@@ -35,9 +35,17 @@ describe("assistant natural dates", () => {
     expect(resolveNaturalDate("la semaine prochaine", { now: sunday, timezone })?.label).toContain("lundi 3 août 2026");
   });
 
+  it("remains deterministic across the Europe/Paris daylight-saving change", () => {
+    const value = resolveNaturalDate("demain à 9h", {
+      now: new Date("2026-03-28T08:00:00.000Z"),
+      timezone,
+    });
+    expect(value?.iso).toBe("2026-03-29T07:00:00.000Z");
+    expect(value?.label).toContain("09:00");
+  });
+
   it("rejects missing and unreasonable dates", () => {
     expect(resolveNaturalDate("un de ces jours", { timezone })).toBeNull();
     expect(resolveNaturalDate("dans 999 jours", { timezone })).toBeNull();
   });
 });
-

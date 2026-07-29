@@ -4,15 +4,17 @@ Socle SaaS multi-marques pour le pilotage commercial en pharmacie. La plateforme
 
 ## Prérequis
 
-- Node.js 22 ou plus récent
-- npm 11 ou plus récent
-- Docker Desktop, nécessaire à Supabase local
-- Supabase CLI (installé dans les dépendances de développement)
+- Node.js 24.14.0 (`.nvmrc`)
+- npm 11.9.0 (`packageManager` et `engines`)
+- Docker Desktop 29.6.1 ou un moteur compatible Docker API récent
+- Supabase CLI 2.109.1 (dépendance de développement verrouillée)
+- PostgreSQL 17 fourni par Supabase local
 
 ## Installation locale
 
 ```bash
-npm install
+nvm use
+npm ci
 npm run db:start
 npm run db:reset
 cp .env.example .env.local
@@ -21,7 +23,9 @@ npm run dev
 
 `npm run db:reset` est la commande de reconstruction de référence : elle recrée la base locale, applique les migrations dans l’ordre et charge le seed. `npm run db:rebuild:sandbox` fournit le même comportement avec un nom explicite pour les environnements contraints. Le wrapper local isole la configuration Supabase dans `.supabase-home`, désactive uniquement la télémétrie et conserve tous les contrôles SQL et RLS.
 
-Après `npm run db:start`, exécuter `npx supabase status -o env`. Reporter l’URL, la clé publique et la clé secrète dans `.env.local`. L’application accepte aussi les anciens noms `NEXT_PUBLIC_SUPABASE_ANON_KEY` et `SUPABASE_SERVICE_ROLE_KEY`, mais les nouveaux noms sont préférés.
+Si le sandbox interdit à la CLI d’inspecter le socket Docker alors que les conteneurs sont actifs, `npm run db:rebuild:sandbox` reconstruit directement la base locale via `docker exec`, enregistre les douze migrations et échoue dès la première erreur SQL.
+
+Après `npm run db:start`, exécuter `sh scripts/supabase-local.sh status -o env`. Reporter l’URL, la clé publique et la clé secrète dans `.env.local`. L’application accepte aussi les anciens noms `NEXT_PUBLIC_SUPABASE_ANON_KEY` et `SUPABASE_SERVICE_ROLE_KEY`, mais les nouveaux noms sont préférés.
 
 L’application est disponible sur [http://localhost:3000](http://localhost:3000), Supabase Studio sur [http://localhost:54323](http://localhost:54323) et la boîte email locale sur [http://localhost:54324](http://localhost:54324).
 
@@ -51,16 +55,45 @@ Tous les comptes locaux utilisent le mot de passe `DemoTR1!2026`.
 ## Validation
 
 ```bash
+npm run security:secrets
+npm run security:release
 npm run lint
-npm test
+npm run typecheck
+npm run test:unit
 npm run build
-npm run db:test
+npm run test:db
 npm run test:e2e
+npm run test:benchmark
 ```
 
 `npm run db:test` exécute les tests pgTAP contre Supabase local et vérifie l’isolation entre marques ainsi que la restriction des agents à leurs affectations.
 
 `npm run test:e2e` récupère automatiquement l’URL et la clé publique de Supabase local, démarre Next.js et exécute le parcours critique Chromium. Installer une fois le navigateur avec `npx playwright install chromium`.
+
+`npm run ci:quality` reproduit localement le job applicatif GitHub Actions. La CI utilise exclusivement `npm ci`, Supabase local et des données fictives seedées.
+
+## Validation depuis un clone vierge
+
+```bash
+git clone https://github.com/Amir-ounissi/TR1-Pharma.git
+cd TR1-Pharma
+nvm use
+npm ci
+npm run db:start
+npm run db:reset
+npm run test:db
+npm run db:lint
+npm run db:advisors
+npm run test:unit
+npm run test:benchmark
+npm run lint
+npm run typecheck
+npm run build
+npx playwright install chromium
+npm run test:e2e
+```
+
+Cette procédure ne nécessite ni Meta, ni WhatsApp, ni géocodage, ni API Vercel. Toute réactivation de l’optimisation d’image rouvre le gate sécurité Sharp.
 
 ## Déploiement Vercel
 
@@ -83,3 +116,6 @@ npm run test:e2e
 - [Assistant Terrain Core Sprint 7](docs/sprint7-assistant-terrain.md)
 - [Connecteur WhatsApp texte Sprint 8](docs/sprint8-whatsapp-connector.md)
 - [Pilotage commercial et réassort Sprint 9](docs/sprint9-commercial-health.md)
+- [Onboarding marque et imports contrôlés Sprint 11](docs/sprint11-onboarding-imports.md)
+- [Release Sprint 11](docs/releases/sprint-11-release.md)
+- [Checklist staging](docs/releases/staging-checklist.md)

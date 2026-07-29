@@ -25,6 +25,7 @@ const navigation = [
   { href: "/dashboard/territories", label: "Territoires", icon: Map },
   { href: "/dashboard/imports", label: "Imports CSV", icon: FileUp },
   { href: "/dashboard/users", label: "Utilisateurs", icon: Users },
+  { href: "/dashboard/admin/onboarding", label: "Onboarding marques", icon: Building2 },
 ];
 
 function Navigation({ scrollable = false }: { scrollable?: boolean }) {
