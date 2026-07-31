@@ -12,9 +12,9 @@ describe("presentation", () => {
   });
 
   it("formats today and tomorrow boundaries", () => {
-    const now = new Date("2026-07-27T23:30:00+01:00");
-    expect(formatActionTiming("2026-07-27T08:00:00+01:00", now).label).toBe("Aujourd’hui");
-    expect(formatActionTiming("2026-07-28T00:15:00+01:00", now).label).toBe("Demain");
+    const now = new Date(2026, 6, 27, 23, 30);
+    expect(formatActionTiming(new Date(2026, 6, 27, 8), now).label).toBe("Aujourd’hui");
+    expect(formatActionTiming(new Date(2026, 6, 28, 0, 15), now).label).toBe("Demain");
   });
 
   it("formats future and overdue actions", () => {

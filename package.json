@@ -2,18 +2,35 @@
   "name": "tr1-platform",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=24.14.0 <25",
+    "npm": ">=11.9.0 <12"
+  },
+  "packageManager": "npm@11.9.0",
   "scripts": {
     "dev": "next dev",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run src --pool=vmThreads --no-file-parallelism",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run test:unit",
+    "test:unit": "vitest run src --pool=vmThreads --no-file-parallelism",
     "test:watch": "vitest",
     "test:e2e": "sh scripts/e2e.sh",
+    "test:db": "npm run db:test",
+    "test:benchmark": "vitest run scripts/import-benchmark.test.ts --pool=vmThreads --no-file-parallelism",
     "db:start": "sh scripts/supabase-local.sh start",
     "db:reset": "sh scripts/supabase-local.sh db reset",
-    "db:rebuild:sandbox": "sh scripts/supabase-local.sh db reset",
-    "db:test": "sh scripts/db-test.sh"
+    "db:rebuild:sandbox": "sh scripts/db-rebuild-sandbox.sh",
+    "db:test": "sh scripts/db-test.sh",
+    "db:lint": "sh scripts/supabase-local.sh db lint --local",
+    "db:advisors": "sh scripts/supabase-local.sh db advisors --local",
+    "benchmark:sprint11": "sh scripts/benchmark-sprint11.sh",
+    "security:secrets": "sh scripts/check-secrets.sh",
+    "security:release": "sh scripts/check-release-config.sh",
+    "ci:quality": "npm run security:secrets && npm run security:release && npm run lint && npm run typecheck && npm run test:unit && npm run test:benchmark && npm run build",
+    "ci:db": "npm run db:start && npm run db:reset && npm run test:db && npm run db:lint && npm run db:advisors",
+    "ci": "npm run ci:quality"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.3",

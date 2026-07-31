@@ -81,16 +81,18 @@ describe("commercial health rules", () => {
   });
 
   it("prefills a follow-up without creating it", () => {
+    const now = new Date(2026, 6, 27, 10);
+    const expectedDueAt = new Date(2026, 6, 28, 9).toISOString();
     expect(buildReorderFollowUp({
       pharmacyName: "Pharmacie République",
       recommendation: "Contacter la pharmacie",
-      now: new Date("2026-07-27T10:00:00Z"),
+      now,
     })).toEqual({
       taskType: "call",
       priority: "high",
       title: "Relance réassort — Pharmacie République",
       description: "Contacter la pharmacie",
-      dueAt: "2026-07-28T08:00:00.000Z",
+      dueAt: expectedDueAt,
     });
   });
 });

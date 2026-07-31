@@ -27,6 +27,23 @@ export async function requireUser() {
   return { supabase, userId: subject };
 }
 
+export async function requirePlatformAdmin() {
+  const { supabase, userId } = await requireUser();
+  const { data: membership, error } = await supabase
+    .from("memberships")
+    .select("id,roles!inner(key)")
+    .eq("user_id", userId)
+    .is("brand_id", null)
+    .eq("status", "active")
+    .eq("roles.key", "super_admin")
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!membership) redirect("/dashboard");
+
+  return { supabase, userId };
+}
+
 export async function getBrandContexts(): Promise<BrandContext[]> {
   const { supabase } = await requireUser();
   const { data, error } = await supabase.rpc("get_my_brand_contexts");
