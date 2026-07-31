@@ -59,7 +59,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
-      PLAYWRIGHT_BROWSERS_PATH: /private/tmp/tr1-playwright-browsers
+      PLAYWRIGHT_BROWSERS_PATH: /tmp/tr1-playwright-browsers
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
