@@ -1,12 +1,12 @@
 # Sprint 11.1 — Rapport de hardening
 
-Date de validation locale : 29 juillet 2026.
+Date de validation locale : 31 juillet 2026.
 
-Dernière validation locale : 29 juillet 2026.
+Dernière validation locale : 31 juillet 2026.
 
 ## Statut
 
-**Validation locale complète.** Le gate Sprint 11.1 reste conditionné à une CI distante verte. Le staging est autorisable sous réserve de revue du risque runtime `next > sharp`; la production publique reste bloquée tant qu'une version corrigée compatible n'est pas disponible ou intégrée.
+**CI validée — staging ready sous réserve.** La reconstruction locale et la CI distante sont vertes. La production publique reste bloquée tant qu'une version corrigée compatible de la chaîne `next > sharp` n'est pas disponible ou intégrée.
 
 ## Clone vierge
 
@@ -38,13 +38,14 @@ Le test pgTAP de charge a été rendu autonome en chargeant explicitement l'exte
 - 33/33 scénarios Playwright réussis en mode production.
 - Sprint 11 : 7/7 scénarios, avec vérifications finales en base, cloisonnement tenant, export CSV sécurisé et Storage privé.
 - Une condition de course a été corrigée : un lot d'import n'est plus marqué `ready` avant l'insertion complète de ses lignes de staging.
+- L'arrêt initial provenait de l'interruption du moteur Docker Desktop pendant la première campagne, sans preuve d'OOM, de saturation disque ni de défaut applicatif. La reprise depuis une base propre puis la CI Linux ont confirmé l'absence de régression.
 
 ## Sécurité
 
 - `.gitignore` couvre secrets, environnements, dépendances, builds, caches, logs, dumps, artefacts Supabase et Playwright.
 - `.env.example` ne contient que des valeurs fictives et distingue client, serveur, obligatoire et optionnel.
 - Aucun secret réel détecté dans les fichiers préparés pour commit.
-- L'historique GitHub complet n'a pas pu être scanné : authentification distante indisponible.
+- L'inventaire Git final et le scan des fichiers suivis ne détectent aucun secret ni artefact local parasite.
 - `images.unoptimized=true` est contrôlé automatiquement.
 - Aucune utilisation de `next/image` détectée.
 - La route `/_next/image` reste couverte par le scénario sécurité.
@@ -81,8 +82,11 @@ Toute réactivation de l'optimisation d'image rouvre le gate sécurité Sharp.
 - `npm ci`, benchmark, deux audits, DB reset, DB lint/advisors, screenshots, traces et artefacts sur échec sont configurés.
 - Aucun `continue-on-error` sur les étapes critiques.
 - GitHub CLI est authentifié avec le compte propriétaire `Amir-ounissi`.
-- Branche préparée : `release/sprint-11-hardening`.
-- Aucun tag ne doit être créé avant une CI verte.
+- Branche publiée : `release/sprint-11-hardening`.
+- Pull request : `https://github.com/Amir-ounissi/TR1-Pharma/pull/1`.
+- CI finale : run `30642709760`, avec qualité applicative, base locale/pgTAP et E2E production réussis.
+- Les divergences de timezone ont été supprimées des assertions et le chemin Playwright CI utilise `/tmp`, compatible Linux.
+- Cible de publication après merge : tag `v0.11.0` et release `https://github.com/Amir-ounissi/TR1-Pharma/releases/tag/v0.11.0`.
 
 ## Documentation
 
@@ -95,8 +99,7 @@ Toute réactivation de l'optimisation d'image rouvre le gate sécurité Sharp.
 
 ## Risques ouverts
 
-1. Synchroniser la branche `release/sprint-11-hardening` et obtenir une CI distante entièrement verte.
-2. Suivre la disponibilité d'une combinaison Next.js/Sharp corrigée et compatible avant production publique.
-3. Créer le tag et la GitHub Release uniquement après validation de la pull request et de la CI.
+1. Suivre la disponibilité d'une combinaison Next.js/Sharp corrigée et compatible avant production publique.
+2. Maintenir `images.unoptimized=true` et le refus de `/_next/image` tant que cette chaîne runtime reste ouverte.
 
 Aucun travail Sprint 12 n'a commencé.
