@@ -65,3 +65,14 @@ Réutilisés : boutons, cartes, badges, inputs, sheet Radix, formulaires commerc
 - Navigateur : 39/39 E2E, dont 6/6 scénarios Sprint 11.2.
 - Audit npm : 0 critique ; 2 alertes runtime élevées restent dans `next > sharp`. La mitigation validée au Sprint 11.1 reste active (`images.unoptimized=true`, aucun usage de `next/image`, route d’optimisation refusée).
 - Captures : six PNG de démonstration dans `artifacts/sprint11-2`.
+
+## Clôture GitHub
+
+- Branche : `feat/sprint-11-2-ux-foundation`.
+- Commit fonctionnel : `3e9d33f363d20b48d77ec095f72c39d74b3706c6`.
+- Pull request : [#2 — Sprint 11.2 — UX Foundation inspired by Attio](https://github.com/Amir-ounissi/TR1-Pharma/pull/2).
+- CI PR : run `30701183014`, entièrement vert — qualité applicative, reconstruction DB/pgTAP et E2E production.
+- Parité : Node, npm, scripts, variables locales et Supabase CLI sont pilotés par le dépôt et la CI. Le dernier rejeu monolithique local a rencontré une saturation machine non fonctionnelle ; la CI distante a confirmé le parcours complet en 7 min 1 s.
+- Tag : aucun tag Sprint 11.2 ; la convention actuelle réserve le prochain tag à un jalon fonctionnel majeur.
+- Risque ouvert : deux alertes runtime élevées `next > sharp`, mitigées par la désactivation et le test de refus de l’optimiseur d’images.
+- Aucun travail Sprint 12 n’a commencé.
