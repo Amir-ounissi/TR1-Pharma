@@ -4,6 +4,8 @@ import { CommercialEventTracker } from "@/components/commercial/commercial-event
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/ux/page-header";
+import { SectionHeader } from "@/components/ux/section-header";
 import { requireActiveBrand } from "@/lib/auth";
 import type { CommercialHealthRow } from "@/lib/commercial-health";
 import { presentationLabel } from "@/lib/presentation";
@@ -86,14 +88,10 @@ export default async function DashboardPage() {
   return (
     <main className="space-y-6">
       <CommercialEventTracker eventName="manager_commercial_dashboard_viewed" />
-      <header className="rounded-3xl bg-[#0f2740] px-6 py-7 text-[#fffaf0]">
-        <p className="text-xs font-semibold uppercase tracking-[.2em] text-[#7fb8df]">Pilotage commercial · {brand.name}</p>
-        <h1 className="mt-2 text-3xl font-semibold">Où agir maintenant ?</h1>
-        <p className="mt-2 text-sm text-[#d7e2eb]">Priorisez le réassort et le chiffre d’affaires avant de consulter les statistiques.</p>
-      </header>
+      <PageHeader eyebrow={`Pilotage commercial · ${brand.name}`} title="Où agir maintenant ?" description="Priorisez le réassort et le chiffre d’affaires avant de consulter les statistiques." tone="dark" />
 
       <section aria-labelledby="now-title" className="space-y-3">
-        <div className="flex items-center justify-between"><h2 id="now-title" className="text-xl font-semibold">À traiter maintenant</h2><Button asChild variant="outline"><Link href="/dashboard/commercial-health">Voir toutes les priorités <ArrowRight /></Link></Button></div>
+        <SectionHeader id="now-title" title="À traiter maintenant" description="Les signaux les plus urgents de votre réseau." action={<Button asChild variant="outline"><Link href="/dashboard/commercial-health">Voir toutes les priorités <ArrowRight /></Link></Button>} />
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           {actions.map((action) => (
             <Link key={action.label} href={`/dashboard/commercial-health?filter=${action.filter}`} className="rounded-2xl border bg-background p-4 transition hover:-translate-y-0.5 hover:shadow-md">

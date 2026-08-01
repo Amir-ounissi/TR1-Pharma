@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type ComponentProps, type ReactNode } from "react";
-import { AlertTriangle, ArrowRight, CalendarCheck, ClipboardCheck, MapPinned, Navigation, Phone, Play, Square, X } from "lucide-react";
+import { AlertTriangle, ArrowRight, CalendarCheck, CalendarPlus, ClipboardCheck, ClipboardPlus, MapPin, MapPinned, Navigation, Phone, Play, ShoppingCart, Square, X } from "lucide-react";
 import { trackProductEventAction } from "@/app/(protected)/dashboard/agent/actions";
 import { QuickInteraction } from "@/components/agent/quick-interaction";
 import { TrackedLink } from "@/components/agent/tracked-link";
@@ -10,6 +10,7 @@ import { ReorderFollowupForm } from "@/components/commercial/reorder-followup-fo
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { QuickActions } from "@/components/ux/quick-actions";
 import { formatActionSummary, formatActionTiming, presentationLabel, presentationText } from "@/lib/presentation";
 import type { CommercialHealthRow } from "@/lib/commercial-health";
 import {
@@ -184,6 +185,13 @@ export function AgentDayExperience({
         </DayList>
       </section>
 
+      <QuickActions className="sm:hidden" actions={[
+        { href: "/dashboard/orders/new", label: "Créer une commande", description: "Saisir une commande terrain", icon: ShoppingCart },
+        { href: "/dashboard/tasks", label: "Planifier une relance", description: "Créer une prochaine action", icon: CalendarPlus },
+        { href: "/dashboard/pharmacies", label: "Ouvrir une pharmacie", description: "Consulter le référentiel", icon: MapPin },
+        { href: "/dashboard/reports", label: "Saisir un compte rendu", description: "Finaliser une visite", icon: ClipboardPlus },
+      ]} />
+
       {!activeVisit && visit ? (
         <QuickReportCard brandPharmacyId={visit.brand_pharmacy_id} pharmacyId={visit.pharmacy_id} commercialStatus={visit.status} lastOrderAt={visit.last_order_at} />
       ) : null}
@@ -194,7 +202,7 @@ export function AgentDayExperience({
 function NextVisitCard({ visit, wazeUrl, mapsUrl, onStart }: { visit: AgentNextVisit; wazeUrl: string; mapsUrl: string; onStart: () => void }) {
   const timing = formatActionTiming(visit.next_action_at);
   return (
-    <Card className="overflow-hidden border-0 bg-[#fffaf0] shadow-[0_18px_50px_-30px_rgba(15,39,64,.5)]" data-testid="next-visit-card">
+    <Card className="scroll-mt-24 overflow-hidden border-0 bg-[#fffaf0] shadow-[0_18px_50px_-30px_rgba(15,39,64,.5)]" data-testid="next-visit-card" id="next-visit-card">
       <div className="h-1.5 bg-[#ee6c3b]" />
       <CardHeader className="gap-2 px-4 py-4 sm:px-7 sm:py-6">
         <div className="flex items-start justify-between gap-2">
@@ -278,7 +286,7 @@ function CompactContext({ label, value, wide = false, alert = false }: { label: 
 }
 
 function DayList({ title, icon, count, children }: { title: string; icon: ReactNode; count: number; children: ReactNode }) {
-  return <Card className="min-h-44"><CardHeader className="flex-row items-center justify-between"><div className="flex items-center gap-2 text-[#0f2740]">{icon}<CardTitle className="text-base">{title}</CardTitle></div><Badge variant="secondary">{count}</Badge></CardHeader><CardContent className="space-y-2">{count ? children : <p className="text-sm text-muted-foreground">Rien à traiter.</p>}</CardContent></Card>;
+  return <Card className="sm:min-h-44"><CardHeader className="flex-row items-center justify-between"><div className="flex items-center gap-2 text-[#0f2740]">{icon}<CardTitle className="text-base">{title}</CardTitle></div><Badge variant="secondary">{count}</Badge></CardHeader><CardContent className="space-y-2">{count ? children : <p className="text-sm text-muted-foreground">Rien à traiter.</p>}</CardContent></Card>;
 }
 
 function DayLink({ href, title, detail }: { href: string; title: string; detail: string }) {

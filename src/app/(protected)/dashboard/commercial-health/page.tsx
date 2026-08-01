@@ -6,6 +6,9 @@ import { ReorderFollowupForm } from "@/components/commercial/reorder-followup-fo
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/ux/page-header";
+import { SectionHeader } from "@/components/ux/section-header";
+import { SavedViewControls } from "@/components/ux/saved-view-controls";
 import { requireActiveBrand } from "@/lib/auth";
 import type { CommercialHealthRow } from "@/lib/commercial-health";
 import { presentationLabel } from "@/lib/presentation";
@@ -41,7 +44,7 @@ function delayLabel(value: number | null) {
 export default async function CommercialHealthPage({ searchParams }: { searchParams: SearchParams }) {
   const query = await searchParams;
   const activeFilter = filters.some(([value]) => value === query.filter) ? query.filter ?? "" : "";
-  const { supabase, brand } = await requireActiveBrand();
+  const { supabase, brand, userId } = await requireActiveBrand();
   const [{ data: priorities }, { data: settings }, { data: contexts }] = await Promise.all([
     supabase.rpc("get_commercial_priorities", {
       target_brand_id: brand.id,
@@ -59,18 +62,17 @@ export default async function CommercialHealthPage({ searchParams }: { searchPar
   return (
     <main className="mx-auto max-w-7xl space-y-6">
       <CommercialEventTracker eventName="commercial_priority_opened" />
-      <header className="rounded-3xl bg-[#0f2740] px-6 py-7 text-[#fffaf0]">
-        <p className="text-xs font-semibold uppercase tracking-[.2em] text-[#7fb8df]">Console de décision · {brand.name}</p>
-        <h1 className="mt-2 text-3xl font-semibold">Priorités commerciales</h1>
-        <p className="mt-2 max-w-2xl text-sm text-[#d7e2eb]">Les comptes à traiter maintenant, classés par urgence et accompagnés d’une recommandation explicable.</p>
-      </header>
+      <PageHeader eyebrow={`Console de décision · ${brand.name}`} title="Priorités commerciales" description="Les comptes à traiter maintenant, classés par urgence et accompagnés d’une recommandation explicable." tone="dark" />
 
-      <div className="flex gap-2 overflow-x-auto pb-2">
-        {filters.map(([value, label]) => (
-          <Button key={value || "all"} asChild size="sm" variant={activeFilter === value ? "default" : "outline"}>
-            <Link href={value ? `?filter=${value}` : "/dashboard/commercial-health"}>{label}</Link>
-          </Button>
-        ))}
+      <div className="flex flex-col gap-3 rounded-xl border bg-background p-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0">
+          {filters.map(([value, label]) => (
+            <Button key={value || "all"} asChild size="sm" variant={activeFilter === value ? "default" : "outline"}>
+              <Link href={value ? `?filter=${value}` : "/dashboard/commercial-health"}>{label}</Link>
+            </Button>
+          ))}
+        </div>
+        <SavedViewControls activeFilter={activeFilter} brandId={brand.id} userId={userId} />
       </div>
 
       {firstReorders.length ? (
@@ -97,17 +99,14 @@ export default async function CommercialHealthPage({ searchParams }: { searchPar
       ) : null}
 
       <section className="space-y-3" aria-label="Liste prioritaire">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold">À traiter</h2>
-          <p className="text-sm text-muted-foreground">{rows.length} compte(s)</p>
-        </div>
+        <SectionHeader title="À traiter" description={`${rows.length} compte(s) classé(s) par score de priorité`} />
         {rows.length === 0 ? (
           <Card><CardContent className="py-10 text-center text-muted-foreground">Aucun compte ne correspond à ce filtre.</CardContent></Card>
         ) : (
           <>
-            <div className="hidden overflow-hidden rounded-2xl border bg-background md:block">
+            <div className="hidden overflow-hidden rounded-xl border bg-background shadow-[0_1px_2px_rgb(14_26_43/0.04)] md:block">
               <table className="w-full text-left text-sm">
-                <thead className="bg-muted/60 text-xs uppercase tracking-wide text-muted-foreground">
+                <thead className="border-b bg-[var(--tr1-navy)] text-[0.68rem] uppercase tracking-[0.1em] text-white/70">
                   <tr>
                     <th className="p-3">Pharmacie</th><th className="p-3">Statut</th><th className="p-3">Dernière commande</th>
                     <th className="p-3">CA 90 j</th><th className="p-3">Tendance</th><th className="p-3">Priorité</th><th className="p-3">Action</th>

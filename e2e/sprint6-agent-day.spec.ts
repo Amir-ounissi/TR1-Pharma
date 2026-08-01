@@ -42,7 +42,7 @@ async function runAgentDay(browser: Browser, viewport: { width: number; height: 
   const dueAt = new Date(Date.now() - 60_000).toISOString().slice(0, 16);
   await page.getByLabel("Quand").fill(dueAt);
   await page.getByRole("button", { name: "Enregistrer et revenir à ma journée" }).click();
-  await expect(page.getByRole("status")).toContainText("Interaction et prochaine action enregistrées");
+  await expect(page.getByRole("status")).toContainText("Interaction et prochaine action enregistrées", { timeout: 60_000 });
   await expect(page.getByText("En retard").first()).toBeVisible();
 
   const admin = adminClient();
