@@ -15,7 +15,9 @@
 /coverage
 /test-results/
 /playwright-report/
-/artifacts/
+/artifacts/*
+!/artifacts/sprint11-2/
+!/artifacts/sprint11-2/*.png
 
 # next.js
 /.next/

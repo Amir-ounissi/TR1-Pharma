@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireActiveBrand } from "@/lib/auth";
 import { hasValidNoNextActionReason } from "@/lib/agent-experience";
@@ -95,7 +94,5 @@ export async function quickInteractionAction(
       target_metadata: { task_type: parsed.data.nextTaskType },
     });
   }
-  revalidatePath("/dashboard/agent");
-  revalidatePath(`/dashboard/pharmacies/${parsed.data.brandPharmacyId}`);
   return { success: "Interaction et prochaine action enregistrées." };
 }
