@@ -1,1 +1,17 @@
-export default function PrivacyPage() { return <main className="mx-auto min-h-[70vh] max-w-3xl px-5 py-16"><p className="font-mono text-xs font-bold uppercase tracking-[.16em] text-[#c9562d]">Données personnelles</p><h1 className="mt-3 text-4xl font-black tracking-[-.05em]">Politique de confidentialité</h1><div className="mt-8 space-y-5 leading-7 text-[#596574]"><p>Le formulaire collecte uniquement votre nom, votre e-mail professionnel et le nom de votre marque ou laboratoire afin de traiter votre demande de diagnostic.</p><p>Ces données ne sont pas transmises aux marques clientes et ne sont pas utilisées dans leurs environnements. Elles sont accessibles uniquement aux responsables TR1 autorisés.</p><p>Les événements de mesure du site ne contiennent ni nom, ni e-mail, ni contenu du formulaire. Les durées de conservation et coordonnées d’exercice des droits doivent être finalisées avant le déploiement public.</p></div></main>; }
+import { legalInformation, missingLegalInformation } from "@/lib/legal";
+
+export default function PrivacyPage() {
+  const sections = [
+    ["Responsable du traitement", legalInformation.dataController],
+    ["Finalités", "Répondre à une demande de diagnostic, qualifier le besoin et, si TR1 est adapté, préparer une démonstration ou un pilote contrôlé."],
+    ["Base juridique", legalInformation.legalBasis],
+    ["Données collectées", "Nom et prénom, e-mail professionnel, marque ou laboratoire, puis informations de qualification communiquées pendant les échanges."],
+    ["Destinataires", "Responsables TR1 autorisés. Les données ne sont jamais mises à disposition des marques clientes."],
+    ["Durée de conservation", legalInformation.retentionPeriod],
+    ["Droits", `Accès, rectification, effacement, limitation, opposition et portabilité lorsque ces droits s’appliquent. Contact : ${legalInformation.privacyContactEmail}.`],
+    ["Transferts et sous-traitants", "À documenter selon les projets Supabase, Vercel, l’outil de réservation et le fournisseur analytics effectivement configurés."],
+    ["Sécurité", "Accès restreints, politiques RLS PostgreSQL, stockage privé, secrets serveur séparés et journalisation contrôlée."],
+    ["Cookies et analytics", "Aucun fournisseur analytics n’est actif par défaut. Les événements prévus excluent les noms, e-mails, notes et contenus du formulaire."],
+  ];
+  return <main className="mx-auto min-h-[70vh] max-w-3xl px-5 py-16"><p className="font-mono text-xs font-bold uppercase tracking-[.16em] text-[#c9562d]">Données personnelles</p><h1 className="mt-3 text-4xl font-black tracking-[-.05em]">Politique de confidentialité</h1>{missingLegalInformation.length ? <p className="mt-6 rounded-lg border border-[#c9562d] bg-[#fff6ec] p-4 text-sm font-semibold text-[#7a351d]">Version de préparation — les champs signalés doivent être fournis par le responsable TR1 avant publication.</p> : null}<div className="mt-8 space-y-8">{sections.map(([title,content]) => <section key={title}><h2 className="font-mono text-sm font-black uppercase tracking-[.05em]">{title}</h2><p className={`mt-2 leading-7 ${content.startsWith("À renseigner") ? "text-[#c9562d]" : "text-[#596574]"}`}>{content}</p></section>)}</div><p className="mt-10 text-xs text-[#66717d]">Dernière mise à jour : {legalInformation.privacyLastUpdated}</p></main>;
+}

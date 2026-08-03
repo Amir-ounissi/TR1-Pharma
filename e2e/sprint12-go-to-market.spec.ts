@@ -48,6 +48,17 @@ test("landing mobile reste lisible et sans débordement", async ({ page }) => {
   await page.screenshot({ path: `${artifacts}/landing-mobile.png`, fullPage: true });
 });
 
+test("pages légales signalées et page 404 publique", async ({ page }) => {
+  await page.goto("/mentions-legales");
+  await expect(page.getByRole("heading", { name: "Mentions légales" })).toBeVisible();
+  await expect(page.getByText(/informations définitives requises/i)).toBeVisible();
+  await page.goto("/politique-de-confidentialite");
+  await expect(page.getByRole("heading", { name: "Politique de confidentialité" })).toBeVisible();
+  await expect(page.getByText(/version de préparation/i)).toBeVisible();
+  await page.goto("/page-inexistante-sprint-12-1");
+  await expect(page.getByRole("heading", { name: "Page introuvable." })).toBeVisible();
+});
+
 test("responsable TR1 qualifie, attribue et prépare un pilote confirmé", async ({ page }) => {
   await signIn(page, "superadmin@tr1.local", /Dermavita/i);
   await page.goto(`/dashboard/admin/leads?q=${encodeURIComponent(leadEmail)}`);

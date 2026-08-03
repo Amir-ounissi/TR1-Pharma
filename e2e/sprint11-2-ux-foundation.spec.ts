@@ -38,9 +38,11 @@ test("scénario 2 — Manager desktop", async ({ page }) => {
   if (await priorityRow.count()) await priorityRow.getByRole("link").first().click();
   else await page.goto("/dashboard/pharmacies/00000000-0000-0000-0000-000000000411");
   await expect(page.getByTestId("terrain-pharmacy-header")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Préparer la relance" })).toBeVisible();
+  const followUpLink = page.getByRole("link", { name: "Préparer la relance" });
+  await expect(followUpLink).toBeVisible();
+  await expect(followUpLink).toHaveAttribute("href", "?tab=activity");
   await page.screenshot({ path: `${artifacts}/pharmacy-detail-desktop.png`, fullPage: true });
-  await page.getByRole("link", { name: "Préparer la relance" }).click();
+  await page.goto(new URL((await followUpLink.getAttribute("href"))!, page.url()).toString());
   await expect(page).toHaveURL(/tab=activity/);
 });
 

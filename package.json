@@ -28,6 +28,7 @@
     "benchmark:sprint11": "sh scripts/benchmark-sprint11.sh",
     "security:secrets": "sh scripts/check-secrets.sh",
     "security:release": "sh scripts/check-release-config.sh",
+    "staging:check-env": "node scripts/check-staging-env.mjs",
     "ci:quality": "npm run security:secrets && npm run security:release && npm run lint && npm run typecheck && npm run test:unit && npm run test:benchmark && npm run build",
     "ci:db": "npm run db:start && npm run db:reset && npm run test:db && npm run db:lint && npm run db:advisors",
     "ci": "npm run ci:quality"
