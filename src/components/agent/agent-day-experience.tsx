@@ -156,7 +156,7 @@ export function AgentDayExperience({
                 <CardContent className="space-y-3 pt-5">
                   <div className="flex items-start justify-between gap-3">
                     <div><Link href={`/dashboard/pharmacies/${opportunity.brand_pharmacy_id}`} className="font-semibold text-[#0f2740] hover:underline">{opportunity.pharmacy_name}</Link><p className="text-sm text-muted-foreground">{presentationLabel(opportunity.health_status)} · {opportunity.expected_reorder_delay_days && opportunity.expected_reorder_delay_days > 0 ? `${opportunity.expected_reorder_delay_days} jours de retard` : opportunity.recommendation}</p></div>
-                    <span className="rounded-full bg-[#ee6c3b] px-3 py-1 text-sm font-bold text-white">{opportunity.priority_score}</span>
+                    <span className="rounded-[0.25rem] border border-[#ee6c3b] bg-transparent px-3 py-1 font-mono text-xs font-bold text-[#c9562d]">{opportunity.priority_score}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-xs"><p className="rounded-lg bg-white p-2"><span className="text-muted-foreground">Dernière commande</span><br />{formatDate(opportunity.last_order_at)}</p><p className="rounded-lg bg-white p-2"><span className="text-muted-foreground">Potentiel</span><br />{presentationLabel(opportunity.potential_level)}</p></div>
                   <ReorderFollowupForm brandPharmacyId={opportunity.brand_pharmacy_id} recommendation={opportunity.recommendation} compact />
@@ -202,12 +202,12 @@ export function AgentDayExperience({
 function NextVisitCard({ visit, wazeUrl, mapsUrl, onStart }: { visit: AgentNextVisit; wazeUrl: string; mapsUrl: string; onStart: () => void }) {
   const timing = formatActionTiming(visit.next_action_at);
   return (
-    <Card className="scroll-mt-24 overflow-hidden border-0 bg-[#fffaf0] shadow-[0_18px_50px_-30px_rgba(15,39,64,.5)]" data-testid="next-visit-card" id="next-visit-card">
-      <div className="h-1.5 bg-[#ee6c3b]" />
+    <Card className="scroll-mt-24 overflow-hidden bg-[#fffaf0]" data-testid="next-visit-card" id="next-visit-card">
+      <div className="h-0.5 bg-[#ee6c3b]" />
       <CardHeader className="gap-2 px-4 py-4 sm:px-7 sm:py-6">
         <div className="flex items-start justify-between gap-2">
-          <div><p className="text-[11px] font-bold uppercase tracking-[.16em] text-[#2d6f9f]">Prochaine visite</p><CardTitle className="mt-1 text-xl text-[#0f2740] sm:text-2xl">{visit.name}</CardTitle></div>
-          <Badge className="bg-[#ee6c3b] text-white">{presentationLabel(visit.priority)}</Badge>
+          <div><p className="font-mono text-[0.58rem] font-bold uppercase tracking-[.16em] text-[#c9562d]">Prochaine visite</p><CardTitle className="mt-1 font-mono text-xl font-black uppercase tracking-[-0.045em] text-[#0f2740] sm:text-2xl">{visit.name}</CardTitle></div>
+          <Badge variant="outline" className="border-[#ee6c3b] bg-transparent text-[#c9562d]">{presentationLabel(visit.priority)}</Badge>
         </div>
         <p className="hidden text-sm text-[#526274] sm:block">{visit.address}</p>
       </CardHeader>
@@ -238,7 +238,7 @@ function NextVisitCard({ visit, wazeUrl, mapsUrl, onStart }: { visit: AgentNextV
           <TrackedLink href={`tel:${visit.primary_contact?.phone || visit.phone || ""}`} eventName="interaction_started" pharmacyId={visit.pharmacy_id} className="border bg-white text-[#0f2740]"><Phone /> Appeler</TrackedLink>
           <TrackedLink href={wazeUrl} eventName="navigation_waze_clicked" pharmacyId={visit.pharmacy_id} external className="bg-[#2d6f9f] text-white"><Navigation /> Waze</TrackedLink>
           <TrackedLink href={mapsUrl} eventName="navigation_maps_clicked" pharmacyId={visit.pharmacy_id} external className="bg-[#2d6f9f] text-white"><MapPinned /> Maps</TrackedLink>
-          <Button type="button" onClick={onStart} size="lg" className="col-span-2 min-h-11 bg-[#ee6c3b] text-white hover:bg-[#d85a2d] sm:col-span-1"><Play /> Démarrer</Button>
+          <Button type="button" onClick={onStart} size="lg" className="col-span-2 min-h-11 bg-[#0f2740] text-white hover:bg-[#172f49] sm:col-span-1"><Play className="text-[#ee6c3b]" /> Démarrer</Button>
         </div>
       </CardContent>
     </Card>
@@ -278,11 +278,11 @@ function QuickReportCard(props: ComponentProps<typeof QuickInteraction> & { comp
 }
 
 function Context({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-xl border border-[#e5dccb] bg-white/70 p-3"><p className="text-[11px] font-semibold uppercase tracking-wide text-[#768392]">{label}</p><p className="mt-1 font-medium text-[#0f2740]">{value}</p></div>;
+  return <div className="rounded-[0.35rem] border border-[#e5dccb] bg-transparent p-3"><p className="font-mono text-[0.56rem] font-bold uppercase tracking-[0.08em] text-[#768392]">{label}</p><p className="mt-1 font-mono text-[0.68rem] font-bold text-[#0f2740]">{value}</p></div>;
 }
 
 function CompactContext({ label, value, wide = false, alert = false }: { label: string; value: string; wide?: boolean; alert?: boolean }) {
-  return <div className={`rounded-xl border bg-white/75 p-2.5 ${wide ? "col-span-2" : ""}`}><p className="text-[10px] font-semibold uppercase tracking-wide text-[#768392]">{label}</p><p className={`mt-1 text-sm font-semibold ${alert ? "text-[#b83a22]" : "text-[#0f2740]"}`}>{value}</p></div>;
+  return <div className={`rounded-[0.35rem] border bg-transparent p-2.5 ${wide ? "col-span-2" : ""}`}><p className="font-mono text-[0.55rem] font-bold uppercase tracking-[0.08em] text-[#768392]">{label}</p><p className={`mt-1 text-sm font-semibold ${alert ? "text-[#b83a22]" : "text-[#0f2740]"}`}>{value}</p></div>;
 }
 
 function DayList({ title, icon, count, children }: { title: string; icon: ReactNode; count: number; children: ReactNode }) {
@@ -290,5 +290,5 @@ function DayList({ title, icon, count, children }: { title: string; icon: ReactN
 }
 
 function DayLink({ href, title, detail }: { href: string; title: string; detail: string }) {
-  return <Link href={href} className="block min-h-11 rounded-xl border p-3 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><p className="text-sm font-semibold">{title}</p><p className="mt-1 text-xs text-muted-foreground">{detail}</p></Link>;
+  return <Link href={href} className="block min-h-11 rounded-[0.35rem] border border-[var(--tr1-line)] p-3 hover:bg-white/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><p className="font-mono text-[0.68rem] font-bold uppercase">{title}</p><p className="mt-1 text-xs text-muted-foreground">{detail}</p></Link>;
 }

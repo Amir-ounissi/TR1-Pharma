@@ -10,10 +10,10 @@ export function RoleNavigation({ role, onNavigate }: { role: string; onNavigate?
   const pathname = usePathname();
 
   return (
-    <nav aria-label="Navigation principale" className="space-y-6">
+    <nav aria-label="Navigation principale" className="space-y-7">
       {getNavigationSections(role).map((section) => (
         <section key={section.label} aria-labelledby={`nav-${section.label}`}>
-          <p id={`nav-${section.label}`} className="mb-2 px-3 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-sidebar-foreground/50">
+          <p id={`nav-${section.label}`} className="mb-2.5 px-3 font-mono text-[0.57rem] font-bold uppercase tracking-[0.18em] text-sidebar-foreground/42">
             {section.label}
           </p>
           <div className="space-y-1">
@@ -23,9 +23,9 @@ export function RoleNavigation({ role, onNavigate }: { role: string; onNavigate?
                 <Link
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "group flex min-h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium text-sidebar-foreground/72 transition-colors",
+                    "group flex min-h-10 items-center gap-3 rounded-[0.4rem] border border-transparent px-3 text-[0.8rem] font-semibold text-sidebar-foreground/68 transition-colors",
                     "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
-                    active && "bg-sidebar-accent text-sidebar-accent-foreground shadow-[inset_3px_0_0_var(--tr1-orange)]",
+                    active && "border-white/8 bg-sidebar-accent text-sidebar-accent-foreground shadow-[inset_2px_0_0_var(--tr1-orange)]",
                   )}
                   href={item.href}
                   key={item.href}

@@ -47,6 +47,13 @@ export function getRoleFamily(role: string): RoleFamily {
   return "manager";
 }
 
+export function getRoleLandingPath(role: string) {
+  const family = getRoleFamily(role);
+  if (family === "agent") return "/dashboard/agent";
+  if (family === "facilitator") return "/dashboard/field";
+  return "/dashboard";
+}
+
 export function getNavigationSections(role: string): NavigationSection[] {
   const family = getRoleFamily(role);
 
