@@ -67,6 +67,7 @@ npm run build
 npm run test:db
 npm run test:e2e
 npm run test:benchmark
+npm run staging:check-env # uniquement avec les variables staging réelles
 ```
 
 `npm run db:test` exécute les tests pgTAP contre Supabase local et vérifie l’isolation entre marques ainsi que la restriction des agents à leurs affectations.
@@ -124,3 +125,5 @@ Cette procédure ne nécessite ni Meta, ni WhatsApp, ni géocodage, ni API Verce
 - [Checklist staging](docs/releases/staging-checklist.md)
 - [Go-to-market et pilot readiness Sprint 12](docs/sprint12-go-to-market.md)
 - [Rapport sécurité Sprint 12](docs/releases/sprint-12-security-report.md)
+- [Runbook staging Sprint 12.1](docs/releases/sprint-12-1-staging-runbook.md)
+- [Checklist juridique Sprint 12.1](docs/releases/sprint-12-1-legal-checklist.md)
