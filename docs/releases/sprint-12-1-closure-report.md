@@ -8,13 +8,13 @@
 
 - Branche : `release/sprint-12-1-hardening-staging`
 - Commit Sprint 12 : `7aa7920fec81ed1f5c6c263cb0af93f738f9eb6a`
-- SHA final : à renseigner après le dernier commit
-- Pull request : à renseigner après publication
-- Working tree : à contrôler après publication
+- SHA audité avant ajout de cette référence : `0955cc91c81d3bd60176f89ed046c2f509302c63`
+- Pull request : `https://github.com/Amir-ounissi/TR1-Pharma/pull/4`
+- Working tree : propre au moment de la publication
 
 ## 3. CI
 
-Le workflow `.github/workflows/ci.yml` exécute installation reproductible, scan de secrets, lint, typecheck, Vitest, benchmark, build, audit niveau high, reconstruction DB, pgTAP, DB lint/advisors et Playwright. Run distant à renseigner après push.
+Le workflow `.github/workflows/ci.yml` exécute installation reproductible, scan de secrets, lint, typecheck, Vitest, benchmark, build, audit niveau high, reconstruction DB, pgTAP, DB lint/advisors et Playwright. Le résultat distant de la PR 4 reste à reporter après exécution.
 
 ## 4. Dépendances
 
