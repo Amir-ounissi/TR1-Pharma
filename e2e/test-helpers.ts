@@ -27,7 +27,7 @@ export async function signIn(page: Page, email: string, brand: RegExp | string) 
   await page.getByRole("button", { name: "Se connecter" }).click();
   await expect(page).toHaveURL(/\/select-brand/, { timeout: 30_000 });
   await page.getByRole("button", { name: brand }).click();
-  await expect(page).toHaveURL(/\/dashboard$/, { timeout: 30_000 });
+  await expect(page).toHaveURL(/\/dashboard(?:\/(?:agent|field))?$/, { timeout: 30_000 });
 }
 
 export async function chooseCombobox(page: Page, formSelector: string, index: number, option: RegExp | string) {
