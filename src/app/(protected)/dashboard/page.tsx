@@ -94,9 +94,9 @@ export default async function DashboardPage() {
         <SectionHeader id="now-title" title="À traiter maintenant" description="Les signaux les plus urgents de votre réseau." action={<Button asChild variant="outline"><Link href="/dashboard/commercial-health">Voir toutes les priorités <ArrowRight /></Link></Button>} />
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           {actions.map((action) => (
-            <Link key={action.label} href={`/dashboard/commercial-health?filter=${action.filter}`} className="rounded-2xl border bg-background p-4 transition hover:-translate-y-0.5 hover:shadow-md">
-              <div className="flex items-center justify-between"><action.icon className={`size-5 ${action.tone}`} /><strong className="text-2xl">{action.value}</strong></div>
-              <p className="mt-3 text-sm font-medium">{action.label}</p>
+            <Link key={action.label} href={`/dashboard/commercial-health?filter=${action.filter}`} className="rounded-[0.45rem] border border-[var(--tr1-line)] bg-card p-4 transition hover:border-[var(--tr1-orange)]/55 hover:bg-white/45">
+              <div className="flex items-center justify-between"><action.icon className={`size-4 ${action.tone}`} /><strong className="font-mono text-2xl tracking-[-0.07em]">{action.value}</strong></div>
+              <p className="mt-3 font-mono text-[0.64rem] font-bold uppercase tracking-[0.04em]">{action.label}</p>
             </Link>
           ))}
         </div>
@@ -107,9 +107,9 @@ export default async function DashboardPage() {
           <CardHeader className="flex-row items-center justify-between"><CardTitle>Comptes prioritaires</CardTitle><Badge variant="secondary">Score explicable</Badge></CardHeader>
           <CardContent className="space-y-3">
             {rows.length ? rows.map((row) => (
-              <Link key={row.brand_pharmacy_id} href={`/dashboard/pharmacies/${row.brand_pharmacy_id}`} className="flex min-h-16 items-center justify-between gap-4 rounded-xl border p-3 hover:bg-muted/40">
+              <Link key={row.brand_pharmacy_id} href={`/dashboard/pharmacies/${row.brand_pharmacy_id}`} className="flex min-h-16 items-center justify-between gap-4 rounded-[0.4rem] border border-[var(--tr1-line)] p-3 hover:bg-white/45">
                 <div><p className="font-semibold">{row.pharmacy_name}</p><p className="text-sm text-muted-foreground">{presentationLabel(row.health_status)} · {row.recommendation}</p></div>
-                <span className="shrink-0 rounded-full bg-[#0f2740] px-3 py-1 font-bold text-white">{row.priority_score}</span>
+                <span className="shrink-0 rounded-[0.25rem] bg-[#0f2740] px-3 py-1 font-mono text-xs font-bold text-white">{row.priority_score}</span>
               </Link>
             )) : <p className="py-8 text-center text-muted-foreground">Aucune urgence commerciale détectée.</p>}
           </CardContent>
@@ -117,7 +117,7 @@ export default async function DashboardPage() {
         <Card>
           <CardHeader><CardTitle className="flex items-center gap-2"><CircleDollarSign className="size-5" />Indicateurs compacts</CardTitle></CardHeader>
           <CardContent className="grid grid-cols-2 gap-3">
-            {kpis.map(([label, value]) => <div key={label} className="rounded-xl bg-muted/50 p-3"><p className="text-lg font-semibold">{value}</p><p className="text-xs text-muted-foreground">{label}</p></div>)}
+            {kpis.map(([label, value]) => <div key={label} className="rounded-[0.35rem] border border-[var(--tr1-line)] bg-transparent p-3"><p className="font-mono text-lg font-black tracking-[-0.05em]">{value}</p><p className="font-mono text-[0.58rem] uppercase tracking-[0.08em] text-muted-foreground">{label}</p></div>)}
           </CardContent>
         </Card>
       </section>

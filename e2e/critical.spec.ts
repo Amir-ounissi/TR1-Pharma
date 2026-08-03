@@ -9,7 +9,7 @@ async function signIn(page: Page, email: string) {
   await page.getByRole("button", { name: "Se connecter" }).click();
   await expect(page).toHaveURL(/\/select-brand/, { timeout: 30_000 });
   await page.getByRole("button", { name: /Dermavita/i }).click();
-  await expect(page).toHaveURL(/\/dashboard$/, { timeout: 30_000 });
+  await expect(page).toHaveURL(/\/dashboard(?:\/agent)?$/, { timeout: 30_000 });
 }
 
 async function chooseOption(page: Page, control: string, option: RegExp | string) {
@@ -41,35 +41,40 @@ async function openOrder(page: Page, number: string) {
 }
 
 test("parcours implantation, réassort et cloisonnement agent", async ({ browser }) => {
+  const runId = String(Date.now());
+  const pharmacyName = `Pharmacie E2E ${runId}`;
+  const initialOrderNumber = `E2E-INITIAL-${runId}`;
+  const reorderNumber = `E2E-REORDER-${runId}`;
   const adminContext = await browser.newContext();
   const adminPage = await adminContext.newPage();
   await signIn(adminPage, "admin@dermavita.local");
 
   await adminPage.goto("/dashboard/pharmacies/new");
-  await adminPage.getByLabel("Raison sociale (création)").fill("Pharmacie E2E SAS");
-  await adminPage.getByLabel("Nom commercial").fill("Pharmacie E2E");
-  await adminPage.getByLabel("SIRET").fill("99999999900011");
-  await adminPage.getByLabel("Adresse", { exact: true }).fill("1 rue du Test");
+  await adminPage.getByLabel("Raison sociale (création)").fill(`${pharmacyName} SAS`);
+  await adminPage.getByLabel("Nom commercial").fill(pharmacyName);
+  await adminPage.getByLabel("SIRET").fill(`999999999${runId.slice(-5)}`);
+  await adminPage.getByLabel("Adresse", { exact: true }).fill(`${runId} rue du Test`);
   await adminPage.getByLabel("Code postal").fill("75001");
   await adminPage.getByLabel("Ville").fill("Paris");
+  await adminPage.getByRole("checkbox", { name: /Confirmer la création/ }).check();
   await adminPage.getByRole("button", { name: "Créer la pharmacie et la relation" }).click();
-  await adminPage.waitForTimeout(1_000);
+  await expect(adminPage.getByText("Pharmacie ajoutée au référentiel.")).toBeVisible();
 
   await adminPage.goto("/dashboard/orders/new");
-  await chooseOption(adminPage, "Pharmacie", /Pharmacie E2E/i);
-  await createOrder(adminPage, "E2E-INITIAL", "initial", "2026-07-21T10:00");
-  const initialOrderUrl = await openOrder(adminPage, "E2E-INITIAL");
+  await chooseOption(adminPage, "Pharmacie", pharmacyName);
+  await createOrder(adminPage, initialOrderNumber, "initial", "2026-07-21T10:00");
+  const initialOrderUrl = await openOrder(adminPage, initialOrderNumber);
   await expect(adminPage.getByText("Implantation", { exact: true })).toBeVisible();
 
   const pharmacyUrl = await adminPage.getByRole("link", { name: "Voir la pharmacie" }).getAttribute("href");
   expect(pharmacyUrl).toBeTruthy();
   const pharmacyPath = pharmacyUrl!.split("?")[0];
   await adminPage.goto(pharmacyPath);
-  await expect(adminPage.getByRole("heading", { name: "Pharmacie E2E" })).toBeVisible();
+  await expect(adminPage.getByRole("heading", { name: pharmacyName })).toBeVisible();
   await adminPage.goto(`${pharmacyPath}?tab=orders`);
   await adminPage.getByRole("link", { name: "Créer une commande" }).click();
-  await createOrder(adminPage, "E2E-REORDER", "reorder", "2026-07-22T10:00");
-  await openOrder(adminPage, "E2E-REORDER");
+  await createOrder(adminPage, reorderNumber, "reorder", "2026-07-22T10:00");
+  await openOrder(adminPage, reorderNumber);
   await expect(adminPage.getByText("Réassort", { exact: true })).toBeVisible();
 
   await adminPage.goto(`${pharmacyPath}?tab=performance`);

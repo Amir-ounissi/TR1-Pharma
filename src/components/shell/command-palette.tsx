@@ -60,14 +60,14 @@ export function CommandPalette({ items }: { items: SearchItem[] }) {
     <>
       <Button
         aria-label="Ouvrir la recherche globale"
-        className="h-10 w-full max-w-md justify-between border-border/80 bg-background/85 px-3 text-muted-foreground shadow-sm hover:bg-background"
+        className="h-10 w-full max-w-xl justify-between rounded-md border-[var(--tr1-line-strong)] bg-transparent px-3 font-mono text-[0.68rem] text-muted-foreground shadow-none hover:bg-white/45"
         data-testid="command-palette-trigger"
         onClick={openPalette}
         type="button"
         variant="outline"
       >
         <span className="flex items-center gap-2"><Search className="size-4" />Rechercher partout…</span>
-        <kbd className="hidden rounded border bg-muted px-1.5 py-0.5 font-mono text-[0.68rem] sm:inline">⌘ K</kbd>
+        <kbd className="hidden rounded-[0.25rem] border border-[var(--tr1-line-strong)] bg-transparent px-1.5 py-0.5 font-mono text-[0.62rem] sm:inline">⌘ K</kbd>
       </Button>
 
       {open && (

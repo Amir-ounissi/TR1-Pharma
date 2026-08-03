@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getNavigationItems, getRoleFamily, isNavigationItemActive } from "./navigation";
+import { getNavigationItems, getRoleFamily, getRoleLandingPath, isNavigationItemActive } from "./navigation";
 
 describe("role navigation", () => {
   it("keeps agent navigation focused on field work", () => {
@@ -19,5 +19,13 @@ describe("role navigation", () => {
     expect(getRoleFamily("facilitator")).toBe("facilitator");
     expect(isNavigationItemActive("/dashboard/pharmacies/123", "/dashboard/pharmacies")).toBe(true);
     expect(isNavigationItemActive("/dashboard/commercial-health", "/dashboard")).toBe(false);
+  });
+
+  it("sends each role family to its dedicated home", () => {
+    expect(getRoleLandingPath("agent")).toBe("/dashboard/agent");
+    expect(getRoleLandingPath("facilitator")).toBe("/dashboard/field");
+    expect(getRoleLandingPath("tr1_manager")).toBe("/dashboard");
+    expect(getRoleLandingPath("brand_admin")).toBe("/dashboard");
+    expect(getRoleLandingPath("super_admin")).toBe("/dashboard");
   });
 });

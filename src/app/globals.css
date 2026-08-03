@@ -59,6 +59,8 @@
   --tr1-success: #4f7a58;
   --tr1-danger: #c54b3c;
   --tr1-muted: #69717d;
+  --tr1-line: rgba(14, 26, 43, 0.13);
+  --tr1-line-strong: rgba(14, 26, 43, 0.2);
   --background: #fffdf8;
   --foreground: #0e1a2b;
   --card: #fffefa;
@@ -149,6 +151,101 @@
 
   .tr1-eyebrow {
     @apply text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground;
+  }
+
+  .tr1-product-da {
+    --background: #f8f3e9;
+    --card: #fbf7ed;
+    --popover: #fffaf0;
+    --primary: #0e1a2b;
+    --primary-foreground: #fffdf8;
+    --secondary: #eee8dc;
+    --muted: #f0eadf;
+    --border: #d9d0c2;
+    --input: #d4cab9;
+    --radius: 0.48rem;
+    color: var(--tr1-navy);
+    background-color: var(--tr1-ivory);
+    background-image: linear-gradient(rgb(14 26 43 / 0.018) 1px, transparent 1px);
+    background-size: 100% 2rem;
+  }
+
+  .tr1-product-da .tr1-da-eyebrow {
+    @apply font-mono text-[0.6rem] font-bold uppercase tracking-[0.17em] text-[var(--tr1-orange)];
+  }
+
+  .tr1-product-da .tr1-da-title {
+    @apply font-mono text-2xl font-black uppercase tracking-[-0.055em] text-[var(--tr1-navy)] sm:text-3xl;
+  }
+
+  .tr1-product-da .tr1-da-panel {
+    @apply rounded-[0.45rem] border border-[var(--tr1-line)] bg-[var(--card)] shadow-[0_1px_0_rgb(255_255_255/0.8)];
+  }
+
+  .tr1-product-da [data-slot="card"] {
+    border-radius: 0.45rem;
+    border-color: var(--tr1-line);
+    background: var(--card);
+    box-shadow: 0 1px 0 rgb(255 255 255 / 0.75);
+  }
+
+  .tr1-product-da [data-slot="button"] {
+    border-radius: 0.35rem;
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.045em;
+    text-transform: uppercase;
+  }
+
+  .tr1-product-da [data-slot="badge"] {
+    border-radius: 0.25rem;
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    letter-spacing: 0.045em;
+    text-transform: uppercase;
+  }
+
+  .tr1-product-da [data-slot="input"],
+  .tr1-product-da [data-slot="select-trigger"] {
+    border-radius: 0.35rem;
+    background: rgb(255 255 255 / 0.28);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+  }
+
+  .tr1-product-da [data-slot="table-head"] {
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .tr1-product-da [data-slot="table-header"] {
+    background: var(--tr1-navy);
+    color: var(--tr1-ivory);
+  }
+
+  .tr1-product-da [data-slot="table-header"] [data-slot="table-head"] {
+    color: var(--tr1-ivory);
+  }
+
+  .tr1-product-da [data-slot="table-row"] {
+    border-color: var(--tr1-line);
+  }
+
+  .tr1-product-da main h1 {
+    font-family: var(--font-mono);
+    font-weight: 900;
+    letter-spacing: -0.055em;
+    text-transform: uppercase;
+  }
+
+  .tr1-product-da main h2 {
+    font-family: var(--font-mono);
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    text-transform: uppercase;
   }
 }
 
