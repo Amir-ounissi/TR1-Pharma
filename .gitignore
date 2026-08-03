@@ -18,6 +18,8 @@
 /artifacts/*
 !/artifacts/sprint11-2/
 !/artifacts/sprint11-2/*.png
+!/artifacts/sprint12/
+!/artifacts/sprint12/*.png
 
 # next.js
 /.next/

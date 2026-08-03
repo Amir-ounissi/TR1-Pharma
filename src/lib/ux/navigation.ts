@@ -69,7 +69,12 @@ export function getNavigationSections(role: string): NavigationSection[] {
   }
 
   const sections: NavigationSection[] = [{ label: "Pilotage", items: managerItems }];
-  if (family === "admin") sections.push({ label: "Administration", items: adminItems });
+  if (family === "admin") {
+    sections.push({
+      label: "Administration",
+      items: role === "super_admin" ? [{ href: "/dashboard/admin/leads", label: "Leads TR1", icon: "leads" }, ...adminItems] : adminItems,
+    });
+  }
   return sections;
 }
 
