@@ -55,9 +55,6 @@ export async function createOrderAction(_state: OrderActionState, formData: Form
     item_payload: parsedItems.data,
   });
   if (error) return { error: error.code === "23505" ? "Cette commande externe existe déjà." : error.message };
-  revalidatePath("/dashboard/orders");
-  revalidatePath("/dashboard/network");
-  revalidatePath(`/dashboard/pharmacies/${header.data.brandPharmacyId}`);
   return { success: "Commande créée et indicateurs recalculés.", orderId: data as string };
 }
 

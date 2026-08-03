@@ -19,7 +19,7 @@
     "test:e2e": "sh scripts/e2e.sh",
     "test:db": "npm run db:test",
     "test:benchmark": "vitest run scripts/import-benchmark.test.ts --pool=vmThreads --no-file-parallelism",
-    "db:start": "sh scripts/supabase-local.sh start",
+    "db:start": "sh scripts/supabase-local.sh start -x edge-runtime,imgproxy,postgres-meta,studio,supavisor,vector",
     "db:reset": "sh scripts/supabase-local.sh db reset",
     "db:rebuild:sandbox": "sh scripts/db-rebuild-sandbox.sh",
     "db:test": "sh scripts/db-test.sh",
@@ -29,9 +29,15 @@
     "security:secrets": "sh scripts/check-secrets.sh",
     "security:release": "sh scripts/check-release-config.sh",
     "staging:check-env": "node scripts/check-staging-env.mjs",
+    "staging:smoke": "node scripts/smoke-staging.mjs",
+    "staging:reset-demo": "sh scripts/reset-demo-environment.sh",
+    "legal:check": "node scripts/check-legal.mjs",
+    "legal:check:production": "node scripts/check-legal.mjs production",
+    "release:check:local": "node scripts/release-check.mjs local",
+    "release:check": "node scripts/release-check.mjs pilot",
     "ci:quality": "npm run security:secrets && npm run security:release && npm run lint && npm run typecheck && npm run test:unit && npm run test:benchmark && npm run build",
     "ci:db": "npm run db:start && npm run db:reset && npm run test:db && npm run db:lint && npm run db:advisors",
-    "ci": "npm run ci:quality"
+    "ci": "npm run release:check:local"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.3",

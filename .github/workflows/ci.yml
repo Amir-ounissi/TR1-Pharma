@@ -28,7 +28,7 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npm run ci:quality
+      - run: npm run release:check:local
       - name: Audit complet
         run: npm audit --audit-level=high
       - name: Audit runtime

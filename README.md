@@ -68,6 +68,9 @@ npm run test:db
 npm run test:e2e
 npm run test:benchmark
 npm run staging:check-env # uniquement avec les variables staging réelles
+npm run staging:smoke # avec BASE_URL=https://...
+npm run release:check:local
+npm run release:check # gate pilote, bloquant tant que staging/audit/juridique restent ouverts
 ```
 
 `npm run db:test` exécute les tests pgTAP contre Supabase local et vérifie l’isolation entre marques ainsi que la restriction des agents à leurs affectations.
@@ -127,3 +130,8 @@ Cette procédure ne nécessite ni Meta, ni WhatsApp, ni géocodage, ni API Verce
 - [Rapport sécurité Sprint 12](docs/releases/sprint-12-security-report.md)
 - [Runbook staging Sprint 12.1](docs/releases/sprint-12-1-staging-runbook.md)
 - [Checklist juridique Sprint 12.1](docs/releases/sprint-12-1-legal-checklist.md)
+- [Accès staging Sprint 12.2A](docs/releases/sprint-12-2-staging-access-checklist.md)
+- [Informations juridiques Sprint 12.2A](docs/releases/sprint-12-2-legal-information-checklist.md)
+- [Expérience Sharp Sprint 12.2A](docs/releases/sprint-12-2-sharp-experiment.md)
+- [Stabilité E2E Sprint 12.2A](docs/releases/sprint-12-2-e2e-stability-report.md)
+- [Clôture Sprint 12.2A](docs/releases/sprint-12-2-closure-report.md)

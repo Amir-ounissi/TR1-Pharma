@@ -16,6 +16,8 @@ Configurer dans l’hébergeur sans les écrire dans Git :
 
 Les variables `LEGAL_*` et `PRIVACY_*` sont obligatoires avant collecte publique. Vérifier la configuration dans un environnement shell sécurisé avec `npm run staging:check-env`. Aucune variable secrète ne doit commencer par `NEXT_PUBLIC_`.
 
+Le modèle complet se trouve dans `.env.staging.example`. Exécuter `npm run legal:check` pour afficher les placeholders autorisés en staging. `APP_ENV=production npm run legal:check:production` doit échouer tant que les informations définitives manquent.
+
 ## Base staging
 
 ```bash
@@ -44,6 +46,12 @@ Ne jamais utiliser cette commande sur la production. Vérifier RLS, buckets priv
 ## Smoke tests distants
 
 Depuis l’URL HTTPS réelle, vérifier `/`, `/merci`, `/connexion`, `/mentions-legales`, `/politique-de-confidentialite` et une URL inexistante. Tester desktop, mobile, clavier, CTA, onglets produit, validation du formulaire, soumission idempotente et absence de PII dans le réseau.
+
+Le socle public automatisé accepte une URL distante configurable :
+
+```bash
+BASE_URL="https://staging.example" npm run staging:smoke
+```
 
 Avec des comptes staging distincts, vérifier la console leads TR1, qualification, attribution, prochaine action, préparation de pilote, refus des rôles de marque, périmètres Agent et Intervenant, changement de marque autorisé, cookie modifié, URL modifiée, requête directe et stockage privé.
 

@@ -29,7 +29,7 @@ export function LeadForm() {
       <div className="grid gap-2"><Label htmlFor="companyName">Marque ou laboratoire</Label><Input defaultValue={state.fields?.companyName} id="companyName" maxLength={160} name="companyName" required /></div>
       <div aria-hidden="true" className="absolute -left-[10000px]"><Label htmlFor="website">Site web</Label><Input autoComplete="off" id="website" name="website" tabIndex={-1} /></div>
       <Button className="h-12 bg-[#0f2740] font-mono text-xs font-black uppercase tracking-[.08em] text-white hover:bg-[#173a5c]" disabled={pending} onClick={() => trackMarketingEvent("lead_form_submit")} type="submit">{pending ? "Envoi…" : "Découvrir TR1 sur mon réseau officinal"}</Button>
-      <p className="text-xs leading-5 text-[#66717d]">TR1 utilise ces informations uniquement pour traiter votre demande de diagnostic et vous recontacter. Consultez notre <Link className="underline" href="/politique-de-confidentialite">politique de confidentialité</Link>.</p>
+      <p className="text-xs leading-5 text-[#66717d]">Vos informations sont utilisées uniquement pour répondre à votre demande. <Link className="underline" href="/politique-de-confidentialite">Politique de confidentialité</Link>.</p>
     </form>
   );
 }

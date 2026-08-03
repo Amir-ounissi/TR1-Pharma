@@ -89,7 +89,6 @@ export async function createPharmacyAction(_state: ReferenceActionState, formDat
     },
   });
   if (error) return { error: error.code === "23505" ? "Cette pharmacie ou cette relation existe déjà." : error.message };
-  revalidatePath("/dashboard/pharmacies");
   return { success: "Pharmacie ajoutée au référentiel.", entityId: data as string };
 }
 

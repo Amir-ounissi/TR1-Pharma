@@ -1,6 +1,9 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
 const password = "DemoTR1!2026";
+type StorageState = Awaited<ReturnType<BrowserContext["storageState"]>>;
+let adminStorageState: StorageState;
+let agentStorageState: StorageState;
 
 async function signIn(page: Page, email: string) {
   await page.goto("/login");
@@ -40,14 +43,27 @@ async function openOrder(page: Page, number: string) {
   return page.url();
 }
 
+test.beforeAll(async ({ browser }) => {
+  const adminContext = await browser.newContext();
+  const adminPage = await adminContext.newPage();
+  await signIn(adminPage, "admin@dermavita.local");
+  adminStorageState = await adminContext.storageState();
+  await adminContext.close();
+
+  const agentContext = await browser.newContext();
+  const agentPage = await agentContext.newPage();
+  await signIn(agentPage, "agent@dermavita.local");
+  agentStorageState = await agentContext.storageState();
+  await agentContext.close();
+});
+
 test("parcours implantation, réassort et cloisonnement agent", async ({ browser }) => {
   const runId = String(Date.now());
   const pharmacyName = `Pharmacie E2E ${runId}`;
   const initialOrderNumber = `E2E-INITIAL-${runId}`;
   const reorderNumber = `E2E-REORDER-${runId}`;
-  const adminContext = await browser.newContext();
+  const adminContext = await browser.newContext({ storageState: adminStorageState });
   const adminPage = await adminContext.newPage();
-  await signIn(adminPage, "admin@dermavita.local");
 
   await adminPage.goto("/dashboard/pharmacies/new");
   await adminPage.getByLabel("Raison sociale (création)").fill(`${pharmacyName} SAS`);
@@ -82,9 +98,8 @@ test("parcours implantation, réassort et cloisonnement agent", async ({ browser
   await expect(adminPage.getByText("Réassorts")).toBeVisible();
   await expect(adminPage.getByText("2", { exact: true }).first()).toBeVisible();
 
-  const agentContext = await browser.newContext();
+  const agentContext = await browser.newContext({ storageState: agentStorageState });
   const agentPage = await agentContext.newPage();
-  await signIn(agentPage, "agent@dermavita.local");
   await agentPage.goto(initialOrderUrl);
   await expect(agentPage.getByText(/could not be found|introuvable/i)).toBeVisible();
 

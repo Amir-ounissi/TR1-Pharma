@@ -1,10 +1,10 @@
-import { legalInformation, missingLegalInformation } from "@/lib/legal";
+import { legalInformation, missingLegalInformation } from "@/config/legal";
 
 const fields = [
-  ["Raison sociale", "companyName"], ["Forme juridique", "companyForm"], ["Capital social", "shareCapital"],
+  ["Raison sociale", "legalEntityName"], ["Forme juridique", "legalForm"], ["Capital social", "shareCapital"],
   ["Siège social", "registeredOffice"], ["Immatriculation", "registrationNumber"], ["TVA", "vatNumber"],
-  ["Directeur de la publication", "publicationDirector"], ["Contact", "contactEmail"], ["Hébergeur", "hostName"],
-  ["Adresse de l’hébergeur", "hostAddress"],
+  ["Directeur de la publication", "publicationDirector"], ["Contact", "contactEmail"], ["Hébergeur", "hostingProviderName"],
+  ["Adresse de l’hébergeur", "hostingProviderAddress"],
 ] as const;
 
 export default function LegalPage() {
