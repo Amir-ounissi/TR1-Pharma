@@ -35,7 +35,7 @@ Configuration centralisée, placeholders explicites et blocage production ajout�
 - Build production sans informations juridiques : bloqué comme attendu.
 - Vitest : 190/190.
 - Benchmark : 1/1.
-- Reconstruction sandbox : réussie, 12 migrations appliquées et seed chargé.
+- Reconstruction sandbox : réussie, 13 migrations appliquées et seed chargé.
 - pgTAP : 455/455.
 - Playwright : 10/10 ciblés puis 135/135 dans trois suites complètes, sans retry.
 - Scan de secrets : réussi.
