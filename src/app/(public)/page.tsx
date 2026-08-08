@@ -70,7 +70,7 @@ export default function LandingPage() {
     <section className="bg-[radial-gradient(circle_at_84%_12%,rgba(47,108,163,.23),transparent_30%),radial-gradient(circle_at_8%_88%,rgba(239,106,58,.13),transparent_24%),#071421] px-5 py-20 text-white lg:px-8" id="produit">
       <div className="mx-auto max-w-7xl">
         <p className="font-mono text-xs font-black uppercase tracking-[.16em] text-[#ff9d78]">La preuve produit</p>
-        <div className="mb-10 mt-4 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between"><h2 className="max-w-4xl text-4xl font-black leading-[1.02] tracking-[-.055em] sm:text-5xl">Un seul environnement pour savoir où agir.</h2><p className="max-w-xl leading-7 text-white/65">Suivez le cycle complet : une pharmacie à ouvrir est identifiée, une visite commerciale est affectée, la première commande est enregistrée puis une action terrain est planifiée.</p></div>
+        <div className="mb-10 mt-4 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between"><h2 className="max-w-4xl text-4xl font-black leading-[1.02] tracking-[-.055em] sm:text-5xl">Un seul environnement pour savoir où agir.</h2><p className="max-w-xl leading-7 text-white/82">Suivez le cycle complet : une pharmacie à ouvrir est identifiée, une visite commerciale est affectée, la première commande est enregistrée puis une action terrain est planifiée.</p></div>
         <ProductProof />
       </div>
     </section>

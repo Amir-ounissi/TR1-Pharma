@@ -31,9 +31,9 @@ export function ProductProof() {
 
   return <div className="overflow-hidden rounded-[1.4rem] border border-white/10 bg-[#102944] shadow-[0_36px_100px_rgba(0,0,0,.38)]">
     <div className="flex flex-col gap-5 border-b border-white/10 bg-[#102944] px-4 py-4 text-white sm:px-6 lg:flex-row lg:items-center lg:justify-between">
-      <div className="font-mono text-[.62rem] font-bold uppercase tracking-[.16em] text-white/50">TR1 Pharma / Démonstration produit</div>
+      <div className="font-mono text-[.62rem] font-bold uppercase tracking-[.16em] text-white/72">TR1 Pharma / Démonstration produit</div>
       <div className="grid gap-2 sm:grid-cols-3" role="tablist" aria-label="Vues produit">
-        {Object.entries(views).map(([key, item]) => <button aria-selected={active === key} className={`rounded-lg border px-4 py-3 text-left font-mono text-[.65rem] font-black uppercase tracking-[.08em] transition ${active === key ? "border-[#ef6a3a] bg-[#ef6a3a] text-white" : "border-white/15 bg-white/[.04] text-white/70 hover:border-white/30 hover:text-white"}`} key={key} onClick={() => { setActive(key as keyof typeof views); trackMarketingEvent("product_tab_view", { tab: key }); }} role="tab">{item.label}</button>)}
+        {Object.entries(views).map(([key, item]) => <button aria-selected={active === key} className={`rounded-lg border px-4 py-3 text-left font-mono text-[.65rem] font-black uppercase tracking-[.08em] transition ${active === key ? "border-[#ef6a3a] bg-[#ef6a3a] text-white" : "border-white/15 bg-white/[.04] text-white/82 hover:border-white/30 hover:text-white"}`} key={key} onClick={() => { setActive(key as keyof typeof views); trackMarketingEvent("product_tab_view", { tab: key }); }} role="tab">{item.label}</button>)}
       </div>
     </div>
     <div className="grid min-h-[34rem] place-items-center bg-[#f7f1e7] p-3 sm:p-6 lg:p-10" role="tabpanel">
