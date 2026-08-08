@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { clearDraft, draftKey, loadDraft, saveDraft } from "./local-draft";
 
 function memoryStorage() {
@@ -11,6 +11,8 @@ function memoryStorage() {
 }
 
 describe("local drafts", () => {
+  afterEach(() => vi.useRealTimers());
+
   it("saves, restores and clears an interaction", () => {
     const storage = memoryStorage();
     const key = draftKey("interaction", "pharmacy-a");
@@ -24,5 +26,20 @@ describe("local drafts", () => {
     const storage = memoryStorage();
     storage.setItem("bad", "{");
     expect(loadDraft(storage, "bad")).toBeNull();
+  });
+
+  it("expires obsolete drafts", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-08T10:00:00Z"));
+    const storage = memoryStorage();
+    saveDraft(storage, "expiring", { note: "Temporaire" }, { ttlHours: 1 });
+    vi.setSystemTime(new Date("2026-08-08T11:30:00Z"));
+    expect(loadDraft(storage, "expiring")).toBeNull();
+  });
+
+  it("clears drafts when user or brand context changes", () => {
+    const storage = memoryStorage();
+    saveDraft(storage, "scoped", { note: "Privée" }, { contextKey: "brand-a:user-a" });
+    expect(loadDraft(storage, "scoped", { contextKey: "brand-b:user-a" })).toBeNull();
   });
 });

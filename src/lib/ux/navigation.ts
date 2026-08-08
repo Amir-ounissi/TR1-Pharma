@@ -17,6 +17,7 @@ const agentItems: NavigationItem[] = [
   { href: "/dashboard/pharmacies", label: "Pharmacies", icon: "building" },
   { href: "/dashboard/missions", label: "Missions", icon: "calendar" },
   { href: "/dashboard/tasks", label: "Agenda", icon: "clipboard" },
+  { href: "/dashboard/agent/performance", label: "Ma performance", icon: "chart" },
   { href: "/dashboard/reports", label: "Documents", icon: "file" },
   { href: "/dashboard/agent/assistant", label: "Assistant Terrain", icon: "sparkles" },
 ];
@@ -27,7 +28,6 @@ const managerItems: NavigationItem[] = [
   { href: "/dashboard/pharmacies", label: "Pharmacies", icon: "building" },
   { href: "/dashboard/missions", label: "Missions", icon: "calendar" },
   { href: "/dashboard/network", label: "Performance", icon: "chart" },
-  { href: "/dashboard/users", label: "Équipe", icon: "users" },
 ];
 
 const adminItems: NavigationItem[] = [

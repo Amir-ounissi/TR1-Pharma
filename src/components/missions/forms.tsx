@@ -29,7 +29,7 @@ export function MissionForm({ pharmacies, users, products }: { pharmacies: Optio
 
 export function MissionStatusForm({ missionId, options }: { missionId: string; options: string[] }) { const [state, action, pending]=useActionState(changeMissionStatusAction,{}); return <form action={action} className="space-y-3"><input type="hidden" name="missionId" value={missionId}/><ActionFeedback {...state}/><Select name="status" required><SelectTrigger className="w-full"><SelectValue placeholder="Nouveau statut"/></SelectTrigger><SelectContent>{options.map((v)=><SelectItem key={v} value={v}>{v}</SelectItem>)}</SelectContent></Select><Input name="reason" placeholder="Motif si nécessaire"/><Button disabled={pending} className="w-full">Mettre à jour</Button></form>; }
 
-export function MissionReportForm({ missionId, missionType, pharmacyId, report }: { missionId:string; missionType:string; pharmacyId:string; report?:Record<string,unknown>|null }) {
+export function MissionReportForm({ missionId, missionType, pharmacyId, report, draftScope }: { missionId:string; missionType:string; pharmacyId:string; report?:Record<string,unknown>|null; draftScope?: string }) {
   const [state,action,pending]=useActionState(saveReportAction,{});
   const formRef = useRef<HTMLFormElement>(null);
   const started = useRef(false);
@@ -37,7 +37,7 @@ export function MissionReportForm({ missionId, missionType, pharmacyId, report }
   const value=(field:string)=>String(report?.[field]??"");
 
   useEffect(() => {
-    const restored = loadDraft<Record<string, string>>(localStorage, key);
+    const restored = loadDraft<Record<string, string>>(localStorage, key, { contextKey: draftScope });
     if (!restored) return;
     const timer = window.setTimeout(() => {
       const form = formRef.current;
@@ -48,7 +48,7 @@ export function MissionReportForm({ missionId, missionType, pharmacyId, report }
       }
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [key]);
+  }, [draftScope, key]);
 
   useEffect(() => {
     if (state.success) clearDraft(localStorage, key);
@@ -56,7 +56,7 @@ export function MissionReportForm({ missionId, missionType, pharmacyId, report }
 
   function preserveDraft() {
     if (!formRef.current) return;
-    saveDraft(localStorage, key, Object.fromEntries(new FormData(formRef.current).entries()));
+    saveDraft(localStorage, key, Object.fromEntries(new FormData(formRef.current).entries()), { ttlHours: 72, contextKey: draftScope });
   }
 
   function markStarted() {
@@ -69,6 +69,6 @@ export function MissionReportForm({ missionId, missionType, pharmacyId, report }
   {missionType==="animation"&&<><Field label="Unités vendues"><Input name="unitsSold" type="number" min="0" defaultValue={value("units_sold")}/></Field><Field label="Durée (minutes)"><Input name="durationMinutes" type="number" min="1" defaultValue={value("duration_minutes")}/></Field><Field label="Contacts clients"><Input name="customerContacts" type="number" min="0" defaultValue={value("customer_contacts")}/></Field><Field label="Sell-out TTC"><Input name="netSalesTtc" type="number" min="0" step="0.01" defaultValue={value("net_sales_ttc")}/></Field></>}
   {missionType==="training"&&<><Field label="Participants"><Input name="participantCount" type="number" min="0" defaultValue={value("participant_count")}/></Field><Field label="Durée (minutes)"><Input name="durationMinutes" type="number" min="1" defaultValue={value("duration_minutes")}/></Field><Field label="Connaissance avant %"><Input name="knowledgeBefore" type="number" min="0" max="100" defaultValue={value("knowledge_before")}/></Field><Field label="Connaissance après %"><Input name="knowledgeAfter" type="number" min="0" max="100" defaultValue={value("knowledge_after")}/></Field></>}
   {["commercial_visit","prospecting_visit","relationship_visit","reactivation"].includes(missionType)&&<><Field label="Contact rencontré"><Input name="contactMet" defaultValue={value("contact_met")}/></Field><Field label="Résultat"><Input name="meetingOutcome" defaultValue={value("meeting_outcome")}/></Field><Field label="Commande attendue HT"><Input name="estimatedOrderAmountHt" type="number" min="0" defaultValue={value("estimated_order_amount_ht")}/></Field></>}
-  </div><Field label="Retour pharmacie"><Textarea name="pharmacyFeedback" defaultValue={value("pharmacy_feedback")}/></Field><Field label="Opportunités"><Textarea name="opportunities" defaultValue={value("opportunities")}/></Field><div className="flex gap-2"><Button name="reportStatus" value="draft" variant="outline" disabled={pending}>Enregistrer</Button><Button name="reportStatus" value="submitted" disabled={pending}>Soumettre</Button></div><p className="text-xs text-muted-foreground">Brouillon conservé automatiquement sur cet appareil.</p></form>;
+  </div><Field label="Retour pharmacie"><Textarea name="pharmacyFeedback" defaultValue={value("pharmacy_feedback")}/></Field><Field label="Opportunités"><Textarea name="opportunities" defaultValue={value("opportunities")}/></Field><div className="flex gap-2"><Button name="reportStatus" value="draft" variant="outline" disabled={pending}>Enregistrer</Button><Button name="reportStatus" value="submitted" disabled={pending}>Soumettre</Button></div><p className="text-xs text-muted-foreground">Brouillon local conservé 72 h maximum sur cet appareil.</p></form>;
 }
 function Field({label,children}:{label:string;children:React.ReactNode}){return <div className="space-y-2"><Label>{label}</Label>{children}</div>}

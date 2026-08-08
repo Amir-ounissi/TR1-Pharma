@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { requireActiveBrand } from "@/lib/auth";
+import { formatMissionType } from "@/lib/performance";
+import { presentationLabel } from "@/lib/presentation";
 import { uploadMissionAttachmentAction } from "../actions";
 
 const transitions: Record<string, string[]> = {
@@ -20,7 +22,7 @@ const transitions: Record<string, string[]> = {
 
 export default async function MissionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { supabase, brand } = await requireActiveBrand();
+  const { supabase, brand, userId } = await requireActiveBrand();
   const [{ data: mission }, { data: report }, { data: products }, { data: history }, { data: attachments }, { data: impactRows }] = await Promise.all([
     supabase.from("missions").select("*").eq("id", id).eq("brand_id", brand.id).maybeSingle(),
     supabase.from("mission_reports").select("*").eq("mission_id", id).maybeSingle(),
@@ -37,7 +39,7 @@ export default async function MissionPage({ params }: { params: Promise<{ id: st
       {impactRows?.[0] ? <MissionImpactTracker eventName="mission_impact_viewed" missionId={id} /> : null}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="flex gap-2"><Badge>{mission.mission_type}</Badge><Badge variant="secondary">{mission.status}</Badge></div>
+          <div className="flex gap-2"><Badge>{formatMissionType(mission.mission_type)}</Badge><Badge variant="secondary">{presentationLabel(mission.status)}</Badge></div>
           <h1 className="mt-2 text-2xl font-semibold">{mission.title}</h1>
           <p className="text-muted-foreground">{mission.objective}</p>
         </div>
@@ -46,7 +48,7 @@ export default async function MissionPage({ params }: { params: Promise<{ id: st
       <div className="grid gap-6 xl:grid-cols-[1.5fr_1fr]">
         <div className="space-y-6">
           <Card><CardHeader><CardTitle>Briefing</CardTitle></CardHeader><CardContent><p className="whitespace-pre-wrap">{mission.briefing || "Aucun briefing."}</p><div className="mt-4 flex flex-wrap gap-2">{(products ?? []).map((item) => { const product = Array.isArray(item.products) ? item.products[0] : item.products; return <Badge variant="outline" key={item.id}>{product?.name || "Produit"}</Badge>; })}</div></CardContent></Card>
-          <Card><CardHeader><CardTitle>Compte rendu</CardTitle></CardHeader><CardContent><MissionReportForm missionId={id} missionType={mission.mission_type} pharmacyId={mission.pharmacy_id} report={report} /></CardContent></Card>
+          <Card><CardHeader><CardTitle>Compte rendu</CardTitle></CardHeader><CardContent><MissionReportForm missionId={id} missionType={mission.mission_type} pharmacyId={mission.pharmacy_id} report={report} draftScope={`${brand.id}:${userId}`} /></CardContent></Card>
           {impactRows?.[0] ? <MissionImpact impact={impactRows[0] as ImpactRow} /> : null}
           <Card><CardHeader><CardTitle>Pièces privées</CardTitle></CardHeader><CardContent>
             <form action={uploadMissionAttachmentAction} className="grid gap-3 sm:grid-cols-[1fr_180px_auto]"><input type="hidden" name="missionId" value={id} /><Input type="file" name="file" accept="image/jpeg,image/png,image/webp,application/pdf" required /><Select name="visibility" defaultValue="shared"><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="shared">Partagé</SelectItem><SelectItem value="tr1_internal">TR1 interne</SelectItem><SelectItem value="provider_private">Intervenant</SelectItem></SelectContent></Select><Button>Ajouter</Button></form>
@@ -55,7 +57,7 @@ export default async function MissionPage({ params }: { params: Promise<{ id: st
         </div>
         <div className="space-y-6">
           <Card><CardHeader><CardTitle>Workflow</CardTitle></CardHeader><CardContent><MissionStatusForm missionId={id} options={transitions[mission.status] ?? []} /></CardContent></Card>
-          <Card><CardHeader><CardTitle>Historique</CardTitle></CardHeader><CardContent className="space-y-3">{(history ?? []).map((entry) => <div key={entry.id} className="border-l-2 pl-3 text-sm"><strong>{entry.new_status}</strong><p className="text-muted-foreground">{new Date(entry.changed_at).toLocaleString("fr-FR")} · {entry.source}</p></div>)}</CardContent></Card>
+          <Card><CardHeader><CardTitle>Historique</CardTitle></CardHeader><CardContent className="space-y-3">{(history ?? []).map((entry) => <div key={entry.id} className="border-l-2 pl-3 text-sm"><strong>{presentationLabel(entry.new_status)}</strong><p className="text-muted-foreground">{new Date(entry.changed_at).toLocaleString("fr-FR")} · {presentationLabel(entry.source)}</p></div>)}</CardContent></Card>
         </div>
       </div>
     </div>

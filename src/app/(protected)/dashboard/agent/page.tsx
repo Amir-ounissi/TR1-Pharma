@@ -42,6 +42,7 @@ export default async function AgentPage() {
       </section> : null}
       <AgentDayExperience
         brandId={brand.id}
+        userId={userId}
         day={day}
         visit={visit}
         opportunities={(opportunities ?? []) as CommercialHealthRow[]}

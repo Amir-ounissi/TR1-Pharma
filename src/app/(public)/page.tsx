@@ -5,15 +5,15 @@ import { MarketingPageEvent, MarketingTrackedLink } from "@/components/marketing
 import { ProductProof } from "@/components/marketing/product-proof";
 
 const pillars = [
-  { icon: Building2, number: "01", title: "Structurez votre réseau", text: "Réunissez les informations nécessaires au développement de chaque pharmacie.", items: ["Pharmacies", "Produits", "Commandes", "Territoires", "Affectations"] },
-  { icon: Route, number: "02", title: "Pilotez l’exécution terrain", text: "Partagez les priorités, affectez les actions et suivez leur réalisation.", items: ["Visites", "Relances", "Animations", "Formations", "Rapports"] },
-  { icon: ChartNoAxesCombined, number: "03", title: "Développez votre portefeuille", text: "Faites ressortir les comptes qui nécessitent une action commerciale.", items: ["Réassorts", "Comptes à risque", "Réactivation", "Prochaine action"] },
+  { icon: Building2, number: "01", title: "Ouvrez de nouvelles pharmacies", text: "Organisez la prospection, les territoires, les comptes à visiter et le suivi commercial jusqu’à la première commande.", items: ["Prospection", "Territoires", "Visites", "Première commande", "Affectations"] },
+  { icon: Route, number: "02", title: "Suivez chaque compte dans le temps", text: "Centralisez les commandes, les réassorts, les contacts, les visites, les prochaines actions et l’historique commercial de chaque pharmacie.", items: ["Commandes", "Réassorts", "Contacts", "Historique", "Prochaine action"] },
+  { icon: ChartNoAxesCombined, number: "03", title: "Développez votre portefeuille officinal", text: "Identifiez les pharmacies à renforcer et déclenchez les actions adaptées : visite, animation, formation, merchandising ou relance commerciale.", items: ["Visites", "Animations", "Formations", "Merchandising", "Relances"] },
 ];
 
 const problems = [
   ["01", "Vos données commerciales sont dispersées", "Pharmacies, commandes, produits détenus, contacts et prochaines actions restent répartis entre plusieurs supports."],
   ["02", "Vos intervenants travaillent avec des méthodes différentes", "Commerciaux, agents, animateurs et formateurs ne partagent pas toujours les mêmes priorités."],
-  ["03", "Vous manquez de visibilité sur les comptes à développer", "Les zones à renforcer, les pharmacies à suivre et les actions réalisées sont difficiles à piloter."],
+  ["03", "Vous manquez de visibilité sur les pharmacies à ouvrir et à développer", "Les prospects à travailler, les comptes à suivre, les zones à renforcer et les prochaines actions sont difficiles à prioriser dans un même système."],
 ];
 
 export default function LandingPage() {
@@ -25,7 +25,7 @@ export default function LandingPage() {
         <div>
           <p className="font-mono text-[.68rem] font-black uppercase tracking-[.17em] text-[#c84f24]">La plateforme des marques qui se développent en pharmacie</p>
           <h1 className="mt-6 max-w-3xl text-[3.1rem] font-black leading-[.92] tracking-[-.072em] text-[#0b1e32] sm:text-6xl lg:text-[5rem]">Structurez, pilotez et développez <span className="text-[#c84f24]">votre réseau officinal.</span></h1>
-          <p className="mt-7 max-w-2xl text-lg leading-8 text-[#667384]">TR1 réunit vos pharmacies, vos équipes, vos commandes et vos actions terrain pour vous aider à faire grandir votre réseau sans perdre le contrôle.</p>
+          <p className="mt-7 max-w-2xl text-lg leading-8 text-[#667384]">De l’ouverture de nouvelles pharmacies au suivi des commandes, des réassorts et des actions terrain, TR1 réunit votre développement officinal dans un même environnement.</p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <MarketingTrackedLink className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#c84f24] px-5 text-center text-sm font-black text-white shadow-[0_14px_34px_rgba(200,79,36,.23)] transition hover:-translate-y-0.5 hover:bg-[#a63f19]" event="primary_cta_click" href="#diagnostic">Découvrir TR1 sur mon réseau officinal <ArrowRight className="size-4" /></MarketingTrackedLink>
             <a className="inline-flex min-h-12 items-center justify-center rounded-xl border border-[#0b1e32]/15 bg-white/80 px-5 text-sm font-black" href="#produit">Voir la plateforme</a>
@@ -50,7 +50,7 @@ export default function LandingPage() {
         <div>
           <p className="font-mono text-xs font-black uppercase tracking-[.16em] text-[#c84f24]">Votre réseau grandit</p>
           <h2 className="mt-4 text-4xl font-black leading-[1.02] tracking-[-.055em] sm:text-5xl">Votre organisation doit pouvoir suivre.</h2>
-          <p className="mt-6 text-lg leading-8 text-[#667384]">À mesure que les pharmacies, les territoires et les intervenants se multiplient, le développement devient plus difficile à coordonner.</p>
+          <p className="mt-6 text-lg leading-8 text-[#667384]">Quand l’activité accélère, de nouvelles pharmacies sont à prospecter et à ouvrir, tandis que les comptes déjà clients doivent continuer à être suivis.</p>
           <p className="mt-6 border-l-2 border-[#ef6a3a] pl-5 text-xl font-bold">TR1 transforme une organisation dispersée en un système commercial commun.</p>
         </div>
         <div className="overflow-hidden rounded-2xl border border-[#0b1e32]/10 bg-[#fffefa]">
@@ -62,7 +62,7 @@ export default function LandingPage() {
     <section className="border-y border-[#0b1e32]/10 bg-[#f8f2e8] px-5 py-20 lg:px-8" id="valeur">
       <div className="mx-auto max-w-7xl">
         <p className="font-mono text-xs font-black uppercase tracking-[.16em] text-[#c84f24]">La proposition de valeur TR1</p>
-        <h2 className="mt-4 text-4xl font-black tracking-[-.055em] sm:text-5xl">Structurez. Pilotez. Développez.</h2>
+        <h2 className="mt-4 text-4xl font-black tracking-[-.055em] sm:text-5xl">Ouvrez. Suivez. Développez.</h2>
         <div className="mt-10 grid gap-5 lg:grid-cols-3">{pillars.map(({ icon: Icon, ...pillar }) => <article className="rounded-2xl border border-[#0b1e32]/10 bg-[#fffdf8] p-7 shadow-[0_14px_36px_rgba(7,20,33,.05)]" key={pillar.number}><div className="flex items-center justify-between"><Icon className="size-6 text-[#c84f24]" /><span className="font-mono text-xs font-bold text-[#c84f24]">{pillar.number}</span></div><h3 className="mt-8 text-2xl font-black tracking-[-.04em]">{pillar.title}</h3><p className="mt-4 leading-7 text-[#667384]">{pillar.text}</p><div className="mt-7 flex flex-wrap gap-2">{pillar.items.map(item => <span className="rounded-full border border-[#0b1e32]/10 bg-[#f8f2e8] px-3 py-1 font-mono text-[.62rem] font-bold uppercase tracking-[.05em]" key={item}>{item}</span>)}</div></article>)}</div>
       </div>
     </section>
@@ -70,15 +70,15 @@ export default function LandingPage() {
     <section className="bg-[radial-gradient(circle_at_84%_12%,rgba(47,108,163,.23),transparent_30%),radial-gradient(circle_at_8%_88%,rgba(239,106,58,.13),transparent_24%),#071421] px-5 py-20 text-white lg:px-8" id="produit">
       <div className="mx-auto max-w-7xl">
         <p className="font-mono text-xs font-black uppercase tracking-[.16em] text-[#ff9d78]">La preuve produit</p>
-        <div className="mb-10 mt-4 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between"><h2 className="max-w-4xl text-4xl font-black leading-[1.02] tracking-[-.055em] sm:text-5xl">Un seul environnement pour savoir où agir.</h2><p className="max-w-xl leading-7 text-white/65">Suivez le même scénario du management jusqu’à l’exécution terrain : une priorité identifiée, une visite préparée et une mission suivie.</p></div>
+        <div className="mb-10 mt-4 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between"><h2 className="max-w-4xl text-4xl font-black leading-[1.02] tracking-[-.055em] sm:text-5xl">Un seul environnement pour savoir où agir.</h2><p className="max-w-xl leading-7 text-white/65">Suivez le cycle complet : une pharmacie à ouvrir est identifiée, une visite commerciale est affectée, la première commande est enregistrée puis une action terrain est planifiée.</p></div>
         <ProductProof />
       </div>
     </section>
 
     <section className="px-5 py-20 lg:px-8" id="equipes">
       <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[.8fr_1.2fr]">
-        <div><p className="font-mono text-xs font-black uppercase tracking-[.16em] text-[#c84f24]">Une organisation qui s’adapte à la vôtre</p><h2 className="mt-4 text-4xl font-black leading-[1.02] tracking-[-.055em] sm:text-5xl">Conservez vos équipes. Complétez votre couverture.</h2><p className="mt-6 text-lg leading-8 text-[#667384]">TR1 intègre vos commerciaux, agents, animateurs et formateurs dans un cadre commun.</p></div>
-        <div className="grid gap-5 sm:grid-cols-2">{[{ title: "Vos ressources existantes", text: "Vous ne changez pas votre organisation. Vous lui donnez un système commun." }, { title: "Les ressources validées par TR1", text: "Complétez votre dispositif selon les territoires et la disponibilité des profils." }].map((block, index) => <article className={`rounded-2xl border p-7 ${index ? "border-[#0b1e32] bg-[#0b1e32] text-white" : "border-[#0b1e32]/10 bg-[#fffefa]"}`} key={block.title}><ShieldCheck className={`size-7 ${index ? "text-[#ef6a3a]" : "text-[#0b1e32]"}`} /><h3 className="mt-8 text-2xl font-black tracking-[-.04em]">{block.title}</h3><p className={`mt-4 leading-7 ${index ? "text-white/65" : "text-[#667384]"}`}>{block.text}</p></article>)}</div>
+        <div><p className="font-mono text-xs font-black uppercase tracking-[.16em] text-[#c84f24]">Une organisation qui s’adapte à la vôtre</p><h2 className="mt-4 text-4xl font-black leading-[1.02] tracking-[-.055em] sm:text-5xl">Conservez vos équipes. Complétez votre couverture.</h2><p className="mt-6 text-lg leading-8 text-[#667384]">Développez votre réseau avec vos équipes existantes, ou complétez votre couverture avec des agents et intervenants validés par TR1.</p></div>
+        <div className="grid gap-5 sm:grid-cols-2">{[{ title: "Vos ressources existantes", text: "Commerciaux salariés, agents déjà mandatés, animateurs, formateurs et managers travaillent dans un même système." }, { title: "Les ressources validées par TR1", text: "Agents commerciaux, animateurs, formateurs et intervenants terrain peuvent compléter votre dispositif selon vos besoins." }].map((block, index) => <article className={`rounded-2xl border p-7 ${index ? "border-[#0b1e32] bg-[#0b1e32] text-white" : "border-[#0b1e32]/10 bg-[#fffefa]"}`} key={block.title}><ShieldCheck className={`size-7 ${index ? "text-[#ef6a3a]" : "text-[#0b1e32]"}`} /><h3 className="mt-8 text-2xl font-black tracking-[-.04em]">{block.title}</h3><p className={`mt-4 leading-7 ${index ? "text-white/65" : "text-[#667384]"}`}>{block.text}</p></article>)}</div>
       </div>
     </section>
 

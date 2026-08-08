@@ -13,6 +13,10 @@ test.beforeAll(() => mkdirSync(artifacts, { recursive: true }));
 test("landing desktop, CTA, preuve produit et capture du lead", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Structurez, pilotez et développez votre réseau officinal." })).toBeVisible();
+  await expect(page.getByText("De l’ouverture de nouvelles pharmacies au suivi des commandes, des réassorts et des actions terrain, TR1 réunit votre développement officinal dans un même environnement.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Ouvrez de nouvelles pharmacies" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Suivez chaque compte dans le temps" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Développez votre portefeuille officinal" })).toBeVisible();
   await expect(page.locator("main > section")).toHaveCount(6);
   await expect(page.getByRole("link", { name: /Découvrir TR1 sur mon réseau officinal/ })).toHaveCount(2);
 
