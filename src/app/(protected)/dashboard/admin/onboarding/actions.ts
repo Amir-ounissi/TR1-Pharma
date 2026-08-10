@@ -109,34 +109,59 @@ export async function updateOnboardingSettingsAction(formData: FormData) {
   revalidatePath("/dashboard/admin/onboarding");
 }
 
-export async function inviteOnboardingAdminAction(formData: FormData) {
+export async function inviteOnboardingAdminAction(
+  _state: OnboardingActionState,
+  formData: FormData,
+): Promise<OnboardingActionState> {
   const parsed = z.object({
     brandId: z.string().uuid(),
     email: z.email(),
     fullName: z.string().trim().min(2).max(120),
-  }).parse(Object.fromEntries(formData));
-  const { userId } = await requirePlatformAdmin();
-  const admin = createAdminClient();
-  const [{ data: brand }, { data: role }] = await Promise.all([
-    admin.from("brands").select("organization_id").eq("id", parsed.brandId).single(),
-    admin.from("roles").select("id").eq("key", "brand_admin").single(),
-  ]);
-  if (!brand || !role) throw new Error("Configuration de marque incomplète.");
-  const { data, error } = await admin.auth.admin.inviteUserByEmail(parsed.email, {
-    data: { full_name: parsed.fullName },
-    redirectTo: resolveOnboardingRedirectUrl(),
-  });
-  if (error || !data.user) throw new Error(error?.message ?? "Invitation impossible.");
-  const { error: membershipError } = await admin.from("memberships").insert({
-    user_id: data.user.id,
-    organization_id: brand.organization_id,
-    brand_id: parsed.brandId,
-    role_id: role.id,
-    invited_by: userId,
-    status: "invited",
-  });
-  if (membershipError) throw new Error(membershipError.message);
-  revalidatePath("/dashboard/admin/onboarding");
+  }).safeParse(Object.fromEntries(formData));
+
+  if (!parsed.success) {
+    return { error: "Les informations du futur administrateur sont invalides." } satisfies OnboardingActionState;
+  }
+
+  try {
+    const { userId } = await requirePlatformAdmin();
+    const admin = createAdminClient();
+    const [{ data: brand }, { data: role }] = await Promise.all([
+      admin.from("brands").select("organization_id").eq("id", parsed.data.brandId).single(),
+      admin.from("roles").select("id").eq("key", "brand_admin").single(),
+    ]);
+
+    if (!brand || !role) {
+      return { error: "Configuration de marque incomplète." } satisfies OnboardingActionState;
+    }
+
+    const { data, error } = await admin.auth.admin.inviteUserByEmail(parsed.data.email, {
+      data: { full_name: parsed.data.fullName },
+      redirectTo: resolveOnboardingRedirectUrl(),
+    });
+
+    if (error || !data.user) {
+      return { error: error?.message ?? "Invitation impossible." } satisfies OnboardingActionState;
+    }
+
+    const { error: membershipError } = await admin.from("memberships").insert({
+      user_id: data.user.id,
+      organization_id: brand.organization_id,
+      brand_id: parsed.data.brandId,
+      role_id: role.id,
+      invited_by: userId,
+      status: "invited",
+    });
+
+    if (membershipError) {
+      return { error: membershipError.message } satisfies OnboardingActionState;
+    }
+
+    revalidatePath("/dashboard/admin/onboarding");
+    return { success: "Invitation administrateur envoyée.", brandId: parsed.data.brandId } satisfies OnboardingActionState;
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Invitation impossible." } satisfies OnboardingActionState;
+  }
 }
 
 export async function stageOnboardingImportAction(

@@ -3,10 +3,10 @@ import Link from "next/link";
 import {
   activateBrandAction,
   executeOnboardingImportAction,
-  inviteOnboardingAdminAction,
   rollbackOnboardingImportAction,
   updateOnboardingSettingsAction,
 } from "@/app/(protected)/dashboard/admin/onboarding/actions";
+import { OnboardingAdminInviteForm } from "@/components/onboarding/onboarding-admin-invite-form";
 import { OnboardingCreateForm } from "@/components/onboarding/onboarding-create-form";
 import { OnboardingImportPanel } from "@/components/onboarding/onboarding-import-panel";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -205,12 +205,7 @@ export default async function BrandOnboardingPage({
           <Card>
             <CardHeader><CardTitle>4. Administrateur de marque</CardTitle><CardDescription>L’invitation est envoyée sans mot de passe en clair.</CardDescription></CardHeader>
             <CardContent>
-              <form action={inviteOnboardingAdminAction} className="grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
-                <input type="hidden" name="brandId" value={selectedBrand.id} />
-                <div className="space-y-2"><Label htmlFor="adminName">Nom complet</Label><Input id="adminName" name="fullName" required /></div>
-                <div className="space-y-2"><Label htmlFor="adminEmail">E-mail</Label><Input id="adminEmail" name="email" type="email" required /></div>
-                <Button>Envoyer l’invitation</Button>
-              </form>
+              <OnboardingAdminInviteForm brandId={selectedBrand.id} />
             </CardContent>
           </Card>
 
