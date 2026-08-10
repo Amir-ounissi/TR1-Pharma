@@ -2,7 +2,6 @@ const required = [
   "NEXT_PUBLIC_SUPABASE_URL",
   "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
   "SUPABASE_SECRET_KEY",
-  "NEXT_PUBLIC_APP_URL",
   "LEAD_CAPTURE_SALT",
   "LEAD_CAPTURE_ENABLED",
 ];
@@ -16,8 +15,24 @@ if (process.env.APP_ENV !== "staging") {
   console.error("APP_ENV=staging est obligatoire.");
   process.exit(1);
 }
-for (const name of ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_APP_URL", "BOOKING_URL"]) {
-  const value = process.env[name];
+
+function resolveAppUrl(environment = process.env) {
+  if (environment.NEXT_PUBLIC_APP_URL) return environment.NEXT_PUBLIC_APP_URL;
+  if (environment.VERCEL_ENV === "preview" && environment.VERCEL_URL) return `https://${environment.VERCEL_URL}`;
+  return undefined;
+}
+
+const resolvedAppUrl = resolveAppUrl(process.env);
+if (!resolvedAppUrl) {
+  console.error("NEXT_PUBLIC_APP_URL ou un contexte Preview Vercel valide est obligatoire.");
+  process.exit(1);
+}
+
+for (const [name, value] of [
+  ["NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL],
+  ["NEXT_PUBLIC_APP_URL", resolvedAppUrl],
+  ["BOOKING_URL", process.env.BOOKING_URL],
+]) {
   if (!value) continue;
   const url = new URL(value);
   if (url.protocol !== "https:" || ["localhost", "127.0.0.1"].includes(url.hostname)) {

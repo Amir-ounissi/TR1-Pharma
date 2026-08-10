@@ -5,20 +5,42 @@ const environmentSchema = z.object({
   NEXT_PUBLIC_SUPABASE_URL: z.url(),
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z.string().min(16),
   SUPABASE_SECRET_KEY: z.string().min(16),
-  NEXT_PUBLIC_APP_URL: z.url(),
+  NEXT_PUBLIC_APP_URL: z.url().optional(),
   LEAD_CAPTURE_SALT: z.string().min(24),
   LEAD_CAPTURE_ENABLED: z.enum(["true", "false"]),
   BOOKING_URL: z.union([z.url(), z.literal("")]).optional(),
   NEXT_PUBLIC_ANALYTICS_PROVIDER: z.union([z.literal("dataLayer"), z.literal("")]).optional(),
 });
 
+type RuntimeEnvironmentInput = Record<string, string | undefined>;
+
+function getAppEnvironment(environment: RuntimeEnvironmentInput) {
+  return environment.APP_ENV
+    ?? (environment.NODE_ENV === "production"
+      ? "production"
+      : environment.NODE_ENV === "test"
+        ? "test"
+        : "local");
+}
+
+export function resolveAppUrl(environment: RuntimeEnvironmentInput = process.env) {
+  if (environment.NEXT_PUBLIC_APP_URL) return environment.NEXT_PUBLIC_APP_URL;
+  if (environment.VERCEL_ENV === "preview" && environment.VERCEL_URL) return `https://${environment.VERCEL_URL}`;
+  return undefined;
+}
+
+export function resolveOnboardingRedirectUrl(environment: RuntimeEnvironmentInput = process.env) {
+  const appUrl = readRuntimeEnvironment(environment).NEXT_PUBLIC_APP_URL;
+  return `${appUrl}/auth/confirm?next=/onboarding`;
+}
+
 export function readRuntimeEnvironment(environment: Record<string, string | undefined> = process.env) {
   const parsed = environmentSchema.parse({
-    APP_ENV: environment.APP_ENV ?? (environment.NODE_ENV === "production" ? "production" : environment.NODE_ENV === "test" ? "test" : "local"),
+    APP_ENV: getAppEnvironment(environment),
     NEXT_PUBLIC_SUPABASE_URL: environment.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: environment.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? environment.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     SUPABASE_SECRET_KEY: environment.SUPABASE_SECRET_KEY ?? environment.SUPABASE_SERVICE_ROLE_KEY,
-    NEXT_PUBLIC_APP_URL: environment.NEXT_PUBLIC_APP_URL,
+    NEXT_PUBLIC_APP_URL: resolveAppUrl(environment),
     LEAD_CAPTURE_SALT: environment.LEAD_CAPTURE_SALT,
     LEAD_CAPTURE_ENABLED: environment.LEAD_CAPTURE_ENABLED ?? "true",
     BOOKING_URL: environment.BOOKING_URL ?? "",
@@ -30,6 +52,10 @@ export function readRuntimeEnvironment(environment: Record<string, string | unde
       if (value && new URL(value).protocol !== "https:") throw new Error(`${name} doit utiliser HTTPS en ${parsed.APP_ENV}.`);
       if (value && ["localhost", "127.0.0.1"].includes(new URL(value).hostname)) throw new Error(`${name} ne peut pas cibler localhost en ${parsed.APP_ENV}.`);
     }
+  }
+
+  if (!parsed.NEXT_PUBLIC_APP_URL && parsed.APP_ENV !== "local" && parsed.APP_ENV !== "test") {
+    throw new Error(`NEXT_PUBLIC_APP_URL est obligatoire en ${parsed.APP_ENV} hors Preview Vercel.`);
   }
 
   return {

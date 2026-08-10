@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readRuntimeEnvironment } from "./runtime-environment";
+import { readRuntimeEnvironment, resolveOnboardingRedirectUrl } from "./runtime-environment";
 
 const valid = {
   APP_ENV: "staging",
@@ -16,8 +16,47 @@ describe("runtime environment", () => {
     expect(readRuntimeEnvironment(valid).leadCaptureEnabled).toBe(true);
   });
 
+  it("uses the explicit app URL when provided", () => {
+    expect(readRuntimeEnvironment(valid).NEXT_PUBLIC_APP_URL).toBe("https://staging.example.test");
+  });
+
+  it("derives the preview app URL from VERCEL_URL", () => {
+    expect(readRuntimeEnvironment({
+      ...valid,
+      NEXT_PUBLIC_APP_URL: undefined,
+      VERCEL_ENV: "preview",
+      VERCEL_URL: "tr1-preview-example.vercel.app",
+    }).NEXT_PUBLIC_APP_URL).toBe("https://tr1-preview-example.vercel.app");
+  });
+
   it("rejects localhost for staging", () => {
     expect(() => readRuntimeEnvironment({ ...valid, NEXT_PUBLIC_APP_URL: "http://127.0.0.1:3000" })).toThrow(/HTTPS|localhost/);
+  });
+
+  it("rejects a production environment without an app URL", () => {
+    expect(() => readRuntimeEnvironment({
+      ...valid,
+      APP_ENV: "production",
+      NEXT_PUBLIC_APP_URL: undefined,
+    })).toThrow(/NEXT_PUBLIC_APP_URL/);
+  });
+
+  it("rejects a staging environment without an app URL outside preview", () => {
+    expect(() => readRuntimeEnvironment({
+      ...valid,
+      NEXT_PUBLIC_APP_URL: undefined,
+      VERCEL_ENV: undefined,
+      APP_ENV: "staging",
+    })).toThrow(/NEXT_PUBLIC_APP_URL/);
+  });
+
+  it("rejects preview without VERCEL_URL when no explicit app URL exists", () => {
+    expect(() => readRuntimeEnvironment({
+      ...valid,
+      NEXT_PUBLIC_APP_URL: undefined,
+      VERCEL_ENV: "preview",
+      VERCEL_URL: undefined,
+    })).toThrow(/NEXT_PUBLIC_APP_URL/);
   });
 
   it("rejects missing server secrets", () => {
@@ -26,5 +65,14 @@ describe("runtime environment", () => {
 
   it("supports an explicit lead capture kill switch", () => {
     expect(readRuntimeEnvironment({ ...valid, LEAD_CAPTURE_ENABLED: "false" }).leadCaptureEnabled).toBe(false);
+  });
+
+  it("builds onboarding redirect URLs from the resolved preview URL", () => {
+    expect(resolveOnboardingRedirectUrl({
+      ...valid,
+      NEXT_PUBLIC_APP_URL: undefined,
+      VERCEL_ENV: "preview",
+      VERCEL_URL: "tr1-preview-example.vercel.app",
+    })).toBe("https://tr1-preview-example.vercel.app/auth/confirm?next=/onboarding");
   });
 });

@@ -6,6 +6,7 @@ import { z } from "zod";
 import { previewImport } from "@/lib/imports/import-engine";
 import type { ColumnMapping, ImportMode, ImportType } from "@/lib/imports/import-types";
 import { requirePlatformAdmin } from "@/lib/auth";
+import { resolveOnboardingRedirectUrl } from "@/lib/runtime-environment";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type OnboardingActionState = {
@@ -121,10 +122,9 @@ export async function inviteOnboardingAdminAction(formData: FormData) {
     admin.from("roles").select("id").eq("key", "brand_admin").single(),
   ]);
   if (!brand || !role) throw new Error("Configuration de marque incomplète.");
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const { data, error } = await admin.auth.admin.inviteUserByEmail(parsed.email, {
     data: { full_name: parsed.fullName },
-    redirectTo: `${appUrl}/auth/confirm?next=/onboarding`,
+    redirectTo: resolveOnboardingRedirectUrl(),
   });
   if (error || !data.user) throw new Error(error?.message ?? "Invitation impossible.");
   const { error: membershipError } = await admin.from("memberships").insert({
@@ -292,10 +292,9 @@ export async function executeOnboardingImportAction(formData: FormData) {
       const fullName = `${String(payload.first_name ?? "")} ${String(payload.last_name ?? "")}`.trim();
       const { data: existing } = await admin.from("users").select("id").ilike("email", email).maybeSingle();
       if (existing) continue;
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
       const { data: invitation, error: invitationError } = await admin.auth.admin.inviteUserByEmail(email, {
         data: { full_name: fullName },
-        redirectTo: `${appUrl}/auth/confirm?next=/onboarding`,
+        redirectTo: resolveOnboardingRedirectUrl(),
       });
       if (invitationError || !invitation.user) {
         await Promise.all(invitedUserIds.map((userId) => admin.auth.admin.deleteUser(userId)));

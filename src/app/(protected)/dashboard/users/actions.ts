@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireActiveBrand } from "@/lib/auth";
+import { resolveOnboardingRedirectUrl } from "@/lib/runtime-environment";
 
 export type CreateUserState = { error?: string; success?: string };
 
@@ -35,10 +36,9 @@ export async function createUserAction(
   ]);
   if (!brandRecord || !role) return { error: "Configuration de marque incomplète." };
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const { data: invitation, error: invitationError } = await admin.auth.admin.inviteUserByEmail(
     parsed.data.email,
-    { data: { full_name: parsed.data.fullName }, redirectTo: `${appUrl}/auth/confirm?next=/onboarding` },
+    { data: { full_name: parsed.data.fullName }, redirectTo: resolveOnboardingRedirectUrl() },
   );
   if (invitationError || !invitation.user) return { error: invitationError?.message ?? "Invitation impossible." };
 
