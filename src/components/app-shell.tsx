@@ -11,12 +11,13 @@ import type { SearchItem } from "@/lib/ux/search";
 type AppShellProps = {
   children: React.ReactNode;
   brandName: string;
+  brandHint?: string;
   role: string;
   searchItems: SearchItem[];
   userName: string;
 };
 
-export function AppShell({ children, brandName, role, searchItems, userName }: AppShellProps) {
+export function AppShell({ children, brandName, brandHint = "Marque active", role, searchItems, userName }: AppShellProps) {
   return (
     <div className="tr1-product-da min-h-screen bg-[var(--tr1-ivory)]">
       <aside className="fixed inset-y-0 z-40 hidden w-[16.5rem] flex-col border-r border-white/10 bg-sidebar px-4 py-5 text-sidebar-foreground md:flex">
@@ -51,7 +52,7 @@ export function AppShell({ children, brandName, role, searchItems, userName }: A
           <form action={changeBrandAction} className="shrink-0">
             <Button className="h-10 max-w-44 justify-between gap-2 rounded-md px-2.5" title="Changer de marque" type="submit" variant="ghost">
               <span className="grid size-7 shrink-0 place-items-center rounded-md border border-[var(--tr1-line-strong)] bg-transparent text-[var(--tr1-navy)]"><Building2 className="size-3.5" /></span>
-              <span className="hidden min-w-0 text-left sm:block"><span className="block text-[0.62rem] font-medium uppercase tracking-wider text-muted-foreground">Marque active</span><span className="block truncate text-xs font-semibold">{brandName}</span></span>
+              <span className="hidden min-w-0 text-left sm:block"><span className="block text-[0.62rem] font-medium uppercase tracking-wider text-muted-foreground">{brandHint}</span><span className="block truncate text-xs font-semibold">{brandName}</span></span>
               <ChevronsUpDown className="hidden size-3.5 text-muted-foreground sm:block" />
             </Button>
           </form>

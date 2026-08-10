@@ -1,12 +1,13 @@
 import { AlertTriangle, ArrowRight, Building2, Clock3, MoonStar, ShieldCheck, Target, TrendingUp } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { CommercialEventTracker } from "@/components/commercial/commercial-event-tracker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/ux/page-header";
 import { SectionHeader } from "@/components/ux/section-header";
-import { requireActiveBrand } from "@/lib/auth";
+import { getOptionalActiveBrand, isPlatformAdmin } from "@/lib/auth";
 import type { CommercialHealthRow } from "@/lib/commercial-health";
 import { formatCompactCurrency, formatCompactNumber, formatCompactPercent, formatPerformanceMetric, formatPerformanceValue } from "@/lib/performance";
 import { presentationLabel } from "@/lib/presentation";
@@ -15,7 +16,66 @@ type DashboardMetrics = Record<string, number | null>;
 type ObjectiveRow = { metric_key: string; target_value: number; realized_value: number; attainment_percent: number | null; projected_value: number | null };
 
 export default async function DashboardPage() {
-  const { supabase, brand, profile } = await requireActiveBrand();
+  const [session, platformAdmin] = await Promise.all([getOptionalActiveBrand(), isPlatformAdmin()]);
+
+  if (!session.brand) {
+    if (!platformAdmin) redirect("/select-brand");
+
+    const { supabase, profile } = session;
+    const [{ count: brandsCount }, { count: pharmaciesCount }, { count: missionsCount }, { count: activeUsersCount }, { count: leadCount }, { data: onboardingSessions }] = await Promise.all([
+      supabase.from("brands").select("id", { count: "exact", head: true }),
+      supabase.from("brand_pharmacies").select("id", { count: "exact", head: true }).is("archived_at", null),
+      supabase.from("missions").select("id", { count: "exact", head: true }).is("archived_at", null),
+      supabase.from("memberships").select("id", { count: "exact", head: true }).eq("status", "active"),
+      supabase.from("commercial_leads").select("id", { count: "exact", head: true }),
+      supabase.from("brand_onboarding_sessions").select("id,brand_id,status,created_at").order("created_at", { ascending: false }).limit(5),
+    ]);
+
+    const recentOnboardingSessions = onboardingSessions ?? [];
+
+    return (
+      <main className="space-y-6">
+        <PageHeader eyebrow="Pilotage TR1" title="Vue globale multi-marques" description={`Bonjour ${profile.full_name}. Cette vue centralise l’activité TR1 avant d’entrer dans une marque.`} tone="dark" />
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          {[
+            { label: "Marques", value: brandsCount ?? 0 },
+            { label: "Pharmacies rattachées", value: pharmaciesCount ?? 0 },
+            { label: "Missions", value: missionsCount ?? 0 },
+            { label: "Utilisateurs actifs", value: activeUsersCount ?? 0 },
+            { label: "Leads TR1", value: leadCount ?? 0 },
+          ].map((item) => (
+            <Card key={item.label}><CardContent className="pt-5"><p className="font-mono text-2xl font-black tracking-[-0.05em]">{item.value}</p><p className="mt-1 text-sm font-medium">{item.label}</p></CardContent></Card>
+          ))}
+        </section>
+        <section className="grid gap-4 xl:grid-cols-[1.15fr_.85fr]">
+          <Card>
+            <CardHeader className="flex-row items-center justify-between">
+              <CardTitle>Actions globales</CardTitle>
+              <Badge variant="secondary">TR1</Badge>
+            </CardHeader>
+            <CardContent className="grid gap-3 sm:grid-cols-2">
+              <Button asChild><Link href="/dashboard/admin/onboarding">Créer ou activer une marque <ArrowRight /></Link></Button>
+              <Button asChild variant="outline"><Link href="/dashboard/admin/leads">Suivre les leads TR1 <ArrowRight /></Link></Button>
+              <Button asChild variant="outline"><Link href="/select-brand">Entrer dans une marque <ArrowRight /></Link></Button>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader><CardTitle>Déploiements récents</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              {recentOnboardingSessions.length ? recentOnboardingSessions.map((sessionItem) => (
+                <div key={sessionItem.id} className="rounded-[0.4rem] border border-[var(--tr1-line)] p-3">
+                  <p className="font-medium">{sessionItem.brand_id}</p>
+                  <p className="text-xs text-muted-foreground">{sessionItem.status} · {new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(new Date(sessionItem.created_at))}</p>
+                </div>
+              )) : <p className="text-sm text-muted-foreground">Aucun onboarding récent.</p>}
+            </CardContent>
+          </Card>
+        </section>
+      </main>
+    );
+  }
+
+  const { supabase, brand, profile } = session;
   const today = new Date();
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
   const todayDate = today.toISOString().slice(0, 10);

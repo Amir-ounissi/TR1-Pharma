@@ -1,10 +1,27 @@
+import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
-import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
+import { getBrandContexts, getOptionalActiveBrand, isPlatformAdmin } from "@/lib/auth";
 import { getNavigationItems, getRoleFamily } from "@/lib/ux/navigation";
 import type { SearchItem } from "@/lib/ux/search";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const [{ brand, profile, supabase }, contexts] = await Promise.all([requireActiveBrand(), getBrandContexts()]);
+  const [session, contexts, platformAdmin] = await Promise.all([getOptionalActiveBrand(), getBrandContexts(), isPlatformAdmin()]);
+
+  if (!session.brand) {
+    if (!platformAdmin) {
+      redirect("/select-brand");
+    }
+
+    const globalNavigation: SearchItem[] = [
+      { id: "navigation-dashboard", kind: "navigation", label: "Vue d’ensemble TR1", href: "/dashboard" },
+      { id: "navigation-leads", kind: "navigation", label: "Leads TR1", href: "/dashboard/admin/leads" },
+      { id: "navigation-onboarding", kind: "navigation", label: "Onboarding marques", href: "/dashboard/admin/onboarding" },
+    ];
+
+    return <AppShell brandHint="Vue active" brandName="TR1 global" role="super_admin" searchItems={globalNavigation} userName={session.profile.full_name}>{children}</AppShell>;
+  }
+
+  const { brand, profile, supabase } = session;
   const role = contexts.find((context) => context.id === brand.id)?.role ?? "brand_user";
 
   const [pharmaciesResult, missionsResult, tasksResult] = await Promise.all([

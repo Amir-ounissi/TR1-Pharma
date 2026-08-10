@@ -18,6 +18,10 @@ type BrandContextRow = {
   role_key: string;
 };
 
+type UserProfile = {
+  full_name: string;
+};
+
 export async function requireUser() {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getClaims();
@@ -29,16 +33,8 @@ export async function requireUser() {
 
 export async function requirePlatformAdmin() {
   const { supabase, userId } = await requireUser();
-  const { data: membership, error } = await supabase
-    .from("memberships")
-    .select("id,roles!inner(key)")
-    .eq("user_id", userId)
-    .is("brand_id", null)
-    .eq("status", "active")
-    .eq("roles.key", "super_admin")
-    .maybeSingle();
+  const membership = await getPlatformAdminMembership(supabase, userId);
 
-  if (error) throw error;
   if (!membership) redirect("/dashboard");
 
   return { supabase, userId };
@@ -58,19 +54,48 @@ export async function getBrandContexts(): Promise<BrandContext[]> {
   }));
 }
 
-export async function requireActiveBrand() {
+export async function isPlatformAdmin() {
+  const { supabase, userId } = await requireUser();
+  return Boolean(await getPlatformAdminMembership(supabase, userId));
+}
+
+export async function getOptionalActiveBrand() {
   const cookieStore = await cookies();
   const activeBrandId = cookieStore.get(ACTIVE_BRAND_COOKIE)?.value;
-  if (!activeBrandId) redirect("/select-brand");
-
   const { supabase, userId } = await requireUser();
-  const [{ data: brand }, { data: profile }] = await Promise.all([
-    supabase.from("brands").select("id,name,slug").eq("id", activeBrandId).maybeSingle(),
-    supabase.from("user_profiles").select("full_name").eq("user_id", userId).maybeSingle(),
-  ]);
+  const profile = await getUserProfile(supabase, userId);
+
+  if (!activeBrandId) {
+    return { supabase, userId, profile, brand: null };
+  }
+
+  const { data: brand } = await supabase.from("brands").select("id,name,slug").eq("id", activeBrandId).maybeSingle();
+  return { supabase, userId, profile, brand: brand ?? null };
+}
+
+export async function requireActiveBrand() {
+  const session = await getOptionalActiveBrand();
+  if (!session.brand) redirect("/select-brand");
+  return session as typeof session & { brand: { id: string; name: string; slug: string } };
+}
+
+async function getPlatformAdminMembership(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
+  const { data: membership, error } = await supabase
+    .from("memberships")
+    .select("id,roles!inner(key)")
+    .eq("user_id", userId)
+    .is("brand_id", null)
+    .eq("status", "active")
+    .eq("roles.key", "super_admin")
+    .maybeSingle();
+
+  if (error) throw error;
+  return membership;
+}
+
+async function getUserProfile(supabase: Awaited<ReturnType<typeof createClient>>, userId: string): Promise<UserProfile> {
+  const { data: profile } = await supabase.from("user_profiles").select("full_name").eq("user_id", userId).maybeSingle();
 
   if (!profile?.full_name) redirect("/onboarding");
-  if (!brand) redirect("/select-brand");
-
-  return { supabase, userId, brand, profile };
+  return profile;
 }

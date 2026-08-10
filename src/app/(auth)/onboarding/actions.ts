@@ -22,5 +22,16 @@ export async function completeOnboardingAction(
     .eq("user_id", userId);
 
   if (error) return { error: "Le profil n’a pas pu être enregistré." };
+
+  const { data: membership } = await supabase
+    .from("memberships")
+    .select("id,roles!inner(key)")
+    .is("brand_id", null)
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .eq("roles.key", "super_admin")
+    .maybeSingle();
+
+  if (membership) redirect("/dashboard");
   redirect("/select-brand");
 }

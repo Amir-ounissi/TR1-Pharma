@@ -26,5 +26,14 @@ export async function loginAction(
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) return { error: "Connexion impossible. Vérifiez vos identifiants." };
 
+  const { data: membership } = await supabase
+    .from("memberships")
+    .select("id,roles!inner(key)")
+    .is("brand_id", null)
+    .eq("status", "active")
+    .eq("roles.key", "super_admin")
+    .maybeSingle();
+
+  if (membership) redirect("/dashboard");
   redirect("/select-brand");
 }
