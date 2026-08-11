@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { loginAction } from "@/app/(auth)/login/actions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -45,6 +46,13 @@ export function LoginForm() {
       <Button className="h-12 w-full rounded-xl bg-[#c84f24] text-sm font-black text-white shadow-[0_16px_34px_rgba(200,79,36,.24)] hover:bg-[#a63f19]" disabled={pending}>
         {pending ? "Connexion…" : "Se connecter"}
       </Button>
+      <div className="rounded-xl border border-[#0b1e32]/8 bg-white/75 px-4 py-3 text-sm text-[#445265]">
+        <p className="font-semibold text-[#0b1e32]">Pas encore de compte ?</p>
+        <p className="mt-1 text-xs leading-5 text-[#667384]">Créez votre accès puis faites-vous attribuer une marque pour utiliser TR1.</p>
+        <Link className="mt-3 inline-flex items-center gap-2 font-black text-[#0b1e32] hover:text-[#c84f24]" href="/inscription">
+          Créer un compte
+        </Link>
+      </div>
       <p className="text-center text-xs leading-5 text-[#667384]">
         Votre accès dépend de votre rôle, de votre marque active et de vos autorisations opérationnelles.
       </p>
