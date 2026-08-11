@@ -16,12 +16,12 @@ export default function SignUpPage() {
             Créez votre accès <span className="text-[#c84f24]">TR1</span>.
           </h1>
           <p className="max-w-xl text-base leading-7 text-[#667384] sm:text-lg">
-            Ouvrez votre compte, confirmez votre email, puis faites-vous attribuer une marque pour entrer dans votre espace opérationnel.
+            Marque, agent terrain ou intervenant : ouvrez votre compte avec un parcours adapté, confirmez votre email, puis laissez TR1 activer le bon périmètre.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-4 text-sm text-[#445265]">
           <div className="font-mono text-[.68rem] font-bold uppercase tracking-[.14em] text-[#667384]">
-            Création · Confirmation email · Attribution de marque
+            Choix du profil · Confirmation email · Activation des accès
           </div>
           <Link className="inline-flex items-center gap-2 font-black text-[#0b1e32] hover:text-[#c84f24]" href="/login">
             J’ai déjà un compte

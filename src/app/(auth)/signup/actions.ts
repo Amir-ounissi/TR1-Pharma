@@ -1,31 +1,28 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { z } from "zod";
+import { buildSignupMetadata, getSignupSuccessMessage, signupIntentSchema } from "@/lib/signup-intent";
 import { createClient } from "@/lib/supabase/server";
 import { resolveOnboardingRedirectUrl } from "@/lib/runtime-environment";
 
 export type SignUpState = { error?: string; success?: string };
 
-const signUpSchema = z.object({
-  fullName: z.string().trim().min(2).max(120),
-  email: z.email(),
-  password: z.string().min(8).max(72),
-  confirmPassword: z.string().min(8).max(72),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Les mots de passe ne correspondent pas.",
-  path: ["confirmPassword"],
-});
-
 export async function signUpAction(
   _state: SignUpState,
   formData: FormData,
 ): Promise<SignUpState> {
-  const parsed = signUpSchema.safeParse({
+  const parsed = signupIntentSchema.safeParse({
     fullName: formData.get("fullName"),
     email: formData.get("email"),
     password: formData.get("password"),
     confirmPassword: formData.get("confirmPassword"),
+    profileType: formData.get("profileType"),
+    companyName: formData.get("companyName"),
+    jobTitle: formData.get("jobTitle"),
+    currentOrganization: formData.get("currentOrganization"),
+    territory: formData.get("territory"),
+    facilitatorKind: formData.get("facilitatorKind"),
+    specialty: formData.get("specialty"),
   });
 
   if (!parsed.success) {
@@ -38,7 +35,7 @@ export async function signUpAction(
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
-      data: { full_name: parsed.data.fullName },
+      data: buildSignupMetadata(parsed.data),
       emailRedirectTo: resolveOnboardingRedirectUrl(),
     },
   });
@@ -52,6 +49,6 @@ export async function signUpAction(
   }
 
   return {
-    success: "Compte créé. Vérifiez votre email pour confirmer votre accès, puis attendez l’attribution de votre marque.",
+    success: getSignupSuccessMessage(parsed.data.profileType),
   };
 }
