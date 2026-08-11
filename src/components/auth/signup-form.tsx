@@ -40,26 +40,26 @@ export function SignUpForm() {
   }, [profileType]);
 
   return (
-    <form action={action} className="space-y-5">
+    <form action={action} className="space-y-4">
       {state.error || state.success ? (
         <Alert variant={state.error ? "destructive" : "default"} className={state.error ? "border-[#d95034]/35 bg-[#fff1ec] text-[#8f2e19]" : "border-[#0b1e32]/10 bg-[#f4f8f3] text-[#1f5130]"}>
           <AlertDescription>{state.error ?? state.success}</AlertDescription>
         </Alert>
       ) : null}
       <input type="hidden" name="profileType" value={profileType} />
-      <div className="space-y-3">
+      <div className="space-y-2.5">
         <div className="space-y-1">
           <p className="text-xs font-black uppercase tracking-[.12em] text-[#445265]">Type de compte demandé</p>
-          <p className="text-sm text-[#667384]">Choisissez votre parcours. Les droits finaux sont attribués ensuite par TR1 ou par la marque.</p>
+          <p className="text-sm text-[#667384]">Choisissez votre parcours.</p>
         </div>
-        <div className="grid gap-3">
+        <div className="grid gap-2 sm:grid-cols-3">
           {profileOptions.map((option) => (
             <button
               key={option.value}
               type="button"
               onClick={() => setProfileType(option.value)}
               className={cn(
-                "rounded-2xl border px-4 py-4 text-left transition",
+                "rounded-2xl border px-3 py-3 text-left transition",
                 profileType === option.value
                   ? "border-[#c84f24] bg-[#fff1ec] shadow-[0_10px_24px_rgba(200,79,36,.12)]"
                   : "border-[#e6ded1] bg-white hover:border-[#c84f24]/35 hover:bg-[#fffdfa]",
@@ -68,82 +68,84 @@ export function SignUpForm() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-black text-[#0b1e32]">{option.label}</p>
-                  <p className="mt-1 text-sm leading-6 text-[#667384]">{option.description}</p>
+                  <p className="mt-1 line-clamp-3 text-[.88rem] leading-5 text-[#667384]">{option.description}</p>
                 </div>
                 <span className={cn("mt-1 inline-flex size-4 rounded-full border", profileType === option.value ? "border-[#c84f24] bg-[#c84f24]" : "border-[#c8c0b2] bg-white")} />
               </div>
-              <p className="mt-3 font-mono text-[.62rem] font-black uppercase tracking-[.14em] text-[#c84f24]">{option.accent}</p>
+              <p className="mt-2 font-mono text-[.58rem] font-black uppercase tracking-[.12em] text-[#c84f24]">{option.accent}</p>
             </button>
           ))}
         </div>
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="fullName" className="text-xs font-black uppercase tracking-[.12em] text-[#445265]">Nom complet</Label>
-        <Input id="fullName" name="fullName" autoComplete="name" required className="h-12 rounded-xl border-[#d8d0c2] bg-white text-[#0b1e32] shadow-none placeholder:text-[#8a93a1] focus-visible:border-[#c84f24] focus-visible:ring-[#c84f24]/25" placeholder="Prénom Nom" />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="email" className="text-xs font-black uppercase tracking-[.12em] text-[#445265]">Email professionnel</Label>
-        <Input id="email" name="email" type="email" autoComplete="email" required className="h-12 rounded-xl border-[#d8d0c2] bg-white text-[#0b1e32] shadow-none placeholder:text-[#8a93a1] focus-visible:border-[#c84f24] focus-visible:ring-[#c84f24]/25" placeholder="vous@marque.com" />
-      </div>
-      {profileType === "brand" ? (
-        <>
-          <div className="space-y-2">
-            <Label htmlFor="companyName" className="text-xs font-black uppercase tracking-[.12em] text-[#445265]">Marque ou société</Label>
-            <Input id="companyName" name="companyName" autoComplete="organization" required className="h-12 rounded-xl border-[#d8d0c2] bg-white text-[#0b1e32] shadow-none placeholder:text-[#8a93a1] focus-visible:border-[#c84f24] focus-visible:ring-[#c84f24]/25" placeholder="VK Swiss" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="jobTitle" className="text-xs font-black uppercase tracking-[.12em] text-[#445265]">Fonction</Label>
-            <Input id="jobTitle" name="jobTitle" autoComplete="organization-title" required className="h-12 rounded-xl border-[#d8d0c2] bg-white text-[#0b1e32] shadow-none placeholder:text-[#8a93a1] focus-visible:border-[#c84f24] focus-visible:ring-[#c84f24]/25" placeholder="Directeur commercial, chef de marque…" />
-          </div>
-        </>
-      ) : null}
-      {profileType === "agent" ? (
-        <>
-          <div className="space-y-2">
-            <Label htmlFor="currentOrganization" className="text-xs font-black uppercase tracking-[.12em] text-[#445265]">Structure actuelle</Label>
-            <Input id="currentOrganization" name="currentOrganization" autoComplete="organization" required className="h-12 rounded-xl border-[#d8d0c2] bg-white text-[#0b1e32] shadow-none placeholder:text-[#8a93a1] focus-visible:border-[#c84f24] focus-visible:ring-[#c84f24]/25" placeholder="VK Swiss, réseau externalisé, freelance…" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="territory" className="text-xs font-black uppercase tracking-[.12em] text-[#445265]">Zone ou secteur</Label>
-            <Input id="territory" name="territory" required className="h-12 rounded-xl border-[#d8d0c2] bg-white text-[#0b1e32] shadow-none placeholder:text-[#8a93a1] focus-visible:border-[#c84f24] focus-visible:ring-[#c84f24]/25" placeholder="Île-de-France, PACA, Suisse romande…" />
-          </div>
-        </>
-      ) : null}
-      {profileType === "facilitator" ? (
-        <>
-          <div className="space-y-2">
-            <Label htmlFor="facilitatorKind" className="text-xs font-black uppercase tracking-[.12em] text-[#445265]">Type d’intervention</Label>
-            <select id="facilitatorKind" name="facilitatorKind" required className="flex h-12 w-full rounded-xl border border-[#d8d0c2] bg-white px-3 text-sm text-[#0b1e32] shadow-none outline-none focus:border-[#c84f24]">
-              <option value="">Sélectionner</option>
-              <option value="animateur">Animateur</option>
-              <option value="formateur">Formateur</option>
-              <option value="mixte">Animateur + formateur</option>
-            </select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="specialty" className="text-xs font-black uppercase tracking-[.12em] text-[#445265]">Spécialité</Label>
-            <Input id="specialty" name="specialty" required className="h-12 rounded-xl border-[#d8d0c2] bg-white text-[#0b1e32] shadow-none placeholder:text-[#8a93a1] focus-visible:border-[#c84f24] focus-visible:ring-[#c84f24]/25" placeholder="Dermocosmétique, OTC, conseil équipe, sell-out…" />
-          </div>
-        </>
-      ) : null}
-      <div className="space-y-2">
-        <Label htmlFor="password" className="text-xs font-black uppercase tracking-[.12em] text-[#445265]">Mot de passe</Label>
-        <Input id="password" name="password" type="password" autoComplete="new-password" minLength={8} required className="h-12 rounded-xl border-[#d8d0c2] bg-white text-[#0b1e32] shadow-none placeholder:text-[#8a93a1] focus-visible:border-[#c84f24] focus-visible:ring-[#c84f24]/25" placeholder="Au moins 8 caractères" />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="confirmPassword" className="text-xs font-black uppercase tracking-[.12em] text-[#445265]">Confirmer le mot de passe</Label>
-        <Input id="confirmPassword" name="confirmPassword" type="password" autoComplete="new-password" minLength={8} required className="h-12 rounded-xl border-[#d8d0c2] bg-white text-[#0b1e32] shadow-none placeholder:text-[#8a93a1] focus-visible:border-[#c84f24] focus-visible:ring-[#c84f24]/25" placeholder="Répétez le mot de passe" />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-2 sm:col-span-2">
+          <Label htmlFor="fullName" className="text-xs font-black uppercase tracking-[.12em] text-[#445265]">Nom complet</Label>
+          <Input id="fullName" name="fullName" autoComplete="name" required className="h-11 rounded-xl border-[#d8d0c2] bg-white text-[#0b1e32] shadow-none placeholder:text-[#8a93a1] focus-visible:border-[#c84f24] focus-visible:ring-[#c84f24]/25" placeholder="Prénom Nom" />
+        </div>
+        <div className="space-y-2 sm:col-span-2">
+          <Label htmlFor="email" className="text-xs font-black uppercase tracking-[.12em] text-[#445265]">Email professionnel</Label>
+          <Input id="email" name="email" type="email" autoComplete="email" required className="h-11 rounded-xl border-[#d8d0c2] bg-white text-[#0b1e32] shadow-none placeholder:text-[#8a93a1] focus-visible:border-[#c84f24] focus-visible:ring-[#c84f24]/25" placeholder="vous@marque.com" />
+        </div>
+        {profileType === "brand" ? (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="companyName" className="text-xs font-black uppercase tracking-[.12em] text-[#445265]">Marque ou société</Label>
+              <Input id="companyName" name="companyName" autoComplete="organization" required className="h-11 rounded-xl border-[#d8d0c2] bg-white text-[#0b1e32] shadow-none placeholder:text-[#8a93a1] focus-visible:border-[#c84f24] focus-visible:ring-[#c84f24]/25" placeholder="VK Swiss" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="jobTitle" className="text-xs font-black uppercase tracking-[.12em] text-[#445265]">Fonction</Label>
+              <Input id="jobTitle" name="jobTitle" autoComplete="organization-title" required className="h-11 rounded-xl border-[#d8d0c2] bg-white text-[#0b1e32] shadow-none placeholder:text-[#8a93a1] focus-visible:border-[#c84f24] focus-visible:ring-[#c84f24]/25" placeholder="Directeur commercial, chef de marque…" />
+            </div>
+          </>
+        ) : null}
+        {profileType === "agent" ? (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="currentOrganization" className="text-xs font-black uppercase tracking-[.12em] text-[#445265]">Structure actuelle</Label>
+              <Input id="currentOrganization" name="currentOrganization" autoComplete="organization" required className="h-11 rounded-xl border-[#d8d0c2] bg-white text-[#0b1e32] shadow-none placeholder:text-[#8a93a1] focus-visible:border-[#c84f24] focus-visible:ring-[#c84f24]/25" placeholder="VK Swiss, freelance…" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="territory" className="text-xs font-black uppercase tracking-[.12em] text-[#445265]">Zone ou secteur</Label>
+              <Input id="territory" name="territory" required className="h-11 rounded-xl border-[#d8d0c2] bg-white text-[#0b1e32] shadow-none placeholder:text-[#8a93a1] focus-visible:border-[#c84f24] focus-visible:ring-[#c84f24]/25" placeholder="Suisse romande" />
+            </div>
+          </>
+        ) : null}
+        {profileType === "facilitator" ? (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="facilitatorKind" className="text-xs font-black uppercase tracking-[.12em] text-[#445265]">Type d’intervention</Label>
+              <select id="facilitatorKind" name="facilitatorKind" required className="flex h-11 w-full rounded-xl border border-[#d8d0c2] bg-white px-3 text-sm text-[#0b1e32] shadow-none outline-none focus:border-[#c84f24]">
+                <option value="">Sélectionner</option>
+                <option value="animateur">Animateur</option>
+                <option value="formateur">Formateur</option>
+                <option value="mixte">Animateur + formateur</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="specialty" className="text-xs font-black uppercase tracking-[.12em] text-[#445265]">Spécialité</Label>
+              <Input id="specialty" name="specialty" required className="h-11 rounded-xl border-[#d8d0c2] bg-white text-[#0b1e32] shadow-none placeholder:text-[#8a93a1] focus-visible:border-[#c84f24] focus-visible:ring-[#c84f24]/25" placeholder="Formation, sell-out…" />
+            </div>
+          </>
+        ) : null}
+        <div className="space-y-2">
+          <Label htmlFor="password" className="text-xs font-black uppercase tracking-[.12em] text-[#445265]">Mot de passe</Label>
+          <Input id="password" name="password" type="password" autoComplete="new-password" minLength={8} required className="h-11 rounded-xl border-[#d8d0c2] bg-white text-[#0b1e32] shadow-none placeholder:text-[#8a93a1] focus-visible:border-[#c84f24] focus-visible:ring-[#c84f24]/25" placeholder="Au moins 8 caractères" />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="confirmPassword" className="text-xs font-black uppercase tracking-[.12em] text-[#445265]">Confirmer le mot de passe</Label>
+          <Input id="confirmPassword" name="confirmPassword" type="password" autoComplete="new-password" minLength={8} required className="h-11 rounded-xl border-[#d8d0c2] bg-white text-[#0b1e32] shadow-none placeholder:text-[#8a93a1] focus-visible:border-[#c84f24] focus-visible:ring-[#c84f24]/25" placeholder="Répétez le mot de passe" />
+        </div>
       </div>
       <Button className="h-12 w-full rounded-xl bg-[#c84f24] text-sm font-black text-white shadow-[0_16px_34px_rgba(200,79,36,.24)] hover:bg-[#a63f19]" disabled={pending}>
         {pending ? "Création…" : "Créer mon compte"}
       </Button>
-      <p className="rounded-xl border border-[#0b1e32]/8 bg-white/75 px-4 py-3 text-sm leading-6 text-[#445265]">
+      <p className="rounded-xl border border-[#0b1e32]/8 bg-white/75 px-4 py-2.5 text-sm leading-6 text-[#445265]">
         {helperMessage}
       </p>
-      <p className="text-center text-xs leading-5 text-[#667384]">
+      <p className="text-center text-[.78rem] leading-5 text-[#667384]">
         La création du compte n’accorde pas automatiquement un rôle final, une marque ou des droits terrain.
       </p>
-      <p className="text-center text-sm text-[#445265]">
+      <p className="text-center text-sm text-[#445265] sm:hidden">
         Déjà un compte ?{" "}
         <Link className="font-black text-[#0b1e32] hover:text-[#c84f24]" href="/login">
           Se connecter
