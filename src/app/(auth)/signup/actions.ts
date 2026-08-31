@@ -7,6 +7,13 @@ import { resolveOnboardingRedirectUrl } from "@/lib/runtime-environment";
 
 export type SignUpState = { error?: string; success?: string };
 
+function getOptionalField(formData: FormData, key: string) {
+  const value = formData.get(key);
+  if (typeof value !== "string") return undefined;
+  const trimmedValue = value.trim();
+  return trimmedValue.length > 0 ? trimmedValue : undefined;
+}
+
 export async function signUpAction(
   _state: SignUpState,
   formData: FormData,
@@ -17,12 +24,12 @@ export async function signUpAction(
     password: formData.get("password"),
     confirmPassword: formData.get("confirmPassword"),
     profileType: formData.get("profileType"),
-    companyName: formData.get("companyName"),
-    jobTitle: formData.get("jobTitle"),
-    currentOrganization: formData.get("currentOrganization"),
-    territory: formData.get("territory"),
-    facilitatorKind: formData.get("facilitatorKind"),
-    specialty: formData.get("specialty"),
+    companyName: getOptionalField(formData, "companyName"),
+    jobTitle: getOptionalField(formData, "jobTitle"),
+    currentOrganization: getOptionalField(formData, "currentOrganization"),
+    territory: getOptionalField(formData, "territory"),
+    facilitatorKind: getOptionalField(formData, "facilitatorKind"),
+    specialty: getOptionalField(formData, "specialty"),
   });
 
   if (!parsed.success) {
