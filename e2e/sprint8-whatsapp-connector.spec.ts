@@ -1,4 +1,5 @@
 import { expect, test, type APIRequestContext } from "@playwright/test";
+import { resolveNaturalDate } from "../src/lib/assistant/assistant-dates";
 import { adminClient, signIn } from "./test-helpers";
 
 const agentId = "00000000-0000-0000-0000-0000000000a3";
@@ -84,19 +85,22 @@ test.describe.serial("Sprint 8 — Connecteur WhatsApp", () => {
     await admin.from("assistant_action_drafts").delete().eq("user_id", agentId);
 
     const draftMessageId = `sprint8-draft-${Date.now()}`;
+    const reminderMessage = "Visite terminée. Intérêt pour DREAM. La rappeler mardi prochain.";
+    const expectedReminder = resolveNaturalDate(reminderMessage, { timezone: "Europe/Paris" });
+    expect(expectedReminder).not.toBeNull();
     const draft = await simulate(
       request,
-      "Visite terminée. Intérêt pour DREAM. La rappeler mardi prochain.",
+      reminderMessage,
       { messageId: draftMessageId },
     );
     expect(draft.body.response).toContain("Compte rendu préparé");
     expect(draft.body.response).toContain("Pharmacie République");
     expect(draft.body.response).toContain("1 — Confirmer");
-    expect(draft.body.response).toMatch(/mardi 4 août 2026/i);
+    expect(draft.body.response).toContain(expectedReminder!.label);
 
     const duplicate = await simulate(
       request,
-      "Visite terminée. Intérêt pour DREAM. La rappeler mardi prochain.",
+      reminderMessage,
       { messageId: draftMessageId },
     );
     expect(duplicate.body).toMatchObject({ duplicate: true, response: null });
@@ -125,7 +129,7 @@ test.describe.serial("Sprint 8 — Connecteur WhatsApp", () => {
       .eq("related_interaction_id", interactions![0].id);
     expect(tasks).toHaveLength(1);
     expect(tasks?.[0].assigned_to).toBe(agentId);
-    expect(tasks?.[0].due_at).toContain("2026-08-04");
+    expect(new Date(tasks![0].due_at).toISOString()).toBe(expectedReminder!.iso);
 
     const confirmedAgain = await simulate(request, "1");
     expect(confirmedAgain.body.response).toContain("déjà été enregistrée");

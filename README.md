@@ -1,6 +1,6 @@
 # TR1 Pharma Platform
 
-Socle SaaS multi-marques pour le pilotage commercial en pharmacie. La plateforme couvre l’authentification, le référentiel officinal, le pipeline commercial, les tâches, les commandes, les implantations, les réassorts, l’activité des comptes et la distribution numérique.
+TR1 Pharma est une plateforme SaaS de pilotage commercial et d’exécution terrain dédiée aux marques qui se développent en pharmacie. Chaque marque cliente dispose de son environnement strictement séparé ; un même agent ou intervenant peut travailler pour plusieurs marques uniquement dans les périmètres qui lui sont autorisés.
 
 ## Prérequis
 
@@ -23,7 +23,7 @@ npm run dev
 
 `npm run db:reset` est la commande de reconstruction de référence : elle recrée la base locale, applique les migrations dans l’ordre et charge le seed. `npm run db:rebuild:sandbox` fournit le même comportement avec un nom explicite pour les environnements contraints. Le wrapper local isole la configuration Supabase dans `.supabase-home`, désactive uniquement la télémétrie et conserve tous les contrôles SQL et RLS.
 
-Si le sandbox interdit à la CLI d’inspecter le socket Docker alors que les conteneurs sont actifs, `npm run db:rebuild:sandbox` reconstruit directement la base locale via `docker exec`, enregistre les douze migrations et échoue dès la première erreur SQL.
+Si le sandbox interdit à la CLI d’inspecter le socket Docker alors que les conteneurs sont actifs, `npm run db:rebuild:sandbox` reconstruit directement la base locale via `docker exec`, enregistre les treize migrations et échoue dès la première erreur SQL.
 
 Après `npm run db:start`, exécuter `sh scripts/supabase-local.sh status -o env`. Reporter l’URL, la clé publique et la clé secrète dans `.env.local`. L’application accepte aussi les anciens noms `NEXT_PUBLIC_SUPABASE_ANON_KEY` et `SUPABASE_SERVICE_ROLE_KEY`, mais les nouveaux noms sont préférés.
 
@@ -37,6 +37,9 @@ L’application est disponible sur [http://localhost:3000](http://localhost:3000
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Client et serveur | Clé publique soumise aux politiques RLS |
 | `SUPABASE_SECRET_KEY` | Serveur uniquement | Invitations et administration Auth |
 | `NEXT_PUBLIC_APP_URL` | Client et serveur | URL canonique des redirections Auth |
+| `LEAD_CAPTURE_SALT` | Serveur uniquement | Sel secret des clés de déduplication et de limitation du formulaire public |
+| `BOOKING_URL` | Serveur uniquement | Lien HTTPS optionnel affiché après soumission |
+| `NEXT_PUBLIC_ANALYTICS_PROVIDER` | Client | Fournisseur optionnel ; vide par défaut, `dataLayer` si explicitement configuré |
 | `WHATSAPP_ENABLED` et `WHATSAPP_*` | Serveur uniquement | Connecteur WhatsApp Business optionnel |
 
 Ne jamais préfixer la clé secrète par `NEXT_PUBLIC_`. Elle doit être configurée uniquement dans les variables Vercel côté serveur.
@@ -52,6 +55,8 @@ Tous les comptes locaux utilisent le mot de passe `DemoTR1!2026`.
 | `agent@dermavita.local` | Agent commercial | Une pharmacie Dermavita affectée |
 | `admin@nutrilab.local` | Administrateur de marque | Nutrilab |
 
+Le compte `superadmin@tr1.local` est strictement un compte de démonstration pour le seed local ou un staging de démo isolé. Il ne doit jamais être réutilisé comme platform owner réel. Le vrai propriétaire plateforme doit être créé séparément, avec validation explicite, puis recevoir son rôle `super_admin` par une opération contrôlée côté serveur ou back-office sécurisé.
+
 ## Validation
 
 ```bash
@@ -64,6 +69,10 @@ npm run build
 npm run test:db
 npm run test:e2e
 npm run test:benchmark
+npm run staging:check-env # uniquement avec les variables staging réelles
+npm run staging:smoke # avec BASE_URL=https://...
+npm run release:check:local
+npm run release:check # gate pilote, bloquant tant que staging/audit/juridique restent ouverts
 ```
 
 `npm run db:test` exécute les tests pgTAP contre Supabase local et vérifie l’isolation entre marques ainsi que la restriction des agents à leurs affectations.
@@ -119,3 +128,12 @@ Cette procédure ne nécessite ni Meta, ni WhatsApp, ni géocodage, ni API Verce
 - [Onboarding marque et imports contrôlés Sprint 11](docs/sprint11-onboarding-imports.md)
 - [Release Sprint 11](docs/releases/sprint-11-release.md)
 - [Checklist staging](docs/releases/staging-checklist.md)
+- [Go-to-market et pilot readiness Sprint 12](docs/sprint12-go-to-market.md)
+- [Rapport sécurité Sprint 12](docs/releases/sprint-12-security-report.md)
+- [Runbook staging Sprint 12.1](docs/releases/sprint-12-1-staging-runbook.md)
+- [Checklist juridique Sprint 12.1](docs/releases/sprint-12-1-legal-checklist.md)
+- [Accès staging Sprint 12.2A](docs/releases/sprint-12-2-staging-access-checklist.md)
+- [Informations juridiques Sprint 12.2A](docs/releases/sprint-12-2-legal-information-checklist.md)
+- [Expérience Sharp Sprint 12.2A](docs/releases/sprint-12-2-sharp-experiment.md)
+- [Stabilité E2E Sprint 12.2A](docs/releases/sprint-12-2-e2e-stability-report.md)
+- [Clôture Sprint 12.2A](docs/releases/sprint-12-2-closure-report.md)

@@ -38,9 +38,11 @@ test("scénario 2 — Manager desktop", async ({ page }) => {
   if (await priorityRow.count()) await priorityRow.getByRole("link").first().click();
   else await page.goto("/dashboard/pharmacies/00000000-0000-0000-0000-000000000411");
   await expect(page.getByTestId("terrain-pharmacy-header")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Préparer la relance" })).toBeVisible();
+  const followUpLink = page.getByRole("link", { name: "Interaction", exact: true });
+  await expect(followUpLink).toBeVisible();
+  await expect(followUpLink).toHaveAttribute("href", "?tab=activity");
   await page.screenshot({ path: `${artifacts}/pharmacy-detail-desktop.png`, fullPage: true });
-  await page.getByRole("link", { name: "Préparer la relance" }).click();
+  await page.goto(new URL((await followUpLink.getAttribute("href"))!, page.url()).toString());
   await expect(page).toHaveURL(/tab=activity/);
 });
 
@@ -75,7 +77,8 @@ test("scénario 4 — Mobile Agent", async ({ page }) => {
   const mobileNav = page.getByRole("navigation", { name: "Navigation mobile" });
   await expect(mobileNav).toBeVisible();
   await expect(mobileNav.getByText("Accueil", { exact: true })).toBeVisible();
-  await expect(mobileNav.getByText("Plus", { exact: true })).toBeVisible();
+  await expect(mobileNav.getByRole("link", { name: "Créer une action" })).toBeVisible();
+  await expect(mobileNav.getByText("Documents", { exact: true })).toBeVisible();
   await expect(page.getByTestId("next-visit-card")).toBeInViewport();
   await expect(page.getByRole("button", { name: "Démarrer", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Waze", exact: true }).first()).toBeVisible();

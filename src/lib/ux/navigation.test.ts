@@ -14,6 +14,33 @@ describe("role navigation", () => {
     expect(getNavigationItems("tr1_manager").map((item) => item.href)).not.toContain("/dashboard/imports");
   });
 
+  it("splits global superadmin navigation from tenant navigation", () => {
+    const globalLinks = getNavigationItems("super_admin", "platform").map((item) => item.href);
+    const tenantLinks = getNavigationItems("super_admin", "tenant").map((item) => item.href);
+
+    expect(globalLinks).toEqual([
+      "/dashboard",
+      "/dashboard/admin/access-requests",
+      "/dashboard/admin/onboarding",
+      "/dashboard/admin/users",
+      "/dashboard/admin/leads",
+    ]);
+    expect(globalLinks).not.toContain("/dashboard/users");
+    expect(globalLinks).not.toContain("/dashboard/imports");
+    expect(tenantLinks).toContain("/dashboard/users");
+    expect(tenantLinks).toContain("/dashboard/imports");
+    expect(tenantLinks).not.toContain("/dashboard/admin/leads");
+  });
+
+  it("keeps platform functions hidden from brand admins and preserves field roles", () => {
+    const brandAdminLinks = getNavigationItems("brand_admin").map((item) => item.href);
+    const facilitatorLinks = getNavigationItems("facilitator").map((item) => item.href);
+
+    expect(brandAdminLinks).not.toContain("/dashboard/admin/users");
+    expect(brandAdminLinks).not.toContain("/dashboard/admin/leads");
+    expect(facilitatorLinks).toEqual(["/dashboard/field", "/dashboard/reports"]);
+  });
+
   it("classifies roles and nested active routes", () => {
     expect(getRoleFamily("super_admin")).toBe("admin");
     expect(getRoleFamily("facilitator")).toBe("facilitator");

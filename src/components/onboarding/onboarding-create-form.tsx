@@ -32,6 +32,10 @@ export function OnboardingCreateForm() {
         <Input id="brandCode" name="brandCode" required maxLength={40} placeholder="MARQUE_FR" />
       </div>
       <div className="space-y-2">
+        <Label htmlFor="brandSlug">Slug public</Label>
+        <Input id="brandSlug" name="brandSlug" maxLength={120} placeholder="vk-swiss" pattern="[a-z0-9-]+" />
+      </div>
+      <div className="space-y-2">
         <Label htmlFor="countryCode">Pays</Label>
         <Input id="countryCode" name="countryCode" required defaultValue="FR" maxLength={2} />
       </div>

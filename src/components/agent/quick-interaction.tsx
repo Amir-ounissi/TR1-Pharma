@@ -39,6 +39,7 @@ function createInitialDraft(): Draft {
 export function QuickInteraction({
   brandPharmacyId,
   pharmacyId,
+  draftScope,
   commercialStatus,
   lastOrderAt,
   visitStartedAt,
@@ -46,6 +47,7 @@ export function QuickInteraction({
 }: {
   brandPharmacyId: string;
   pharmacyId: string;
+  draftScope?: string;
   commercialStatus: string;
   lastOrderAt?: string | null;
   visitStartedAt?: string;
@@ -56,15 +58,15 @@ export function QuickInteraction({
   const [state, action, pending] = useActionState(quickInteractionAction, {});
 
   useEffect(() => {
-    const restored = loadDraft<Draft>(localStorage, key);
+    const restored = loadDraft<Draft>(localStorage, key, { contextKey: draftScope });
     if (!restored) return;
     const timer = window.setTimeout(() => setDraft(restored), 0);
     return () => window.clearTimeout(timer);
-  }, [key]);
+  }, [draftScope, key]);
 
   useEffect(() => {
-    if (draft.note || draft.noNextReason) saveDraft(localStorage, key, draft);
-  }, [draft, key]);
+    if (draft.note || draft.noNextReason) saveDraft(localStorage, key, draft, { ttlHours: 24, contextKey: draftScope });
+  }, [draft, draftScope, key]);
 
   useEffect(() => {
     if (state.success) {
@@ -141,7 +143,7 @@ export function QuickInteraction({
       <Button type="submit" size="lg" disabled={pending} className="min-h-12 w-full bg-[#ee6c3b] text-white hover:bg-[#d85a2d]">
         {pending ? "Enregistrement…" : "Enregistrer et revenir à ma journée"}
       </Button>
-      <p className="text-center text-xs text-muted-foreground">Brouillon conservé automatiquement sur cet appareil.</p>
+      <p className="text-center text-xs text-muted-foreground">Brouillon local conservé 24 h maximum sur cet appareil.</p>
     </form>
   );
 }

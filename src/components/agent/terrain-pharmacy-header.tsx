@@ -16,6 +16,8 @@ type TerrainPharmacyHeaderProps = {
   lastOrderAt?: string | null;
   nextActionType?: string | null;
   nextActionAt?: string | null;
+  objective?: string;
+  primaryAction?: { href: string; label: string };
   navigation: NavigablePharmacy;
 };
 
@@ -34,7 +36,7 @@ export function TerrainPharmacyHeader(props: TerrainPharmacyHeaderProps) {
             <h1 className="mt-1 font-mono text-2xl font-black uppercase tracking-[-0.055em] text-[var(--tr1-navy)] sm:text-3xl">{props.name}</h1>
             <p className="mt-1 text-sm text-muted-foreground">{props.address}</p>
           </div>
-          <div className="flex gap-2"><Badge variant="outline" className="border-[var(--tr1-line-strong)] bg-transparent">{props.status}</Badge><Badge variant="outline" className="border-[var(--tr1-orange)] bg-transparent text-[var(--tr1-orange)]">{props.potential}</Badge></div>
+          <div className="flex flex-wrap gap-2">{props.objective ? <Badge className="bg-[var(--tr1-orange)] text-white">{props.objective}</Badge> : null}<Badge variant="outline" className="border-[var(--tr1-line-strong)] bg-transparent">{props.status}</Badge><Badge variant="outline" className="border-[var(--tr1-orange)] bg-transparent text-[var(--tr1-orange)]">{props.potential}</Badge></div>
         </div>
         <div className="grid overflow-hidden rounded-[0.4rem] border border-[var(--tr1-line-strong)] bg-transparent text-sm sm:grid-cols-3">
           <p className="p-3 sm:border-r sm:border-[var(--tr1-line)]"><span className="font-mono text-[0.58rem] font-bold uppercase tracking-[0.1em] text-muted-foreground">Téléphone</span><br /><strong className="font-mono text-[0.72rem] font-bold">{props.phone || "Non renseigné"}</strong></p>
@@ -50,7 +52,7 @@ export function TerrainPharmacyHeader(props: TerrainPharmacyHeaderProps) {
           <Button asChild size="lg" variant="secondary" className="min-h-11"><Link href={`/dashboard/orders/new?pharmacy=${props.brandPharmacyId}`}><ShoppingCart /> Commande</Link></Button>
           <Button asChild size="lg" variant="secondary" className="col-span-2 min-h-11 sm:col-span-1"><Link href={`/dashboard/missions/new?pharmacy=${props.brandPharmacyId}`}><CalendarPlus /> Mission</Link></Button>
         </div>
-        <Button asChild className="w-full border-[var(--tr1-navy)] bg-[var(--tr1-navy)] text-white hover:bg-[var(--tr1-navy-soft)] hover:text-white sm:w-auto" variant="outline"><Link href="?tab=activity"><CalendarPlus />Préparer la relance</Link></Button>
+        <Button asChild className="w-full border-[var(--tr1-navy)] bg-[var(--tr1-navy)] text-white hover:bg-[var(--tr1-navy-soft)] hover:text-white sm:w-auto" variant="outline"><Link href={props.primaryAction?.href ?? "?tab=activity"}><CalendarPlus />{props.primaryAction?.label ?? "Préparer la relance"}</Link></Button>
       </div>
     </section>
   );

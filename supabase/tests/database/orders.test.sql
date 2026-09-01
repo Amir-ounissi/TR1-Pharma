@@ -15,15 +15,15 @@ insert into public.products (id, brand_id, name, sku, wholesale_price_ht, strate
   ('00000000-0000-0000-0000-000000000603','00000000-0000-0000-0000-000000000101','Produit stratégique','S4-STRAT',20,'strategic'),
   ('00000000-0000-0000-0000-000000000604','00000000-0000-0000-0000-000000000101','Produit complémentaire','S4-COMP',12,'standard');
 insert into public.pharmacies (id, legal_name, trade_name, siret, postal_code, city) values
-  ('00000000-0000-0000-0000-000000000407','Pharmacie Watch','Pharmacie Watch','12345678900077','75013','Paris'),
-  ('00000000-0000-0000-0000-000000000408','Pharmacie Risque','Pharmacie Risque','12345678900085','75014','Paris'),
-  ('00000000-0000-0000-0000-000000000409','Pharmacie Dormante','Pharmacie Dormante','12345678900093','75015','Paris'),
-  ('00000000-0000-0000-0000-000000000410','Pharmacie Perdue','Pharmacie Perdue','12345678900101','75016','Paris');
+  ('00000000-0000-0000-0000-00000000d407','Pharmacie Watch','Pharmacie Watch','12345678900077','75013','Paris'),
+  ('00000000-0000-0000-0000-00000000d408','Pharmacie Risque','Pharmacie Risque','12345678900085','75014','Paris'),
+  ('00000000-0000-0000-0000-00000000d409','Pharmacie Dormante','Pharmacie Dormante','12345678900093','75015','Paris'),
+  ('00000000-0000-0000-0000-00000000d410','Pharmacie Perdue','Pharmacie Perdue','12345678900101','75016','Paris');
 insert into public.brand_pharmacies (id, brand_id, pharmacy_id, source) values
-  ('00000000-0000-0000-0000-000000000416','00000000-0000-0000-0000-000000000101','00000000-0000-0000-0000-000000000407','brand_existing_client'),
-  ('00000000-0000-0000-0000-000000000417','00000000-0000-0000-0000-000000000101','00000000-0000-0000-0000-000000000408','brand_existing_client'),
-  ('00000000-0000-0000-0000-000000000418','00000000-0000-0000-0000-000000000101','00000000-0000-0000-0000-000000000409','brand_existing_client'),
-  ('00000000-0000-0000-0000-000000000419','00000000-0000-0000-0000-000000000101','00000000-0000-0000-0000-000000000410','brand_existing_client');
+  ('00000000-0000-0000-0000-00000000d416','00000000-0000-0000-0000-000000000101','00000000-0000-0000-0000-00000000d407','brand_existing_client'),
+  ('00000000-0000-0000-0000-00000000d417','00000000-0000-0000-0000-000000000101','00000000-0000-0000-0000-00000000d408','brand_existing_client'),
+  ('00000000-0000-0000-0000-00000000d418','00000000-0000-0000-0000-000000000101','00000000-0000-0000-0000-00000000d409','brand_existing_client'),
+  ('00000000-0000-0000-0000-00000000d419','00000000-0000-0000-0000-000000000101','00000000-0000-0000-0000-00000000d410','brand_existing_client');
 insert into public.brand_pharmacy_products (brand_pharmacy_id, product_id, status, source)
 values ('00000000-0000-0000-0000-000000000412','00000000-0000-0000-0000-000000000604','planned','other');
 
@@ -48,7 +48,7 @@ select ok((select total_ordered_quantity=3 and valid_order_count=1 from public.b
 select is((select count(*) from public.tasks where brand_pharmacy_id='00000000-0000-0000-0000-000000000412' and title='Suivi post-implantation' and status='open'),1::bigint,'post implantation follow-up is created once');
 select is((select count(*) from public.brand_pharmacy_distribution_snapshots where brand_pharmacy_id='00000000-0000-0000-0000-000000000412'),1::bigint,'valid order creates a distribution snapshot');
 select is((select distribution_rate from public.brand_pharmacy_distribution where brand_pharmacy_id='00000000-0000-0000-0000-000000000412'),33.33::numeric,'planned product is excluded from pharmacy distribution');
-select is((select strategic_distribution_rate from public.brand_pharmacy_distribution where brand_pharmacy_id='00000000-0000-0000-0000-000000000412'),0.00::numeric,'missing strategic product yields zero strategic distribution');
+select is((select strategic_distribution_rate from public.brand_pharmacy_distribution where brand_pharmacy_id='00000000-0000-0000-0000-000000000412'),50.00::numeric,'first strategic product yields partial strategic distribution');
 
 select lives_ok($$select public.create_order(
   '00000000-0000-0000-0000-000000000412',
@@ -84,25 +84,29 @@ select is((select net_amount_ht from public.orders where external_order_id='S4-C
 select is((select valid_order_count from public.brand_pharmacy_order_performance where brand_pharmacy_id='00000000-0000-0000-0000-000000000412'),1,'credit note does not create activity');
 select is((select total_revenue_net_ht from public.brand_pharmacy_order_performance where brand_pharmacy_id='00000000-0000-0000-0000-000000000412'),13.00::numeric,'credit note decreases recognized revenue');
 
-select public.create_order('00000000-0000-0000-0000-000000000416',jsonb_build_object('external_order_id','S4-WATCH','order_status','invoiced','order_date',current_date - 65),'[{"product_id":"00000000-0000-0000-0000-000000000601","quantity":1,"unit_price_ht":10}]');
-select is((select activity_status from public.brand_pharmacies where id='00000000-0000-0000-0000-000000000416'),'watch'::public.activity_status,'65-day account is watch with default thresholds');
-select is((select count(*) from public.tasks where brand_pharmacy_id='00000000-0000-0000-0000-000000000416' and title='Activité watch — action de suivi'),1::bigint,'watch creates one stock control task');
-select public.create_order('00000000-0000-0000-0000-000000000417',jsonb_build_object('external_order_id','S4-RISK','order_status','invoiced','order_date',current_date - 80),'[{"product_id":"00000000-0000-0000-0000-000000000601","quantity":1,"unit_price_ht":10}]');
-select is((select activity_status from public.brand_pharmacies where id='00000000-0000-0000-0000-000000000417'),'at_risk'::public.activity_status,'80-day account is at risk');
-select ok((select priority='high' from public.tasks where brand_pharmacy_id='00000000-0000-0000-0000-000000000417' and title='Activité at_risk — action de suivi'),'at-risk account creates a high-priority task');
-select public.create_order('00000000-0000-0000-0000-000000000418',jsonb_build_object('external_order_id','S4-DORMANT','order_status','invoiced','order_date',current_date - 100),'[{"product_id":"00000000-0000-0000-0000-000000000601","quantity":1,"unit_price_ht":10}]');
-select is((select activity_status from public.brand_pharmacies where id='00000000-0000-0000-0000-000000000418'),'dormant'::public.activity_status,'100-day account is dormant');
-select ok((select priority='urgent' from public.tasks where brand_pharmacy_id='00000000-0000-0000-0000-000000000418' and title='Activité dormant — action de suivi'),'dormant account creates an urgent reactivation task');
-select is(public.recalculate_brand_activity('00000000-0000-0000-0000-000000000101'),6,'brand activity recalculation processes every active relation');
-select is((select count(*) from public.brand_pharmacy_activity_history where brand_pharmacy_id='00000000-0000-0000-0000-000000000418' and new_activity_status='dormant'),1::bigint,'idempotent recalculation does not duplicate history');
+select public.create_order('00000000-0000-0000-0000-00000000d416',jsonb_build_object('external_order_id','S4-WATCH','order_status','invoiced','order_date',current_date - 65),'[{"product_id":"00000000-0000-0000-0000-000000000601","quantity":1,"unit_price_ht":10}]');
+select is((select activity_status from public.brand_pharmacies where id='00000000-0000-0000-0000-00000000d416'),'watch'::public.activity_status,'65-day account is watch with default thresholds');
+select is((select count(*) from public.tasks where brand_pharmacy_id='00000000-0000-0000-0000-00000000d416' and title='Activité watch — action de suivi'),1::bigint,'watch creates one stock control task');
+select public.create_order('00000000-0000-0000-0000-00000000d417',jsonb_build_object('external_order_id','S4-RISK','order_status','invoiced','order_date',current_date - 80),'[{"product_id":"00000000-0000-0000-0000-000000000601","quantity":1,"unit_price_ht":10}]');
+select is((select activity_status from public.brand_pharmacies where id='00000000-0000-0000-0000-00000000d417'),'at_risk'::public.activity_status,'80-day account is at risk');
+select ok((select priority='high' from public.tasks where brand_pharmacy_id='00000000-0000-0000-0000-00000000d417' and title='Activité at_risk — action de suivi'),'at-risk account creates a high-priority task');
+select public.create_order('00000000-0000-0000-0000-00000000d418',jsonb_build_object('external_order_id','S4-DORMANT','order_status','invoiced','order_date',current_date - 100),'[{"product_id":"00000000-0000-0000-0000-000000000601","quantity":1,"unit_price_ht":10}]');
+select is((select activity_status from public.brand_pharmacies where id='00000000-0000-0000-0000-00000000d418'),'dormant'::public.activity_status,'100-day account is dormant');
+select ok((select priority='urgent' from public.tasks where brand_pharmacy_id='00000000-0000-0000-0000-00000000d418' and title='Activité dormant — action de suivi'),'dormant account creates an urgent reactivation task');
+select is(
+  public.recalculate_brand_activity('00000000-0000-0000-0000-000000000101'),
+  (select count(*)::integer from public.brand_pharmacies where brand_id = '00000000-0000-0000-0000-000000000101' and archived_at is null),
+  'brand activity recalculation processes every active relation'
+);
+select is((select count(*) from public.brand_pharmacy_activity_history where brand_pharmacy_id='00000000-0000-0000-0000-00000000d418' and new_activity_status='dormant'),1::bigint,'idempotent recalculation does not duplicate history');
 
-select lives_ok($$select public.change_activity_status('00000000-0000-0000-0000-000000000419','lost','Compte perdu confirmé')$$,'lost status is set manually with a reason');
-select public.create_order('00000000-0000-0000-0000-000000000419','{"external_order_id":"S4-LOST","order_status":"invoiced","order_date":"2026-07-21T10:00:00Z"}','[{"product_id":"00000000-0000-0000-0000-000000000601","quantity":1,"unit_price_ht":10}]');
-select is((select activity_status from public.brand_pharmacies where id='00000000-0000-0000-0000-000000000419'),'lost'::public.activity_status,'manual lost status remains prioritary after an order');
-select public.create_order('00000000-0000-0000-0000-000000000418','{"external_order_id":"S4-REACTIVATE","order_status":"invoiced","order_date":"2026-07-21T11:00:00Z"}','[{"product_id":"00000000-0000-0000-0000-000000000603","quantity":1,"unit_price_ht":20}]');
-select is((select activity_status from public.brand_pharmacies where id='00000000-0000-0000-0000-000000000418'),'active'::public.activity_status,'new valid order reactivates a dormant account');
-select is((select count(*) from public.brand_pharmacy_activity_history where brand_pharmacy_id='00000000-0000-0000-0000-000000000418' and previous_activity_status='dormant' and new_activity_status='active'),1::bigint,'dormant reactivation is historized');
-select is((select count(*) from public.tasks where brand_pharmacy_id='00000000-0000-0000-0000-000000000418' and title='Activité dormant — action de suivi' and status='completed'),1::bigint,'reactivation closes the explicit dormant follow-up');
+select lives_ok($$select public.change_activity_status('00000000-0000-0000-0000-00000000d419','lost','Compte perdu confirmé')$$,'lost status is set manually with a reason');
+select public.create_order('00000000-0000-0000-0000-00000000d419','{"external_order_id":"S4-LOST","order_status":"invoiced","order_date":"2026-07-21T10:00:00Z"}','[{"product_id":"00000000-0000-0000-0000-000000000601","quantity":1,"unit_price_ht":10}]');
+select is((select activity_status from public.brand_pharmacies where id='00000000-0000-0000-0000-00000000d419'),'lost'::public.activity_status,'manual lost status remains prioritary after an order');
+select public.create_order('00000000-0000-0000-0000-00000000d418','{"external_order_id":"S4-REACTIVATE","order_status":"invoiced","order_date":"2026-07-21T11:00:00Z"}','[{"product_id":"00000000-0000-0000-0000-000000000603","quantity":1,"unit_price_ht":20}]');
+select is((select activity_status from public.brand_pharmacies where id='00000000-0000-0000-0000-00000000d418'),'active'::public.activity_status,'new valid order reactivates a dormant account');
+select is((select count(*) from public.brand_pharmacy_activity_history where brand_pharmacy_id='00000000-0000-0000-0000-00000000d418' and previous_activity_status='dormant' and new_activity_status='active'),1::bigint,'dormant reactivation is historized');
+select is((select count(*) from public.tasks where brand_pharmacy_id='00000000-0000-0000-0000-00000000d418' and title='Activité dormant — action de suivi' and status='completed'),1::bigint,'reactivation closes the explicit dormant follow-up');
 
 select set_config('request.jwt.claims','{"sub":"00000000-0000-0000-0000-0000000000a3","role":"authenticated"}',true);
 select lives_ok($$select public.create_order('00000000-0000-0000-0000-000000000411','{"external_order_id":"S4-AGENT","source":"agent"}','[{"product_id":"00000000-0000-0000-0000-000000000601","quantity":1,"unit_price_ht":18.5}]')$$,'assigned agent creates a draft order for its pharmacy');

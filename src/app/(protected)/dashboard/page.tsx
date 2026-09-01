@@ -1,48 +1,143 @@
-import { AlertTriangle, ArrowRight, Building2, CircleDollarSign, Clock3, MoonStar, ShieldCheck, Sparkles, TrendingUp } from "lucide-react";
+import { AlertTriangle, ArrowRight, Building2, Clock3, MoonStar, ShieldCheck, Target, TrendingUp } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { CommercialEventTracker } from "@/components/commercial/commercial-event-tracker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/ux/page-header";
 import { SectionHeader } from "@/components/ux/section-header";
-import { requireActiveBrand } from "@/lib/auth";
+import { getOptionalActiveBrand, isPlatformAdmin } from "@/lib/auth";
+import { mapRecentPlatformOnboardings, summarizePlatformDashboard } from "@/lib/platform-admin";
 import type { CommercialHealthRow } from "@/lib/commercial-health";
+import { formatCompactCurrency, formatCompactNumber, formatCompactPercent, formatPerformanceMetric, formatPerformanceValue } from "@/lib/performance";
 import { presentationLabel } from "@/lib/presentation";
 
-type DashboardMetrics = {
-  period_days: number;
-  current_revenue: number;
-  previous_revenue: number;
-  revenue_change_percent: number | null;
-  orders_count: number;
-  average_order_value: number;
-  active_pharmacies: number;
-  reorder_rate: number | null;
-  first_reorder_rate: number | null;
-  average_days_to_first_reorder: number | null;
-  reorder_overdue_count: number;
-  first_reorder_count: number;
-  at_risk_count: number;
-  dormant_count: number;
-  without_action_count: number;
-  strategic_without_action_count: number;
-};
-
-function currency(value: number | null) {
-  return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(Number(value ?? 0));
-}
+type DashboardMetrics = Record<string, number | null>;
+type ObjectiveRow = { metric_key: string; target_value: number; realized_value: number; attainment_percent: number | null; projected_value: number | null };
 
 export default async function DashboardPage() {
-  const { supabase, brand, profile } = await requireActiveBrand();
-  const [{ data: contexts }, { data: dashboard }, { data: priorities }] = await Promise.all([
+  const [session, platformAdmin] = await Promise.all([getOptionalActiveBrand(), isPlatformAdmin()]);
+
+  if (!session.brand) {
+    if (!platformAdmin) redirect("/select-brand");
+
+    const { supabase, profile } = session;
+    const [{ data: brands }, { data: brandPharmacies }, { data: activeMemberships }, { count: leadCount }, { data: onboardingSessions }] = await Promise.all([
+      supabase.from("brands").select("id,is_active,status"),
+      supabase.from("brand_pharmacies").select("pharmacy_id,archived_at").is("archived_at", null),
+      supabase.from("memberships").select("user_id").eq("status", "active"),
+      supabase.from("commercial_leads").select("id", { count: "exact", head: true }),
+      supabase
+        .from("brand_onboarding_sessions")
+        .select("id,brand_id,status,created_at,current_step,step_statuses,brands(name)")
+        .order("created_at", { ascending: false })
+        .limit(5),
+    ]);
+
+    const summary = summarizePlatformDashboard({
+      brands: brands ?? [],
+      brandPharmacies: brandPharmacies ?? [],
+      activeMemberships: activeMemberships ?? [],
+      onboardingSessions: (onboardingSessions ?? []).map((sessionItem) => ({
+        id: sessionItem.id,
+        brand_id: sessionItem.brand_id,
+        brand_name: (Array.isArray(sessionItem.brands) ? sessionItem.brands[0] : sessionItem.brands)?.name ?? "Marque",
+        status: sessionItem.status,
+        created_at: sessionItem.created_at,
+        current_step: sessionItem.current_step,
+        step_statuses: sessionItem.step_statuses as Record<string, string> | null,
+      })),
+    });
+    const recentOnboardingSessions = mapRecentPlatformOnboardings(
+      (onboardingSessions ?? []).map((sessionItem) => ({
+        id: sessionItem.id,
+        brand_id: sessionItem.brand_id,
+        brand_name: (Array.isArray(sessionItem.brands) ? sessionItem.brands[0] : sessionItem.brands)?.name ?? "Marque",
+        status: sessionItem.status,
+        created_at: sessionItem.created_at,
+        current_step: sessionItem.current_step,
+        step_statuses: sessionItem.step_statuses as Record<string, string> | null,
+      })),
+    );
+
+    return (
+      <main className="space-y-6">
+        <PageHeader eyebrow="Pilotage TR1" title="Vue globale multi-marques" description={`Bonjour ${profile.full_name}. Cette vue centralise l’activité TR1 avant d’entrer dans une marque.`} tone="dark" />
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+          {[
+            { label: "Marques actives", value: summary.activeBrands },
+            { label: "Marques en préparation", value: summary.preparingBrands },
+            { label: "Pharmacies uniques", value: summary.uniquePharmacies },
+            { label: "Relations marque/officine", value: summary.brandPharmacyRelations },
+            { label: "Utilisateurs uniques actifs", value: summary.uniqueActiveUsers },
+            { label: "Onboardings en cours", value: summary.onboardingsInProgress },
+            { label: "Leads TR1", value: leadCount ?? 0 },
+          ].map((item) => (
+            <Card key={item.label}><CardContent className="pt-5"><p className="font-mono text-2xl font-black tracking-[-0.05em]">{item.value}</p><p className="mt-1 text-sm font-medium">{item.label}</p></CardContent></Card>
+          ))}
+        </section>
+        <section className="grid gap-4 xl:grid-cols-[1.15fr_.85fr]">
+          <Card>
+            <CardHeader className="flex-row items-center justify-between">
+              <CardTitle>Actions globales</CardTitle>
+              <Badge variant="secondary">TR1</Badge>
+            </CardHeader>
+            <CardContent className="grid gap-3 sm:grid-cols-2">
+              <Button asChild><Link href="/dashboard/admin/onboarding">Créer ou activer une marque <ArrowRight /></Link></Button>
+              <Button asChild variant="outline"><Link href="/dashboard/admin/users">Piloter les accès globaux <ArrowRight /></Link></Button>
+              <Button asChild variant="outline"><Link href="/dashboard/admin/leads">Suivre les leads TR1 <ArrowRight /></Link></Button>
+              <Button asChild variant="outline"><Link href="/select-brand">Entrer dans une marque <ArrowRight /></Link></Button>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader><CardTitle>Déploiements récents</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              {recentOnboardingSessions.length ? recentOnboardingSessions.map((sessionItem) => (
+                <div key={sessionItem.id} className="rounded-[0.4rem] border border-[var(--tr1-line)] p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-medium">{sessionItem.brandName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {sessionItem.statusLabel} · étape {sessionItem.currentStep} · checklist {sessionItem.checklistProgress}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(new Date(sessionItem.createdAt))}
+                      </p>
+                    </div>
+                    <Button asChild size="sm" variant="outline">
+                      <Link href={`/dashboard/admin/onboarding?brandId=${sessionItem.brandId}`}>Reprendre l’onboarding</Link>
+                    </Button>
+                  </div>
+                </div>
+              )) : <p className="text-sm text-muted-foreground">Aucun onboarding récent.</p>}
+            </CardContent>
+          </Card>
+        </section>
+      </main>
+    );
+  }
+
+  const { supabase, brand, profile } = session;
+  const today = new Date();
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
+  const todayDate = today.toISOString().slice(0, 10);
+  const [{ data: contexts }, { data: dashboard }, { data: objectives }, { data: priorities }] = await Promise.all([
     supabase.rpc("get_my_brand_contexts"),
-    supabase.rpc("get_commercial_dashboard", {
+    supabase.rpc("get_performance_overview", {
       target_brand_id: brand.id,
-      target_period_days: 90,
+      target_period_start: monthStart,
+      target_period_end: todayDate,
       target_agent_id: null,
       target_territory_id: null,
-      target_commercial_status: null,
+    }),
+    supabase.rpc("get_objective_progress", {
+      target_brand_id: brand.id,
+      target_filter_start: monthStart,
+      target_filter_end: todayDate,
+      target_scope_type: "brand",
+      target_territory_id: null,
+      target_agent_id: null,
     }),
     supabase.rpc("get_commercial_priorities", {
       target_brand_id: brand.id,
@@ -66,29 +161,48 @@ export default async function DashboardPage() {
   }
 
   const metrics = (dashboard ?? {}) as DashboardMetrics;
+  const topObjectives = ((objectives ?? []) as ObjectiveRow[])
+    .filter((objective) => ["revenue_ht", "implantations", "first_reorder_rate"].includes(objective.metric_key))
+    .slice(0, 3);
   const rows = (priorities ?? []) as CommercialHealthRow[];
   const actions = [
-    { label: "Réassorts en retard", value: metrics.reorder_overdue_count ?? 0, filter: "reorder_overdue", icon: Clock3, tone: "text-[#b83a22]" },
-    { label: "Premiers réassorts à sécuriser", value: metrics.first_reorder_count ?? 0, filter: "first_reorder", icon: Sparkles, tone: "text-[#ee6c3b]" },
-    { label: "Comptes à risque", value: metrics.at_risk_count ?? 0, filter: "at_risk", icon: AlertTriangle, tone: "text-[#b83a22]" },
+    { label: "Sans prochaine action", value: metrics.without_next_action_count ?? 0, filter: "without_action", icon: Clock3, tone: "text-[#b83a22]" },
+    { label: "Comptes à risque", value: metrics.at_risk_accounts ?? 0, filter: "at_risk", icon: AlertTriangle, tone: "text-[#b83a22]" },
     { label: "Stratégiques sans action", value: metrics.strategic_without_action_count ?? 0, filter: "strategic", icon: TrendingUp, tone: "text-[#2d6f9f]" },
-    { label: "Comptes dormants", value: metrics.dormant_count ?? 0, filter: "dormant", icon: MoonStar, tone: "text-[#6d5c87]" },
-  ];
-  const kpis = [
-    ["CA 90 jours", currency(metrics.current_revenue)],
-    ["Évolution", metrics.revenue_change_percent === null || metrics.revenue_change_percent === undefined ? "Données insuffisantes" : `${metrics.revenue_change_percent > 0 ? "+" : ""}${metrics.revenue_change_percent}%`],
-    ["Commandes", String(metrics.orders_count ?? 0)],
-    ["Pharmacies actives", String(metrics.active_pharmacies ?? 0)],
-    ["Taux de réassort", metrics.reorder_rate === null || metrics.reorder_rate === undefined ? "—" : `${metrics.reorder_rate}%`],
-    ["Premier réassort", metrics.first_reorder_rate === null || metrics.first_reorder_rate === undefined ? "—" : `${metrics.first_reorder_rate}%`],
-    ["Délai moyen 1er réassort", metrics.average_days_to_first_reorder === null || metrics.average_days_to_first_reorder === undefined ? "—" : `${metrics.average_days_to_first_reorder} j`],
-    ["Panier moyen", currency(metrics.average_order_value)],
+    { label: "Comptes dormants", value: metrics.dormant_accounts ?? 0, filter: "dormant", icon: MoonStar, tone: "text-[#6d5c87]" },
   ];
 
   return (
     <main className="space-y-6">
       <CommercialEventTracker eventName="manager_commercial_dashboard_viewed" />
-      <PageHeader eyebrow={`Pilotage commercial · ${brand.name}`} title="Où agir maintenant ?" description="Priorisez le réassort et le chiffre d’affaires avant de consulter les statistiques." tone="dark" />
+      <PageHeader eyebrow={`Pilotage commercial · ${brand.name}`} title="Je constate, je comprends, j’agis" description="Le dashboard reste orienté décision: objectifs clés, alertes prioritaires, activité terrain et comptes à traiter." tone="dark" />
+
+      <section aria-labelledby="objective-title" className="space-y-3">
+        <SectionHeader id="objective-title" title="Objectifs principaux" description="Objectif, réalisé, atteinte et projection du mois." action={<Button asChild variant="outline"><Link href="/dashboard/network?view=overview">Ouvrir Performance <ArrowRight /></Link></Button>} />
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {topObjectives.length ? topObjectives.map((objective) => (
+            <Card key={objective.metric_key}>
+              <CardContent className="pt-5">
+                <Target className="size-4 text-[var(--tr1-orange)]" />
+                <p className="mt-3 text-2xl font-semibold">{objective.attainment_percent == null ? "—" : `${objective.attainment_percent.toFixed(1)} %`}</p>
+                <p className="text-sm font-medium">{formatPerformanceMetric(objective.metric_key)}</p>
+                <p className="text-xs text-muted-foreground">
+                  {formatPerformanceValue(objective.metric_key, objective.realized_value)} / {formatPerformanceValue(objective.metric_key, objective.target_value)}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Projection {objective.projected_value == null ? "—" : formatPerformanceValue(objective.metric_key, objective.projected_value)}
+                </p>
+              </CardContent>
+            </Card>
+          )) : (
+            <>
+              <Card><CardContent className="pt-5"><p className="text-2xl font-semibold">{formatCompactCurrency(metrics.revenue_ht)}</p><p className="text-sm font-medium">CA HT</p><p className="text-xs text-muted-foreground">Objectif non défini</p></CardContent></Card>
+              <Card><CardContent className="pt-5"><p className="text-2xl font-semibold">{formatCompactNumber(metrics.implantations)}</p><p className="text-sm font-medium">Implantations</p><p className="text-xs text-muted-foreground">Réalisées ce mois-ci</p></CardContent></Card>
+              <Card><CardContent className="pt-5"><p className="text-2xl font-semibold">{formatCompactPercent(metrics.first_reorder_rate)}</p><p className="text-sm font-medium">Premier réassort</p><p className="text-xs text-muted-foreground">Base éligible</p></CardContent></Card>
+            </>
+          )}
+        </div>
+      </section>
 
       <section aria-labelledby="now-title" className="space-y-3">
         <SectionHeader id="now-title" title="À traiter maintenant" description="Les signaux les plus urgents de votre réseau." action={<Button asChild variant="outline"><Link href="/dashboard/commercial-health">Voir toutes les priorités <ArrowRight /></Link></Button>} />
@@ -115,9 +229,16 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2"><CircleDollarSign className="size-5" />Indicateurs compacts</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Activité terrain</CardTitle></CardHeader>
           <CardContent className="grid grid-cols-2 gap-3">
-            {kpis.map(([label, value]) => <div key={label} className="rounded-[0.35rem] border border-[var(--tr1-line)] bg-transparent p-3"><p className="font-mono text-lg font-black tracking-[-0.05em]">{value}</p><p className="font-mono text-[0.58rem] uppercase tracking-[0.08em] text-muted-foreground">{label}</p></div>)}
+            {[
+              ["Animations", formatCompactNumber(metrics.animations_completed)],
+              ["Formations", formatCompactNumber(metrics.trainings_completed)],
+              ["Missions terminées", formatCompactNumber(metrics.missions_completed)],
+              ["Sell-out déclaré", `${formatCompactNumber(metrics.sell_out_units)} unités`],
+              ["DN moyenne", formatCompactPercent(metrics.avg_distribution_rate)],
+              ["DN stratégique", formatCompactPercent(metrics.strategic_distribution_rate)],
+            ].map(([label, value]) => <div key={label} className="rounded-[0.35rem] border border-[var(--tr1-line)] bg-transparent p-3"><p className="font-mono text-lg font-black tracking-[-0.05em]">{value}</p><p className="font-mono text-[0.58rem] uppercase tracking-[0.08em] text-muted-foreground">{label}</p></div>)}
           </CardContent>
         </Card>
       </section>

@@ -23,8 +23,18 @@ export async function loginAction(
   if (!parsed.success) return { error: "Adresse email ou mot de passe invalide." };
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword(parsed.data);
-  if (error) return { error: "Connexion impossible. Vérifiez vos identifiants." };
+  const { data: signInData, error } = await supabase.auth.signInWithPassword(parsed.data);
+  if (error || !signInData.user) return { error: "Connexion impossible. Vérifiez vos identifiants." };
 
+  const { data: membership } = await supabase
+    .from("memberships")
+    .select("id,roles!inner(key)")
+    .eq("user_id", signInData.user.id)
+    .is("brand_id", null)
+    .eq("status", "active")
+    .eq("roles.key", "super_admin")
+    .maybeSingle();
+
+  if (membership) redirect("/dashboard");
   redirect("/select-brand");
 }

@@ -28,6 +28,18 @@ export function validateImportRows(
         issues.push({ column, value: "", message: "Valeur obligatoire manquante.", severity: "error" });
       }
     }
+    if (type === "products" && "tax_rate" in normalized && normalized.tax_rate != null && (typeof normalized.tax_rate !== "number" || normalized.tax_rate < 0 || normalized.tax_rate > 100)) {
+      issues.push({ column: "tax_rate", value: String(normalized.tax_rate ?? ""), message: "La TVA doit être comprise entre 0 et 100.", severity: "error" });
+    }
+    if (type === "products" && "units_per_case" in normalized && normalized.units_per_case != null && (!Number.isInteger(normalized.units_per_case) || Number(normalized.units_per_case) <= 0)) {
+      issues.push({ column: "units_per_case", value: String(normalized.units_per_case ?? ""), message: "Le colisage doit être un entier strictement positif.", severity: "error" });
+    }
+    if (type === "products" && "minimum_order_quantity" in normalized && normalized.minimum_order_quantity != null && (!Number.isInteger(normalized.minimum_order_quantity) || Number(normalized.minimum_order_quantity) <= 0)) {
+      issues.push({ column: "minimum_order_quantity", value: String(normalized.minimum_order_quantity ?? ""), message: "Le MOQ doit être un entier strictement positif.", severity: "error" });
+    }
+    if (type === "products" && normalized.strategic_priority != null && !["standard", "priority", "strategic"].includes(String(normalized.strategic_priority))) {
+      issues.push({ column: "strategic_priority", value: String(normalized.strategic_priority ?? ""), message: "Priorité stratégique invalide.", severity: "error" });
+    }
     if (type === "orders" && typeof normalized.total_ht === "number" && normalized.total_ht < 0) {
       issues.push({ column: "total_ht", value: String(normalized.total_ht), message: "Le montant doit être positif.", severity: "error" });
     }

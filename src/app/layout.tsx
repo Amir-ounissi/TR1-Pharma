@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "TR1 Pharma",
-  description: "Plateforme sécurisée de pilotage commercial en pharmacie",
+  description: "TR1 Pharma est une plateforme SaaS de pilotage commercial et d’exécution terrain dédiée aux marques qui se développent en pharmacie.",
 };
 
 export default function RootLayout({

@@ -44,6 +44,7 @@ function formatDate(value: string | null, includeTime = false) {
 
 export function AgentDayExperience({
   brandId,
+  userId,
   day,
   visit,
   opportunities,
@@ -51,6 +52,7 @@ export function AgentDayExperience({
   mapsUrl,
 }: {
   brandId: string;
+  userId: string;
   day: AgentTodayData;
   visit: AgentNextVisit | null;
   opportunities: CommercialHealthRow[];
@@ -62,6 +64,7 @@ export function AgentDayExperience({
   const [completionMessage, setCompletionMessage] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
   const overdue = day.tasks.filter((task) => task.is_overdue);
+  const draftScope = `${brandId}:${userId}`;
 
   useEffect(() => {
     const restored = loadActiveVisit(localStorage);
@@ -135,6 +138,7 @@ export function AgentDayExperience({
           <QuickReportCard
             brandPharmacyId={formVisit.brandPharmacyId}
             pharmacyId={formVisit.pharmacyId}
+            draftScope={draftScope}
             commercialStatus={visit.status}
             lastOrderAt={visit.last_order_at}
             visitStartedAt={formVisit.startedAt}
@@ -193,7 +197,7 @@ export function AgentDayExperience({
       ]} />
 
       {!activeVisit && visit ? (
-        <QuickReportCard brandPharmacyId={visit.brand_pharmacy_id} pharmacyId={visit.pharmacy_id} commercialStatus={visit.status} lastOrderAt={visit.last_order_at} />
+        <QuickReportCard brandPharmacyId={visit.brand_pharmacy_id} pharmacyId={visit.pharmacy_id} draftScope={draftScope} commercialStatus={visit.status} lastOrderAt={visit.last_order_at} />
       ) : null}
     </div>
   );

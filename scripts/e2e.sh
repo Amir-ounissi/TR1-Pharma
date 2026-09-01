@@ -23,10 +23,17 @@ if [ -z "$api_url" ] || [ -z "$anon_key" ] || [ -z "$service_role_key" ]; then
   exit 1
 fi
 
+. ./scripts/local-env-lock.sh
+tr1_acquire_local_env_lock
+trap 'tr1_release_local_env_lock' EXIT HUP INT TERM
+
 export NEXT_PUBLIC_SUPABASE_URL="$api_url"
 export NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="$anon_key"
 export SUPABASE_SERVICE_ROLE_KEY="$service_role_key"
 export NEXT_PUBLIC_APP_URL="http://127.0.0.1:3002"
+export APP_ENV="test"
+export LEAD_CAPTURE_SALT="tr1-e2e-lead-capture-salt"
+export LEAD_CAPTURE_ENABLED="true"
 export WHATSAPP_SIMULATOR_ENABLED="true"
 export E2E_SKIP_TYPECHECK="true"
 export NEXT_DIST_DIR="${NEXT_DIST_DIR:-.next-playwright-prod}"

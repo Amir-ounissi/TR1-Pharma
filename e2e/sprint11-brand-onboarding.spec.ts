@@ -108,7 +108,7 @@ test.describe.serial("Sprint 11 — Onboarding marque et imports contrôlés", (
       type: "products",
       mode: "create_only",
       fileName: `produits-${suffix}.csv`,
-      content: `product_code;product_name;category;active;unit_price_ht;ean;strategic\n${productCode};Produit Onboarding;Dermocosmétique;oui;19,90;;oui`,
+      content: `sku;ean;name;description;product_family;format;wholesale_price_ht;retail_price_ttc;tax_rate;units_per_case;minimum_order_quantity;strategic_priority;counts_for_distribution;is_active\n${productCode};;Produit Onboarding;Produit de test;Dermocosmétique;Boîte;19.90;29.90;20;1;1;;oui;oui`,
     });
     await stageImport(page, {
       type: "territories",

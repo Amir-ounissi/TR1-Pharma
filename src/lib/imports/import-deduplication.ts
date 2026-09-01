@@ -6,7 +6,7 @@ function keyPart(value: unknown) {
 
 export function buildDeduplicationKey(type: ImportType, row: ValidatedImportRow) {
   const value = row.normalized;
-  if (type === "products") return value.product_code ? `product:${keyPart(value.product_code)}` : value.ean ? `ean:${keyPart(value.ean)}` : null;
+  if (type === "products") return value.sku ? `product:${keyPart(value.sku)}` : value.ean ? `ean:${keyPart(value.ean)}` : null;
   if (type === "pharmacies") return value.external_id
     ? `pharmacy:${keyPart(value.external_id)}`
     : `pharmacy-address:${keyPart(value.pharmacy_name)}|${keyPart(value.address_line_1)}|${keyPart(value.postal_code)}`;

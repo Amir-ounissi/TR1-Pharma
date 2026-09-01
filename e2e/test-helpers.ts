@@ -25,7 +25,10 @@ export async function signIn(page: Page, email: string, brand: RegExp | string) 
   await page.getByLabel("Email professionnel").fill(email);
   await page.getByLabel("Mot de passe").fill(password);
   await page.getByRole("button", { name: "Se connecter" }).click();
-  await expect(page).toHaveURL(/\/select-brand/, { timeout: 30_000 });
+  await expect(page).toHaveURL(/\/(?:select-brand|dashboard(?:\/(?:agent|field))?)$/, { timeout: 30_000 });
+  if (new URL(page.url()).pathname !== "/select-brand") {
+    await page.goto("/select-brand");
+  }
   await page.getByRole("button", { name: brand }).click();
   await expect(page).toHaveURL(/\/dashboard(?:\/(?:agent|field))?$/, { timeout: 30_000 });
 }

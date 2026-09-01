@@ -9,8 +9,8 @@ import { createImportReport, reportToCsv } from "./import-report";
 import { neutralizeSpreadsheetFormula, recordsToCsv } from "./control-export";
 
 const productsCsv = [
-  "product_code;product_name;category;active;unit_price_ht;ean;strategic",
-  "SKU-1;Sérum A;Soin;oui;12,50;3400000000012;non",
+  "sku;ean;name;description;category;product_family;format;wholesale_price_ht;retail_price_ttc;tax_rate;units_per_case;minimum_order_quantity;strategic_priority;counts_for_distribution;is_active",
+  "SKU-1;3400000000012;Sérum A;Description;Soin;Dermocosmétique;50 ml;12,50;19,90;5,5;6;2;strategic;oui;oui",
 ].join("\n");
 
 const pharmaciesCsv = [
@@ -36,14 +36,14 @@ describe("Sprint 11 import engine", () => {
   it("enforces field limits", () => expect(() => parseImportCsv("a\n1234", { maxBytes: 100, maxRows: 10, maxFieldLength: 3 })).toThrow("longueur"));
 
   it("normalizes accented column names", () => expect(normalizeColumnName("  Nom Produit  ")).toBe("nom_produit"));
-  it("automatically maps aliases", () => expect(autoMapColumns(["sku", "nom_produit", "category", "active"], "products")).toEqual({
-    sku: "product_code",
-    nom_produit: "product_name",
+  it("automatically maps aliases", () => expect(autoMapColumns(["product_code", "nom_produit", "category", "active"], "products")).toEqual({
+    product_code: "sku",
+    nom_produit: "name",
     category: "category",
-    active: "active",
+    active: "is_active",
   }));
-  it("applies manual mapping and ignored columns", () => expect(mergeManualMapping({ Code: null, Nom: null }, { Code: "product_code", Nom: null })).toEqual({ Code: "product_code", Nom: null }));
-  it("reports missing required mappings", () => expect(missingRequiredColumns({ sku: "product_code" }, "products")).toEqual(["product_name", "category", "active"]));
+  it("applies manual mapping and ignored columns", () => expect(mergeManualMapping({ Code: null, Nom: null }, { Code: "sku", Nom: null })).toEqual({ Code: "sku", Nom: null }));
+  it("reports missing required mappings", () => expect(missingRequiredColumns({ sku: "sku" }, "products")).toEqual(["name", "is_active"]));
 
   it.each([
     ["oui", true], ["yes", true], ["1", true], ["non", false], ["0", false], ["inconnu", null],
@@ -70,7 +70,7 @@ describe("Sprint 11 import engine", () => {
   it("previews and normalizes a product import", () => {
     const preview = previewImport({ content: productsCsv, type: "products" });
     expect(preview.summary).toEqual({ total: 1, valid: 1, warnings: 0, errors: 0, duplicates: 0 });
-    expect(preview.rows[0].normalized).toMatchObject({ product_code: "SKU-1", active: true, unit_price_ht: 12.5, strategic: false });
+    expect(preview.rows[0].normalized).toMatchObject({ sku: "SKU-1", is_active: true, wholesale_price_ht: 12.5, tax_rate: 5.5, strategic_priority: "strategic" });
   });
   it("previews and normalizes a pharmacy import", () => {
     const preview = previewImport({ content: pharmaciesCsv, type: "pharmacies" });
@@ -98,7 +98,7 @@ describe("Sprint 11 import engine", () => {
     expect(previewImport({ content: csv, type: "orders" }).rows[0].issues).toContainEqual(expect.objectContaining({ column: "currency" }));
   });
   it("detects product duplicates by normalized code", () => {
-    const preview = previewImport({ content: `${productsCsv}\n sku-1 ;Autre;Soin;oui;10;;non`, type: "products" });
+    const preview = previewImport({ content: `${productsCsv}\n sku-1 ;;Autre;;Soin;;;10;19;5.5;4;1;standard;oui;oui`, type: "products" });
     expect(preview.summary.duplicates).toBe(2);
   });
   it("detects pharmacies by external id or normalized address", () => {
@@ -115,7 +115,10 @@ describe("Sprint 11 import engine", () => {
   });
 
   it("builds create-only and upsert plans", () => {
-    const preview = previewImport({ content: `${productsCsv}\nSKU-1;Autre;Soin;oui;10;;non`, type: "products" });
+    const preview = previewImport({
+      content: `${productsCsv}\nSKU-1;;Autre;Description 2;Soin;Dermocosmétique;50 ml;10;19;5.5;4;1;standard;oui;oui`,
+      type: "products",
+    });
     expect(buildExecutionPlan(preview, "create_only")).toMatchObject({ creates: 0, ignored: 2, blocked: 0, executable: true });
     expect(buildExecutionPlan(preview, "upsert")).toMatchObject({ creates: 0, updates: 2, executable: true });
   });
@@ -124,6 +127,11 @@ describe("Sprint 11 import engine", () => {
     const plan = buildExecutionPlan(preview, "create_only");
     expect(plan.executable).toBe(false);
     expect(() => assertExecutable(plan)).toThrow("invalides");
+  });
+  it("blocks invalid VAT and logistics constraints", () => {
+    const csv = "sku;name;is_active;tax_rate;units_per_case;minimum_order_quantity\nSKU-1;Produit;oui;120;0;-1";
+    const preview = previewImport({ content: csv, type: "products" });
+    expect(preview.rows[0].issues.map((issue) => issue.column)).toEqual(expect.arrayContaining(["tax_rate", "units_per_case", "minimum_order_quantity"]));
   });
   it("creates a deterministic report and CSV", () => {
     const preview = previewImport({ content: productsCsv, type: "products" });

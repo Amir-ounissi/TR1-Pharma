@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-tracked_env=$(git ls-files | grep -E '(^|/)\.env($|\.)' | grep -vE '(^|/)\.env\.example$' || true)
+tracked_env=$(git ls-files | grep -E '(^|/)\.env($|\.)' | grep -vE '(^|/)\.env(\.[^/]+)?\.example$' || true)
 if [ -n "$tracked_env" ]; then
   echo "Fichier d'environnement réel suivi par Git :" >&2
   printf '%s\n' "$tracked_env" >&2

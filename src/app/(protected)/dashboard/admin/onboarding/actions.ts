@@ -6,6 +6,7 @@ import { z } from "zod";
 import { previewImport } from "@/lib/imports/import-engine";
 import type { ColumnMapping, ImportMode, ImportType } from "@/lib/imports/import-types";
 import { requirePlatformAdmin } from "@/lib/auth";
+import { resolveOnboardingRedirectUrl } from "@/lib/runtime-environment";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type OnboardingActionState = {
@@ -26,6 +27,7 @@ const onboardingSchema = z.object({
   externalId: z.string().trim().max(120).optional(),
   brandName: z.string().trim().min(2).max(120),
   brandCode: z.string().trim().min(2).max(40),
+  brandSlug: z.string().trim().min(2).max(120).regex(/^[a-z0-9-]+$/).optional(),
   accentColor: z.union([z.string().regex(/^#[0-9A-Fa-f]{6}$/), z.literal("")]),
   description: z.string().trim().max(300).optional(),
 });
@@ -44,6 +46,7 @@ export async function createBrandOnboardingAction(
     externalId: formData.get("externalId") || undefined,
     brandName: formData.get("brandName"),
     brandCode: formData.get("brandCode"),
+    brandSlug: formData.get("brandSlug") || undefined,
     accentColor: formData.get("accentColor") ?? "",
     description: formData.get("description") || undefined,
   });
@@ -62,6 +65,7 @@ export async function createBrandOnboardingAction(
     brand_data: {
       name: parsed.data.brandName,
       code: parsed.data.brandCode,
+      slug: parsed.data.brandSlug,
       country_code: parsed.data.countryCode,
       currency_code: parsed.data.currencyCode,
       accent_color: parsed.data.accentColor || null,
@@ -76,6 +80,11 @@ export async function createBrandOnboardingAction(
 
 const settingsSchema = z.object({
   brandId: z.string().uuid(),
+  brandName: z.string().trim().min(2).max(120),
+  brandCode: z.string().trim().min(2).max(40),
+  brandSlug: z.string().trim().min(2).max(120).regex(/^[a-z0-9-]+$/),
+  logoPath: z.union([z.string().trim().url(), z.literal(""), z.string().trim().startsWith("/")]),
+  countryCode: z.string().trim().length(2),
   defaultReorderIntervalDays: z.coerce.number().int().min(1).max(365),
   firstReorderTargetDays: z.coerce.number().int().min(1).max(365),
   reorderDueSoonDays: z.coerce.number().int().min(0).max(90),
@@ -85,6 +94,13 @@ const settingsSchema = z.object({
   postMissionFollowupDays: z.coerce.number().int().min(1).max(90),
   currencyCode: z.string().length(3),
   timezone: z.string().min(3).max(80),
+  commercialEmail: z.union([z.email(), z.literal("")]),
+  orderEmail: z.union([z.email(), z.literal("")]),
+  phone: z.string().trim().max(40).optional(),
+  addressLine1: z.string().trim().max(180).optional(),
+  postalCode: z.string().trim().max(20).optional(),
+  city: z.string().trim().max(120).optional(),
+  description: z.string().trim().max(300).optional(),
 });
 
 export async function updateOnboardingSettingsAction(formData: FormData) {
@@ -93,6 +109,11 @@ export async function updateOnboardingSettingsAction(formData: FormData) {
   const { error } = await supabase.rpc("update_onboarding_settings", {
     target_brand_id: parsed.brandId,
     settings_data: {
+      name: parsed.brandName,
+      code: parsed.brandCode,
+      slug: parsed.brandSlug,
+      logo_path: parsed.logoPath || null,
+      country_code: parsed.countryCode.toUpperCase(),
       default_reorder_interval_days: parsed.defaultReorderIntervalDays,
       first_reorder_target_days: parsed.firstReorderTargetDays,
       reorder_due_soon_days: parsed.reorderDueSoonDays,
@@ -102,41 +123,72 @@ export async function updateOnboardingSettingsAction(formData: FormData) {
       post_mission_followup_days: parsed.postMissionFollowupDays,
       currency_code: parsed.currencyCode.toUpperCase(),
       timezone: parsed.timezone,
+      commercial_email: parsed.commercialEmail || null,
+      order_email: parsed.orderEmail || null,
+      phone: parsed.phone || null,
+      address_line_1: parsed.addressLine1 || null,
+      postal_code: parsed.postalCode || null,
+      city: parsed.city || null,
+      short_description: parsed.description || null,
     },
   });
   if (error) throw new Error(error.message);
   revalidatePath("/dashboard/admin/onboarding");
 }
 
-export async function inviteOnboardingAdminAction(formData: FormData) {
+export async function inviteOnboardingAdminAction(
+  _state: OnboardingActionState,
+  formData: FormData,
+): Promise<OnboardingActionState> {
   const parsed = z.object({
     brandId: z.string().uuid(),
     email: z.email(),
     fullName: z.string().trim().min(2).max(120),
-  }).parse(Object.fromEntries(formData));
-  const { userId } = await requirePlatformAdmin();
-  const admin = createAdminClient();
-  const [{ data: brand }, { data: role }] = await Promise.all([
-    admin.from("brands").select("organization_id").eq("id", parsed.brandId).single(),
-    admin.from("roles").select("id").eq("key", "brand_admin").single(),
-  ]);
-  if (!brand || !role) throw new Error("Configuration de marque incomplète.");
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  const { data, error } = await admin.auth.admin.inviteUserByEmail(parsed.email, {
-    data: { full_name: parsed.fullName },
-    redirectTo: `${appUrl}/auth/confirm?next=/onboarding`,
-  });
-  if (error || !data.user) throw new Error(error?.message ?? "Invitation impossible.");
-  const { error: membershipError } = await admin.from("memberships").insert({
-    user_id: data.user.id,
-    organization_id: brand.organization_id,
-    brand_id: parsed.brandId,
-    role_id: role.id,
-    invited_by: userId,
-    status: "invited",
-  });
-  if (membershipError) throw new Error(membershipError.message);
-  revalidatePath("/dashboard/admin/onboarding");
+  }).safeParse(Object.fromEntries(formData));
+
+  if (!parsed.success) {
+    return { error: "Les informations du futur administrateur sont invalides." } satisfies OnboardingActionState;
+  }
+
+  try {
+    const { userId } = await requirePlatformAdmin();
+    const admin = createAdminClient();
+    const [{ data: brand }, { data: role }] = await Promise.all([
+      admin.from("brands").select("organization_id").eq("id", parsed.data.brandId).single(),
+      admin.from("roles").select("id").eq("key", "brand_admin").single(),
+    ]);
+
+    if (!brand || !role) {
+      return { error: "Configuration de marque incomplète." } satisfies OnboardingActionState;
+    }
+
+    const { data, error } = await admin.auth.admin.inviteUserByEmail(parsed.data.email, {
+      data: { full_name: parsed.data.fullName },
+      redirectTo: resolveOnboardingRedirectUrl(),
+    });
+
+    if (error || !data.user) {
+      return { error: error?.message ?? "Invitation impossible." } satisfies OnboardingActionState;
+    }
+
+    const { error: membershipError } = await admin.from("memberships").insert({
+      user_id: data.user.id,
+      organization_id: brand.organization_id,
+      brand_id: parsed.data.brandId,
+      role_id: role.id,
+      invited_by: userId,
+      status: "invited",
+    });
+
+    if (membershipError) {
+      return { error: membershipError.message } satisfies OnboardingActionState;
+    }
+
+    revalidatePath("/dashboard/admin/onboarding");
+    return { success: "Invitation administrateur envoyée.", brandId: parsed.data.brandId } satisfies OnboardingActionState;
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Invitation impossible." } satisfies OnboardingActionState;
+  }
 }
 
 export async function stageOnboardingImportAction(
@@ -292,10 +344,9 @@ export async function executeOnboardingImportAction(formData: FormData) {
       const fullName = `${String(payload.first_name ?? "")} ${String(payload.last_name ?? "")}`.trim();
       const { data: existing } = await admin.from("users").select("id").ilike("email", email).maybeSingle();
       if (existing) continue;
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
       const { data: invitation, error: invitationError } = await admin.auth.admin.inviteUserByEmail(email, {
         data: { full_name: fullName },
-        redirectTo: `${appUrl}/auth/confirm?next=/onboarding`,
+        redirectTo: resolveOnboardingRedirectUrl(),
       });
       if (invitationError || !invitation.user) {
         await Promise.all(invitedUserIds.map((userId) => admin.auth.admin.deleteUser(userId)));

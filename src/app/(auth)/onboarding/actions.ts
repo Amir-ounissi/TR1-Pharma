@@ -16,11 +16,25 @@ export async function completeOnboardingAction(
   if (!parsed.success) return { error: "Renseignez un nom complet valide." };
 
   const { supabase, userId } = await requireUser();
+  const { error: activationError } = await supabase.rpc("accept_my_invited_memberships");
+  if (activationError) return { error: "Vos accès invités n’ont pas pu être activés." };
+
   const { error } = await supabase
     .from("user_profiles")
     .update({ full_name: parsed.data.fullName, onboarding_completed_at: new Date().toISOString() })
     .eq("user_id", userId);
 
   if (error) return { error: "Le profil n’a pas pu être enregistré." };
+
+  const { data: membership } = await supabase
+    .from("memberships")
+    .select("id,roles!inner(key)")
+    .is("brand_id", null)
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .eq("roles.key", "super_admin")
+    .maybeSingle();
+
+  if (membership) redirect("/dashboard");
   redirect("/select-brand");
 }
