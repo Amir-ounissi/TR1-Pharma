@@ -3,10 +3,10 @@ import { defineConfig, devices } from "@playwright/test";
 const webServer = process.env.PLAYWRIGHT_SKIP_WEBSERVER === "true"
   ? undefined
   : {
-      command: "npm run build && npm run start -- --hostname 127.0.0.1 --port 3002",
+      command: "npm run build && sh scripts/wait-for-supabase.sh && npm run start -- --hostname 127.0.0.1 --port 3002",
       url: "http://127.0.0.1:3002/login",
       reuseExistingServer: !process.env.CI,
-      timeout: 420_000,
+      timeout: 900_000,
     };
 
 export default defineConfig({

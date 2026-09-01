@@ -1,2 +1,5 @@
-import { Skeleton } from "@/components/ui/skeleton";
-export default function Loading() { return <div className="space-y-4"><Skeleton className="h-10 w-72" /><Skeleton className="h-24 w-full" /><Skeleton className="h-96 w-full" /></div>; }
+import { ListPageSkeleton } from "@/components/ux/list-page-skeleton";
+
+export default function Loading() {
+  return <ListPageSkeleton />;
+}

@@ -4,14 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NavigationIcon } from "@/components/shell/navigation-icons";
 import { cn } from "@/lib/utils";
-import { getNavigationSections, isNavigationItemActive } from "@/lib/ux/navigation";
+import { getNavigationSections, isNavigationItemActive, type NavigationScope } from "@/lib/ux/navigation";
 
-export function RoleNavigation({ role, onNavigate }: { role: string; onNavigate?: () => void }) {
+export function RoleNavigation({ role, scope = "tenant", onNavigate }: { role: string; scope?: NavigationScope; onNavigate?: () => void }) {
   const pathname = usePathname();
 
   return (
     <nav aria-label="Navigation principale" className="space-y-7">
-      {getNavigationSections(role).map((section) => (
+      {getNavigationSections(role, scope).map((section) => (
         <section key={section.label} aria-labelledby={`nav-${section.label}`}>
           <p id={`nav-${section.label}`} className="mb-2.5 px-3 font-mono text-[0.57rem] font-bold uppercase tracking-[0.18em] text-sidebar-foreground/42">
             {section.label}

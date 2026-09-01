@@ -23,9 +23,9 @@ test("landing desktop, CTA, preuve produit et capture du lead", async ({ page })
   await page.getByRole("link", { name: /Découvrir TR1 sur mon réseau officinal/ }).first().click();
   await expect(page.locator("#diagnostic")).toBeInViewport();
   await page.getByRole("tab", { name: "Expérience Agent" }).click();
-  await expect(page.getByRole("tabpanel")).toContainText("Pharmacie République");
+  await expect(page.getByRole("tabpanel").getByRole("img", { name: "Vue mobile TR1 Agent avec prochaine visite et tournée du jour" })).toBeVisible();
   await page.getByRole("tab", { name: "Missions terrain" }).click();
-  await expect(page.getByRole("tabpanel")).toContainText("Formation Dermacalm");
+  await expect(page.getByRole("tabpanel").getByRole("img", { name: "Tableau TR1 des missions terrain à venir et terminées" })).toBeVisible();
   await page.screenshot({ path: `${artifacts}/landing-desktop.png`, fullPage: true });
 
   await page.getByRole("button", { name: "Découvrir TR1 sur mon réseau officinal" }).click();

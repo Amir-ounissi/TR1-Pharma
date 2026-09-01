@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/ux/page-header";
 import { SectionHeader } from "@/components/ux/section-header";
 import { getOptionalActiveBrand, isPlatformAdmin } from "@/lib/auth";
+import { mapRecentPlatformOnboardings, summarizePlatformDashboard } from "@/lib/platform-admin";
 import type { CommercialHealthRow } from "@/lib/commercial-health";
 import { formatCompactCurrency, formatCompactNumber, formatCompactPercent, formatPerformanceMetric, formatPerformanceValue } from "@/lib/performance";
 import { presentationLabel } from "@/lib/presentation";
@@ -22,26 +23,55 @@ export default async function DashboardPage() {
     if (!platformAdmin) redirect("/select-brand");
 
     const { supabase, profile } = session;
-    const [{ count: brandsCount }, { count: pharmaciesCount }, { count: missionsCount }, { count: activeUsersCount }, { count: leadCount }, { data: onboardingSessions }] = await Promise.all([
-      supabase.from("brands").select("id", { count: "exact", head: true }),
-      supabase.from("brand_pharmacies").select("id", { count: "exact", head: true }).is("archived_at", null),
-      supabase.from("missions").select("id", { count: "exact", head: true }).is("archived_at", null),
-      supabase.from("memberships").select("id", { count: "exact", head: true }).eq("status", "active"),
+    const [{ data: brands }, { data: brandPharmacies }, { data: activeMemberships }, { count: leadCount }, { data: onboardingSessions }] = await Promise.all([
+      supabase.from("brands").select("id,is_active,status"),
+      supabase.from("brand_pharmacies").select("pharmacy_id,archived_at").is("archived_at", null),
+      supabase.from("memberships").select("user_id").eq("status", "active"),
       supabase.from("commercial_leads").select("id", { count: "exact", head: true }),
-      supabase.from("brand_onboarding_sessions").select("id,brand_id,status,created_at").order("created_at", { ascending: false }).limit(5),
+      supabase
+        .from("brand_onboarding_sessions")
+        .select("id,brand_id,status,created_at,current_step,step_statuses,brands(name)")
+        .order("created_at", { ascending: false })
+        .limit(5),
     ]);
 
-    const recentOnboardingSessions = onboardingSessions ?? [];
+    const summary = summarizePlatformDashboard({
+      brands: brands ?? [],
+      brandPharmacies: brandPharmacies ?? [],
+      activeMemberships: activeMemberships ?? [],
+      onboardingSessions: (onboardingSessions ?? []).map((sessionItem) => ({
+        id: sessionItem.id,
+        brand_id: sessionItem.brand_id,
+        brand_name: (Array.isArray(sessionItem.brands) ? sessionItem.brands[0] : sessionItem.brands)?.name ?? "Marque",
+        status: sessionItem.status,
+        created_at: sessionItem.created_at,
+        current_step: sessionItem.current_step,
+        step_statuses: sessionItem.step_statuses as Record<string, string> | null,
+      })),
+    });
+    const recentOnboardingSessions = mapRecentPlatformOnboardings(
+      (onboardingSessions ?? []).map((sessionItem) => ({
+        id: sessionItem.id,
+        brand_id: sessionItem.brand_id,
+        brand_name: (Array.isArray(sessionItem.brands) ? sessionItem.brands[0] : sessionItem.brands)?.name ?? "Marque",
+        status: sessionItem.status,
+        created_at: sessionItem.created_at,
+        current_step: sessionItem.current_step,
+        step_statuses: sessionItem.step_statuses as Record<string, string> | null,
+      })),
+    );
 
     return (
       <main className="space-y-6">
         <PageHeader eyebrow="Pilotage TR1" title="Vue globale multi-marques" description={`Bonjour ${profile.full_name}. Cette vue centralise l’activité TR1 avant d’entrer dans une marque.`} tone="dark" />
-        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
           {[
-            { label: "Marques", value: brandsCount ?? 0 },
-            { label: "Pharmacies rattachées", value: pharmaciesCount ?? 0 },
-            { label: "Missions", value: missionsCount ?? 0 },
-            { label: "Utilisateurs actifs", value: activeUsersCount ?? 0 },
+            { label: "Marques actives", value: summary.activeBrands },
+            { label: "Marques en préparation", value: summary.preparingBrands },
+            { label: "Pharmacies uniques", value: summary.uniquePharmacies },
+            { label: "Relations marque/officine", value: summary.brandPharmacyRelations },
+            { label: "Utilisateurs uniques actifs", value: summary.uniqueActiveUsers },
+            { label: "Onboardings en cours", value: summary.onboardingsInProgress },
             { label: "Leads TR1", value: leadCount ?? 0 },
           ].map((item) => (
             <Card key={item.label}><CardContent className="pt-5"><p className="font-mono text-2xl font-black tracking-[-0.05em]">{item.value}</p><p className="mt-1 text-sm font-medium">{item.label}</p></CardContent></Card>
@@ -55,6 +85,7 @@ export default async function DashboardPage() {
             </CardHeader>
             <CardContent className="grid gap-3 sm:grid-cols-2">
               <Button asChild><Link href="/dashboard/admin/onboarding">Créer ou activer une marque <ArrowRight /></Link></Button>
+              <Button asChild variant="outline"><Link href="/dashboard/admin/users">Piloter les accès globaux <ArrowRight /></Link></Button>
               <Button asChild variant="outline"><Link href="/dashboard/admin/leads">Suivre les leads TR1 <ArrowRight /></Link></Button>
               <Button asChild variant="outline"><Link href="/select-brand">Entrer dans une marque <ArrowRight /></Link></Button>
             </CardContent>
@@ -64,8 +95,20 @@ export default async function DashboardPage() {
             <CardContent className="space-y-3">
               {recentOnboardingSessions.length ? recentOnboardingSessions.map((sessionItem) => (
                 <div key={sessionItem.id} className="rounded-[0.4rem] border border-[var(--tr1-line)] p-3">
-                  <p className="font-medium">{sessionItem.brand_id}</p>
-                  <p className="text-xs text-muted-foreground">{sessionItem.status} · {new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(new Date(sessionItem.created_at))}</p>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-medium">{sessionItem.brandName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {sessionItem.statusLabel} · étape {sessionItem.currentStep} · checklist {sessionItem.checklistProgress}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(new Date(sessionItem.createdAt))}
+                      </p>
+                    </div>
+                    <Button asChild size="sm" variant="outline">
+                      <Link href={`/dashboard/admin/onboarding?brandId=${sessionItem.brandId}`}>Reprendre l’onboarding</Link>
+                    </Button>
+                  </div>
                 </div>
               )) : <p className="text-sm text-muted-foreground">Aucun onboarding récent.</p>}
             </CardContent>

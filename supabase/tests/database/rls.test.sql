@@ -21,16 +21,26 @@ insert into public.memberships (user_id, organization_id, brand_id, role_id, sta
   ('00000000-0000-0000-0000-0000000000b6', '00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000101', (select id from public.roles where key = 'agent'), 'active');
 
 insert into public.pharmacies (id, legal_name, trade_name, siret, postal_code, city, archived_at) values
-  ('00000000-0000-0000-0000-000000000404', 'Pharmacie archivée', 'Pharmacie archivée', '12345678900044', '75010', 'Paris', now()),
-  ('00000000-0000-0000-0000-000000000405', 'Pharmacie autre agent', 'Pharmacie autre agent', '12345678900052', '75011', 'Paris', null),
-  ('00000000-0000-0000-0000-000000000406', 'Pharmacie contraintes', 'Pharmacie contraintes', '12345678900060', '75012', 'Paris', null);
+  ('00000000-0000-0000-0000-00000000e404', 'Pharmacie archivée', 'Pharmacie archivée', '12345678999044', '75010', 'Paris', now()),
+  ('00000000-0000-0000-0000-00000000e405', 'Pharmacie autre agent', 'Pharmacie autre agent', '12345678999052', '75011', 'Paris', null),
+  ('00000000-0000-0000-0000-00000000e406', 'Pharmacie contraintes', 'Pharmacie contraintes', '12345678999060', '75012', 'Paris', null);
 insert into public.brand_pharmacies (id, brand_id, pharmacy_id, current_agent_user_id, source) values
-  ('00000000-0000-0000-0000-000000000415', '00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000405', '00000000-0000-0000-0000-0000000000b6', 'agent');
+  ('00000000-0000-0000-0000-00000000e415', '00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-00000000e405', '00000000-0000-0000-0000-0000000000b6', 'agent');
 insert into public.orders (id, organization_id, brand_id, pharmacy_id, brand_pharmacy_id, created_by)
 values ('00000000-0000-0000-0000-000000000901', '00000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000102', '00000000-0000-0000-0000-000000000403', '00000000-0000-0000-0000-000000000413', '00000000-0000-0000-0000-0000000000a4');
 insert into public.missions (id, organization_id, brand_id, pharmacy_id, brand_pharmacy_id, assigned_user_id, managed_by, created_by, mission_type, title, objective, scheduled_start_at) values
   ('00000000-0000-0000-0000-000000000902', '00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000402', '00000000-0000-0000-0000-000000000412', '00000000-0000-0000-0000-0000000000b4', '00000000-0000-0000-0000-0000000000a2', '00000000-0000-0000-0000-0000000000a2', 'animation', 'Mission animateur', 'Animation Dermavita', now()),
   ('00000000-0000-0000-0000-000000000903', '00000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000102', '00000000-0000-0000-0000-000000000403', '00000000-0000-0000-0000-000000000413', '00000000-0000-0000-0000-0000000000a4', '00000000-0000-0000-0000-0000000000a4', '00000000-0000-0000-0000-0000000000a4', 'training', 'Mission autre marque', 'Formation Nutrilab', now());
+
+create temp table rls_expected_counts as
+select
+  count(*) filter (where brand_id = '00000000-0000-0000-0000-000000000101' and archived_at is null) as brand_101_relations,
+  count(distinct pharmacy_id) filter (where brand_id = '00000000-0000-0000-0000-000000000101' and archived_at is null) as brand_101_pharmacies,
+  count(*) filter (where brand_id in ('00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000102') and archived_at is null) as both_brand_relations,
+  count(distinct pharmacy_id) filter (where brand_id in ('00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000102') and archived_at is null) as both_brand_pharmacies,
+  count(*) filter (where archived_at is null) as all_active_relations
+from public.brand_pharmacies;
+grant select on rls_expected_counts to authenticated;
 
 select plan(57);
 
@@ -40,16 +50,16 @@ select throws_ok($$insert into public.pharmacies (legal_name, siret) values ('Do
 select throws_ok($$insert into public.pharmacies (legal_name, cip_code) values ('Doublon CIP','7500001')$$, '23505', null, 'duplicate CIP is rejected');
 select throws_ok($$insert into public.pharmacies (legal_name, finess_code) values ('Doublon FINESS','750100001')$$, '23505', null, 'duplicate FINESS is rejected');
 select throws_ok($$insert into public.pharmacy_contacts (pharmacy_id, first_name, last_name, is_primary) values ('00000000-0000-0000-0000-000000000401','Autre','Titulaire',true)$$, '23505', null, 'only one active primary contact is allowed');
-select throws_ok($$insert into public.brand_pharmacies (brand_id, pharmacy_id) values ('00000000-0000-0000-0000-000000000101','00000000-0000-0000-0000-000000000404')$$, '23514', 'An archived pharmacy cannot receive an active brand relation', 'archived pharmacy cannot receive a new active relation');
+select throws_ok($$insert into public.brand_pharmacies (brand_id, pharmacy_id) values ('00000000-0000-0000-0000-000000000101','00000000-0000-0000-0000-00000000e404')$$, '23514', 'An archived pharmacy cannot receive an active brand relation', 'archived pharmacy cannot receive a new active relation');
 select throws_ok($$insert into public.brand_pharmacy_products (brand_pharmacy_id, product_id) values ('00000000-0000-0000-0000-000000000411','00000000-0000-0000-0000-000000000602')$$, '23514', 'Product and brand pharmacy must belong to the same brand', 'cross-brand product association is rejected');
 select throws_ok($$update public.brand_pharmacies set current_agent_user_id = '00000000-0000-0000-0000-0000000000b1' where id = '00000000-0000-0000-0000-000000000412'$$, '23514', 'Assigned users must have active access to the brand', 'user without brand access cannot be assigned');
-select throws_ok($$insert into public.brand_pharmacies (brand_id, pharmacy_id, territory_id) values ('00000000-0000-0000-0000-000000000101','00000000-0000-0000-0000-000000000406','00000000-0000-0000-0000-000000000202')$$, '23514', 'Territory is outside the brand scope', 'territory from another brand is rejected');
+select throws_ok($$insert into public.brand_pharmacies (brand_id, pharmacy_id, territory_id) values ('00000000-0000-0000-0000-000000000101','00000000-0000-0000-0000-00000000e406','00000000-0000-0000-0000-000000000202')$$, '23514', 'Territory is outside the brand scope', 'territory from another brand is rejected');
 select throws_ok($$insert into public.products (brand_id,name,sku) values ('00000000-0000-0000-0000-000000000101','Doublon SKU','DV-DC-50')$$, '23505', null, 'SKU is unique within a brand');
 
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}', true);
-select is((select count(*) from public.brand_pharmacies), 3::bigint, 'brand admin sees only its three brand relations');
-select is((select count(*) from public.pharmacies), 3::bigint, 'brand admin sees only physical pharmacies connected to its brand');
+select is((select count(*) from public.brand_pharmacies), (select brand_101_relations from rls_expected_counts), 'brand admin sees only its brand relations');
+select is((select count(*) from public.pharmacies), (select brand_101_pharmacies from rls_expected_counts), 'brand admin sees only physical pharmacies connected to its brand');
 select is((select count(*) from public.brand_pharmacies where brand_id = '00000000-0000-0000-0000-000000000102'), 0::bigint, 'brand admin cannot read another brand relation');
 with changed as (update public.brand_pharmacies set notes = 'Hacked' where id = '00000000-0000-0000-0000-000000000413' returning 1)
 select is((select count(*) from changed), 0::bigint, 'brand admin cannot update another brand relation');
@@ -67,8 +77,8 @@ select is((select count(*) from public.brand_pharmacies where id = '00000000-000
 with changed as (update public.brand_pharmacies set notes = 'Compte rendu agent' where id = '00000000-0000-0000-0000-000000000411' returning 1)
 select is((select count(*) from changed), 1::bigint, 'agent can update notes on its assigned pharmacy');
 select throws_ok($$update public.brand_pharmacies set current_agent_user_id = null where id = '00000000-0000-0000-0000-000000000411'$$, '42501', 'Agent update scope exceeded', 'agent cannot alter its own assignment');
-select throws_ok($$insert into public.brand_pharmacies (brand_id, pharmacy_id) values ('00000000-0000-0000-0000-000000000101','00000000-0000-0000-0000-000000000406')$$, '42501', null, 'agent cannot create a brand relation');
-select is((select count(*) from public.brand_pharmacies where id = '00000000-0000-0000-0000-000000000415'), 0::bigint, 'agent cannot access another agent pharmacy');
+select throws_ok($$insert into public.brand_pharmacies (brand_id, pharmacy_id) values ('00000000-0000-0000-0000-000000000101','00000000-0000-0000-0000-00000000e406')$$, '42501', null, 'agent cannot create a brand relation');
+select is((select count(*) from public.brand_pharmacies where id = '00000000-0000-0000-0000-00000000e415'), 0::bigint, 'agent cannot access another agent pharmacy');
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000b4","role":"authenticated"}', true);
 select is((select count(*) from public.brand_pharmacies), 0::bigint, 'facilitator has no general referential access');
@@ -84,15 +94,15 @@ select is((select count(*) from public.brand_pharmacies), 0::bigint, 'suspended 
 select is((select count(*) from public.pharmacies), 0::bigint, 'suspended membership sees no pharmacy');
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000b3","role":"authenticated"}', true);
-select is((select count(*) from public.brand_pharmacies), 5::bigint, 'multi-brand user sees both authorized brand scopes');
-select is((select count(*) from public.pharmacies), 4::bigint, 'multi-brand user sees shared physical pharmacy only once');
+select is((select count(*) from public.brand_pharmacies), (select both_brand_relations from rls_expected_counts), 'multi-brand user sees both authorized brand scopes');
+select is((select count(*) from public.pharmacies), (select both_brand_pharmacies from rls_expected_counts), 'multi-brand user sees shared physical pharmacy only once');
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}', true);
 update public.memberships set role_id = (select id from public.roles where key = 'agent') where user_id = '00000000-0000-0000-0000-0000000000b3';
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000b3","role":"authenticated"}', true);
 select is((select count(*) from public.brand_pharmacies), 0::bigint, 'role change is applied immediately by RLS');
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}', true);
-select is((select count(*) from public.brand_pharmacies), 5::bigint, 'TR1 super admin sees every brand relation');
+select is((select count(*) from public.brand_pharmacies), (select all_active_relations from rls_expected_counts), 'TR1 super admin sees every active brand relation');
 select is((select count(*) from public.find_pharmacy_duplicates('12345678900011',null,null,null,null,null)), 1::bigint, 'duplicate search detects identical SIRET');
 select is((select count(*) from public.find_pharmacy_duplicates(null,null,null,'Pharmacie Republique','75003',null)), 1::bigint, 'duplicate search warns on normalized name and postal code');
 
@@ -109,7 +119,7 @@ select is((select count(*) from public.import_batches where id = '00000000-0000-
 select is((select count(*) from public.activity_logs where action = 'import.confirm' and entity_id = '00000000-0000-0000-0000-000000000a01'), 1::bigint, 'CSV confirmation is journalized');
 
 select lives_ok($$update public.brand_pharmacies set archived_at = now() where id = '00000000-0000-0000-0000-000000000412'$$, 'brand relation is logically archived');
-select is((select count(*) from public.brand_pharmacies where archived_at is null), 2::bigint, 'archived relation disappears from the active relation scope');
+select is((select count(*) from public.brand_pharmacies where archived_at is null), (select brand_101_relations - 1 from rls_expected_counts), 'archived relation disappears from the active relation scope');
 select ok(private.is_active_pharmacy('00000000-0000-0000-0000-000000000402'), 'logical relation archive preserves physical pharmacy data');
 select lives_ok($$select public.create_brand_pharmacy('00000000-0000-0000-0000-000000000101','{}','{}','00000000-0000-0000-0000-000000000402')$$, 'new active relation can be created after archive');
 select lives_ok($$select public.create_brand_pharmacy('00000000-0000-0000-0000-000000000101','{"legal_name":"Pharmacie RPC RLS","siret":"12345678900999"}','{}',null)$$, 'brand admin can atomically create a physical pharmacy and its brand relation under RLS');

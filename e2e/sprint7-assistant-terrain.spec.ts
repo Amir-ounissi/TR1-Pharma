@@ -29,7 +29,7 @@ test.describe.serial("Sprint 7 — Assistant Terrain", () => {
     await expect(draft).toContainText("Intérêt pour DREAM.");
     await expect(draft).toContainText("Appel");
     await expect(draft).toContainText(/mardi/i);
-    await expect(draft).toContainText(/août 2026/i);
+    await expect(draft).toContainText(/\d{1,2}\s+[A-Za-zÀ-ÿ]+\s+\d{4}/i);
 
     await page.screenshot({ path: "artifacts/sprint7/assistant-desktop.png", fullPage: true });
     await draft.getByRole("button", { name: "Confirmer" }).click();

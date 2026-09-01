@@ -1,19 +1,5 @@
-import { expect, test, type BrowserContext, type Page } from "@playwright/test";
-
-const password = "DemoTR1!2026";
-type StorageState = Awaited<ReturnType<BrowserContext["storageState"]>>;
-let adminStorageState: StorageState;
-let agentStorageState: StorageState;
-
-async function signIn(page: Page, email: string) {
-  await page.goto("/login");
-  await page.getByLabel("Email professionnel").fill(email);
-  await page.getByLabel("Mot de passe").fill(password);
-  await page.getByRole("button", { name: "Se connecter" }).click();
-  await expect(page).toHaveURL(/\/select-brand/, { timeout: 30_000 });
-  await page.getByRole("button", { name: /Dermavita/i }).click();
-  await expect(page).toHaveURL(/\/dashboard(?:\/agent)?$/, { timeout: 30_000 });
-}
+import { expect, test, type Page } from "@playwright/test";
+import { signIn } from "./test-helpers";
 
 async function chooseOption(page: Page, control: string, option: RegExp | string) {
   await page.getByLabel(control).click();
@@ -43,27 +29,14 @@ async function openOrder(page: Page, number: string) {
   return page.url();
 }
 
-test.beforeAll(async ({ browser }) => {
-  const adminContext = await browser.newContext();
-  const adminPage = await adminContext.newPage();
-  await signIn(adminPage, "admin@dermavita.local");
-  adminStorageState = await adminContext.storageState();
-  await adminContext.close();
-
-  const agentContext = await browser.newContext();
-  const agentPage = await agentContext.newPage();
-  await signIn(agentPage, "agent@dermavita.local");
-  agentStorageState = await agentContext.storageState();
-  await agentContext.close();
-});
-
 test("parcours implantation, réassort et cloisonnement agent", async ({ browser }) => {
   const runId = String(Date.now());
   const pharmacyName = `Pharmacie E2E ${runId}`;
   const initialOrderNumber = `E2E-INITIAL-${runId}`;
   const reorderNumber = `E2E-REORDER-${runId}`;
-  const adminContext = await browser.newContext({ storageState: adminStorageState });
+  const adminContext = await browser.newContext();
   const adminPage = await adminContext.newPage();
+  await signIn(adminPage, "admin@dermavita.local", /Dermavita/i);
 
   await adminPage.goto("/dashboard/pharmacies/new");
   await adminPage.getByLabel("Raison sociale (création)").fill(`${pharmacyName} SAS`);
@@ -98,8 +71,9 @@ test("parcours implantation, réassort et cloisonnement agent", async ({ browser
   await expect(adminPage.getByText("Réassorts")).toBeVisible();
   await expect(adminPage.getByText("2", { exact: true }).first()).toBeVisible();
 
-  const agentContext = await browser.newContext({ storageState: agentStorageState });
+  const agentContext = await browser.newContext();
   const agentPage = await agentContext.newPage();
+  await signIn(agentPage, "agent@dermavita.local", /Dermavita/i);
   await agentPage.goto(initialOrderUrl);
   await expect(agentPage.getByText(/could not be found|introuvable/i)).toBeVisible();
 

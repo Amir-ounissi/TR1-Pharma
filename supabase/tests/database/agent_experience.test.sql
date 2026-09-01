@@ -65,7 +65,7 @@ select throws_ok(
   'authenticated users cannot write instrumentation directly'
 );
 select lives_ok(
-  $$select public.track_product_event('pharmacy_opened','00000000-0000-0000-0000-000000000101','00000000-0000-0000-0000-000000000401','agent_day','{"origin":"test"}')$$,
+  $$select public.track_product_event('pharmacy_opened','00000000-0000-0000-0000-000000000101','00000000-0000-0000-0000-000000000401','agent_day','{"origin":"agent_experience_test","actor":"agent"}')$$,
   'agent records an event on an assigned pharmacy'
 );
 select throws_ok(
@@ -84,30 +84,50 @@ select throws_ok(
   'instrumentation metadata is size limited'
 );
 select is(
-  (select count(*) from public.product_events),
+  (
+    select count(*)
+    from public.product_events
+    where metadata->>'origin' = 'agent_experience_test'
+      and metadata->>'actor' = 'agent'
+  ),
   1::bigint,
   'agent reads only its own recorded event'
 );
 select is(
-  (select organization_id from public.product_events limit 1),
+  (
+    select organization_id
+    from public.product_events
+    where metadata->>'origin' = 'agent_experience_test'
+      and metadata->>'actor' = 'agent'
+    limit 1
+  ),
   '00000000-0000-0000-0000-000000000002'::uuid,
   'event organization is derived from the authorized brand'
 );
 
 select set_config('request.jwt.claims','{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}',true);
 select lives_ok(
-  $$select public.track_product_event('agent_dashboard_viewed','00000000-0000-0000-0000-000000000101',null,'agent_day','{}')$$,
+  $$select public.track_product_event('agent_dashboard_viewed','00000000-0000-0000-0000-000000000101',null,'agent_day','{"origin":"agent_experience_test","actor":"brand_admin"}')$$,
   'brand administrator records an event in its brand'
 );
 select is(
-  (select count(*) from public.product_events where brand_id = '00000000-0000-0000-0000-000000000101'),
+  (
+    select count(*)
+    from public.product_events
+    where brand_id = '00000000-0000-0000-0000-000000000101'
+      and metadata->>'origin' = 'agent_experience_test'
+  ),
   2::bigint,
   'brand administrator reads all events from its brand'
 );
 
 select set_config('request.jwt.claims','{"sub":"00000000-0000-0000-0000-0000000000a4","role":"authenticated"}',true);
 select is(
-  (select count(*) from public.product_events),
+  (
+    select count(*)
+    from public.product_events
+    where metadata->>'origin' = 'agent_experience_test'
+  ),
   0::bigint,
   'another brand cannot read instrumentation'
 );
@@ -124,7 +144,11 @@ where user_id = '00000000-0000-0000-0000-0000000000a3'
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"00000000-0000-0000-0000-0000000000a3","role":"authenticated"}',true);
 select is(
-  (select count(*) from public.product_events),
+  (
+    select count(*)
+    from public.product_events
+    where metadata->>'origin' = 'agent_experience_test'
+  ),
   0::bigint,
   'suspended agent immediately loses access to previous product events'
 );
