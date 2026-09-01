@@ -186,7 +186,7 @@ end;
 $$;
 
 revoke all on function public.approve_access_request(uuid, uuid, uuid[], text) from public, anon;
-grant execute on function public.approve_access_request(uuid, uuid, uuid[], text) to authenticated, service_role;
+grant execute on function public.approve_access_request(uuid, uuid, uuid[], text) to authenticated;
 
 create or replace function private.handle_new_auth_user()
 returns trigger
