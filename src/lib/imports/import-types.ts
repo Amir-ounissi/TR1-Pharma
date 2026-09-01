@@ -53,8 +53,21 @@ export const DEFAULT_IMPORT_LIMITS: ImportLimits = {
 
 export const IMPORT_COLUMNS: Record<ImportType, { required: string[]; optional: string[] }> = {
   products: {
-    required: ["product_code", "product_name", "category", "active"],
-    optional: ["unit_price_ht", "ean", "strategic"],
+    required: ["sku", "name", "is_active"],
+    optional: [
+      "ean",
+      "description",
+      "category",
+      "product_family",
+      "format",
+      "wholesale_price_ht",
+      "retail_price_ttc",
+      "tax_rate",
+      "units_per_case",
+      "minimum_order_quantity",
+      "strategic_priority",
+      "counts_for_distribution",
+    ],
   },
   pharmacies: {
     required: ["pharmacy_name", "address_line_1", "postal_code", "city", "country"],

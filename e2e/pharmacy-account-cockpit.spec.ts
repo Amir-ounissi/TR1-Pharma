@@ -21,12 +21,12 @@ test("Manager voit le cockpit commercial, les activations et la performance", as
   await page.screenshot({ path: `${artifacts}/manager-pharmacy-cockpit.png`, fullPage: true });
 
   await page.goto(`/dashboard/pharmacies/${brandPharmacyId}?tab=performance`);
-  await expect(page.getByText("Actions terrain récentes")).toBeVisible();
+  await expect(page.getByText("Historique missions & impact observé")).toBeVisible();
   await page.screenshot({ path: `${artifacts}/manager-account-performance.png`, fullPage: true });
 
   await page.goto("/dashboard/network");
-  await expect(page.getByRole("heading", { name: "Performance réseau" })).toBeVisible();
-  await expect(page.getByText("Nouvelles ouvertures du mois")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Où en sommes-nous et où agir maintenant ?" })).toBeVisible();
+  await expect(page.getByText("Implantations", { exact: true }).first()).toBeVisible();
   await page.screenshot({ path: `${artifacts}/manager-network-performance.png`, fullPage: true });
 });
 

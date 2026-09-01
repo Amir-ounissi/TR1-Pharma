@@ -153,9 +153,11 @@ test.describe.serial("Sprint 10 — Performance des missions", () => {
 
   test("animation avec impact observé — coûts, commande, réassort et causalité", async ({ page }) => {
     await signIn(page, "admin@dermavita.local", /Dermavita/);
-    await page.goto("/dashboard/mission-performance?period=90");
-    await expect(page.getByRole("heading", { name: "Impact des missions" })).toBeVisible();
-    await expect(page.getByText(/sans attribution causale/i)).toBeVisible();
+    const from = new Date(Date.now() - 90 * 86_400_000).toISOString().slice(0, 10);
+    const to = new Date().toISOString().slice(0, 10);
+    await page.goto(`/dashboard/network?view=missions&from=${from}&to=${to}`);
+    await expect(page.getByRole("heading", { name: "Où en sommes-nous et où agir maintenant ?" })).toBeVisible();
+    await expect(page.getByText(/sans causalité attribuée/i)).toBeVisible();
     const missionRow = page.getByRole("row").filter({ hasText: missionTitle });
     await expect(missionRow).toBeVisible();
     await expect(missionRow.getByText("Signal positif fort")).toBeVisible();

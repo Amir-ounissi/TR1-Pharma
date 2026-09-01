@@ -112,7 +112,7 @@ test("parcours complet animation Sprint 5 avec vérification en base", async ({ 
   await waitForReportStatus(admin, missionId, "validated");
   await waitForMissionStatus(admin, missionId, "completed");
   await tr1Page.goto(missionUrl);
-  await expect(tr1Page.getByText("completed", { exact: true }).first()).toBeVisible();
+  await expect(tr1Page.getByText("Terminée", { exact: true }).first()).toBeVisible();
 
   await tr1Page.goto("/dashboard/orders/new");
   await chooseCombobox(tr1Page, "form", 0, /Pharmacie République/i);

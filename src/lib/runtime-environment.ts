@@ -30,8 +30,18 @@ export function resolveAppUrl(environment: RuntimeEnvironmentInput = process.env
 }
 
 export function resolveOnboardingRedirectUrl(environment: RuntimeEnvironmentInput = process.env) {
-  const appUrl = readRuntimeEnvironment(environment).NEXT_PUBLIC_APP_URL;
-  return `${appUrl}/auth/confirm?next=/onboarding`;
+  const appUrl = resolveAppUrl(environment);
+  if (!appUrl) throw new Error("NEXT_PUBLIC_APP_URL est obligatoire pour les redirections d’authentification.");
+
+  const parsedUrl = new URL(z.url().parse(appUrl));
+  const appEnvironment = getAppEnvironment(environment);
+  if (appEnvironment === "staging" || appEnvironment === "production") {
+    if (parsedUrl.protocol !== "https:" || ["localhost", "127.0.0.1"].includes(parsedUrl.hostname)) {
+      throw new Error(`NEXT_PUBLIC_APP_URL doit cibler une URL HTTPS distante en ${appEnvironment}.`);
+    }
+  }
+
+  return `${parsedUrl.origin}/auth/confirm?next=/onboarding`;
 }
 
 export function readRuntimeEnvironment(environment: Record<string, string | undefined> = process.env) {

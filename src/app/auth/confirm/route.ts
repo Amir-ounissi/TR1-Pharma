@@ -10,7 +10,10 @@ export async function GET(request: NextRequest) {
   if (tokenHash && type && next.startsWith("/")) {
     const supabase = await createClient();
     const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
-    if (!error) return NextResponse.redirect(new URL(next, request.url));
+    if (!error) {
+      const { error: activationError } = await supabase.rpc("accept_my_invited_memberships");
+      if (!activationError) return NextResponse.redirect(new URL(next, request.url));
+    }
   }
 
   return NextResponse.redirect(new URL("/login?error=confirmation", request.url));

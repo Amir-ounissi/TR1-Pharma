@@ -14,11 +14,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
     const globalNavigation: SearchItem[] = [
       { id: "navigation-dashboard", kind: "navigation", label: "Vue d’ensemble TR1", href: "/dashboard" },
+      { id: "navigation-access-requests", kind: "navigation", label: "Demandes d’accès", href: "/dashboard/admin/access-requests" },
+      { id: "navigation-users", kind: "navigation", label: "Utilisateurs & accès", href: "/dashboard/admin/users" },
       { id: "navigation-leads", kind: "navigation", label: "Leads TR1", href: "/dashboard/admin/leads" },
       { id: "navigation-onboarding", kind: "navigation", label: "Onboarding marques", href: "/dashboard/admin/onboarding" },
     ];
 
-    return <AppShell brandHint="Vue active" brandName="TR1 global" role="super_admin" searchItems={globalNavigation} userName={session.profile.full_name}>{children}</AppShell>;
+    return <AppShell brandHint="Vue active" brandName="TR1 global" role="super_admin" navigationScope="platform" searchItems={globalNavigation} userName={session.profile.full_name}>{children}</AppShell>;
   }
 
   const { brand, profile, supabase } = session;

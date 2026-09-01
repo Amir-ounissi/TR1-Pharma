@@ -19,7 +19,7 @@ describe("signUpAction", () => {
   });
 
   it("accepts an agent signup when non-relevant optional fields are absent", async () => {
-    const signUp = vi.fn(async () => ({ data: { session: null }, error: null }));
+    const signUp = vi.fn(async () => ({ data: { user: { id: "00000000-0000-4000-8000-000000000001" }, session: null }, error: null }));
     mocks.createClient.mockResolvedValue({ auth: { signUp } });
 
     const formData = new FormData();
@@ -51,7 +51,7 @@ describe("signUpAction", () => {
   });
 
   it("accepts a facilitator signup when brand and agent fields are absent", async () => {
-    const signUp = vi.fn(async () => ({ data: { session: null }, error: null }));
+    const signUp = vi.fn(async () => ({ data: { user: { id: "00000000-0000-4000-8000-000000000002" }, session: null }, error: null }));
     mocks.createClient.mockResolvedValue({ auth: { signUp } });
 
     const formData = new FormData();

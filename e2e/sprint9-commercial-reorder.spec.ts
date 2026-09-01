@@ -117,7 +117,7 @@ test.describe.serial("Sprint 9 — Pilotage commercial et réassort", () => {
 
   test("manager — décision, détail explicable et relance confirmée", async ({ page }) => {
     await signIn(page, "admin@dermavita.local", /Dermavita/);
-    await expect(page.getByRole("heading", { name: "Où agir maintenant ?" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Je constate, je comprends, j’agis" })).toBeVisible();
     await expect(page.getByText("À traiter maintenant")).toBeVisible();
     await page.screenshot({ path: "artifacts/sprint9/manager-dashboard-desktop.png", fullPage: true });
 

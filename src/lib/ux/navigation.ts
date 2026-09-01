@@ -12,6 +12,8 @@ export type NavigationSection = {
   items: NavigationItem[];
 };
 
+export type NavigationScope = "tenant" | "platform";
+
 const agentItems: NavigationItem[] = [
   { href: "/dashboard/agent", label: "Ma journée", shortLabel: "Accueil", icon: "sun" },
   { href: "/dashboard/pharmacies", label: "Pharmacies", icon: "building" },
@@ -30,14 +32,21 @@ const managerItems: NavigationItem[] = [
   { href: "/dashboard/network", label: "Performance", icon: "chart" },
 ];
 
-const adminItems: NavigationItem[] = [
+const tenantAdminItems: NavigationItem[] = [
   { href: "/dashboard/products", label: "Produits", icon: "boxes" },
   { href: "/dashboard/groups", label: "Groupements", icon: "network" },
   { href: "/dashboard/territories", label: "Territoires", icon: "map" },
   { href: "/dashboard/imports", label: "Imports", icon: "upload" },
   { href: "/dashboard/users", label: "Utilisateurs", icon: "users" },
   { href: "/dashboard/admin/design-system", label: "Configuration UI", icon: "activity" },
-  { href: "/dashboard/admin/onboarding", label: "Onboarding marques", icon: "badge" },
+];
+
+const platformAdminItems: NavigationItem[] = [
+  { href: "/dashboard", label: "Vue globale", shortLabel: "Accueil", icon: "layout" },
+  { href: "/dashboard/admin/access-requests", label: "Demandes d’accès", icon: "users" },
+  { href: "/dashboard/admin/onboarding", label: "Marques & onboardings", icon: "badge" },
+  { href: "/dashboard/admin/users", label: "Utilisateurs & accès", icon: "users" },
+  { href: "/dashboard/admin/leads", label: "Leads TR1", icon: "leads" },
 ];
 
 export function getRoleFamily(role: string): RoleFamily {
@@ -54,7 +63,7 @@ export function getRoleLandingPath(role: string) {
   return "/dashboard";
 }
 
-export function getNavigationSections(role: string): NavigationSection[] {
+export function getNavigationSections(role: string, scope: NavigationScope = "tenant"): NavigationSection[] {
   const family = getRoleFamily(role);
 
   if (family === "agent") return [{ label: "Terrain", items: agentItems }];
@@ -68,18 +77,22 @@ export function getNavigationSections(role: string): NavigationSection[] {
     }];
   }
 
+  if (scope === "platform") {
+    return [{ label: "Plateforme TR1", items: platformAdminItems }];
+  }
+
   const sections: NavigationSection[] = [{ label: "Pilotage", items: managerItems }];
   if (family === "admin") {
     sections.push({
-      label: "Administration",
-      items: role === "super_admin" ? [{ href: "/dashboard/admin/leads", label: "Leads TR1", icon: "leads" }, ...adminItems] : adminItems,
+      label: "Administration marque",
+      items: tenantAdminItems,
     });
   }
   return sections;
 }
 
-export function getNavigationItems(role: string) {
-  return getNavigationSections(role).flatMap((section) => section.items);
+export function getNavigationItems(role: string, scope: NavigationScope = "tenant") {
+  return getNavigationSections(role, scope).flatMap((section) => section.items);
 }
 
 export function isNavigationItemActive(pathname: string, href: string) {

@@ -55,6 +55,8 @@ Tous les comptes locaux utilisent le mot de passe `DemoTR1!2026`.
 | `agent@dermavita.local` | Agent commercial | Une pharmacie Dermavita affectée |
 | `admin@nutrilab.local` | Administrateur de marque | Nutrilab |
 
+Le compte `superadmin@tr1.local` est strictement un compte de démonstration pour le seed local ou un staging de démo isolé. Il ne doit jamais être réutilisé comme platform owner réel. Le vrai propriétaire plateforme doit être créé séparément, avec validation explicite, puis recevoir son rôle `super_admin` par une opération contrôlée côté serveur ou back-office sécurisé.
+
 ## Validation
 
 ```bash

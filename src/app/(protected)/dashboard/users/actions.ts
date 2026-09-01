@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { requireActiveBrand } from "@/lib/auth";
+import { isPlatformAdmin, requireActiveBrand } from "@/lib/auth";
 import { resolveOnboardingRedirectUrl } from "@/lib/runtime-environment";
 
 export type CreateUserState = { error?: string; success?: string };
@@ -13,6 +13,8 @@ const createUserSchema = z.object({
   fullName: z.string().trim().min(2).max(120),
   role: z.enum(["brand_admin", "brand_user", "agent", "facilitator"]),
 });
+
+const managedRoles = ["brand_admin", "brand_user", "agent", "facilitator"] as const;
 
 export async function createUserAction(
   _state: CreateUserState,
@@ -26,15 +28,31 @@ export async function createUserAction(
   if (!parsed.success) return { error: "Les informations saisies sont invalides." };
 
   const { supabase, userId, brand } = await requireActiveBrand();
+  const platformAdmin = await isPlatformAdmin();
   const { data: allowed } = await supabase.rpc("can_manage_brand_users", { target_brand_id: brand.id });
   if (!allowed) return { error: "Vous n’avez pas le droit de créer un utilisateur." };
+
+  const { data: authorMembership } = await supabase
+    .from("memberships")
+    .select("roles!inner(key,rank)")
+    .eq("user_id", userId)
+    .eq("brand_id", brand.id)
+    .eq("status", "active")
+    .order("roles(rank)", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
   const admin = createAdminClient();
   const [{ data: brandRecord }, { data: role }] = await Promise.all([
     admin.from("brands").select("organization_id").eq("id", brand.id).single(),
-    admin.from("roles").select("id").eq("key", parsed.data.role).single(),
+    admin.from("roles").select("id,rank").eq("key", parsed.data.role).single(),
   ]);
   if (!brandRecord || !role) return { error: "Configuration de marque incomplète." };
+
+  const authorRole = Array.isArray(authorMembership?.roles) ? authorMembership.roles[0] : authorMembership?.roles;
+  if (!managedRoles.includes(parsed.data.role) || (!platformAdmin && (!authorRole || role.rank >= authorRole.rank))) {
+    return { error: "Vous ne pouvez inviter qu’un rôle strictement inférieur au vôtre." };
+  }
 
   const { data: invitation, error: invitationError } = await admin.auth.admin.inviteUserByEmail(
     parsed.data.email,

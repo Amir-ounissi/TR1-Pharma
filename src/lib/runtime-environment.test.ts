@@ -75,4 +75,11 @@ describe("runtime environment", () => {
       VERCEL_URL: "tr1-preview-example.vercel.app",
     })).toBe("https://tr1-preview-example.vercel.app/auth/confirm?next=/onboarding");
   });
+
+  it("resolves a local authentication redirect without unrelated server secrets", () => {
+    expect(resolveOnboardingRedirectUrl({
+      APP_ENV: "local",
+      NEXT_PUBLIC_APP_URL: "http://localhost:3001",
+    })).toBe("http://localhost:3001/auth/confirm?next=/onboarding");
+  });
 });

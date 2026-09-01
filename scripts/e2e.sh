@@ -23,6 +23,10 @@ if [ -z "$api_url" ] || [ -z "$anon_key" ] || [ -z "$service_role_key" ]; then
   exit 1
 fi
 
+. ./scripts/local-env-lock.sh
+tr1_acquire_local_env_lock
+trap 'tr1_release_local_env_lock' EXIT HUP INT TERM
+
 export NEXT_PUBLIC_SUPABASE_URL="$api_url"
 export NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="$anon_key"
 export SUPABASE_SERVICE_ROLE_KEY="$service_role_key"

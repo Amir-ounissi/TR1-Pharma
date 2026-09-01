@@ -3,10 +3,16 @@ import { selectBrandAction, selectPlatformViewAction } from "@/app/(auth)/select
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getBrandContexts, isPlatformAdmin } from "@/lib/auth";
+import { getBrandContexts, isPlatformAdmin, requireUser } from "@/lib/auth";
 
 export default async function SelectBrandPage() {
-  const [brands, platformAdmin] = await Promise.all([getBrandContexts(), isPlatformAdmin()]);
+  const { supabase, userId } = await requireUser();
+  const [brands, platformAdmin, accessRequest] = await Promise.all([
+    getBrandContexts(),
+    isPlatformAdmin(),
+    supabase.from("access_requests").select("status,requested_profile_type,reviewer_note").eq("user_id", userId).maybeSingle(),
+  ]);
+  const request = accessRequest.data;
   return (
     <Card><CardHeader><CardTitle>Choisir un contexte</CardTitle><CardDescription>{platformAdmin ? "Commencez en vue globale TR1 ou entrez dans une marque pour travailler au niveau tenant." : "Votre contexte actif filtre toutes les données affichées."}</CardDescription></CardHeader><CardContent className="space-y-3">
       {platformAdmin ? (
@@ -25,7 +31,7 @@ export default async function SelectBrandPage() {
             <Badge variant="secondary">{brand.role}</Badge>
           </Button>
         </form>
-      )) : <p className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">Aucune marque active ne vous est attribuée.</p>}
+      )) : request?.status === "pending" ? <div className="rounded-md border border-dashed p-6 text-center"><p className="font-medium">Votre demande d’accès est en cours de validation.</p><p className="mt-1 text-sm text-muted-foreground">TR1 vous notifiera dès que votre marque, votre rôle et votre périmètre terrain seront activés.</p></div> : request?.status === "rejected" ? <div className="rounded-md border border-dashed p-6 text-center"><p className="font-medium">Votre demande d’accès n’a pas été validée.</p><p className="mt-1 text-sm text-muted-foreground">{request.reviewer_note || "Contactez TR1 pour connaître la suite."}</p></div> : <p className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">Aucune marque active ne vous est attribuée.</p>}
     </CardContent></Card>
   );
 }

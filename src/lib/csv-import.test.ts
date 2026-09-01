@@ -15,9 +15,16 @@ describe("parseCsv", () => {
   });
 
   it("signale les formats invalides", () => {
-    const preview = parseCsv("name;sku;wholesale_price_ht\nProduit;SKU-1;abc", "products");
+    const preview = parseCsv("name;sku;is_active;wholesale_price_ht;tax_rate\nProduit;SKU-1;oui;abc;120", "products");
     expect(preview.rows[0].isValid).toBe(false);
     expect(preview.rows[0].errors).toContain("Prix de gros invalide");
+    expect(preview.rows[0].errors).toContain("TVA invalide");
+  });
+
+  it("accepte le format produit canonique P0.1", () => {
+    const preview = parseCsv("sku;name;is_active;tax_rate;units_per_case;minimum_order_quantity\nSKU-1;Produit test;oui;5.5;6;2", "products");
+    expect(preview.rows[0].isValid).toBe(true);
+    expect(preview.rows[0].normalizedPayload.sku).toBe("SKU-1");
   });
 
   it("gère les champs entre guillemets", () => {
@@ -26,7 +33,7 @@ describe("parseCsv", () => {
   });
 
   it("valide les colonnes minimales d’une ligne de commande", () => {
-    const preview = parseCsv("external_order_id;order_date;brand_pharmacy_id;product_id;quantity;unit_price_ht\nCMD-1;2026-07-21;11111111-1111-4111-8111-111111111111;22222222-2222-4222-8222-222222222222;2;10,50", "orders");
+    const preview = parseCsv("external_order_id;order_date;brand_pharmacy_id;sku;quantity;unit_price_ht\nCMD-1;2026-07-21;11111111-1111-4111-8111-111111111111;SKU-1;2;10,50", "orders");
     expect(preview.rows[0].isValid).toBe(true);
     expect(preview.rows[0].normalizedPayload.unit_price_ht).toBe("10.50");
   });
@@ -36,5 +43,6 @@ describe("parseCsv", () => {
     expect(preview.rows[0].errors).toContain("Identifiant pharmacie manquant");
     expect(preview.rows[0].errors).toContain("Identifiant produit manquant");
     expect(preview.rows[0].errors).toContain("Quantité invalide");
+    expect(preview.rows[0].errors).toContain("Prix HT invalide");
   });
 });
