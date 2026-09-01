@@ -7,10 +7,10 @@ describe("Sprint 11 import load benchmark", () => {
   it("parses, maps and validates 5,000 product rows", () => {
     const rows = Array.from(
       { length: 5_000 },
-      (_, index) => `BENCH-${index + 1};Produit ${index + 1};Benchmark;oui;19,90;;non`,
+      (_, index) => `BENCH-${index + 1};Produit ${index + 1};Benchmark;oui;19,90;;standard`,
     );
     const csv = [
-      "product_code;product_name;category;active;unit_price_ht;ean;strategic",
+      "sku;name;category;is_active;wholesale_price_ht;ean;strategic_priority",
       ...rows,
     ].join("\n");
 
