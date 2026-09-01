@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
-select plan(60);
+select plan(63);
 
 select has_table('public','brand_onboarding_sessions','onboarding sessions exist');
 select has_table('public','import_mutations','import mutations exist');
@@ -95,11 +95,14 @@ insert into public.import_batches(
 insert into public.import_rows(batch_id,line_number,payload,normalized_payload,is_valid,status,deduplication_key)
 values(
   '11000000-0000-0000-0000-000000000101',2,'{}',
-  '{"product_code":"S11-PROD","product_name":"Produit Sprint 11","category":"Test","active":true,"unit_price_ht":25,"strategic":true}',
+  '{"sku":"S11-PROD","name":"Produit Sprint 11","description":"Référence onboarding","category":"Test","product_family":"Soin","format":"50 ml","wholesale_price_ht":25,"retail_price_ttc":39.9,"tax_rate":5.5,"units_per_case":6,"minimum_order_quantity":2,"strategic_priority":"strategic","counts_for_distribution":true,"is_active":true}',
   true,'valid','product:s11-prod'
 );
 select is((select processed from public.execute_onboarding_import('11000000-0000-0000-0000-000000000101')),1,'product import processes one row');
 select is((select count(*) from public.products where brand_id='00000000-0000-0000-0000-000000000101' and sku='S11-PROD'),1::bigint,'product import creates the canonical product');
+select is((select tax_rate from public.products where brand_id='00000000-0000-0000-0000-000000000101' and sku='S11-PROD'),5.5::numeric,'product import stores configurable VAT');
+select is((select units_per_case from public.products where brand_id='00000000-0000-0000-0000-000000000101' and sku='S11-PROD'),6,'product import stores packaging');
+select is((select minimum_order_quantity from public.products where brand_id='00000000-0000-0000-0000-000000000101' and sku='S11-PROD'),2,'product import stores MOQ');
 select is((select count(*) from public.import_batches where id='11000000-0000-0000-0000-000000000101' and lifecycle_status='completed' and status='confirmed'),1::bigint,'completed job is finalized');
 select is((select count(*) from public.import_mutations where import_batch_id='11000000-0000-0000-0000-000000000101' and target_table='products'),1::bigint,'created product is journalized for rollback');
 select throws_ok(

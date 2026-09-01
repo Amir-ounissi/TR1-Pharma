@@ -42,12 +42,19 @@ export function normalizeEmail(value: string) {
 
 export function normalizeImportValue(column: string, value: string, dateFormat?: "DMY" | "MDY") {
   if (!value.trim()) return null;
-  if (["active", "strategic"].includes(column)) return normalizeBoolean(value);
-  if (["unit_price_ht", "total_ht", "quantity"].includes(column)) return normalizeAmount(value);
+  if (["active", "is_active", "counts_for_distribution", "strategic"].includes(column)) return normalizeBoolean(value);
+  if (["unit_price_ht", "wholesale_price_ht", "retail_price_ttc", "tax_rate", "total_ht", "quantity", "units_per_case", "minimum_order_quantity"].includes(column)) return normalizeAmount(value);
   if (column === "order_date") return normalizeIsoDate(value, dateFormat);
   if (column.endsWith("email")) return normalizeEmail(value);
   if (column === "phone") return normalizePhone(value);
   if (column === "currency") return value.trim().toUpperCase();
   if (column === "country") return value.trim().toUpperCase();
+  if (column === "strategic_priority") {
+    const normalized = normalizeText(value).toLowerCase().replace(/\s+/g, "_");
+    if (["standard", "priority", "strategic"].includes(normalized)) return normalized;
+    if (["prioritaire"].includes(normalized)) return "priority";
+    if (["strategique", "stratégique"].includes(normalized)) return "strategic";
+    return null;
+  }
   return normalizeText(value);
 }

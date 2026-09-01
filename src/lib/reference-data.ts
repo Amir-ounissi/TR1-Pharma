@@ -29,7 +29,7 @@ export const labels = {
 export type ImportEntity = "pharmacies" | "contacts" | "brand_pharmacies" | "products" | "orders";
 export type ImportStrategy = "create_only" | "update_only" | "upsert" | "skip_duplicates";
 
-export function formatCurrency(value: number | string | null) {
+export function formatCurrency(value: number | string | null, currency = "EUR") {
   if (value === null || value === "") return "—";
-  return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(Number(value));
+  return new Intl.NumberFormat("fr-FR", { style: "currency", currency }).format(Number(value));
 }

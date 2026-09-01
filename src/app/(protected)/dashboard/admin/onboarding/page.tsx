@@ -84,7 +84,7 @@ export default async function BrandOnboardingPage({
   const brandIds = (sessions ?? []).map((session) => session.brand_id);
   const organizationIds = (sessions ?? []).map((session) => session.organization_id);
   const [{ data: brands }, { data: organizations }] = await Promise.all([
-    brandIds.length ? supabase.from("brands").select("id,name,code,status,organization_id,activated_at").in("id", brandIds) : Promise.resolve({ data: [] }),
+    brandIds.length ? supabase.from("brands").select("id,name,slug,code,status,organization_id,activated_at,logo_path,country_code,currency_code,commercial_email,order_email,phone,address_line_1,postal_code,city,short_description").in("id", brandIds) : Promise.resolve({ data: [] }),
     organizationIds.length ? supabase.from("organizations").select("id,legal_name,trade_name,status").in("id", organizationIds) : Promise.resolve({ data: [] }),
   ]);
   const selectedBrand = brands?.find((brand) => brand.id === selectedSession?.brand_id) ?? null;
@@ -175,6 +175,54 @@ export default async function BrandOnboardingPage({
             <CardContent>
               <form action={updateOnboardingSettingsAction} className="grid gap-4 md:grid-cols-3">
                 <input type="hidden" name="brandId" value={selectedBrand.id} />
+                <div className="space-y-2">
+                  <Label htmlFor="brandName">Nom de marque</Label>
+                  <Input id="brandName" name="brandName" defaultValue={selectedBrand.name} required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="brandCode">Code marque</Label>
+                  <Input id="brandCode" name="brandCode" defaultValue={selectedBrand.code ?? ""} required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="brandSlug">Slug</Label>
+                  <Input id="brandSlug" name="brandSlug" defaultValue={selectedBrand.slug ?? ""} required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="brandCountryCode">Pays</Label>
+                  <Input id="brandCountryCode" name="countryCode" defaultValue={selectedBrand.country_code ?? "FR"} required maxLength={2} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="brandLogoPath">Logo</Label>
+                  <Input id="brandLogoPath" name="logoPath" defaultValue={selectedBrand.logo_path ?? ""} placeholder="https://…" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="brandDescription">Description courte</Label>
+                  <Input id="brandDescription" name="description" defaultValue={selectedBrand.short_description ?? ""} maxLength={300} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="commercialEmail">Email commercial</Label>
+                  <Input id="commercialEmail" name="commercialEmail" type="email" defaultValue={selectedBrand.commercial_email ?? ""} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="orderEmail">Email destinataire des commandes</Label>
+                  <Input id="orderEmail" name="orderEmail" type="email" defaultValue={selectedBrand.order_email ?? ""} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="brandPhone">Téléphone</Label>
+                  <Input id="brandPhone" name="phone" defaultValue={selectedBrand.phone ?? ""} />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="addressLine1">Adresse</Label>
+                  <Input id="addressLine1" name="addressLine1" defaultValue={selectedBrand.address_line_1 ?? ""} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="postalCode">Code postal</Label>
+                  <Input id="postalCode" name="postalCode" defaultValue={selectedBrand.postal_code ?? ""} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="brandCity">Ville</Label>
+                  <Input id="brandCity" name="city" defaultValue={selectedBrand.city ?? ""} />
+                </div>
                 {[
                   ["defaultReorderIntervalDays", "Intervalle de réassort (jours)", settings?.default_reorder_interval_days, "Cadence standard entre deux commandes."],
                   ["firstReorderTargetDays", "Premier réassort cible (jours)", settings?.first_reorder_target_days, "Délai attendu après la première commande."],
@@ -190,7 +238,7 @@ export default async function BrandOnboardingPage({
                     <p className="text-xs text-muted-foreground">{help}</p>
                   </div>
                 ))}
-                <div className="space-y-2"><Label htmlFor="settingsCurrency">Devise</Label><Input id="settingsCurrency" name="currencyCode" defaultValue={settings?.currency_code ?? "EUR"} required maxLength={3} /></div>
+                <div className="space-y-2"><Label htmlFor="settingsCurrency">Devise</Label><Input id="settingsCurrency" name="currencyCode" defaultValue={selectedBrand.currency_code ?? settings?.currency_code ?? "EUR"} required maxLength={3} /></div>
                 <div className="space-y-2"><Label htmlFor="settingsTimezone">Fuseau horaire</Label><Input id="settingsTimezone" name="timezone" defaultValue={settings?.timezone ?? "Europe/Paris"} required /></div>
                 <Button className="md:col-span-3">Enregistrer les paramètres</Button>
               </form>
