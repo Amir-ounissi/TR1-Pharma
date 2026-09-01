@@ -357,11 +357,13 @@ export async function executeOnboardingImportAction(formData: FormData) {
       invitedUserIds.push(invitation.user.id);
     }
   }
-  const { error } = await supabase.rpc("execute_onboarding_import", { target_batch_id: jobId });
-  if (error) {
+  const { data, error } = await supabase.rpc("execute_onboarding_import", { target_batch_id: jobId });
+  const result = data?.[0];
+  if (error || !result || result.lifecycle_status === "failed") {
     await Promise.all(invitedUserIds.map((userId) => admin.auth.admin.deleteUser(userId)));
-    await markFailed(error.message);
-    throw new Error(error.message);
+    const message = error?.message ?? result?.error_message ?? "L’import a échoué avant son exécution complète.";
+    await markFailed(message);
+    throw new Error(message);
   }
   revalidatePath("/dashboard/admin/onboarding");
 }

@@ -10,7 +10,7 @@ export default async function SelectBrandPage() {
   const [brands, platformAdmin, accessRequest] = await Promise.all([
     getBrandContexts(),
     isPlatformAdmin(),
-    supabase.from("access_requests").select("status,requested_profile_type,reviewer_note").eq("user_id", userId).maybeSingle(),
+    supabase.from("access_requests").select("status,requested_profile_type,reviewer_note").eq("user_id", userId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
   const request = accessRequest.data;
   return (

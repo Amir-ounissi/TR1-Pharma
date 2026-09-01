@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
-select plan(63);
+select plan(75);
 
 select has_table('public','brand_onboarding_sessions','onboarding sessions exist');
 select has_table('public','import_mutations','import mutations exist');
@@ -158,6 +158,63 @@ select '11000000-0000-0000-0000-000000000104',2,'{}',normalized_payload,true,'va
 from public.import_rows where batch_id='11000000-0000-0000-0000-000000000103';
 select is((select skipped from public.execute_onboarding_import('11000000-0000-0000-0000-000000000104')),1,'duplicate historical order is skipped idempotently');
 select is((select count(*) from public.orders where brand_id='00000000-0000-0000-0000-000000000101' and external_order_id='S11-ORDER'),1::bigint,'duplicate execution creates no second order');
+
+insert into public.import_batches(
+  id,brand_id,entity_type,strategy,file_name,valid_rows,total_rows,created_by,
+  lifecycle_status,import_mode,status
+) values (
+  '11000000-0000-0000-0000-000000000106','00000000-0000-0000-0000-000000000101',
+  'orders','create_only','orders-s11-failure.csv',1,1,'00000000-0000-0000-0000-0000000000a2',
+  'ready','append_only','preview'
+);
+insert into public.import_rows(batch_id,line_number,payload,normalized_payload,is_valid,status,deduplication_key)
+values(
+  '11000000-0000-0000-0000-000000000106',2,'{}',
+  '{"external_order_id":"S11-ORDER-FAIL","pharmacy_external_id":"UNKNOWN-PHARMACY","order_date":"2026-06-01","status":"invoiced","total_ht":100,"currency":"EUR","product_code":"S11-PROD","quantity":4}',
+  true,'valid','order:s11-order-failure'
+);
+create temp table failed_import_result as
+select * from public.execute_onboarding_import('11000000-0000-0000-0000-000000000106');
+select is((select lifecycle_status from failed_import_result),'failed','failed import result is explicit');
+select is((select error_code from failed_import_result),'23503','failed import result exposes its SQLSTATE');
+select is((select processed from failed_import_result),0,'failed import returns no processed row');
+select is((select count(*) from public.orders where external_order_id='S11-ORDER-FAIL'),0::bigint,'failed import leaves no partial business mutation');
+select is((select lifecycle_status from public.import_batches where id='11000000-0000-0000-0000-000000000106'),'failed','failed import lifecycle is persisted');
+select is((select status from public.import_batches where id='11000000-0000-0000-0000-000000000106'),'failed'::public.import_status,'failed import status is persisted');
+select is((select metadata ->> 'execution_error_code' from public.import_batches where id='11000000-0000-0000-0000-000000000106'),'23503','failed import records its SQLSTATE');
+select ok((select nullif(metadata ->> 'execution_error_message','') is not null from public.import_batches where id='11000000-0000-0000-0000-000000000106'),'failed import records its error message');
+select throws_ok(
+  $$select * from public.execute_onboarding_import('11000000-0000-0000-0000-000000000106')$$,
+  '23514','Import must be ready and contain no invalid row','failed batch cannot be retried without controlled reset'
+);
+
+reset role;
+insert into auth.users (
+  instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+  raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+  confirmation_token, email_change, email_change_token_new, recovery_token
+) values (
+  '00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-0000000000f6', 'authenticated', 'authenticated', 'import.member@test.local', '', now(), '{}', '{}', now(), now(), '', '', '', ''
+);
+set local role authenticated;
+select set_config('request.jwt.claims','{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}',true);
+insert into public.import_batches(
+  id,brand_id,entity_type,strategy,file_name,valid_rows,total_rows,created_by,
+  lifecycle_status,import_mode,status
+) values (
+  '11000000-0000-0000-0000-000000000107','00000000-0000-0000-0000-000000000101',
+  'users','create_only','users-s11.csv',1,1,'00000000-0000-0000-0000-0000000000a2',
+  'ready','invite','preview'
+);
+insert into public.import_rows(batch_id,line_number,payload,normalized_payload,is_valid,status,deduplication_key)
+values(
+  '11000000-0000-0000-0000-000000000107',2,'{}',
+  '{"email":"import.member@test.local","role":"agent","active":true}',
+  true,'valid','user:import.member@test.local'
+);
+select is((select processed from public.execute_onboarding_import('11000000-0000-0000-0000-000000000107')),1,'user import creates an invitation');
+select is((select status from public.memberships where user_id='00000000-0000-0000-0000-0000000000f6' and brand_id='00000000-0000-0000-0000-000000000101'),'invited'::public.membership_status,'user import cannot activate a membership from CSV data');
+select is((select count(*) from public.memberships where user_id='00000000-0000-0000-0000-0000000000f6' and status='active'),0::bigint,'imported user receives no active membership');
 
 insert into public.import_batches(
   id,brand_id,entity_type,strategy,file_name,valid_rows,total_rows,created_by,
