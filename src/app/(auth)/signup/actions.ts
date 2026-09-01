@@ -51,6 +51,10 @@ export async function signUpAction(
     return { error: error.message };
   }
 
+  if (!data.user) {
+    return { error: "Le compte n’a pas pu être créé. Réessayez dans quelques instants." };
+  }
+
   if (data.session) {
     redirect("/onboarding");
   }
