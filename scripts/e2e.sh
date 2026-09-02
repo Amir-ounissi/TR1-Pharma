@@ -30,7 +30,7 @@ trap 'tr1_release_local_env_lock' EXIT HUP INT TERM
 export NEXT_PUBLIC_SUPABASE_URL="$api_url"
 export NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="$anon_key"
 export SUPABASE_SERVICE_ROLE_KEY="$service_role_key"
-export NEXT_PUBLIC_APP_URL="http://127.0.0.1:3002"
+export NEXT_PUBLIC_APP_URL="http://localhost:3002"
 export APP_ENV="test"
 export LEAD_CAPTURE_SALT="tr1-e2e-lead-capture-salt"
 export LEAD_CAPTURE_ENABLED="true"

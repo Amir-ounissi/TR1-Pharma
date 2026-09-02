@@ -4,7 +4,7 @@ const webServer = process.env.PLAYWRIGHT_SKIP_WEBSERVER === "true"
   ? undefined
   : {
       command: "npm run build && sh scripts/wait-for-supabase.sh && npm run start -- --hostname 127.0.0.1 --port 3002",
-      url: "http://127.0.0.1:3002/login",
+      url: "http://localhost:3002/login",
       reuseExistingServer: !process.env.CI,
       timeout: 900_000,
     };
@@ -18,7 +18,7 @@ export default defineConfig({
   retries: 0,
   reporter: process.env.CI ? [["line"], ["html", { open: "never" }]] : "line",
   use: {
-    baseURL: "http://127.0.0.1:3002",
+    baseURL: "http://localhost:3002",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "off",
