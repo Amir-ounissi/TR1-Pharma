@@ -11,7 +11,7 @@ export default async function AccessRequestsPage() {
   const [{ data: requests, error: requestsError }, { data: brands, error: brandsError }, { data: territories, error: territoriesError }, { data: brandPharmacies, error: pharmaciesError }] = await Promise.all([
     supabase
       .from("access_requests")
-      .select("id,requested_profile_type,requested_access,status,reviewer_note,created_at,target_brand:brands!access_requests_target_brand_id_fkey(name),users!access_requests_user_id_fkey(email,user_profiles(full_name)),reviewer:users!access_requests_reviewed_by_fkey(email,user_profiles(full_name))")
+      .select("id,requested_profile_type,requested_access,status,reviewer_note,created_at,target_brand:brands!access_requests_target_brand_id_fkey(name),target_territory:territories!access_requests_target_territory_id_fkey(name),users!access_requests_user_id_fkey(email,user_profiles(full_name)),reviewer:users!access_requests_reviewed_by_fkey(email,user_profiles(full_name))")
       .order("created_at", { ascending: false }),
     supabase
       .from("brands")
@@ -46,6 +46,7 @@ export default async function AccessRequestsPage() {
     const reviewer = first(request.reviewer);
     const reviewerProfile = first(reviewer?.user_profiles);
     const targetBrand = first(request.target_brand);
+    const targetTerritory = first(request.target_territory);
     return {
       id: request.id,
       fullName: profile?.full_name || "Compte sans nom",
@@ -57,6 +58,7 @@ export default async function AccessRequestsPage() {
       reviewerNote: request.reviewer_note,
       reviewedBy: reviewerProfile?.full_name || reviewer?.email || null,
       targetBrandName: targetBrand?.name || null,
+      targetTerritoryName: targetTerritory?.name || null,
     };
   });
   const pendingRequests = normalizedRequests.filter((request) => request.status === "pending");
@@ -114,7 +116,7 @@ export default async function AccessRequestsPage() {
             <div className="grid min-w-[56rem] grid-cols-[9rem_1.5fr_8rem_1fr_1fr_8rem_1fr] gap-3 border-b bg-muted/40 px-5 py-3 text-xs font-medium text-muted-foreground"><span>Date</span><span>Utilisateur</span><span>Profil</span><span>Marque</span><span>Périmètre</span><span>Décision</span><span>Traité par</span></div>
             {processedRequests.slice(0, 20).map((request) => (
               <div className="grid min-w-[56rem] grid-cols-[9rem_1.5fr_8rem_1fr_1fr_8rem_1fr] gap-3 px-5 py-4 text-sm" key={request.id}>
-                <span>{new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(new Date(request.createdAt))}</span><span><span className="block font-medium">{request.fullName}</span><span className="text-muted-foreground">{request.email}</span></span><span>{profileLabels[request.profileType]}</span><span>{request.targetBrandName || "—"}</span><span>{String(request.requestedAccess.territory || request.requestedAccess.organization || request.requestedAccess.company_name || "—")}</span><span><Badge variant={request.status === "approved" ? "default" : "outline"}>{statusLabel(request.status)}</Badge></span><span className="text-muted-foreground">{request.reviewedBy || "—"}</span>
+                <span>{new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(new Date(request.createdAt))}</span><span><span className="block font-medium">{request.fullName}</span><span className="text-muted-foreground">{request.email}</span></span><span>{profileLabels[request.profileType]}</span><span>{request.targetBrandName || "—"}</span><span>{request.targetTerritoryName || String(request.requestedAccess.territory || request.requestedAccess.organization || request.requestedAccess.company_name || "—")}</span><span><Badge variant={request.status === "approved" ? "default" : "outline"}>{statusLabel(request.status)}</Badge></span><span className="text-muted-foreground">{request.reviewedBy || "—"}</span>
               </div>
             ))}
             {!processedRequests.length ? <div className="px-5 py-8 text-center text-sm text-muted-foreground">Aucune décision enregistrée.</div> : null}

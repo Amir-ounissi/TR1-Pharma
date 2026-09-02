@@ -15,7 +15,20 @@ insert into auth.users (
   ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-0000000000f6', 'authenticated', 'authenticated', 'access.territory@test.local', '', now(), '{}', '{"full_name":"Territory Agent","requested_profile_type":"agent","requested_access":{"type":"agent","territory":"Paris Centre"}}', now(), now(), '', '', '', ''),
   ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-0000000000f7', 'authenticated', 'authenticated', 'access.wrong-territory@test.local', '', now(), '{}', '{"full_name":"Wrong Territory","requested_profile_type":"agent","requested_access":{"type":"agent"}}', now(), now(), '', '', '', '');
 
-select plan(29);
+insert into public.territories (id, organization_id, brand_id, name, code)
+values ('00000000-0000-0000-0000-000000000209', '00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000101', 'Territoire portefeuille test', 'PORTFOLIO-TEST');
+
+insert into public.pharmacies (id, legal_name, trade_name, city, created_by)
+values
+  ('00000000-0000-0000-0000-000000000f81', 'Pharmacie portefeuille 1', 'Pharmacie portefeuille 1', 'Paris', '00000000-0000-0000-0000-0000000000a1'),
+  ('00000000-0000-0000-0000-000000000f82', 'Pharmacie portefeuille 2', 'Pharmacie portefeuille 2', 'Paris', '00000000-0000-0000-0000-0000000000a1');
+
+insert into public.brand_pharmacies (id, brand_id, pharmacy_id, territory_id, source, created_by)
+values
+  ('00000000-0000-0000-0000-000000000f91', '00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000f81', '00000000-0000-0000-0000-000000000209', 'import', '00000000-0000-0000-0000-0000000000a1'),
+  ('00000000-0000-0000-0000-000000000f92', '00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000f82', '00000000-0000-0000-0000-000000000209', 'import', '00000000-0000-0000-0000-0000000000a1');
+
+select plan(35);
 
 select has_table('public', 'access_requests', 'access request table exists');
 select is((select requested_profile_type from public.access_requests where user_id = '00000000-0000-0000-0000-0000000000f1'), 'agent', 'new auth user creates the requested access record');
@@ -51,19 +64,32 @@ select throws_ok(
 );
 select is((select count(*) from public.memberships where user_id = '00000000-0000-0000-0000-0000000000f2'), 0::bigint, 'cross-brand approval failure creates no membership');
 select lives_ok(
-  $$select public.approve_access_request_with_territory((select id from public.access_requests where user_id = '00000000-0000-0000-0000-0000000000f6'), '00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000201', 'Territoire validé')$$,
+  $$select public.approve_access_request_with_territory((select id from public.access_requests where user_id = '00000000-0000-0000-0000-0000000000f6'), '00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000209', 'Territoire validé')$$,
   'super admin approves an agent with a valid territory'
 );
-select is((select territory_id from public.memberships where user_id = '00000000-0000-0000-0000-0000000000f6' and status = 'active'), '00000000-0000-0000-0000-000000000201'::uuid, 'approved agent membership retains the selected territory');
-select is((select count(*) from public.pharmacy_assignments where user_id = '00000000-0000-0000-0000-0000000000f6'), 2::bigint, 'approved agent receives every active pharmacy in the territory');
-select is((select count(*) from public.pharmacy_assignments assignment join public.brand_pharmacies pharmacy on pharmacy.id = assignment.brand_pharmacy_id where assignment.user_id = '00000000-0000-0000-0000-0000000000f6' and pharmacy.territory_id <> '00000000-0000-0000-0000-000000000201'), 0::bigint, 'territory approval never assigns pharmacies outside the selected territory');
+select is((select territory_id from public.memberships where user_id = '00000000-0000-0000-0000-0000000000f6' and status = 'active'), '00000000-0000-0000-0000-000000000209'::uuid, 'approved agent membership retains the selected territory');
+select is((select target_territory_id from public.access_requests where user_id = '00000000-0000-0000-0000-0000000000f6'), '00000000-0000-0000-0000-000000000209'::uuid, 'approved request retains the selected territory');
+select is((select count(*) from public.pharmacy_assignments where user_id = '00000000-0000-0000-0000-0000000000f6' and is_primary), 2::bigint, 'approved agent receives every territory pharmacy as a primary assignment');
+select is((select count(*) from public.brand_pharmacies where territory_id = '00000000-0000-0000-0000-000000000209' and current_agent_user_id = '00000000-0000-0000-0000-0000000000f6'), 2::bigint, 'territory pharmacies identify the approved agent as their commercial owner');
+select is((select count(*) from public.pharmacy_assignments assignment join public.brand_pharmacies pharmacy on pharmacy.id = assignment.brand_pharmacy_id where assignment.user_id = '00000000-0000-0000-0000-0000000000f6' and pharmacy.territory_id <> '00000000-0000-0000-0000-000000000209'), 0::bigint, 'territory approval never assigns pharmacies outside the selected territory');
 select is((select brand_id from public.memberships where user_id = '00000000-0000-0000-0000-0000000000f6' and status = 'active'), '00000000-0000-0000-0000-000000000101'::uuid, 'approved agent membership belongs to the selected brand');
 select is((select count(*) from public.memberships membership join public.roles role on role.id = membership.role_id where membership.user_id = '00000000-0000-0000-0000-0000000000f6' and role.key = 'agent'), 1::bigint, 'territory approval grants the agent role');
+insert into public.pharmacies (id, legal_name, trade_name, city, created_by)
+values ('00000000-0000-0000-0000-000000000f83', 'Pharmacie portefeuille future', 'Pharmacie portefeuille future', 'Paris', '00000000-0000-0000-0000-0000000000a1');
+insert into public.brand_pharmacies (id, brand_id, pharmacy_id, territory_id, source, created_by)
+values ('00000000-0000-0000-0000-000000000f93', '00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000f83', '00000000-0000-0000-0000-000000000209', 'import', '00000000-0000-0000-0000-0000000000a1');
+select is((select current_agent_user_id from public.brand_pharmacies where id = '00000000-0000-0000-0000-000000000f93'), '00000000-0000-0000-0000-0000000000f6'::uuid, 'a pharmacy added later inherits the territory portfolio owner');
+select is((select count(*) from public.pharmacy_assignments where brand_pharmacy_id = '00000000-0000-0000-0000-000000000f93' and user_id = '00000000-0000-0000-0000-0000000000f6' and is_primary and ends_at is null), 1::bigint, 'a pharmacy added later receives one primary territory assignment');
 select throws_ok(
   $$select public.approve_access_request_with_territory((select id from public.access_requests where user_id = '00000000-0000-0000-0000-0000000000f7'), '00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000202', null)$$,
   '23514', 'Target territory must belong to the selected active brand', 'another brand territory is rejected atomically'
 );
 select is((select count(*) from public.memberships where user_id = '00000000-0000-0000-0000-0000000000f7'), 0::bigint, 'wrong territory failure leaves no active membership');
+select throws_ok(
+  $$select public.approve_access_request_with_territory((select id from public.access_requests where user_id = '00000000-0000-0000-0000-0000000000f2'), '00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000201', null)$$,
+  '23514', 'Territory contains pharmacies assigned to another primary agent', 'agent approval refuses a territory owned by another primary agent'
+);
+select is((select count(*) from public.memberships where user_id = '00000000-0000-0000-0000-0000000000f2'), 0::bigint, 'primary agent conflict leaves no membership');
 select throws_ok(
   $$select public.approve_access_request_with_territory((select id from public.access_requests where user_id = '00000000-0000-0000-0000-0000000000f4'), '00000000-0000-0000-0000-000000000101', '00000000-0000-0000-0000-000000000201', null)$$,
   '23514', 'Territory approval is only available for agent requests', 'brand request cannot use the agent territory approval path'

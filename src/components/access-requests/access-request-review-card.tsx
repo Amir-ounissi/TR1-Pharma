@@ -23,6 +23,7 @@ export type AccessRequestCardData = {
   reviewerNote?: string | null;
   reviewedBy?: string | null;
   targetBrandName?: string | null;
+  targetTerritoryName?: string | null;
 };
 
 export function AccessRequestReviewCard({ request, brands, territories, matchedBrand }: {
