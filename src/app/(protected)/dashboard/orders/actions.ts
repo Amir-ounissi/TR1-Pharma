@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { requireActiveBrand } from "@/lib/auth";
+import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
 
 export type OrderActionState = { error?: string; success?: string; orderId?: string };
 
@@ -27,18 +27,32 @@ export async function createOrderAction(_state: OrderActionState, formData: Form
   const freeQuantities = formData.getAll("freeQuantity").map(String);
   const unitPrices = formData.getAll("unitPriceHt").map(String);
   const discountRates = formData.getAll("discountRate").map(String);
-  const taxRates = formData.getAll("taxRate").map(String);
   const items = productIds.map((productId, index) => ({
     product_id: productId,
     quantity: Number(quantities[index]),
     free_quantity: Number(freeQuantities[index] || 0),
     unit_price_ht: Number(unitPrices[index]),
     discount_rate: discountRates[index] ? Number(discountRates[index]) : null,
-    tax_rate: Number(taxRates[index] || 20),
   }));
-  const parsedItems = z.array(z.object({ product_id: uuid, quantity: z.number().int().positive(), free_quantity: z.number().int().min(0), unit_price_ht: z.number(), discount_rate: z.number().min(0).max(100).nullable(), tax_rate: z.number().min(0).max(100) })).min(1).safeParse(items);
+  const parsedItems = z.array(z.object({ product_id: uuid, quantity: z.number().int().positive(), free_quantity: z.number().int().min(0), unit_price_ht: z.number(), discount_rate: z.number().min(0).max(100).nullable() })).min(1).safeParse(items);
   if (!header.success || !parsedItems.success) return { error: "La commande ou ses lignes sont invalides." };
-  const { supabase } = await requireActiveBrand();
+  const { supabase, brand } = await requireActiveBrand();
+  const contexts = await getBrandContexts();
+  const role = contexts.find((context) => context.id === brand.id)?.role;
+  if (role === "agent" && !["draft", "pending", "confirmed"].includes(header.data.orderStatus)) {
+    return { error: "Un agent ne peut pas déclarer une commande facturée ou livrée." };
+  }
+  const uniqueProductIds = [...new Set(parsedItems.data.map((item) => item.product_id))];
+  const { data: products, error: productsError } = await supabase
+    .from("products")
+    .select("id,tax_rate")
+    .eq("brand_id", brand.id)
+    .eq("is_active", true)
+    .is("discontinued_at", null)
+    .in("id", uniqueProductIds);
+  if (productsError || products?.length !== uniqueProductIds.length) return { error: "Un produit sélectionné n’est plus disponible pour cette marque." };
+  const productById = new Map(products.map((product) => [product.id, product]));
+  const trustedItems = parsedItems.data.map((item) => ({ ...item, tax_rate: Number(productById.get(item.product_id)?.tax_rate ?? 0) }));
   const { data, error } = await supabase.rpc("create_order", {
     target_brand_pharmacy_id: header.data.brandPharmacyId,
     order_payload: {
@@ -52,7 +66,7 @@ export async function createOrderAction(_state: OrderActionState, formData: Form
       notes: header.data.notes || null,
       source: "manual",
     },
-    item_payload: parsedItems.data,
+    item_payload: trustedItems,
   });
   if (error) return { error: error.code === "23505" ? "Cette commande externe existe déjà." : error.message };
   return { success: "Commande créée et indicateurs recalculés.", orderId: data as string };
