@@ -3,10 +3,10 @@ import { selectBrandAction, selectPlatformViewAction } from "@/app/(auth)/select
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getBrandContexts, isPlatformAdmin, requireUser } from "@/lib/auth";
+import { getBrandContexts, isPlatformAdmin, requireCompletedOnboarding } from "@/lib/auth";
 
 export default async function SelectBrandPage() {
-  const { supabase, userId } = await requireUser();
+  const { supabase, userId } = await requireCompletedOnboarding();
   const [brands, platformAdmin, accessRequest] = await Promise.all([
     getBrandContexts(),
     isPlatformAdmin(),

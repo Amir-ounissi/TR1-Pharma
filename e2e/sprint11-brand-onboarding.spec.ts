@@ -13,6 +13,21 @@ const pharmacyExternalId = `PHA-${suffix}`;
 let brandId = "";
 let organizationId = "";
 
+async function getInvitationLink(email: string) {
+  const listResponse = await fetch("http://127.0.0.1:54324/api/v1/messages");
+  if (!listResponse.ok) throw new Error("Inbucket is unavailable");
+  const list = await listResponse.json() as { messages: Array<{ ID: string; To: Array<{ Address: string }> }> };
+  const message = list.messages.find((candidate) => candidate.To.some((recipient) => recipient.Address === email));
+  if (!message) throw new Error("Invitation email is not available yet");
+
+  const messageResponse = await fetch(`http://127.0.0.1:54324/api/v1/message/${message.ID}`);
+  if (!messageResponse.ok) throw new Error("Invitation email cannot be read");
+  const content = await messageResponse.json() as { HTML: string };
+  const url = content.HTML.match(/href="([^"]+)"/i)?.[1]?.replaceAll("&amp;", "&");
+  if (!url) throw new Error("Invitation link is missing");
+  return url;
+}
+
 async function openConsole(page: Page) {
   await page.goto(`/dashboard/admin/onboarding${brandId ? `?brand=${brandId}` : ""}`);
   await expect(page.getByRole("heading", { name: "Onboarding d’une marque" })).toBeVisible();
@@ -78,7 +93,7 @@ async function stageImport(page: Page, options: {
 }
 
 test.describe.serial("Sprint 11 — Onboarding marque et imports contrôlés", () => {
-  test.setTimeout(300_000);
+  test.setTimeout(480_000);
   test.beforeAll(() => mkdirSync("artifacts/sprint11", { recursive: true }));
 
   test("scénario 1 — création, configuration, référentiels, utilisateur et activation", async ({ page }) => {
@@ -144,21 +159,49 @@ test.describe.serial("Sprint 11 — Onboarding marque et imports contrôlés", (
     await page.goto(`/dashboard/admin/onboarding?brand=${brandId}`);
     await expect(page.getByText("Marque activée")).toBeVisible();
 
-    const { data: invitedAuth } = await admin.from("users").select("id").eq("email", brandAdminEmail).single();
-    expect(invitedAuth).toBeTruthy();
-    const { error: passwordError } = await admin.auth.admin.updateUserById(invitedAuth!.id, { password, email_confirm: true });
-    expect(passwordError).toBeNull();
-    const { error: profileError } = await admin.from("user_profiles").update({
-      full_name: "Admin Marque Pilote",
-      onboarding_completed_at: new Date().toISOString(),
-    }).eq("user_id", invitedAuth!.id);
-    expect(profileError).toBeNull();
+    await expect.poll(async () => (
+      await admin.from("memberships").select("status").eq("user_id", (await admin.from("users").select("id").eq("email", brandAdminEmail).single()).data!.id).eq("brand_id", brandId).single()
+    ).data?.status).toBe("invited");
+    await expect.poll(async () => {
+      try {
+        return await getInvitationLink(brandAdminEmail);
+      } catch {
+        return "";
+      }
+    }).not.toBe("");
+    const invitationLink = await getInvitationLink(brandAdminEmail);
+    expect(invitationLink).toContain("/auth/confirm?next=/onboarding&token_hash=");
+
     const brandAdminContext = await page.context().browser()!.newContext();
     const brandAdminPage = await brandAdminContext.newPage();
+    await brandAdminPage.goto(invitationLink);
+    await expect(brandAdminPage).toHaveURL(/\/onboarding$/);
+    await expect(brandAdminPage.getByLabel("Mot de passe", { exact: true })).toBeVisible();
+    await brandAdminPage.goto("/dashboard");
+    await expect(brandAdminPage).toHaveURL(/\/onboarding$/);
+    await brandAdminPage.getByLabel("Nom complet").fill("Admin Marque Pilote");
+    await brandAdminPage.getByLabel("Mot de passe", { exact: true }).fill(password);
+    await brandAdminPage.getByLabel("Confirmer le mot de passe").fill(password);
+    await brandAdminPage.getByRole("button", { name: "Continuer" }).click();
+    await expect(brandAdminPage).toHaveURL(/\/select-brand$/);
+    await expect.poll(async () => (
+      await admin.from("memberships").select("status").eq("user_id", (await admin.from("users").select("id").eq("email", brandAdminEmail).single()).data!.id).eq("brand_id", brandId).single()
+    ).data?.status).toBe("active");
+    const { data: brandAdminUser } = await admin.from("users").select("id").eq("email", brandAdminEmail).single();
+    expect(brandAdminUser).toBeTruthy();
+    const [{ data: profile }, { count: activePlatformMemberships }] = await Promise.all([
+      admin.from("user_profiles").select("full_name,onboarding_completed_at").eq("user_id", brandAdminUser!.id).single(),
+      admin.from("memberships").select("id", { count: "exact", head: true }).eq("user_id", brandAdminUser!.id).is("brand_id", null).eq("status", "active"),
+    ]);
+    expect(profile).toMatchObject({ full_name: "Admin Marque Pilote" });
+    expect(profile?.onboarding_completed_at).toBeTruthy();
+    expect(activePlatformMemberships).toBe(0);
+    await brandAdminPage.getByRole("button", { name: brandName, exact: false }).click();
+    await expect(brandAdminPage).toHaveURL(/\/dashboard$/);
+    await brandAdminPage.getByRole("button", { name: "Déconnexion", exact: true }).click();
+    await expect(brandAdminPage).toHaveURL(/\/login$/);
     await signIn(brandAdminPage, brandAdminEmail, new RegExp(brandName));
     await expect(brandAdminPage.getByText(brandName).first()).toBeVisible();
-    await brandAdminPage.goto("/dashboard/admin/onboarding");
-    await expect(brandAdminPage).toHaveURL(/\/dashboard$/);
     await brandAdminContext.close();
 
     const { data: importedUser } = await admin.from("users").select("id").eq("email", importedUserEmail).single();

@@ -20,6 +20,7 @@ type BrandContextRow = {
 
 type UserProfile = {
   full_name: string;
+  onboarding_completed_at: string;
 };
 
 export async function requireUser() {
@@ -33,6 +34,7 @@ export async function requireUser() {
 
 export async function requirePlatformAdmin() {
   const { supabase, userId } = await requireUser();
+  await getUserProfile(supabase, userId);
   const membership = await getPlatformAdminMembership(supabase, userId);
 
   if (!membership) redirect("/dashboard");
@@ -56,7 +58,14 @@ export async function getBrandContexts(): Promise<BrandContext[]> {
 
 export async function isPlatformAdmin() {
   const { supabase, userId } = await requireUser();
+  await getUserProfile(supabase, userId);
   return Boolean(await getPlatformAdminMembership(supabase, userId));
+}
+
+export async function requireCompletedOnboarding() {
+  const { supabase, userId } = await requireUser();
+  const profile = await getUserProfile(supabase, userId);
+  return { supabase, userId, profile };
 }
 
 export async function getOptionalActiveBrand() {
@@ -94,8 +103,8 @@ async function getPlatformAdminMembership(supabase: Awaited<ReturnType<typeof cr
 }
 
 async function getUserProfile(supabase: Awaited<ReturnType<typeof createClient>>, userId: string): Promise<UserProfile> {
-  const { data: profile } = await supabase.from("user_profiles").select("full_name").eq("user_id", userId).maybeSingle();
+  const { data: profile } = await supabase.from("user_profiles").select("full_name,onboarding_completed_at").eq("user_id", userId).maybeSingle();
 
-  if (!profile?.full_name) redirect("/onboarding");
+  if (!profile?.full_name?.trim() || !profile.onboarding_completed_at) redirect("/onboarding");
   return profile;
 }
