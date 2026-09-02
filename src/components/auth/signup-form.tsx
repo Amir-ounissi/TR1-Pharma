@@ -22,12 +22,6 @@ const profileOptions = [
     description: "Accéder au terrain et aux pharmacies.",
     accent: "Rattachement ensuite par TR1",
   },
-  {
-    value: "facilitator",
-    label: "Intervenant",
-    description: "Gérer des missions d’animation ou formation.",
-    accent: "Missions activées après validation",
-  },
 ] as const;
 
 export function SignUpForm() {
@@ -36,7 +30,7 @@ export function SignUpForm() {
   const helperMessage = useMemo(() => {
     if (profileType === "brand") return "Votre accès final sera activé après validation de votre demande marque.";
     if (profileType === "agent") return "Votre accès final sera activé après rattachement à une marque et à votre périmètre.";
-    return "Votre accès final sera activé après validation de votre rôle et de vos missions.";
+    return "Votre accès final sera activé après rattachement à une marque et à votre périmètre.";
   }, [profileType]);
 
   return (
@@ -110,24 +104,6 @@ export function SignUpForm() {
             <div className="space-y-2">
               <Label htmlFor="territory" className="text-sm font-medium text-[#0b1e32]">Zone ou secteur</Label>
               <Input id="territory" name="territory" required className="h-11 rounded-2xl border-[#dfe3ea] bg-white text-[#0b1e32] shadow-none placeholder:text-[#98a2b3] focus-visible:border-[#0b1e32]/30 focus-visible:ring-[#0b1e32]/10" placeholder="Suisse romande" />
-            </div>
-          </>
-        ) : null}
-
-        {profileType === "facilitator" ? (
-          <>
-            <div className="space-y-2">
-              <Label htmlFor="facilitatorKind" className="text-sm font-medium text-[#0b1e32]">Type d’intervention</Label>
-              <select id="facilitatorKind" name="facilitatorKind" required className="flex h-11 w-full rounded-2xl border border-[#dfe3ea] bg-white px-3 text-sm text-[#0b1e32] shadow-none outline-none focus:border-[#0b1e32]/30">
-                <option value="">Sélectionner</option>
-                <option value="animateur">Animateur</option>
-                <option value="formateur">Formateur</option>
-                <option value="mixte">Animateur + formateur</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="specialty" className="text-sm font-medium text-[#0b1e32]">Spécialité</Label>
-              <Input id="specialty" name="specialty" required className="h-11 rounded-2xl border-[#dfe3ea] bg-white text-[#0b1e32] shadow-none placeholder:text-[#98a2b3] focus-visible:border-[#0b1e32]/30 focus-visible:ring-[#0b1e32]/10" placeholder="Formation, sell-out…" />
             </div>
           </>
         ) : null}
