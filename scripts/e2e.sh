@@ -1,22 +1,10 @@
 #!/bin/sh
 set -eu
 
-if [ -f .env.local ]; then
-  set -a
-  . ./.env.local
-  set +a
-fi
-
-api_url=${NEXT_PUBLIC_SUPABASE_URL:-}
-anon_key=${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:-${NEXT_PUBLIC_SUPABASE_ANON_KEY:-}}
-service_role_key=${SUPABASE_SECRET_KEY:-${SUPABASE_SERVICE_ROLE_KEY:-}}
-
-if [ -z "$api_url" ] || [ -z "$anon_key" ] || [ -z "$service_role_key" ]; then
-  status_output="$(sh scripts/supabase-local.sh status -o env)"
-  api_url="$(printf '%s\n' "$status_output" | sed -n 's/^API_URL="\(.*\)"$/\1/p')"
-  anon_key="$(printf '%s\n' "$status_output" | sed -n 's/^ANON_KEY="\(.*\)"$/\1/p')"
-  service_role_key="$(printf '%s\n' "$status_output" | sed -n 's/^SERVICE_ROLE_KEY="\(.*\)"$/\1/p')"
-fi
+status_output="$(sh scripts/supabase-local.sh status -o env)"
+api_url="$(printf '%s\n' "$status_output" | sed -n 's/^API_URL="\(.*\)"$/\1/p')"
+anon_key="$(printf '%s\n' "$status_output" | sed -n 's/^ANON_KEY="\(.*\)"$/\1/p')"
+service_role_key="$(printf '%s\n' "$status_output" | sed -n 's/^SERVICE_ROLE_KEY="\(.*\)"$/\1/p')"
 
 if [ -z "$api_url" ] || [ -z "$anon_key" ] || [ -z "$service_role_key" ]; then
   echo "Supabase local doit être démarré avant les tests E2E." >&2

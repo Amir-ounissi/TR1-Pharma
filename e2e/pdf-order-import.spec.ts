@@ -9,8 +9,10 @@ test("PDF mocké : prévisualisation puis confirmation crée une commande, sans 
   await page.getByLabel(/pdf/i).setInputFiles({ name: "commande.pdf", mimeType: "application/pdf", buffer: Buffer.from("mock pdf") });
   await page.getByRole("button", { name: "Analyser le PDF" }).click();
   await expect(page.getByRole("heading", { name: "Prévisualisation obligatoire" })).toBeVisible();
+  await expect(page.getByLabel("Pharmacie")).toHaveValue("00000000-0000-0000-0000-000000000411");
+  await expect(page.getByLabel("Produit 1")).toHaveValue("00000000-0000-0000-0000-000000000601");
   const service = adminClient();
-  const { count: beforeConfirmation } = await service.from("orders").select("*", { count: "exact", head: true }).eq("order_number", "E2E-PDF-ORDER");
+  const { count: beforeConfirmation } = await service.from("orders").select("*", { count: "exact", head: true }).eq("order_number", orderNumber);
   expect(beforeConfirmation).toBe(0);
   await page.getByLabel("Numéro commande").fill(orderNumber);
   await page.getByRole("button", { name: "Confirmer la commande" }).click();

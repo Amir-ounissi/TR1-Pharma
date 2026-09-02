@@ -7,7 +7,7 @@ import { extractPdfOrder, PdfOrderImportError } from "@/lib/orders/pdf-order-ext
 import { calculateOrderTotal, hasMeaningfulTotalDifference, matchPdfPharmacy, matchPdfProduct, resolvedLinePrice, type PharmacyCandidate, type ProductCandidate } from "@/lib/orders/pdf-order-matching";
 import type { PdfOrderExtraction } from "@/lib/orders/pdf-order-schema";
 
-const uuid = z.string().uuid();
+const uuid = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
 
 type PreviewPharmacy = PharmacyCandidate;
 type PreviewProduct = Omit<ProductCandidate, "references">;
@@ -68,7 +68,7 @@ export async function analyzePdfOrderAction(_state: PdfOrderActionState, formDat
     const extraction = await extractPdfOrder(candidate);
     const [{ data: relationRows, error: pharmaciesError }, { data: productRows, error: productsError }] = await Promise.all([
       supabase.from("brand_pharmacies").select("id,pharmacies(legal_name,trade_name,siret,cip_code,finess_code,postal_code)").eq("brand_id", brand.id).is("archived_at", null),
-      supabase.from("products").select("id,name,sku,ean,wholesale_price_ht,tax_rate,product_references(sku,ean,label)").eq("brand_id", brand.id).eq("is_active", true).is("discontinued_at", null),
+      supabase.from("products").select("id,name,sku,ean,wholesale_price_ht,tax_rate,product_references!product_references_product_brand_fk(sku,ean,label)").eq("brand_id", brand.id).eq("is_active", true).is("discontinued_at", null),
     ]);
     if (pharmaciesError || productsError) return { error: "Les données de la marque ne sont pas disponibles." };
     const pharmacies = (relationRows ?? []).map(readPharmacy).filter((row): row is PharmacyCandidate => row !== null);
@@ -79,7 +79,7 @@ export async function analyzePdfOrderAction(_state: PdfOrderActionState, formDat
       const price = resolvedLinePrice(line, productMatch.match);
       return {
         index, label: line.label, sku: line.sku, ean: line.ean, quantity: line.quantity, unitPriceHt: line.unitPriceHt, discountRate: line.discountRate,
-        product: { status: productMatch.status, method: productMatch.method, selectedId: productMatch.match?.id ?? null, candidates: (productMatch.status === "matched" ? productMatch.candidates : products).map(({ references: _references, ...product }) => product) },
+        product: { status: productMatch.status, method: productMatch.method, selectedId: productMatch.match?.id || null, candidates: (productMatch.status === "matched" ? productMatch.candidates : products).map((product) => ({ id: product.id, name: product.name, sku: product.sku, ean: product.ean, wholesalePriceHt: product.wholesalePriceHt, taxRate: product.taxRate })) },
         suggestedPriceHt: price.price, priceWarning: price.warning,
       };
     });
@@ -88,7 +88,7 @@ export async function analyzePdfOrderAction(_state: PdfOrderActionState, formDat
     return {
       preview: {
         extraction,
-        pharmacy: { status: pharmacyMatch.status, method: pharmacyMatch.method, selectedId: pharmacyMatch.match?.id ?? null, candidates: pharmacyMatch.status === "matched" ? pharmacyMatch.candidates : pharmacies },
+        pharmacy: { status: pharmacyMatch.status, method: pharmacyMatch.method, selectedId: pharmacyMatch.match?.id || null, candidates: pharmacyMatch.status === "matched" ? pharmacyMatch.candidates : pharmacies },
         lines,
         totalTr1Ht,
         totalDifferenceWarning: hasMeaningfulTotalDifference(extraction.totalHt, totalTr1Ht),
