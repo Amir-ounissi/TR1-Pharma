@@ -33,7 +33,7 @@ export async function extractPdfOrder(file: File, fetcher: Fetcher = fetch): Pro
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: process.env.OPENAI_PDF_ORDER_MODEL ?? "gpt-5.6-luna",
+    model: process.env.OPENAI_PDF_ORDER_MODEL ?? "gpt-5",
         store: false,
         instructions: "Extract only the fields requested from this purchase-order PDF. Never infer a TR1 identifier, never match a product or pharmacy, and use null when a value is absent or unreadable.",
         input: [{ role: "user", content: [{ type: "input_text", text: "Extract the order as structured data." }, { type: "input_file", file_id: fileId }] }],
