@@ -67,15 +67,15 @@ export function AgentDayExperience({
   const draftScope = `${brandId}:${userId}`;
 
   useEffect(() => {
-    const restored = loadActiveVisit(localStorage);
+    const restored = loadActiveVisit(localStorage, brandId, userId);
     if (!restored) return;
     if (restored.brandId !== brandId) {
-      clearActiveVisit(localStorage);
+      clearActiveVisit(localStorage, brandId, userId);
       return;
     }
     const timer = window.setTimeout(() => setActiveVisit(restored), 0);
     return () => window.clearTimeout(timer);
-  }, [brandId]);
+  }, [brandId, userId]);
 
   function startVisit() {
     if (!visit) return;
@@ -91,7 +91,7 @@ export function AgentDayExperience({
       wazeUrl,
       mapsUrl,
     });
-    saveActiveVisit(localStorage, started);
+    saveActiveVisit(localStorage, started, userId);
     setActiveVisit(started);
     setFinishing(false);
     setCompletionMessage(false);
@@ -104,19 +104,19 @@ export function AgentDayExperience({
   }
 
   function abandonVisit() {
-    clearActiveVisit(localStorage);
+    clearActiveVisit(localStorage, brandId, userId);
     setActiveVisit(null);
     setFinishing(false);
     setCompletionMessage(false);
   }
 
   const completeVisit = useCallback(() => {
-    clearActiveVisit(localStorage);
+    clearActiveVisit(localStorage, brandId, userId);
     setActiveVisit(null);
     setFinishing(false);
     setCompletionMessage(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }, []);
+  }, [brandId, userId]);
 
   const formVisit = activeVisit ?? (visit ? {
     brandPharmacyId: visit.brand_pharmacy_id,

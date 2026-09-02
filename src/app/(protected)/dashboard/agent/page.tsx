@@ -9,11 +9,12 @@ import { QuickActions } from "@/components/ux/quick-actions";
 import { SectionHeader } from "@/components/ux/section-header";
 import { buildGoogleMapsUrl, buildWazeUrl } from "@/lib/agent-experience";
 import { requireActiveBrand } from "@/lib/auth";
+import { parisBusinessDate } from "@/lib/business-date";
 import type { CommercialHealthRow } from "@/lib/commercial-health";
 
 export default async function AgentPage() {
   const { supabase, brand, profile, userId } = await requireActiveBrand();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = parisBusinessDate();
   const [{ data: agenda }, { data: nextVisit }, { data: opportunities }, { data: recentImpact }] = await Promise.all([
     supabase.rpc("get_agent_today", { target_brand_id: brand.id, target_date: today }),
     supabase.rpc("get_next_agent_visit", { target_brand_id: brand.id }),

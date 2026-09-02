@@ -27,7 +27,7 @@ insert into public.brand_pharmacies (id, brand_id, pharmacy_id, source) values
 insert into public.brand_pharmacy_products (brand_pharmacy_id, product_id, status, source)
 values ('00000000-0000-0000-0000-000000000412','00000000-0000-0000-0000-000000000604','planned','other');
 
-select plan(66);
+select plan(71);
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}',true);
 
@@ -38,7 +38,8 @@ select lives_ok($$select public.create_order(
 )$$,'first invoiced order is created transactionally');
 select is((select subtotal_ht from public.orders where external_order_id='S4-001'),20.00::numeric,'subtotal is recalculated by SQL');
 select is((select net_amount_ht from public.orders where external_order_id='S4-001'),18.00::numeric,'discounted net amount is recalculated by SQL');
-select is((select total_ttc from public.orders where external_order_id='S4-001'),21.60::numeric,'tax and total are recalculated by SQL');
+select is((select total_ttc from public.orders where external_order_id='S4-001'),18.99::numeric,'catalog product tax and total are recalculated by SQL');
+select is((select tax_rate from public.order_items where order_id=(select id from public.orders where external_order_id='S4-001') limit 1),5.5::numeric,'catalog tax wins over client item payload');
 select ok((select is_initial_order and not is_reorder from public.orders where external_order_id='S4-001'),'first valid order is classified as initial');
 select ok((select implanted_at is not null from public.brand_pharmacies where id='00000000-0000-0000-0000-000000000412'),'first valid order records implantation date');
 select is((select commercial_status from public.brand_pharmacies where id='00000000-0000-0000-0000-000000000412'),'implanted'::public.commercial_status,'commercial pipeline advances to implanted');
@@ -68,7 +69,7 @@ select is((select count(*) from public.brand_pharmacy_distribution_snapshots whe
 
 select throws_ok($$select public.create_order('00000000-0000-0000-0000-000000000412','{"external_order_id":"S4-002"}','[{"product_id":"00000000-0000-0000-0000-000000000601","quantity":1,"unit_price_ht":10}]')$$,'23505',null,'duplicate external order id is blocked');
 select throws_ok($$select public.create_order('00000000-0000-0000-0000-000000000412','{"order_type":"initial","order_date":"2026-07-21T10:00:00Z"}','[{"product_id":"00000000-0000-0000-0000-000000000601","quantity":1,"unit_price_ht":10}]')$$,'23514','An initial order already exists for this brand pharmacy','initial type cannot be declared after a valid order');
-select throws_ok($$select public.create_order('00000000-0000-0000-0000-000000000412','{}','[{"product_id":"00000000-0000-0000-0000-000000000602","quantity":1,"unit_price_ht":10}]')$$,'23514','Order item product brand mismatch','cross-brand product is blocked');
+select throws_ok($$select public.create_order('00000000-0000-0000-0000-000000000412','{}','[{"product_id":"00000000-0000-0000-0000-000000000602","quantity":1,"unit_price_ht":10}]')$$,'23514','Order item product is unavailable for this brand','cross-brand product is blocked');
 select throws_ok($$select public.create_order('00000000-0000-0000-0000-000000000413','{}','[{"product_id":"00000000-0000-0000-0000-000000000602","quantity":1,"unit_price_ht":10}]')$$,'42501','Brand pharmacy unavailable','cross-brand pharmacy is blocked');
 select throws_ok($$update public.orders set net_amount_ht=999 where external_order_id='S4-001'$$,'42501','Order totals are server controlled','client cannot alter server totals');
 select throws_ok($$update public.order_items set quantity=99 where order_id=(select id from public.orders where external_order_id='S4-001')$$,'42501','Items of an invoiced order are immutable','invoiced order items are immutable');
@@ -110,6 +111,9 @@ select is((select count(*) from public.tasks where brand_pharmacy_id='00000000-0
 
 select set_config('request.jwt.claims','{"sub":"00000000-0000-0000-0000-0000000000a3","role":"authenticated"}',true);
 select lives_ok($$select public.create_order('00000000-0000-0000-0000-000000000411','{"external_order_id":"S4-AGENT","source":"agent"}','[{"product_id":"00000000-0000-0000-0000-000000000601","quantity":1,"unit_price_ht":18.5}]')$$,'assigned agent creates a draft order for its pharmacy');
+select lives_ok($$select public.create_order('00000000-0000-0000-0000-000000000411','{"external_order_id":"S4-AGENT-CONF","source":"agent","order_status":"confirmed"}','[{"product_id":"00000000-0000-0000-0000-000000000601","quantity":1,"unit_price_ht":18.5}]')$$,'assigned agent can create a confirmed order');
+select throws_ok($$select public.create_order('00000000-0000-0000-0000-000000000411','{"external_order_id":"S4-AGENT-INVOICED","source":"agent","order_status":"invoiced"}','[{"product_id":"00000000-0000-0000-0000-000000000601","quantity":1,"unit_price_ht":18.5}]')$$,'42501','Agents cannot declare invoiced, delivered or refunded revenue','agent cannot create invoiced revenue');
+select throws_ok($$select public.change_order_status((select id from public.orders where external_order_id='S4-AGENT-CONF'),'delivered','')$$,'42501','Agents cannot declare invoiced, delivered or refunded revenue','agent cannot mark an order delivered');
 select is((select count(*) from public.orders where external_order_id='S4-AGENT'),1::bigint,'agent reads its own pharmacy order');
 select is((select count(*) from public.orders where external_order_id='S4-001'),0::bigint,'direct URL order outside agent scope is invisible');
 select throws_ok($$select public.create_order('00000000-0000-0000-0000-000000000412','{}','[{"product_id":"00000000-0000-0000-0000-000000000601","quantity":1,"unit_price_ht":10}]')$$,'42501','Brand pharmacy unavailable','agent cannot create for an unassigned pharmacy');
@@ -117,6 +121,7 @@ select throws_ok($$select public.create_order('00000000-0000-0000-0000-000000000
 select set_config('request.jwt.claims','{"sub":"00000000-0000-0000-0000-0000000000d1","role":"authenticated"}',true);
 select is((select count(*) from public.orders),0::bigint,'suspended membership reads no order');
 select set_config('request.jwt.claims','{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}',true);
+select lives_ok($$select public.change_order_status((select id from public.orders where external_order_id='S4-AGENT-CONF'),'invoiced','')$$,'manager can record invoiced revenue');
 select is((select count(*) from public.orders where brand_id='00000000-0000-0000-0000-000000000102'),0::bigint,'brand admin reads no cross-brand order');
 
 select count(*) as orders_before_preview from public.orders \gset

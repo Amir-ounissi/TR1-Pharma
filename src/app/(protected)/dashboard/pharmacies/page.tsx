@@ -92,14 +92,14 @@ export default async function PharmaciesPage({ searchParams }: { searchParams: S
           eyebrow={`Réseau officinal / ${brand.name}`}
           title="Pharmacies"
           description="Le portefeuille, les affectations et les priorités commerciales se lisent ici en une seule vue dense."
-          actions={
+          actions={role !== "agent" ? (
             <Button asChild className="h-9 rounded-md bg-[var(--tr1-navy)] px-3.5 text-sm font-medium text-white hover:bg-[var(--tr1-navy-soft)]">
               <Link href="/dashboard/pharmacies/new">
                 <Plus className="size-4" />
                 Ajouter une pharmacie
               </Link>
             </Button>
-          }
+          ) : undefined}
         />
       ) : null}
 
@@ -108,9 +108,9 @@ export default async function PharmaciesPage({ searchParams }: { searchParams: S
       {view === "list" ? (
         <MetricStrip
           items={[
-            { icon: Building2, label: "Portefeuille total", value: count ?? 0, detail: "Pharmacies référencées" },
+            { icon: Building2, label: role === "agent" ? "Mon portefeuille" : "Portefeuille total", value: count ?? 0, detail: "Pharmacies référencées" },
             { icon: CircleAlert, label: "Priorités", value: strategicCount, detail: "Sur cette page", accent: true },
-            { icon: UserRound, label: "Sans agent", value: unassignedCount, detail: "Affectation à compléter" },
+            role === "agent" ? { icon: CircleAlert, label: "À relancer", value: rows.filter((row) => row.activity_status === "at_risk" || row.activity_status === "dormant").length, detail: "Sur cette page" } : { icon: UserRound, label: "Sans agent", value: unassignedCount, detail: "Affectation à compléter" },
             { icon: MapPin, label: "Villes couvertes", value: cityCount, detail: "Sur cette page" },
           ]}
         />
@@ -209,7 +209,7 @@ export default async function PharmaciesPage({ searchParams }: { searchParams: S
           description={
             hasActiveFilters
               ? "Essayez d’élargir votre recherche ou de réinitialiser les filtres."
-              : "Commencez par ajouter une première pharmacie pour construire le portefeuille."
+              : role === "agent" ? "Votre portefeuille ne comporte pas encore de pharmacie accessible." : "Commencez par ajouter une première pharmacie pour construire le portefeuille."
           }
           action={
             hasActiveFilters ? (
@@ -219,14 +219,14 @@ export default async function PharmaciesPage({ searchParams }: { searchParams: S
                   Réinitialiser les filtres
                 </Link>
               </Button>
-            ) : (
+            ) : role !== "agent" ? (
               <Button asChild size="sm" className="h-9 bg-[var(--tr1-navy)] px-3.5 text-sm font-medium text-white hover:bg-[var(--tr1-navy-soft)]">
                 <Link href="/dashboard/pharmacies/new">
                   <Plus className="size-3.5" />
                   Ajouter une pharmacie
                 </Link>
               </Button>
-            )
+            ) : undefined
           }
         />
       ) : (

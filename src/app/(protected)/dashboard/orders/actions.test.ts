@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ revalidatePath: vi.fn(), requireActiveBrand: vi.fn() }));
+const mocks = vi.hoisted(() => ({ revalidatePath: vi.fn(), requireActiveBrand: vi.fn(), getBrandContexts: vi.fn() }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
-vi.mock("@/lib/auth", () => ({ requireActiveBrand: mocks.requireActiveBrand }));
+vi.mock("@/lib/auth", () => ({ requireActiveBrand: mocks.requireActiveBrand, getBrandContexts: mocks.getBrandContexts }));
 
 import { changeOrderStatusAction, createOrderAction } from "./actions";
 
@@ -11,10 +11,15 @@ const productId = "22222222-2222-4222-8222-222222222222";
 
 describe("order server actions", () => {
   const rpc = vi.fn();
+  const productQuery = vi.fn();
   beforeEach(() => {
     vi.clearAllMocks();
     rpc.mockResolvedValue({ data: "33333333-3333-4333-8333-333333333333", error: null });
-    mocks.requireActiveBrand.mockResolvedValue({ supabase: { rpc } });
+    const productResult = { in: async () => ({ data: [{ id: productId, tax_rate: 5.5 }], error: null }) };
+    const productScope: { eq: () => typeof productScope; is: () => typeof productResult } = { eq: () => productScope, is: () => productResult };
+    productQuery.mockReturnValue({ select: () => productScope });
+    mocks.requireActiveBrand.mockResolvedValue({ brand: { id: "brand-id" }, supabase: { rpc, from: productQuery } });
+    mocks.getBrandContexts.mockResolvedValue([{ id: "brand-id", role: "brand_admin" }]);
   });
 
   it("rejects malformed order data before database access", async () => {
@@ -26,7 +31,15 @@ describe("order server actions", () => {
     const formData = new FormData();
     Object.entries({ brandPharmacyId: relationId, orderType: "other", orderStatus: "invoiced", orderDate: "2026-07-21T10:00", shippingAmountHt: "0", paymentStatus: "pending", productId, quantity: "2", freeQuantity: "1", unitPriceHt: "10", discountRate: "5", taxRate: "20" }).forEach(([key,value]) => formData.append(key,value));
     expect(await createOrderAction({}, formData)).toEqual({ success: "Commande créée et indicateurs recalculés.", orderId: "33333333-3333-4333-8333-333333333333" });
-    expect(rpc).toHaveBeenCalledWith("create_order", expect.objectContaining({ target_brand_pharmacy_id: relationId, item_payload: [expect.objectContaining({ product_id: productId, quantity: 2 })] }));
+    expect(rpc).toHaveBeenCalledWith("create_order", expect.objectContaining({ target_brand_pharmacy_id: relationId, item_payload: [expect.objectContaining({ product_id: productId, quantity: 2, tax_rate: 5.5 })] }));
+  });
+
+  it("blocks a financial status for an agent before creating the order", async () => {
+    mocks.getBrandContexts.mockResolvedValue([{ id: "brand-id", role: "agent" }]);
+    const formData = new FormData();
+    Object.entries({ brandPharmacyId: relationId, orderType: "other", orderStatus: "invoiced", orderDate: "2026-07-21T10:00", shippingAmountHt: "0", paymentStatus: "pending", productId, quantity: "1", freeQuantity: "0", unitPriceHt: "10" }).forEach(([key, value]) => formData.append(key, value));
+    await expect(createOrderAction({}, formData)).resolves.toEqual({ error: "Un agent ne peut pas déclarer une commande facturée ou livrée." });
+    expect(rpc).not.toHaveBeenCalled();
   });
 
   it("returns SQL authorization errors without masking them", async () => {
