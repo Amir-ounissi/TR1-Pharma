@@ -132,7 +132,15 @@ export async function confirmPdfOrderAction(_state: PdfOrderActionState, formDat
   let items: unknown;
   try { items = JSON.parse(typeof rawItems === "string" ? rawItems : "[]"); } catch { return { error: "Les lignes de commande sont invalides." }; }
   let newPharmacy: unknown;
-  try { newPharmacy = JSON.parse(typeof formData.get("newPharmacy") === "string" ? String(formData.get("newPharmacy")) : "null"); } catch { return { error: "Les informations de la pharmacie sont invalides." }; }
+  const rawNewPharmacy = formData.get("newPharmacy");
+  try {
+    newPharmacy =
+      typeof rawNewPharmacy === "string" && rawNewPharmacy.trim()
+        ? JSON.parse(rawNewPharmacy)
+        : null;
+  } catch {
+    return { error: "Les informations de la pharmacie sont invalides." };
+  }
   const parsed = confirmationSchema.safeParse({ brandPharmacyId: formData.get("brandPharmacyId") || undefined, pharmacyId: formData.get("pharmacyId") || undefined, newPharmacy: newPharmacy || undefined, orderNumber: formData.get("orderNumber"), orderDate: formData.get("orderDate"), items });
   if (!parsed.success) return { error: "La confirmation de commande est invalide." };
   if (Number(Boolean(parsed.data.brandPharmacyId)) + Number(Boolean(parsed.data.pharmacyId)) + Number(Boolean(parsed.data.newPharmacy)) !== 1) return { error: "Sélectionnez ou créez explicitement une pharmacie." };
