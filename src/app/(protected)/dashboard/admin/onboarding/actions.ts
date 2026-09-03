@@ -32,6 +32,19 @@ const onboardingSchema = z.object({
   description: z.string().trim().max(300).optional(),
 });
 
+function slugifyOnboardingValue(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+const duplicateOnboardingMessage =
+  "Une organisation ou une marque avec ce slug existe déjà. Reprenez son onboarding existant au lieu d’en créer un nouveau.";
+
 export async function createBrandOnboardingAction(
   _state: OnboardingActionState,
   formData: FormData,
@@ -52,6 +65,26 @@ export async function createBrandOnboardingAction(
   });
   if (!parsed.success) return { error: "Les informations organisation ou marque sont invalides." };
   const { supabase } = await requirePlatformAdmin();
+  const organizationSlug = slugifyOnboardingValue(
+    parsed.data.tradeName || parsed.data.legalName,
+  );
+  const brandSlug = slugifyOnboardingValue(
+    parsed.data.brandName,
+  );
+  const [{ data: existingOrganization, error: organizationError }, { data: existingBrand, error: brandError }] =
+    await Promise.all([
+      supabase.from("organizations").select("id").eq("slug", organizationSlug).maybeSingle(),
+      supabase.from("brands").select("id").eq("slug", brandSlug).maybeSingle(),
+    ]);
+
+  if (organizationError || brandError) {
+    return { error: "La vérification des organisations et marques existantes a échoué." };
+  }
+
+  if (existingOrganization || existingBrand) {
+    return { error: duplicateOnboardingMessage };
+  }
+
   const { data, error } = await supabase.rpc("create_brand_onboarding", {
     organization_data: {
       legal_name: parsed.data.legalName,
@@ -72,6 +105,7 @@ export async function createBrandOnboardingAction(
       short_description: parsed.data.description,
     },
   });
+  if (error?.code === "23505") return { error: duplicateOnboardingMessage };
   if (error) return { error: error.message };
   const result = data?.[0];
   revalidatePath("/dashboard/admin/onboarding");
