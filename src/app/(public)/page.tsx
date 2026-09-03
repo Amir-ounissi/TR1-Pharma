@@ -128,6 +128,83 @@ export default function LandingPage() {
           </div>
 
           <div className="mt-14 grid gap-5 lg:grid-cols-12">
+            <article className="overflow-hidden rounded-[1.6rem] border border-[#0b1e32]/10 bg-[#f8f2e8] lg:col-span-7">
+              <div className="p-7 sm:p-9">
+                <p className="font-mono text-[.62rem] font-black uppercase tracking-[.15em] text-[#c84f24]">
+                  Pilotage
+                </p>
+                <h3 className="mt-3 text-3xl font-black tracking-[-.05em]">
+                  Savoir où agir aujourd’hui.
+                </h3>
+                <p className="mt-4 max-w-xl leading-7 text-[#667384]">
+                  Les comptes prioritaires, les alertes et les objectifs remontent dans une même vue.
+                </p>
+              </div>
+
+              <div className="px-3 pb-3 sm:px-5 sm:pb-5">
+                <Image
+                  alt="Pilotage Manager TR1"
+                  className="w-full rounded-xl border border-[#0b1e32]/8"
+                  height={600}
+                  src="/marketing/manager-day.webp"
+                  width={716}
+                />
+              </div>
+            </article>
+
+            <article className="overflow-hidden rounded-[1.6rem] border border-[#0b1e32]/10 bg-white lg:col-span-5">
+              <div className="p-7 sm:p-9">
+                <p className="font-mono text-[.62rem] font-black uppercase tracking-[.15em] text-[#c84f24]">
+                  Compte pharmacie
+                </p>
+                <h3 className="mt-3 text-3xl font-black tracking-[-.05em]">
+                  Comprendre chaque pharmacie.
+                </h3>
+                <p className="mt-4 leading-7 text-[#667384]">
+                  Commandes, activité, assortiment, historique et prochaine action restent rattachés au compte.
+                </p>
+              </div>
+
+              <div className="px-3 pb-3 sm:px-5 sm:pb-5">
+                <Image
+                  alt="Fiche pharmacie TR1"
+                  className="w-full rounded-xl border border-[#0b1e32]/8"
+                  height={600}
+                  src="/marketing/pharmacy-account.webp"
+                  width={716}
+                />
+              </div>
+            </article>
+
+            <article className="grid overflow-hidden rounded-[1.6rem] bg-[#0b1e32] text-white lg:col-span-12 lg:grid-cols-[.9fr_1.1fr]">
+              <div className="flex flex-col justify-center p-7 sm:p-10 lg:p-12">
+                <p className="font-mono text-[.62rem] font-black uppercase tracking-[.15em] text-[#ff9d78]">
+                  Expérience terrain
+                </p>
+                <h3 className="mt-4 text-3xl font-black tracking-[-.05em] sm:text-4xl">
+                  Donner au terrain la prochaine bonne action.
+                </h3>
+                <p className="mt-5 max-w-xl leading-7 text-white/65">
+                  La prochaine visite est préparée avec la pharmacie, le contexte, l’objectif et les informations utiles.
+                </p>
+
+                <div className="mt-8 space-y-3 border-t border-white/12 pt-6 font-semibold">
+                  <p>Où vais-je ?</p>
+                  <p>Pourquoi cette pharmacie ?</p>
+                  <p>Que dois-je faire sur place ?</p>
+                </div>
+              </div>
+
+              <div className="flex items-end justify-center px-6 pt-8 lg:px-10">
+                <Image
+                  alt="Expérience mobile Agent TR1"
+                  className="w-full max-w-[25rem] rounded-t-[1.4rem] border border-b-0 border-white/12"
+                  height={600}
+                  src="/marketing/agent-day-mobile.webp"
+                  width={716}
+                />
+              </div>
+            </article>
           </div>
         </div>
       </section>
