@@ -361,7 +361,7 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div id="diagnostic" className="scroll-mt-28">
+            <div>
               <LeadForm />
             </div>
           </div>
