@@ -35,7 +35,7 @@ export async function extractPdfOrder(file: File, fetcher: Fetcher = fetch): Pro
       body: JSON.stringify({
     model: process.env.OPENAI_PDF_ORDER_MODEL ?? "gpt-5",
         store: false,
-        instructions: "Extract only the fields requested from this purchase-order PDF. Never infer a TR1 identifier, never match a product or pharmacy, and use null when a value is absent or unreadable.",
+        instructions: "Extract only the fields requested from this purchase-order PDF. The pharmacy object MUST describe the buying/customer/delivery pharmacy (the officine placing or receiving the order), never the supplier, manufacturer or brand. Labels such as Fournisseur identify the supplier and must not be used as the pharmacy. Never infer CIP, SIRET or FINESS from an unlabeled number: populate those identifiers only when they are explicitly labeled or unambiguous. Never infer a TR1 identifier, never perform matching, preserve the pharmacy name as printed, and use null when a value is absent or unreadable.",
         input: [{ role: "user", content: [{ type: "input_text", text: "Extract the order as structured data." }, { type: "input_file", file_id: fileId }] }],
         text: { format: { type: "json_schema", name: "pdf_order", strict: true, schema: PDF_ORDER_JSON_SCHEMA } },
       }),

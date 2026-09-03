@@ -28,6 +28,37 @@ describe("PDF order deterministic matching", () => {
     expect(matchPdfPharmacy({ name: "Pharmacie du Centre", siret: null, cip: null, finess: null, address: null, postalCode: "75002" }, pharmacies)).toMatchObject({ status: "suggested", method: "name_postal_code", match: { pharmacyId: "pharmacy-2" } });
   });
 
+  it("suggests a pharmacy when the PDF adds titulaire names to the directory name", () => {
+    expect(
+      matchPdfPharmacy(
+        {
+          name: "PHARMACIE PLEIN SUD M. ESCOJIDO & Mme MONTGAILLARD",
+          siret: null,
+          cip: null,
+          finess: null,
+          address: "CENTRE COMMERCIAL AUCHAN PLEIN SUD",
+          postalCode: "34470",
+        },
+        [
+          {
+            pharmacyId: "perols",
+            brandPharmacyId: null,
+            relationStatus: "global_only",
+            name: "PHARMACIE PLEIN SUD",
+            siret: null,
+            cip: "2107715",
+            finess: null,
+            postalCode: "34470",
+          },
+        ],
+      ),
+    ).toMatchObject({
+      status: "suggested",
+      method: "name_contains_postal_code",
+      match: { pharmacyId: "perols" },
+    });
+  });
+
   it("matches products by EAN, SKU, and a reference", () => {
     expect(matchPdfProduct({ label: null, sku: null, ean: "3760000000001", quantity: 1, unitPriceHt: 10, discountRate: null }, products)).toMatchObject({ status: "matched", method: "ean", match: { id: "product-1" } });
     expect(matchPdfProduct({ label: null, sku: "VK-C", ean: null, quantity: 1, unitPriceHt: 10, discountRate: null }, products)).toMatchObject({ status: "matched", method: "sku", match: { id: "product-1" } });

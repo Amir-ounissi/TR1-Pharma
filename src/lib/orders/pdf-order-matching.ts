@@ -43,6 +43,13 @@ export function normalizeText(value: string | null | undefined) {
   return value?.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("fr-FR").replace(/[^a-z0-9]+/g, " ").trim() ?? "";
 }
 
+function normalizePharmacyNameCore(value: string | null | undefined) {
+  return normalizeText(value)
+    .replace(/\b(pharmacie|phcie|officine|selarl|selas|eurl|sarl|sas)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function resolve<T>(candidates: T[], method: string): MatchResult<T> {
   if (candidates.length === 1) return { status: "matched", method, match: candidates[0], candidates };
   if (candidates.length > 1) return { status: "ambiguous", method, match: null, candidates };
@@ -62,13 +69,58 @@ export function matchPdfPharmacy(pharmacy: PdfOrderExtraction["pharmacy"], candi
   }
   const name = normalizeText(pharmacy.name);
   const postalCode = normalizeIdentifier(pharmacy.postalCode);
+
   if (name && postalCode) {
-    const result = resolve(candidates.filter((candidate) => normalizeText(candidate.name) === name && normalizeIdentifier(candidate.postalCode) === postalCode), "name_postal_code");
-    if (result.status === "matched" && result.match?.relationStatus === "global_only") {
-      return { ...result, status: "suggested" };
+    const samePostalCode = candidates.filter(
+      (candidate) => normalizeIdentifier(candidate.postalCode) === postalCode,
+    );
+
+    const exact = resolve(
+      samePostalCode.filter((candidate) => normalizeText(candidate.name) === name),
+      "name_postal_code",
+    );
+
+    if (exact.status === "matched") {
+      if (exact.match?.relationStatus === "global_only") {
+        return { ...exact, status: "suggested" };
+      }
+      return exact;
     }
-    return result;
+
+    if (exact.status === "ambiguous") return exact;
+
+    const extractedCore = normalizePharmacyNameCore(pharmacy.name);
+
+    const contained = resolve(
+      samePostalCode.filter((candidate) => {
+        const candidateCore = normalizePharmacyNameCore(candidate.name);
+
+        if (extractedCore.length < 4 || candidateCore.length < 4) return false;
+
+        return (
+          extractedCore.includes(candidateCore) ||
+          candidateCore.includes(extractedCore)
+        );
+      }),
+      "name_contains_postal_code",
+    );
+
+    if (contained.status === "matched") {
+      return { ...contained, status: "suggested" };
+    }
+
+    if (contained.status === "ambiguous") return contained;
+
+    if (samePostalCode.length > 0) {
+      return {
+        status: "unmatched",
+        method: "postal_code",
+        match: null,
+        candidates: samePostalCode,
+      };
+    }
   }
+
   return { status: "unmatched", method: null, match: null, candidates: [] };
 }
 
