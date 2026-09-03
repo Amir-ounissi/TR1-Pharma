@@ -14,13 +14,17 @@ export type OrderPharmacySearchResult = {
 };
 
 const uuid = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+const optionalUuid = z.preprocess(
+  (value) => value === "" || value == null ? undefined : value,
+  uuid.optional(),
+);
 const orderTypes = ["initial", "reorder", "complementary", "replacement", "sample", "return", "credit_note", "other"] as const;
 const orderStatuses = ["draft", "pending", "confirmed", "invoiced", "partially_delivered", "delivered", "cancelled", "refunded"] as const;
 
 export async function createOrderAction(_state: OrderActionState, formData: FormData): Promise<OrderActionState> {
   const header = z.object({
-    brandPharmacyId: uuid.optional(),
-    pharmacyId: uuid.optional(),
+    brandPharmacyId: optionalUuid,
+    pharmacyId: optionalUuid,
     externalOrderId: z.string().trim().max(120).optional(),
     orderNumber: z.string().trim().max(120).optional(),
     orderType: z.enum(orderTypes),
@@ -100,7 +104,16 @@ export async function searchOrderPharmaciesAction(search: string): Promise<Order
     result_limit: 12,
   });
   if (error) throw new Error(error.message);
-  return (data ?? []).map((row) => ({
+  return ((data ?? []) as Array<{
+    pharmacy_id: string;
+    brand_pharmacy_id: string | null;
+    relation_status: string;
+    legal_name: string | null;
+    trade_name: string | null;
+    city: string | null;
+    cip_code: string | null;
+    siret: string | null;
+  }>).map((row) => ({
     pharmacyId: String(row.pharmacy_id),
     brandPharmacyId: row.brand_pharmacy_id ? String(row.brand_pharmacy_id) : null,
     relationStatus: row.relation_status === "existing_brand_relation" ? "existing_brand_relation" : "global_only",

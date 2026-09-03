@@ -81,7 +81,9 @@ export async function analyzePdfOrderAction(_state: PdfOrderActionState, formDat
       supabase.from("products").select("id,name,sku,ean,wholesale_price_ht,tax_rate,product_references!product_references_product_brand_fk(sku,ean,label)").eq("brand_id", brand.id).eq("is_active", true).is("discontinued_at", null),
     ]);
     if (pharmaciesError || productsError) return { error: "Les données de la marque ne sont pas disponibles." };
-    const pharmacies = (directoryRows ?? []).map((row) => readPharmacy(row as Record<string, unknown>)).filter((row): row is PharmacyCandidate => row !== null);
+    const pharmacies = ((directoryRows ?? []) as Array<Record<string, unknown>>)
+      .map((row) => readPharmacy(row))
+      .filter((row): row is PharmacyCandidate => row !== null);
     const products = (productRows ?? []).map((row) => readProduct(row as unknown as Record<string, unknown>));
     const pharmacyMatch = matchPdfPharmacy(extraction.pharmacy, pharmacies);
     const lines = extraction.lines.map((line, index) => {
