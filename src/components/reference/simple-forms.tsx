@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { addBrandPharmacyProductAction, createContactAction, createGroupAction, createProductAction, createTerritoryAction, updateBrandPharmacyAction, updateGroupAction, updateTerritoryAction } from "@/app/(protected)/dashboard/reference/actions";
+import { addBrandPharmacyProductAction, createContactAction, createGroupAction, createProductAction, createTerritoryAction, updateBrandPharmacyAction, updateGroupAction, updateProductAction, updateTerritoryAction } from "@/app/(protected)/dashboard/reference/actions";
 import { ActionFeedback } from "@/components/reference/action-feedback";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,192 @@ export function ContactForm({ pharmacyId }: { pharmacyId: string }) {
 export function ProductForm() {
   const [state, action, pending] = useActionState(createProductAction, {});
   return <form action={action} className="grid gap-3 sm:grid-cols-2"><div className="sm:col-span-2"><ActionFeedback {...state} /></div><div className="space-y-2"><Label>Nom</Label><Input name="name" required /></div><div className="space-y-2"><Label>SKU</Label><Input name="sku" required /></div><div className="space-y-2"><Label>EAN</Label><Input name="ean" /></div><div className="space-y-2"><Label>Catégorie</Label><Input name="category" /></div><div className="space-y-2"><Label>Famille</Label><Input name="productFamily" /></div><div className="space-y-2"><Label>Format</Label><Input name="format" /></div><div className="space-y-2 sm:col-span-2"><Label>Description</Label><Textarea name="description" rows={3} /></div><div className="space-y-2"><Label>Prix pharmacie HT</Label><Input name="wholesalePrice" type="number" step="0.01" min="0" /></div><div className="space-y-2"><Label>PVC TTC recommandé</Label><Input name="retailPrice" type="number" step="0.01" min="0" /></div><div className="space-y-2"><Label>TVA (%)</Label><Input name="taxRate" type="number" step="0.01" min="0" max="100" /></div><div className="space-y-2"><Label>Colisage</Label><Input name="unitsPerCase" type="number" min="1" step="1" /></div><div className="space-y-2"><Label>MOQ</Label><Input name="minimumOrderQuantity" type="number" min="1" step="1" /></div><div className="space-y-2"><Label>Priorité stratégique</Label><Select name="strategicPriority" defaultValue="standard"><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="standard">Standard</SelectItem><SelectItem value="priority">Prioritaire</SelectItem><SelectItem value="strategic">Stratégique</SelectItem></SelectContent></Select></div><label className="flex items-center gap-2 text-sm"><input name="pharmacyEligible" type="checkbox" defaultChecked /> Éligible pharmacie</label><label className="flex items-center gap-2 text-sm"><input name="countsForDistribution" type="checkbox" defaultChecked /> Compte dans la DN</label><Button disabled={pending} className="sm:col-span-2">Créer le produit</Button></form>;
+}
+
+
+export function ProductEditForm({
+  product,
+}: {
+  product: {
+    id: string;
+    name: string;
+    sku: string;
+    ean: string | null;
+    category: string | null;
+    product_family: string | null;
+    format: string | null;
+    description: string | null;
+    wholesale_price_ht: number | string | null;
+    retail_price_ttc: number | string | null;
+    tax_rate: number | string | null;
+    units_per_case: number | null;
+    minimum_order_quantity: number | null;
+    strategic_priority: string;
+    is_pharmacy_eligible: boolean;
+    counts_for_distribution: boolean;
+  };
+}) {
+  const [state, action, pending] = useActionState(
+    updateProductAction,
+    {},
+  );
+
+  return (
+    <form action={action} className="grid gap-4 sm:grid-cols-2">
+      <input type="hidden" name="id" value={product.id} />
+
+      <div className="sm:col-span-2">
+        <ActionFeedback {...state} />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Nom</Label>
+        <Input name="name" defaultValue={product.name} required />
+      </div>
+
+      <div className="space-y-2">
+        <Label>SKU / ACL</Label>
+        <Input name="sku" defaultValue={product.sku} required />
+      </div>
+
+      <div className="space-y-2">
+        <Label>EAN</Label>
+        <Input name="ean" defaultValue={product.ean ?? ""} />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Format / conditionnement</Label>
+        <Input name="format" defaultValue={product.format ?? ""} />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Catégorie</Label>
+        <Input name="category" defaultValue={product.category ?? ""} />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Famille</Label>
+        <Input
+          name="productFamily"
+          defaultValue={product.product_family ?? ""}
+        />
+      </div>
+
+      <div className="space-y-2 sm:col-span-2">
+        <Label>Description</Label>
+        <Textarea
+          name="description"
+          rows={4}
+          defaultValue={product.description ?? ""}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Prix pharmacie HT</Label>
+        <Input
+          name="wholesalePrice"
+          type="number"
+          step="0.01"
+          min="0"
+          defaultValue={product.wholesale_price_ht ?? ""}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label>PVC TTC recommandé</Label>
+        <Input
+          name="retailPrice"
+          type="number"
+          step="0.01"
+          min="0"
+          defaultValue={product.retail_price_ttc ?? ""}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label>TVA (%)</Label>
+        <Input
+          name="taxRate"
+          type="number"
+          step="0.01"
+          min="0"
+          max="100"
+          defaultValue={product.tax_rate ?? ""}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label>PCB / colisage</Label>
+        <Input
+          name="unitsPerCase"
+          type="number"
+          min="1"
+          step="1"
+          defaultValue={product.units_per_case ?? ""}
+        />
+        <p className="text-xs text-muted-foreground">
+          Nombre d’unités par carton.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label>MOQ</Label>
+        <Input
+          name="minimumOrderQuantity"
+          type="number"
+          min="1"
+          step="1"
+          defaultValue={product.minimum_order_quantity ?? ""}
+        />
+        <p className="text-xs text-muted-foreground">
+          Quantité minimale de commande.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Priorité stratégique</Label>
+        <Select
+          name="strategicPriority"
+          defaultValue={product.strategic_priority}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="standard">Standard</SelectItem>
+            <SelectItem value="priority">Prioritaire</SelectItem>
+            <SelectItem value="strategic">Stratégique</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          name="pharmacyEligible"
+          type="checkbox"
+          className="size-4"
+          defaultChecked={product.is_pharmacy_eligible}
+        />
+        Éligible pharmacie
+      </label>
+
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          name="countsForDistribution"
+          type="checkbox"
+          className="size-4"
+          defaultChecked={product.counts_for_distribution}
+        />
+        Compte dans la DN
+      </label>
+
+      <Button disabled={pending} className="sm:col-span-2">
+        {pending
+          ? "Enregistrement…"
+          : "Enregistrer les modifications"}
+      </Button>
+    </form>
+  );
 }
 
 export function AddImplantedProductForm({ brandPharmacyId, products }: { brandPharmacyId: string; products: Array<{ id: string; name: string }> }) {
