@@ -44,7 +44,13 @@ export async function requirePlatformAdmin() {
 
 export async function getBrandContexts(): Promise<BrandContext[]> {
   const { supabase } = await requireUser();
-  const { data, error } = await supabase.rpc("get_my_brand_contexts");
+
+  let { data, error } = await supabase.rpc("get_my_brand_contexts");
+
+  if (error?.code === "PGRST303") {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    ({ data, error } = await supabase.rpc("get_my_brand_contexts"));
+  }
 
   if (error) throw error;
 
