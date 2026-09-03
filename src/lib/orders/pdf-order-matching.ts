@@ -43,6 +43,78 @@ export function normalizeText(value: string | null | undefined) {
   return value?.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("fr-FR").replace(/[^a-z0-9]+/g, " ").trim() ?? "";
 }
 
+export function normalizePdfOrderDate(value: string | null | undefined) {
+  const text = value?.trim();
+  if (!text) return null;
+
+  const iso = text.match(/\b(\d{4})-(\d{2})-(\d{2})\b/);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+
+  const french = text.match(/\b(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})\b/);
+  if (french) {
+    return `${french[3]}-${french[2].padStart(2, "0")}-${french[1].padStart(2, "0")}`;
+  }
+
+  return null;
+}
+
+function pdfLineIdentity(line: PdfOrderExtraction["lines"][number]) {
+  const ean = normalizeIdentifier(line.ean);
+  if (ean) return `ean:${ean}`;
+
+  const sku = normalizeIdentifier(line.sku);
+  if (sku) return `sku:${sku}`;
+
+  const label = normalizeText(line.label);
+  return label ? `label:${label}` : "";
+}
+
+function compatibleLinePrice(
+  first: PdfOrderExtraction["lines"][number],
+  second: PdfOrderExtraction["lines"][number],
+) {
+  if (first.unitPriceHt == null || second.unitPriceHt == null) return true;
+  return Math.abs(first.unitPriceHt - second.unitPriceHt) < 0.0001;
+}
+
+export function consolidatePdfOrderLines(lines: PdfOrderExtraction["lines"]) {
+  const result = lines
+    .filter((line) => (line.quantity ?? 0) > 0 || (line.freeQuantity ?? 0) <= 0)
+    .map((line) => ({
+      ...line,
+      freeQuantity: line.freeQuantity ?? 0,
+    }));
+
+  const freeOnlyLines = lines.filter(
+    (line) => (line.quantity ?? 0) <= 0 && (line.freeQuantity ?? 0) > 0,
+  );
+
+  for (const freeLine of freeOnlyLines) {
+    const identity = pdfLineIdentity(freeLine);
+
+    const matches = result.filter(
+      (candidate) =>
+        (candidate.quantity ?? 0) > 0 &&
+        identity &&
+        pdfLineIdentity(candidate) === identity &&
+        compatibleLinePrice(candidate, freeLine),
+    );
+
+    if (matches.length === 1) {
+      matches[0].freeQuantity =
+        (matches[0].freeQuantity ?? 0) + (freeLine.freeQuantity ?? 0);
+      continue;
+    }
+
+    result.push({
+      ...freeLine,
+      freeQuantity: freeLine.freeQuantity ?? 0,
+    });
+  }
+
+  return result;
+}
+
 function normalizePharmacyNameCore(value: string | null | undefined) {
   return normalizeText(value)
     .replace(/\b(pharmacie|phcie|officine|selarl|selas|eurl|sarl|sas)\b/g, " ")

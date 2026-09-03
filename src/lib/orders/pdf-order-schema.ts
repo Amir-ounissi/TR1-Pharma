@@ -19,6 +19,7 @@ export const pdfOrderExtractionSchema = z.object({
     sku: optionalText,
     ean: optionalText,
     quantity: z.number().finite().positive().nullable(),
+    freeQuantity: z.number().int().nonnegative().nullable().optional(),
     unitPriceHt: optionalAmount,
     discountRate: z.number().finite().min(0).max(100).nullable(),
   })).max(100),
@@ -54,12 +55,13 @@ export const PDF_ORDER_JSON_SCHEMA = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["label", "sku", "ean", "quantity", "unitPriceHt", "discountRate"],
+        required: ["label", "sku", "ean", "quantity", "freeQuantity", "unitPriceHt", "discountRate"],
         properties: {
           label: { type: ["string", "null"] },
           sku: { type: ["string", "null"] },
           ean: { type: ["string", "null"] },
           quantity: { type: ["number", "null"] },
+          freeQuantity: { type: ["number", "null"] },
           unitPriceHt: { type: ["number", "null"] },
           discountRate: { type: ["number", "null"] },
         },

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateOrderTotal, hasMeaningfulTotalDifference, matchPdfPharmacy, matchPdfProduct, resolvedLinePrice } from "./pdf-order-matching";
+import { calculateOrderTotal, consolidatePdfOrderLines, hasMeaningfulTotalDifference, matchPdfPharmacy, matchPdfProduct, normalizePdfOrderDate, resolvedLinePrice } from "./pdf-order-matching";
 
 const pharmacies = [
   { pharmacyId: "pharmacy-1", brandPharmacyId: "brand-pharmacy-1", relationStatus: "existing_brand_relation" as const, name: "Pharmacie du Centre", siret: "12345678901234", cip: "CIP-1", finess: "FIN-1", postalCode: "75001" },
@@ -56,6 +56,42 @@ describe("PDF order deterministic matching", () => {
       status: "suggested",
       method: "name_contains_postal_code",
       match: { pharmacyId: "perols" },
+    });
+  });
+
+  it("normalizes a French document date for the HTML date field", () => {
+    expect(normalizePdfOrderDate("Le 31/08/2026 à 11:42")).toBe("2026-08-31");
+    expect(normalizePdfOrderDate("2026-08-31")).toBe("2026-08-31");
+  });
+
+  it("merges a free-unit PDF row into the paid line", () => {
+    const lines = consolidatePdfOrderLines([
+      {
+        label: "VK SWISS ASHWAGANDHA BTE 30",
+        sku: null,
+        ean: "7629999810969",
+        quantity: 8,
+        freeQuantity: 0,
+        unitPriceHt: 17,
+        discountRate: 0,
+      },
+      {
+        label: "VK SWISS ASHWAGANDHA BTE 30",
+        sku: null,
+        ean: "7629999810969",
+        quantity: null,
+        freeQuantity: 2,
+        unitPriceHt: 17,
+        discountRate: 100,
+      },
+    ]);
+
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatchObject({
+      quantity: 8,
+      freeQuantity: 2,
+      unitPriceHt: 17,
+      discountRate: 0,
     });
   });
 

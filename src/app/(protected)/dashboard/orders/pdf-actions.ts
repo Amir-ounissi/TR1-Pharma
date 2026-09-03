@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireActiveBrand } from "@/lib/auth";
 import { extractPdfOrder, PdfOrderImportError } from "@/lib/orders/pdf-order-extraction";
-import { calculateOrderTotal, hasMeaningfulTotalDifference, matchPdfPharmacy, matchPdfProduct, resolvedLinePrice, type PharmacyCandidate, type ProductCandidate } from "@/lib/orders/pdf-order-matching";
+import { calculateOrderTotal, consolidatePdfOrderLines, hasMeaningfulTotalDifference, matchPdfPharmacy, matchPdfProduct, normalizePdfOrderDate, resolvedLinePrice, type PharmacyCandidate, type ProductCandidate } from "@/lib/orders/pdf-order-matching";
 import type { PdfOrderExtraction } from "@/lib/orders/pdf-order-schema";
 
 const uuid = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
@@ -21,6 +21,7 @@ export type PdfOrderPreview = {
     sku: string | null;
     ean: string | null;
     quantity: number | null;
+    freeQuantity: number;
     unitPriceHt: number | null;
     discountRate: number | null;
     product: { status: "matched" | "unmatched" | "ambiguous"; method: string | null; selectedId: string | null; candidates: PreviewProduct[] };
@@ -66,7 +67,12 @@ export async function analyzePdfOrderAction(_state: PdfOrderActionState, formDat
   if (!(candidate instanceof File) || candidate.size === 0) return { error: "Ajoutez un PDF de commande." };
   try {
     const { supabase, brand } = await requireActiveBrand();
-    const extraction = await extractPdfOrder(candidate);
+    const rawExtraction = await extractPdfOrder(candidate);
+    const extraction: PdfOrderExtraction = {
+      ...rawExtraction,
+      orderDate: normalizePdfOrderDate(rawExtraction.orderDate),
+      lines: consolidatePdfOrderLines(rawExtraction.lines),
+    };
     const [{ data: directoryRows, error: pharmaciesError }, { data: productRows, error: productsError }] = await Promise.all([
       supabase.rpc("search_pharmacy_directory_for_order", {
         target_brand_id: brand.id,
@@ -90,7 +96,7 @@ export async function analyzePdfOrderAction(_state: PdfOrderActionState, formDat
       const productMatch = matchPdfProduct(line, products);
       const price = resolvedLinePrice(line, productMatch.match);
       return {
-        index, label: line.label, sku: line.sku, ean: line.ean, quantity: line.quantity, unitPriceHt: line.unitPriceHt, discountRate: line.discountRate,
+        index, label: line.label, sku: line.sku, ean: line.ean, quantity: line.quantity, freeQuantity: line.freeQuantity ?? 0, unitPriceHt: line.unitPriceHt, discountRate: line.discountRate,
         product: { status: productMatch.status, method: productMatch.method, selectedId: productMatch.match?.id || null, candidates: (productMatch.status === "matched" ? productMatch.candidates : products).map((product) => ({ id: product.id, name: product.name, sku: product.sku, ean: product.ean, wholesalePriceHt: product.wholesalePriceHt, taxRate: product.taxRate })) },
         suggestedPriceHt: price.price, priceWarning: price.warning,
       };
@@ -118,7 +124,7 @@ const confirmationSchema = z.object({
   newPharmacy: z.object({ legalName: z.string().trim().min(1).max(200), tradeName: z.string().trim().max(200).optional(), siret: z.string().trim().max(32).optional(), cip: z.string().trim().max(32).optional(), finess: z.string().trim().max(32).optional(), postalCode: z.string().trim().max(16).optional(), city: z.string().trim().max(120).optional(), address: z.string().trim().max(300).optional() }).optional(),
   orderNumber: z.string().trim().min(1).max(120),
   orderDate: z.string().min(1),
-  items: z.array(z.object({ productId: uuid, quantity: z.number().int().positive(), unitPriceHt: z.number().finite().nonnegative(), discountRate: z.number().finite().min(0).max(100).nullable() })).min(1),
+  items: z.array(z.object({ productId: uuid, quantity: z.number().int().positive(), freeQuantity: z.number().int().nonnegative(), unitPriceHt: z.number().finite().nonnegative(), discountRate: z.number().finite().min(0).max(100).nullable() })).min(1),
 });
 
 export async function confirmPdfOrderAction(_state: PdfOrderActionState, formData: FormData): Promise<PdfOrderActionState> {
@@ -139,7 +145,7 @@ export async function confirmPdfOrderAction(_state: PdfOrderActionState, formDat
   if (productsError || products?.length !== new Set(parsed.data.items.map((item) => item.productId)).size) return { error: "Un produit sélectionné n’est plus disponible." };
   if (externalDuplicate || numberDuplicate) return { error: "Une commande avec ce numéro existe déjà pour cette marque." };
   const productById = new Map(products.map((product) => [product.id, product]));
-  const trustedItems = parsed.data.items.map((item) => ({ product_id: item.productId, quantity: item.quantity, free_quantity: 0, unit_price_ht: item.unitPriceHt, discount_rate: item.discountRate, tax_rate: Number(productById.get(item.productId)?.tax_rate ?? 0) }));
+  const trustedItems = parsed.data.items.map((item) => ({ product_id: item.productId, quantity: item.quantity, free_quantity: item.freeQuantity, unit_price_ht: item.unitPriceHt, discount_rate: item.discountRate, tax_rate: Number(productById.get(item.productId)?.tax_rate ?? 0) }));
   const { data, error } = await supabase.rpc("create_order_with_pharmacy_resolution", {
     target_brand_id: brand.id,
     target_brand_pharmacy_id: parsed.data.brandPharmacyId ?? null,
