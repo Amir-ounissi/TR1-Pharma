@@ -150,9 +150,9 @@ test.describe.serial("Sprint 11 — Onboarding marque et imports contrôlés", (
       content: `email;first_name;last_name;role;territory_code;active\n${importedUserEmail};Utilisateur;Importé;brand_user;T-${suffix};oui`,
     });
 
-    await expect(page.getByText("Prête à être activée")).toBeVisible();
+    await expect(page.getByText("Votre espace peut être activé")).toBeVisible();
     await page.screenshot({ path: "artifacts/sprint11/onboarding-ready-desktop.png", fullPage: true });
-    await page.getByRole("button", { name: "Activer la marque" }).click();
+    await page.getByRole("button", { name: "Activer l’espace" }).click();
     await expect.poll(async () => (
       await admin.from("brands").select("status").eq("id", brandId).single()
     ).data?.status).toBe("active");

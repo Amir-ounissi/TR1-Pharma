@@ -167,8 +167,8 @@ export default async function BrandOnboardingPage({
         <>
           <Card>
             <CardHeader>
-              <CardTitle>Progression de {selectedBrand.name}</CardTitle>
-              <CardDescription>{selectedOrganization?.legal_name} · {progress}% du contrôle terminé</CardDescription>
+              <CardTitle>Configuration de {selectedBrand.name}</CardTitle>
+              <CardDescription>{selectedOrganization?.legal_name} · {progress}% de la configuration complétée</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full bg-primary transition-all" style={{ width: `${progress}%` }} /></div>
@@ -176,13 +176,13 @@ export default async function BrandOnboardingPage({
                 {checklistItems.map((item) => (
                   <div className="flex items-center gap-3 rounded-lg border p-3" key={item.check_key}>
                     <StatusIcon completed={item.completed} blocking={item.blocking} />
-                    <div><p className="font-medium">{item.label}</p><p className="text-xs text-muted-foreground">{item.completed ? "Contrôle réussi" : item.blocking ? "Action requise" : "Étape facultative"}</p></div>
+                    <div><p className="font-medium">{item.label}</p><p className="text-xs text-muted-foreground">{item.completed ? "Configuré" : item.blocking ? "Requis pour activer" : "À compléter plus tard"}</p></div>
                   </div>
                 ))}
               </div>
               <Alert variant={blockingCount ? "destructive" : "default"}>
-                <AlertTitle>{blockingCount ? `${blockingCount} élément(s) bloquant(s)` : "Prête à être activée"}</AlertTitle>
-                <AlertDescription>{blockingCount ? "Terminez les contrôles requis avant l’activation." : "Tous les contrôles obligatoires sont satisfaits."}</AlertDescription>
+                <AlertTitle>{blockingCount ? `${blockingCount} élément(s) requis avant activation` : "Votre espace peut être activé"}</AlertTitle>
+                <AlertDescription>{blockingCount ? "Terminez les éléments requis avant l’activation." : "Produits, pharmacies, équipe et imports pourront être complétés après l’ouverture."}</AlertDescription>
               </Alert>
             </CardContent>
           </Card>
@@ -305,7 +305,7 @@ export default async function BrandOnboardingPage({
           </Card>
 
           <Card id="rapport">
-            <CardHeader><CardTitle>6. Rapport et activation</CardTitle><CardDescription>Contrôle final de l’environnement avant ouverture aux utilisateurs.</CardDescription></CardHeader>
+            <CardHeader><CardTitle>6. Ouverture de l’espace</CardTitle><CardDescription>Activez l’espace dès que le socle est prêt. Le reste pourra être complété ensuite.</CardDescription></CardHeader>
             <CardContent className="space-y-5">
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="rounded-lg border p-3"><p className="text-xs text-muted-foreground">Organisation</p><p className="font-medium">{selectedOrganization?.legal_name}</p></div>
@@ -325,7 +325,7 @@ export default async function BrandOnboardingPage({
               {selectedBrand.status !== "active" ? (
                 <form action={activateBrandAction}>
                   <input type="hidden" name="brandId" value={selectedBrand.id} />
-                  <Button disabled={blockingCount > 0}><Rocket className="size-4" />Activer la marque</Button>
+                  <Button disabled={blockingCount > 0}><Rocket className="size-4" />Activer l’espace</Button>
                 </form>
               ) : <Badge>Marque activée</Badge>}
             </CardContent>
