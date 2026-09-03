@@ -14,6 +14,7 @@ async function runAgentDay(browser: Browser, viewport: { width: number; height: 
   const context = await browser.newContext({ viewport });
   const page = await context.newPage();
   const note = `Compte rendu terrain Sprint 6 ${suffix} ${Date.now()}`;
+  const eventWindowStartedAt = new Date().toISOString();
 
   await signIn(page, "agent@dermavita.local", /Dermavita/i);
   await page.goto("/dashboard/agent");
@@ -56,7 +57,12 @@ async function runAgentDay(browser: Browser, viewport: { width: number; height: 
   expect(interactionResult.data?.related_task_id).toBeTruthy();
   const taskResult = await admin.from("tasks").select("assigned_to,task_type,status").eq("id", interactionResult.data!.related_task_id).single();
   expect(taskResult.data).toMatchObject({ assigned_to: "00000000-0000-0000-0000-0000000000a3", task_type: "call", status: "open" });
-  const eventsResult = await admin.from("product_events").select("event_name,user_id,brand_id,pharmacy_id").eq("user_id", "00000000-0000-0000-0000-0000000000a3");
+  const eventsResult = await admin
+    .from("product_events")
+    .select("event_name,user_id,brand_id,pharmacy_id,occurred_at")
+    .eq("user_id", "00000000-0000-0000-0000-0000000000a3")
+    .gte("occurred_at", eventWindowStartedAt);
+  expect(eventsResult.error).toBeNull();
   expect(eventsResult.data?.map((event) => event.event_name)).toEqual(expect.arrayContaining(["agent_dashboard_viewed", "pharmacy_opened", "navigation_maps_clicked", "interaction_started", "interaction_submitted", "next_action_created"]));
   expect(eventsResult.data?.every((event) => event.brand_id === "00000000-0000-0000-0000-000000000101")).toBe(true);
 
