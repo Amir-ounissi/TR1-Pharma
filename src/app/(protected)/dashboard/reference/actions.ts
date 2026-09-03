@@ -137,15 +137,150 @@ export async function createContactAction(_state: ReferenceActionState, formData
   return { success: "Contact ajouté." };
 }
 
-export async function createProductAction(_state: ReferenceActionState, formData: FormData): Promise<ReferenceActionState> {
-  const schema = z.object({ name: z.string().trim().min(2), sku: z.string().trim().min(1), ean: optionalText, category: optionalText, format: optionalText, description: z.string().trim().max(1000).optional().or(z.literal("")), productFamily: optionalText, strategicPriority: z.enum(["standard","priority","strategic"]), pharmacyEligible: z.boolean(), countsForDistribution: z.boolean(), wholesalePrice: z.union([z.coerce.number().min(0), z.literal("")]), retailPrice: z.union([z.coerce.number().min(0), z.literal("")]), taxRate: z.union([z.coerce.number().min(0).max(100), z.literal("")]), unitsPerCase: z.union([z.coerce.number().int().min(1), z.literal("")]), minimumOrderQuantity: z.union([z.coerce.number().int().min(1), z.literal("")]) });
-  const parsed = schema.safeParse({ name: formData.get("name"), sku: formData.get("sku"), ean: formData.get("ean"), category: formData.get("category"), format: formData.get("format"), description: formData.get("description"), productFamily: formData.get("productFamily"), strategicPriority: formData.get("strategicPriority"), pharmacyEligible: formData.get("pharmacyEligible") === "on", countsForDistribution: formData.get("countsForDistribution") === "on", wholesalePrice: formData.get("wholesalePrice"), retailPrice: formData.get("retailPrice"), taxRate: formData.get("taxRate"), unitsPerCase: formData.get("unitsPerCase"), minimumOrderQuantity: formData.get("minimumOrderQuantity") });
-  if (!parsed.success) return { error: "Produit invalide." };
+const productSchema = z.object({
+  name: z.string().trim().min(2),
+  sku: z.string().trim().min(1),
+  ean: optionalText,
+  category: optionalText,
+  format: optionalText,
+  description: z.string().trim().max(1000).optional().or(z.literal("")),
+  productFamily: optionalText,
+  strategicPriority: z.enum(["standard", "priority", "strategic"]),
+  pharmacyEligible: z.boolean(),
+  countsForDistribution: z.boolean(),
+  wholesalePrice: z.union([z.coerce.number().min(0), z.literal("")]),
+  retailPrice: z.union([z.coerce.number().min(0), z.literal("")]),
+  taxRate: z.union([
+    z.coerce.number().min(0).max(100),
+    z.literal(""),
+  ]),
+  unitsPerCase: z.union([
+    z.coerce.number().int().min(1),
+    z.literal(""),
+  ]),
+  minimumOrderQuantity: z.union([
+    z.coerce.number().int().min(1),
+    z.literal(""),
+  ]),
+});
+
+function productFormValues(formData: FormData) {
+  return {
+    name: formData.get("name"),
+    sku: formData.get("sku"),
+    ean: formData.get("ean"),
+    category: formData.get("category"),
+    format: formData.get("format"),
+    description: formData.get("description"),
+    productFamily: formData.get("productFamily"),
+    strategicPriority: formData.get("strategicPriority"),
+    pharmacyEligible: formData.get("pharmacyEligible") === "on",
+    countsForDistribution:
+      formData.get("countsForDistribution") === "on",
+    wholesalePrice: formData.get("wholesalePrice"),
+    retailPrice: formData.get("retailPrice"),
+    taxRate: formData.get("taxRate"),
+    unitsPerCase: formData.get("unitsPerCase"),
+    minimumOrderQuantity: formData.get("minimumOrderQuantity"),
+  };
+}
+
+function productMutationPayload(
+  data: z.infer<typeof productSchema>,
+) {
+  return {
+    name: data.name,
+    sku: data.sku,
+    ean: data.ean || null,
+    category: data.category || null,
+    format: data.format || null,
+    description: data.description || null,
+    product_family: data.productFamily || null,
+    strategic_priority: data.strategicPriority,
+    is_pharmacy_eligible: data.pharmacyEligible,
+    counts_for_distribution: data.countsForDistribution,
+    wholesale_price_ht:
+      data.wholesalePrice === "" ? null : data.wholesalePrice,
+    retail_price_ttc:
+      data.retailPrice === "" ? null : data.retailPrice,
+    tax_rate: data.taxRate === "" ? null : data.taxRate,
+    units_per_case:
+      data.unitsPerCase === "" ? null : data.unitsPerCase,
+    minimum_order_quantity:
+      data.minimumOrderQuantity === ""
+        ? null
+        : data.minimumOrderQuantity,
+  };
+}
+
+export async function createProductAction(
+  _state: ReferenceActionState,
+  formData: FormData,
+): Promise<ReferenceActionState> {
+  const parsed = productSchema.safeParse(productFormValues(formData));
+
+  if (!parsed.success) {
+    return { error: "Produit invalide." };
+  }
+
   const { supabase, brand } = await requireActiveBrand();
-  const { error } = await supabase.from("products").insert({ brand_id: brand.id, name: parsed.data.name, sku: parsed.data.sku, ean: parsed.data.ean || null, category: parsed.data.category || null, format: parsed.data.format || null, description: parsed.data.description || null, product_family: parsed.data.productFamily || null, strategic_priority: parsed.data.strategicPriority, is_pharmacy_eligible: parsed.data.pharmacyEligible, counts_for_distribution: parsed.data.countsForDistribution, wholesale_price_ht: parsed.data.wholesalePrice === "" ? null : parsed.data.wholesalePrice, retail_price_ttc: parsed.data.retailPrice === "" ? null : parsed.data.retailPrice, tax_rate: parsed.data.taxRate === "" ? null : parsed.data.taxRate, units_per_case: parsed.data.unitsPerCase === "" ? null : parsed.data.unitsPerCase, minimum_order_quantity: parsed.data.minimumOrderQuantity === "" ? null : parsed.data.minimumOrderQuantity });
-  if (error) return { error: error.code === "23505" ? "Ce SKU ou cet EAN existe déjà." : error.message };
+
+  const { error } = await supabase.from("products").insert({
+    brand_id: brand.id,
+    ...productMutationPayload(parsed.data),
+  });
+
+  if (error) {
+    return {
+      error:
+        error.code === "23505"
+          ? "Ce SKU ou cet EAN existe déjà."
+          : error.message,
+    };
+  }
+
   revalidatePath("/dashboard/products");
+
   return { success: "Produit créé." };
+}
+
+export async function updateProductAction(
+  _state: ReferenceActionState,
+  formData: FormData,
+): Promise<ReferenceActionState> {
+  const parsed = productSchema
+    .extend({ id: z.string().uuid() })
+    .safeParse({
+      id: formData.get("id"),
+      ...productFormValues(formData),
+    });
+
+  if (!parsed.success) {
+    return { error: "Produit invalide." };
+  }
+
+  const { supabase, brand } = await requireActiveBrand();
+
+  const { id, ...productData } = parsed.data;
+
+  const { error } = await supabase
+    .from("products")
+    .update(productMutationPayload(productData))
+    .eq("id", id)
+    .eq("brand_id", brand.id);
+
+  if (error) {
+    return {
+      error:
+        error.code === "23505"
+          ? "Ce SKU ou cet EAN existe déjà."
+          : error.message,
+    };
+  }
+
+  revalidatePath("/dashboard/products");
+
+  return { success: "Fiche produit mise à jour." };
 }
 
 export async function addBrandPharmacyProductAction(_state: ReferenceActionState, formData: FormData): Promise<ReferenceActionState> {

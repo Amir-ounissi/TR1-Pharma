@@ -1,10 +1,67 @@
+import { ProductCatalog } from "@/components/reference/product-catalog";
 import { ProductForm } from "@/components/reference/simple-forms";
-import { toggleProductAction } from "@/app/(protected)/dashboard/reference/actions";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { requireActiveBrand } from "@/lib/auth";
-import { formatCurrency } from "@/lib/reference-data";
 
-export default async function ProductsPage() { const { supabase, brand } = await requireActiveBrand(); const [{ data: products }, { data: brandRecord }] = await Promise.all([supabase.from("products").select("*").eq("brand_id", brand.id).order("name"), supabase.from("brands").select("currency_code").eq("id", brand.id).single()]); const currency = brandRecord?.currency_code ?? "EUR"; return <div className="space-y-6"><div><h1 className="text-2xl font-semibold tracking-tight">Produits</h1><p className="text-muted-foreground">Catalogue de {brand.name}.</p></div><div className="grid gap-6 xl:grid-cols-[1fr_420px]"><Card><CardHeader><CardTitle>Catalogue</CardTitle></CardHeader><CardContent className="p-0"><Table><TableHeader><TableRow><TableHead>Produit</TableHead><TableHead>SKU / EAN</TableHead><TableHead>Référentiel</TableHead><TableHead>Prix</TableHead><TableHead>Logistique</TableHead><TableHead>État</TableHead><TableHead>Action</TableHead></TableRow></TableHeader><TableBody>{(products ?? []).map((product) => <TableRow key={product.id}><TableCell className="font-medium">{product.name}<p className="text-xs text-muted-foreground">{product.product_family || product.category || "—"} · {product.format || "—"}</p></TableCell><TableCell>{product.sku}<p className="text-xs text-muted-foreground">{product.ean || "EAN non renseigné"}</p></TableCell><TableCell><Badge variant="outline">{product.strategic_priority}</Badge><p className="text-xs text-muted-foreground">{product.counts_for_distribution ? "Compté DN" : "Hors DN"}</p></TableCell><TableCell>{formatCurrency(product.wholesale_price_ht, currency)}<p className="text-xs text-muted-foreground">PVC {formatCurrency(product.retail_price_ttc, currency)} · TVA {product.tax_rate == null ? "—" : `${Number(product.tax_rate).toFixed(2)} %`}</p></TableCell><TableCell>{product.units_per_case ?? "—"}<p className="text-xs text-muted-foreground">MOQ {product.minimum_order_quantity ?? "—"}</p></TableCell><TableCell><Badge variant="secondary">{product.is_active ? "Actif" : "Arrêté"}</Badge></TableCell><TableCell><form action={toggleProductAction}><input type="hidden" name="id" value={product.id} /><input type="hidden" name="active" value={product.is_active ? "false" : "true"} /><Button variant="outline" size="sm">{product.is_active ? "Arrêter" : "Réactiver"}</Button></form></TableCell></TableRow>)}</TableBody></Table></CardContent></Card><Card><CardHeader><CardTitle>Nouveau produit</CardTitle></CardHeader><CardContent><ProductForm /></CardContent></Card></div></div>; }
+export default async function ProductsPage() {
+  const { supabase, brand } = await requireActiveBrand();
+
+  const [{ data: products }, { data: brandRecord }] = await Promise.all([
+    supabase
+      .from("products")
+      .select("*")
+      .eq("brand_id", brand.id)
+      .order("name"),
+    supabase
+      .from("brands")
+      .select("currency_code")
+      .eq("id", brand.id)
+      .single(),
+  ]);
+
+  const currency = brandRecord?.currency_code ?? "EUR";
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          Produits
+        </h1>
+        <p className="text-muted-foreground">
+          Catalogue de {brand.name}. Cliquez sur un produit pour
+          consulter ou compléter sa fiche.
+        </p>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[1fr_420px]">
+        <Card>
+          <CardHeader>
+            <CardTitle>Catalogue</CardTitle>
+          </CardHeader>
+
+          <CardContent className="p-0">
+            <ProductCatalog
+              products={products ?? []}
+              currency={currency}
+            />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Nouveau produit</CardTitle>
+          </CardHeader>
+
+          <CardContent>
+            <ProductForm />
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
