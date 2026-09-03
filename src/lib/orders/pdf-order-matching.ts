@@ -1,12 +1,21 @@
 import type { PdfOrderExtraction } from "@/lib/orders/pdf-order-schema";
 
 export type PharmacyCandidate = {
-  id: string;
+  pharmacyId: string;
+  brandPharmacyId: string | null;
+  relationStatus: "existing_brand_relation" | "global_only";
   name: string;
   siret: string | null;
   cip: string | null;
   finess: string | null;
   postalCode: string | null;
+};
+
+export type PharmacyMatchResult = {
+  status: "matched" | "suggested" | "unmatched" | "ambiguous";
+  method: string | null;
+  match: PharmacyCandidate | null;
+  candidates: PharmacyCandidate[];
 };
 
 export type ProductCandidate = {
@@ -40,7 +49,7 @@ function resolve<T>(candidates: T[], method: string): MatchResult<T> {
   return { status: "unmatched", method: null, match: null, candidates: [] };
 }
 
-export function matchPdfPharmacy(pharmacy: PdfOrderExtraction["pharmacy"], candidates: PharmacyCandidate[]): MatchResult<PharmacyCandidate> {
+export function matchPdfPharmacy(pharmacy: PdfOrderExtraction["pharmacy"], candidates: PharmacyCandidate[]): PharmacyMatchResult {
   const identifiers: Array<[string, string, keyof PharmacyCandidate]> = [
     ["siret", normalizeIdentifier(pharmacy.siret), "siret"],
     ["cip", normalizeIdentifier(pharmacy.cip), "cip"],
@@ -53,7 +62,13 @@ export function matchPdfPharmacy(pharmacy: PdfOrderExtraction["pharmacy"], candi
   }
   const name = normalizeText(pharmacy.name);
   const postalCode = normalizeIdentifier(pharmacy.postalCode);
-  if (name && postalCode) return resolve(candidates.filter((candidate) => normalizeText(candidate.name) === name && normalizeIdentifier(candidate.postalCode) === postalCode), "name_postal_code");
+  if (name && postalCode) {
+    const result = resolve(candidates.filter((candidate) => normalizeText(candidate.name) === name && normalizeIdentifier(candidate.postalCode) === postalCode), "name_postal_code");
+    if (result.status === "matched" && result.match?.relationStatus === "global_only") {
+      return { ...result, status: "suggested" };
+    }
+    return result;
+  }
   return { status: "unmatched", method: null, match: null, candidates: [] };
 }
 

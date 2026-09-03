@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { changeOrderStatusAction, createOrderAction } from "@/app/(protected)/dashboard/orders/actions";
+import { changeOrderStatusAction, createOrderAction, searchOrderPharmaciesAction, type OrderPharmacySearchResult } from "@/app/(protected)/dashboard/orders/actions";
 import { ActionFeedback } from "@/components/reference/action-feedback";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,31 @@ import { Textarea } from "@/components/ui/textarea";
 
 type Option = { id: string; name: string; detail?: string; price?: number | null; taxRate?: number | null; unitsPerCase?: number | null; minimumOrderQuantity?: number | null };
 
-export function OrderForm({ pharmacies, products, initialBrandPharmacyId, isAgent = false }: { pharmacies: Option[]; products: Option[]; initialBrandPharmacyId?: string; isAgent?: boolean }) {
+function PharmacyAutocomplete({ initialPharmacy }: { initialPharmacy?: OrderPharmacySearchResult }) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<OrderPharmacySearchResult[]>([]);
+  const [selected, setSelected] = useState<OrderPharmacySearchResult | undefined>(initialPharmacy);
+  const [loading, setLoading] = useState(false);
+
+  async function search(value: string) {
+    setQuery(value);
+    if (value.trim().length < 2) { setResults([]); return; }
+    setLoading(true);
+    try { setResults(await searchOrderPharmaciesAction(value)); } finally { setLoading(false); }
+  }
+
+  return <div className="space-y-2 sm:col-span-2 lg:col-span-3">
+    <Label htmlFor="pharmacy-search">Pharmacie</Label>
+    <Input id="pharmacy-search" value={selected ? selected.name : query} placeholder="Rechercher une pharmacie : nom, ville, CIP, SIRET…" autoComplete="off" onChange={(event) => { setSelected(undefined); void search(event.target.value); }} />
+    <input type="hidden" name="brandPharmacyId" value={selected?.brandPharmacyId ?? ""} />
+    <input type="hidden" name="pharmacyId" value={selected?.brandPharmacyId ? "" : selected?.pharmacyId ?? ""} />
+    {selected ? <p className="text-xs text-muted-foreground">{selected.detail} · {selected.relationStatus === "existing_brand_relation" ? "Déjà cliente" : "Nouvelle pour la marque : rattachement à la confirmation"}</p> : null}
+    {!selected && results.length > 0 ? <div className="max-h-56 overflow-auto rounded-md border bg-popover p-1 shadow-sm">{results.map((result) => <button key={result.pharmacyId} className="block w-full rounded px-3 py-2 text-left text-sm hover:bg-muted" type="button" onClick={() => { setSelected(result); setResults([]); }}><span className="font-medium">{result.name}</span><span className="block text-xs text-muted-foreground">{result.detail} · {result.relationStatus === "existing_brand_relation" ? "Déjà cliente" : "Nouvelle pour la marque"}</span></button>)}</div> : null}
+    {loading ? <p className="text-xs text-muted-foreground">Recherche…</p> : null}
+  </div>;
+}
+
+export function OrderForm({ products, initialPharmacy, isAgent = false }: { products: Option[]; initialPharmacy?: OrderPharmacySearchResult; isAgent?: boolean }) {
   const [state, action, pending] = useActionState(createOrderAction, {});
   const [lines, setLines] = useState(["line-1"]);
   const [selectedProducts, setSelectedProducts] = useState<Record<number, string>>({});
@@ -19,7 +43,7 @@ export function OrderForm({ pharmacies, products, initialBrandPharmacyId, isAgen
   const orderStatuses = isAgent ? ["draft", "pending", "confirmed"] : ["draft", "pending", "confirmed", "invoiced", "partially_delivered", "delivered"];
   return <form action={action} className="space-y-6"><ActionFeedback {...state} />
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <div className="space-y-2"><Label htmlFor="brandPharmacyId">Pharmacie</Label><Select name="brandPharmacyId" defaultValue={initialBrandPharmacyId} required><SelectTrigger id="brandPharmacyId" className="w-full"><SelectValue placeholder="Sélectionner" /></SelectTrigger><SelectContent>{pharmacies.map((item) => <SelectItem key={item.id} value={item.id}>{item.name} {item.detail ? `· ${item.detail}` : ""}</SelectItem>)}</SelectContent></Select></div>
+      <PharmacyAutocomplete initialPharmacy={initialPharmacy} />
       <div className="space-y-2"><Label htmlFor="orderDate">Date de commande</Label><Input id="orderDate" name="orderDate" type="datetime-local" required /></div>
       <div className="space-y-2"><Label htmlFor="orderStatus">Statut</Label><Select name="orderStatus" defaultValue={isAgent ? "confirmed" : "draft"}><SelectTrigger id="orderStatus" className="w-full"><SelectValue /></SelectTrigger><SelectContent>{orderStatuses.map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent></Select></div>
       <div className="space-y-2"><Label htmlFor="orderType">Type demandé</Label><Select name="orderType" defaultValue="other"><SelectTrigger id="orderType" className="w-full"><SelectValue /></SelectTrigger><SelectContent>{["initial","reorder","complementary","replacement","sample","return","credit_note","other"].map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent></Select></div>

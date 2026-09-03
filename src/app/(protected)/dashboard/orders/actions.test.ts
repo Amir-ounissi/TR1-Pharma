@@ -14,7 +14,7 @@ describe("order server actions", () => {
   const productQuery = vi.fn();
   beforeEach(() => {
     vi.clearAllMocks();
-    rpc.mockResolvedValue({ data: "33333333-3333-4333-8333-333333333333", error: null });
+    rpc.mockResolvedValue({ data: [{ order_id: "33333333-3333-4333-8333-333333333333", brand_pharmacy_id: relationId }], error: null });
     const productResult = { in: async () => ({ data: [{ id: productId, tax_rate: 5.5 }], error: null }) };
     const productScope: { eq: () => typeof productScope; is: () => typeof productResult } = { eq: () => productScope, is: () => productResult };
     productQuery.mockReturnValue({ select: () => productScope });
@@ -31,7 +31,14 @@ describe("order server actions", () => {
     const formData = new FormData();
     Object.entries({ brandPharmacyId: relationId, orderType: "other", orderStatus: "invoiced", orderDate: "2026-07-21T10:00", shippingAmountHt: "0", paymentStatus: "pending", productId, quantity: "2", freeQuantity: "1", unitPriceHt: "10", discountRate: "5", taxRate: "20" }).forEach(([key,value]) => formData.append(key,value));
     expect(await createOrderAction({}, formData)).toEqual({ success: "Commande créée et indicateurs recalculés.", orderId: "33333333-3333-4333-8333-333333333333" });
-    expect(rpc).toHaveBeenCalledWith("create_order", expect.objectContaining({ target_brand_pharmacy_id: relationId, item_payload: [expect.objectContaining({ product_id: productId, quantity: 2, tax_rate: 5.5 })] }));
+    expect(rpc).toHaveBeenCalledWith("create_order_with_pharmacy_resolution", expect.objectContaining({ target_brand_id: "brand-id", target_brand_pharmacy_id: relationId, target_pharmacy_id: null, item_payload: [expect.objectContaining({ product_id: productId, quantity: 2, tax_rate: 5.5 })] }));
+  });
+
+  it("resolves a global pharmacy through the transactional order RPC", async () => {
+    const formData = new FormData();
+    Object.entries({ pharmacyId: "44444444-4444-4444-8444-444444444444", orderType: "other", orderStatus: "draft", orderDate: "2026-07-21T10:00", shippingAmountHt: "0", paymentStatus: "pending", productId, quantity: "1", freeQuantity: "0", unitPriceHt: "10" }).forEach(([key, value]) => formData.append(key, value));
+    await createOrderAction({}, formData);
+    expect(rpc).toHaveBeenCalledWith("create_order_with_pharmacy_resolution", expect.objectContaining({ target_brand_pharmacy_id: null, target_pharmacy_id: "44444444-4444-4444-8444-444444444444" }));
   });
 
   it("blocks a financial status for an agent before creating the order", async () => {
