@@ -1,92 +1,372 @@
 import Image from "next/image";
-import { ArrowRight, Building2, ChartNoAxesCombined, Route, ShieldCheck } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { LeadForm } from "@/components/marketing/lead-form";
 import { MarketingPageEvent, MarketingTrackedLink } from "@/components/marketing/marketing-events";
-import { ProductProof } from "@/components/marketing/product-proof";
-
-const pillars = [
-  { icon: Building2, number: "01", title: "Ouvrez de nouvelles pharmacies", text: "Organisez la prospection, les territoires, les comptes à visiter et le suivi commercial jusqu’à la première commande.", items: ["Prospection", "Territoires", "Visites", "Première commande", "Affectations"] },
-  { icon: Route, number: "02", title: "Suivez chaque compte dans le temps", text: "Centralisez les commandes, les réassorts, les contacts, les visites, les prochaines actions et l’historique commercial de chaque pharmacie.", items: ["Commandes", "Réassorts", "Contacts", "Historique", "Prochaine action"] },
-  { icon: ChartNoAxesCombined, number: "03", title: "Développez votre portefeuille officinal", text: "Identifiez les pharmacies à renforcer et déclenchez les actions adaptées : visite, animation, formation, merchandising ou relance commerciale.", items: ["Visites", "Animations", "Formations", "Merchandising", "Relances"] },
-];
 
 const problems = [
-  ["01", "Vos données commerciales sont dispersées", "Pharmacies, commandes, produits détenus, contacts et prochaines actions restent répartis entre plusieurs supports."],
-  ["02", "Vos intervenants travaillent avec des méthodes différentes", "Commerciaux, agents, animateurs et formateurs ne partagent pas toujours les mêmes priorités."],
-  ["03", "Vous manquez de visibilité sur les pharmacies à ouvrir et à développer", "Les prospects à travailler, les comptes à suivre, les zones à renforcer et les prochaines actions sont difficiles à prioriser dans un même système."],
+  {
+    number: "01",
+    title: "Vos données commerciales sont dispersées.",
+    text: "Pharmacies, commandes, contacts, visites et prochaines actions restent souvent répartis entre plusieurs outils.",
+  },
+  {
+    number: "02",
+    title: "Les priorités terrain sont difficiles à partager.",
+    text: "Le management et le terrain ne travaillent pas toujours à partir de la même lecture du réseau.",
+  },
+  {
+    number: "03",
+    title: "Un compte ouvert ne doit pas disparaître du radar.",
+    text: "La première commande n’est qu’une étape : réassort, animation, formation et suivi doivent ensuite prendre le relais.",
+  },
 ];
 
 export default function LandingPage() {
-  return <main className="bg-[#fffdf8] [background-image:linear-gradient(rgba(11,30,50,.025)_1px,transparent_1px),linear-gradient(90deg,rgba(11,30,50,.025)_1px,transparent_1px)] [background-size:30px_30px]">
-    <MarketingPageEvent event="landing_view" />
+  return (
+    <main className="bg-[#fffdf8]">
+      <MarketingPageEvent event="landing_view" />
 
-    <section className="overflow-hidden border-b border-[#0b1e32]/10 bg-[radial-gradient(circle_at_88%_8%,rgba(47,108,163,.13),transparent_28%),radial-gradient(circle_at_5%_94%,rgba(239,106,58,.1),transparent_23%)]">
-      <div className="mx-auto grid max-w-7xl items-center gap-14 px-5 py-16 lg:grid-cols-[.9fr_1.1fr] lg:px-8 lg:py-24">
-        <div>
-          <p className="font-mono text-[.68rem] font-black uppercase tracking-[.17em] text-[#c84f24]">La plateforme des marques qui se développent en pharmacie</p>
-          <h1 className="mt-6 max-w-3xl text-[3.1rem] font-black leading-[.92] tracking-[-.072em] text-[#0b1e32] sm:text-6xl lg:text-[5rem]">Structurez, pilotez et développez <span className="text-[#c84f24]">votre réseau officinal.</span></h1>
-          <p className="mt-7 max-w-2xl text-lg leading-8 text-[#667384]">De l’ouverture de nouvelles pharmacies au suivi des commandes, des réassorts et des actions terrain, TR1 réunit votre développement officinal dans un même environnement.</p>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <MarketingTrackedLink className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#c84f24] px-5 text-center text-sm font-black text-white shadow-[0_14px_34px_rgba(200,79,36,.23)] transition hover:-translate-y-0.5 hover:bg-[#a63f19]" event="primary_cta_click" href="#diagnostic">Découvrir TR1 sur mon réseau officinal <ArrowRight className="size-4" /></MarketingTrackedLink>
-            <a className="inline-flex min-h-12 items-center justify-center rounded-xl border border-[#0b1e32]/15 bg-white/80 px-5 text-sm font-black" href="#produit">Voir la plateforme</a>
+      <section className="overflow-hidden px-5 pb-20 pt-16 sm:pt-20 lg:px-8 lg:pb-28 lg:pt-24">
+        <div className="mx-auto max-w-7xl">
+          <div className="mx-auto max-w-5xl text-center">
+            <p className="font-mono text-[.68rem] font-black uppercase tracking-[.17em] text-[#c84f24]">
+              La plateforme des marques qui se développent en pharmacie
+            </p>
+
+            <h1 className="mx-auto mt-6 max-w-5xl text-[3.25rem] font-black leading-[.94] tracking-[-.07em] text-[#0b1e32] sm:text-6xl lg:text-[5.4rem]">
+              Pilotez votre développement en pharmacie.
+            </h1>
+
+            <p className="mx-auto mt-7 max-w-3xl text-lg leading-8 text-[#667384] sm:text-xl sm:leading-9">
+              De l’ouverture d’un compte au réassort, TR1 réunit le management et le terrain dans un même système.
+            </p>
+
+            <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
+              <MarketingTrackedLink
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-[#c84f24] px-5 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-[#a63f19]"
+                event="primary_cta_click"
+                href="#diagnostic"
+              >
+                Demander une démo
+                <ArrowRight className="size-4" />
+              </MarketingTrackedLink>
+
+              <a
+                className="inline-flex min-h-12 items-center justify-center rounded-lg border border-[#0b1e32]/12 bg-white px-5 text-sm font-black transition hover:bg-[#f8f2e8]"
+                href="#produit"
+              >
+                Voir la plateforme
+              </a>
+            </div>
+
+            <p className="mt-4 text-sm text-[#7b8491]">
+              Diagnostic et démonstration personnalisée de 30 minutes.
+            </p>
           </div>
-          <p className="mt-4 text-sm text-[#667384]">Diagnostic et démonstration personnalisée de 30 minutes.</p>
-        </div>
 
-        <div className="relative lg:pl-4">
-          <div className="rounded-[1.6rem] border border-[#0b1e32]/10 bg-white/65 p-3 shadow-[0_32px_90px_rgba(7,20,33,.18)] backdrop-blur-sm sm:p-5">
-            <Image alt="Fiche pharmacie TR1 avec commandes, réassort et prochaine action" className="w-full rounded-xl" height={600} priority src="/marketing/pharmacy-account.webp" width={600} />
+          <div className="relative mx-auto mt-14 max-w-6xl sm:mt-16 lg:mt-20">
+            <div className="absolute inset-x-[8%] bottom-[-5%] h-28 rounded-full bg-[#ef6a3a]/10 blur-3xl" />
+            <div className="relative overflow-hidden rounded-[1.4rem] border border-[#0b1e32]/10 bg-[#f6efe4] p-2 shadow-[0_30px_90px_rgba(7,20,33,.12)] sm:p-4">
+              <Image
+                alt="Dashboard TR1 Manager présentant objectifs, priorités et actions commerciales"
+                className="w-full rounded-xl"
+                height={600}
+                priority
+                src="/marketing/manager-day.webp"
+                width={716}
+              />
+            </div>
           </div>
-          <div className="absolute -left-3 top-[17%] hidden max-w-52 rounded-xl border border-[#0b1e32]/10 bg-[#fffdf8]/95 p-4 shadow-xl xl:block"><strong className="text-sm">Une vision complète du compte</strong><p className="mt-1 text-xs leading-5 text-[#667384]">Commandes, activité, assortiment et historique.</p></div>
-          <div className="absolute -right-3 bottom-[12%] hidden max-w-52 rounded-xl border border-[#0b1e32]/10 bg-[#fffdf8]/95 p-4 shadow-xl xl:block"><strong className="text-sm">Une prochaine action claire</strong><p className="mt-1 text-xs leading-5 text-[#667384]">Le management et le terrain savent où agir.</p></div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <div className="border-b border-[#0b1e32]/10 bg-[#f8f2e8] px-5 py-5 text-center font-mono text-xs font-bold uppercase tracking-[.08em] text-[#445265]">Pour les marques ayant déjà ouvert leurs premières pharmacies et souhaitant structurer leur prochaine phase de développement.</div>
+      <section className="border-y border-[#0b1e32]/8 bg-[#faf6ef] px-5 py-24 lg:px-8 lg:py-32" id="pourquoi">
+        <div className="mx-auto max-w-7xl">
+          <div className="max-w-4xl">
+            <p className="font-mono text-[.67rem] font-black uppercase tracking-[.17em] text-[#c84f24]">
+              Pourquoi TR1
+            </p>
+            <h2 className="mt-5 text-4xl font-black leading-[.98] tracking-[-.06em] sm:text-5xl lg:text-6xl">
+              Votre réseau grandit. Votre organisation doit pouvoir suivre.
+            </h2>
+            <p className="mt-7 max-w-3xl text-lg leading-8 text-[#667384]">
+              Développer une marque en pharmacie demande de faire deux choses en même temps : ouvrir de nouveaux comptes et continuer à faire progresser ceux qui existent déjà.
+            </p>
+          </div>
 
-    <section className="px-5 py-20 lg:px-8" id="probleme">
-      <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[.75fr_1.25fr]">
-        <div>
-          <p className="font-mono text-xs font-black uppercase tracking-[.16em] text-[#c84f24]">Votre réseau grandit</p>
-          <h2 className="mt-4 text-4xl font-black leading-[1.02] tracking-[-.055em] sm:text-5xl">Votre organisation doit pouvoir suivre.</h2>
-          <p className="mt-6 text-lg leading-8 text-[#667384]">Quand l’activité accélère, de nouvelles pharmacies sont à prospecter et à ouvrir, tandis que les comptes déjà clients doivent continuer à être suivis.</p>
-          <p className="mt-6 border-l-2 border-[#ef6a3a] pl-5 text-xl font-bold">TR1 transforme une organisation dispersée en un système commercial commun.</p>
+          <div className="mt-14 border-t border-[#0b1e32]/12">
+            {problems.map((problem) => (
+              <article
+                className="grid gap-4 border-b border-[#0b1e32]/12 py-8 sm:grid-cols-[5rem_1fr] lg:grid-cols-[8rem_.9fr_1.1fr] lg:items-start lg:py-10"
+                key={problem.number}
+              >
+                <span className="font-mono text-sm font-black text-[#c84f24]">{problem.number}</span>
+                <h3 className="text-2xl font-black leading-tight tracking-[-.035em]">
+                  {problem.title}
+                </h3>
+                <p className="max-w-xl text-base leading-7 text-[#667384] sm:col-start-2 lg:col-start-auto">
+                  {problem.text}
+                </p>
+              </article>
+            ))}
+          </div>
         </div>
-        <div className="overflow-hidden rounded-2xl border border-[#0b1e32]/10 bg-[#fffefa]">
-          {problems.map(([number, title, text]) => <article className="grid gap-4 border-b border-[#0b1e32]/10 p-6 last:border-b-0 sm:grid-cols-[3rem_1fr]" key={number}><span className="font-mono text-xs font-black text-[#c84f24]">{number}</span><div><h3 className="text-xl font-black tracking-[-.03em]">{title}</h3><p className="mt-2 leading-7 text-[#667384]">{text}</p></div></article>)}
+      </section>
+
+      <section className="px-5 py-24 lg:px-8 lg:py-32" id="produit">
+        <div className="mx-auto max-w-7xl">
+          <div className="max-w-4xl">
+            <p className="font-mono text-[.67rem] font-black uppercase tracking-[.17em] text-[#c84f24]">
+              La plateforme
+            </p>
+            <h2 className="mt-5 text-4xl font-black leading-[.98] tracking-[-.06em] sm:text-5xl lg:text-6xl">
+              Un seul environnement pour savoir où agir.
+            </h2>
+            <p className="mt-7 max-w-3xl text-lg leading-8 text-[#667384]">
+              TR1 transforme les données du réseau en décisions concrètes pour le management et le terrain.
+            </p>
+          </div>
+
+          <div className="mt-14 grid gap-5 lg:grid-cols-12">
+            <article className="overflow-hidden rounded-[1.6rem] border border-[#0b1e32]/10 bg-[#f8f2e8] lg:col-span-7">
+              <div className="p-7 sm:p-9">
+                <p className="font-mono text-[.62rem] font-black uppercase tracking-[.15em] text-[#c84f24]">
+                  Pilotage
+                </p>
+                <h3 className="mt-3 text-3xl font-black tracking-[-.05em]">
+                  Savoir où agir aujourd’hui.
+                </h3>
+                <p className="mt-4 max-w-xl leading-7 text-[#667384]">
+                  Les comptes prioritaires, les alertes et les objectifs remontent dans une même vue.
+                </p>
+              </div>
+
+              <div className="px-3 pb-3 sm:px-5 sm:pb-5">
+                <Image
+                  alt="Pilotage Manager TR1"
+                  className="w-full rounded-xl border border-[#0b1e32]/8"
+                  height={600}
+                  src="/marketing/manager-day.webp"
+                  width={716}
+                />
+              </div>
+            </article>
+
+            <article className="overflow-hidden rounded-[1.6rem] border border-[#0b1e32]/10 bg-white lg:col-span-5">
+              <div className="p-7 sm:p-9">
+                <p className="font-mono text-[.62rem] font-black uppercase tracking-[.15em] text-[#c84f24]">
+                  Compte pharmacie
+                </p>
+                <h3 className="mt-3 text-3xl font-black tracking-[-.05em]">
+                  Comprendre chaque pharmacie.
+                </h3>
+                <p className="mt-4 leading-7 text-[#667384]">
+                  Commandes, activité, assortiment, historique et prochaine action restent rattachés au compte.
+                </p>
+              </div>
+
+              <div className="px-3 pb-3 sm:px-5 sm:pb-5">
+                <Image
+                  alt="Fiche pharmacie TR1"
+                  className="w-full rounded-xl border border-[#0b1e32]/8"
+                  height={600}
+                  src="/marketing/pharmacy-account.webp"
+                  width={716}
+                />
+              </div>
+            </article>
+
+            <article className="grid overflow-hidden rounded-[1.6rem] bg-[#0b1e32] text-white lg:col-span-12 lg:grid-cols-[.9fr_1.1fr]">
+              <div className="flex flex-col justify-center p-7 sm:p-10 lg:p-12">
+                <p className="font-mono text-[.62rem] font-black uppercase tracking-[.15em] text-[#ff9d78]">
+                  Expérience terrain
+                </p>
+                <h3 className="mt-4 text-3xl font-black tracking-[-.05em] sm:text-4xl">
+                  Donner au terrain la prochaine bonne action.
+                </h3>
+                <p className="mt-5 max-w-xl leading-7 text-white/65">
+                  La prochaine visite est préparée avec la pharmacie, le contexte, l’objectif et les informations utiles.
+                </p>
+
+                <div className="mt-8 space-y-3 border-t border-white/12 pt-6 font-semibold">
+                  <p>Où vais-je ?</p>
+                  <p>Pourquoi cette pharmacie ?</p>
+                  <p>Que dois-je faire sur place ?</p>
+                </div>
+              </div>
+
+              <div className="flex items-end justify-center px-6 pt-8 lg:px-10">
+                <Image
+                  alt="Expérience mobile Agent TR1"
+                  className="w-full max-w-[25rem] rounded-t-[1.4rem] border border-b-0 border-white/12"
+                  height={600}
+                  src="/marketing/agent-day-mobile.webp"
+                  width={716}
+                />
+              </div>
+            </article>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <section className="border-y border-[#0b1e32]/10 bg-[#f8f2e8] px-5 py-20 lg:px-8" id="valeur">
-      <div className="mx-auto max-w-7xl">
-        <p className="font-mono text-xs font-black uppercase tracking-[.16em] text-[#c84f24]">La proposition de valeur TR1</p>
-        <h2 className="mt-4 text-4xl font-black tracking-[-.055em] sm:text-5xl">Ouvrez. Suivez. Développez.</h2>
-        <div className="mt-10 grid gap-5 lg:grid-cols-3">{pillars.map(({ icon: Icon, ...pillar }) => <article className="rounded-2xl border border-[#0b1e32]/10 bg-[#fffdf8] p-7 shadow-[0_14px_36px_rgba(7,20,33,.05)]" key={pillar.number}><div className="flex items-center justify-between"><Icon className="size-6 text-[#c84f24]" /><span className="font-mono text-xs font-bold text-[#c84f24]">{pillar.number}</span></div><h3 className="mt-8 text-2xl font-black tracking-[-.04em]">{pillar.title}</h3><p className="mt-4 leading-7 text-[#667384]">{pillar.text}</p><div className="mt-7 flex flex-wrap gap-2">{pillar.items.map(item => <span className="rounded-full border border-[#0b1e32]/10 bg-[#f8f2e8] px-3 py-1 font-mono text-[.62rem] font-bold uppercase tracking-[.05em]" key={item}>{item}</span>)}</div></article>)}</div>
-      </div>
-    </section>
+      <section className="border-y border-[#0b1e32]/8 bg-[#faf6ef] px-5 py-24 lg:px-8 lg:py-32" id="animations">
+        <div className="mx-auto max-w-7xl">
+          <div className="max-w-4xl">
+            <p className="font-mono text-[.67rem] font-black uppercase tracking-[.17em] text-[#c84f24]">
+              Animation commerciale
+            </p>
 
-    <section className="bg-[radial-gradient(circle_at_84%_12%,rgba(47,108,163,.23),transparent_30%),radial-gradient(circle_at_8%_88%,rgba(239,106,58,.13),transparent_24%),#071421] px-5 py-20 text-white lg:px-8" id="produit">
-      <div className="mx-auto max-w-7xl">
-        <p className="font-mono text-xs font-black uppercase tracking-[.16em] text-[#ff9d78]">La preuve produit</p>
-        <div className="mb-10 mt-4 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between"><h2 className="max-w-4xl text-4xl font-black leading-[1.02] tracking-[-.055em] text-[#102944] sm:text-5xl">Un seul environnement pour savoir où agir.</h2><p className="max-w-xl leading-7 text-[#586779]">Suivez le cycle complet : une pharmacie à ouvrir est identifiée, une visite commerciale est affectée, la première commande est enregistrée puis une action terrain est planifiée.</p></div>
-        <ProductProof />
-      </div>
-    </section>
+            <h2 className="mt-5 text-4xl font-black leading-[.98] tracking-[-.06em] sm:text-5xl lg:text-6xl">
+              Recrutez, planifiez et mesurez vos animations.
+            </h2>
 
-    <section className="px-5 py-20 lg:px-8" id="equipes">
-      <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[.8fr_1.2fr]">
-        <div><p className="font-mono text-xs font-black uppercase tracking-[.16em] text-[#c84f24]">Une organisation qui s’adapte à la vôtre</p><h2 className="mt-4 text-4xl font-black leading-[1.02] tracking-[-.055em] sm:text-5xl">Conservez vos équipes. Complétez votre couverture.</h2><p className="mt-6 text-lg leading-8 text-[#667384]">Développez votre réseau avec vos équipes existantes, ou complétez votre couverture avec des agents et intervenants validés par TR1.</p></div>
-        <div className="grid gap-5 sm:grid-cols-2">{[{ title: "Vos ressources existantes", text: "Commerciaux salariés, agents déjà mandatés, animateurs, formateurs et managers travaillent dans un même système." }, { title: "Les ressources validées par TR1", text: "Agents commerciaux, animateurs, formateurs et intervenants terrain peuvent compléter votre dispositif selon vos besoins." }].map((block, index) => <article className={`rounded-2xl border p-7 ${index ? "border-[#0b1e32] bg-[#0b1e32] text-white" : "border-[#0b1e32]/10 bg-[#fffefa]"}`} key={block.title}><ShieldCheck className={`size-7 ${index ? "text-[#ef6a3a]" : "text-[#0b1e32]"}`} /><h3 className="mt-8 text-2xl font-black tracking-[-.04em]">{block.title}</h3><p className={`mt-4 leading-7 ${index ? "text-white/65" : "text-[#667384]"}`}>{block.text}</p></article>)}</div>
-      </div>
-    </section>
+            <p className="mt-7 max-w-3xl text-lg leading-8 text-[#667384]">
+              De la sélection de l’intervenant à l’analyse des résultats, TR1 permet de coordonner les animations et formations autour de chaque pharmacie.
+            </p>
+          </div>
 
-    <section className="border-t border-[#0b1e32]/10 bg-[#f8f2e8] px-5 py-20 lg:px-8">
-      <div className="mx-auto grid max-w-7xl items-start gap-12 lg:grid-cols-[.9fr_1.1fr]">
-        <div className="lg:sticky lg:top-28"><p className="font-mono text-xs font-black uppercase tracking-[.16em] text-[#c84f24]">Diagnostic et démonstration personnalisée</p><h2 className="mt-4 text-4xl font-black leading-[1.02] tracking-[-.055em] sm:text-5xl">Donnez à votre réseau les moyens de grandir.</h2><p className="mt-6 max-w-xl text-lg leading-8 text-[#667384]">En 30 minutes, nous faisons le point sur votre portefeuille, votre organisation terrain et vos outils actuels.</p></div>
-        <LeadForm />
-      </div>
-    </section>
-  </main>;
+          <div className="mt-14 grid border-t border-[#0b1e32]/12 lg:grid-cols-4">
+            <article className="border-b border-[#0b1e32]/12 py-8 lg:border-r lg:px-7 lg:first:pl-0">
+              <span className="font-mono text-xs font-black text-[#c84f24]">01</span>
+              <h3 className="mt-7 text-2xl font-black tracking-[-.04em]">
+                Recruter
+              </h3>
+              <p className="mt-4 leading-7 text-[#667384]">
+                Mobilisez un animateur ou un formateur adapté à la mission, au secteur et aux besoins de la marque.
+              </p>
+            </article>
+
+            <article className="border-b border-[#0b1e32]/12 py-8 lg:border-r lg:px-7">
+              <span className="font-mono text-xs font-black text-[#c84f24]">02</span>
+              <h3 className="mt-7 text-2xl font-black tracking-[-.04em]">
+                Planifier
+              </h3>
+              <p className="mt-4 leading-7 text-[#667384]">
+                Définissez la pharmacie, la date, l’intervenant, le type de mission et son objectif.
+              </p>
+            </article>
+
+            <article className="border-b border-[#0b1e32]/12 py-8 lg:border-r lg:px-7">
+              <span className="font-mono text-xs font-black text-[#c84f24]">03</span>
+              <h3 className="mt-7 text-2xl font-black tracking-[-.04em]">
+                Suivre
+              </h3>
+              <p className="mt-4 leading-7 text-[#667384]">
+                Suivez les missions planifiées, affectées, réalisées et celles qui attendent encore leur compte rendu.
+              </p>
+            </article>
+
+            <article className="border-b border-[#0b1e32]/12 py-8 lg:px-7 lg:pr-0">
+              <span className="font-mono text-xs font-black text-[#c84f24]">04</span>
+              <h3 className="mt-7 text-2xl font-black tracking-[-.04em]">
+                Mesurer
+              </h3>
+              <p className="mt-4 leading-7 text-[#667384]">
+                Analysez l’impact observé après la mission et rapprochez le résultat du coût engagé.
+              </p>
+            </article>
+          </div>
+
+          <div className="mt-16 grid gap-6 lg:grid-cols-[1.15fr_.85fr]">
+            <div className="overflow-hidden rounded-[1.6rem] border border-[#0b1e32]/10 bg-[#fffdf8] p-3 shadow-[0_24px_70px_rgba(7,20,33,.09)] sm:p-5">
+              <div className="mb-5 px-2 pt-2">
+                <p className="font-mono text-[.62rem] font-black uppercase tracking-[.15em] text-[#c84f24]">
+                  Exécution
+                </p>
+                <h3 className="mt-2 text-2xl font-black tracking-[-.04em]">
+                  Toutes les missions dans un même planning.
+                </h3>
+              </div>
+
+              <Image
+                alt="Planning TR1 des animations, formations et missions terrain"
+                className="w-full rounded-xl border border-[#0b1e32]/8"
+                height={600}
+                src="/marketing/missions-board.webp"
+                width={716}
+              />
+            </div>
+
+            <div className="flex flex-col justify-between rounded-[1.6rem] bg-[#0b1e32] p-7 text-white sm:p-9">
+              <div>
+                <p className="font-mono text-[.62rem] font-black uppercase tracking-[.15em] text-[#ff9d78]">
+                  Performance & rentabilité
+                </p>
+
+                <h3 className="mt-4 text-3xl font-black leading-[1.04] tracking-[-.05em]">
+                  Une animation ne devrait pas seulement être réalisée. Elle devrait être mesurée.
+                </h3>
+
+                <p className="mt-5 leading-7 text-white/65">
+                  TR1 rapproche l’exécution terrain des données disponibles après la mission pour aider à comprendre ce qui produit réellement du résultat.
+                </p>
+              </div>
+
+              <div className="mt-10 divide-y divide-white/12 border-y border-white/12">
+                <div className="flex items-center justify-between gap-4 py-4">
+                  <span className="text-sm text-white/60">Coût de la mission</span>
+                  <strong className="text-sm">Suivi</strong>
+                </div>
+
+                <div className="flex items-center justify-between gap-4 py-4">
+                  <span className="text-sm text-white/60">Sell-out déclaré</span>
+                  <strong className="text-sm">Impact</strong>
+                </div>
+
+                <div className="flex items-center justify-between gap-4 py-4">
+                  <span className="text-sm text-white/60">CA après mission</span>
+                  <strong className="text-sm">Performance</strong>
+                </div>
+
+                <div className="flex items-center justify-between gap-4 py-4">
+                  <span className="text-sm text-white/60">Résultat / coût engagé</span>
+                  <strong className="text-sm">Rentabilité</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-16 border-t border-[#0b1e32]/12 pt-8 text-center">
+            <p className="text-2xl font-black tracking-[-.04em] sm:text-3xl">
+              Le sell-in ouvre le compte. L’activation terrain aide à le développer.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="px-5 py-24 lg:px-8 lg:py-36">
+        <div className="mx-auto max-w-7xl">
+          <div className="mx-auto max-w-4xl text-center">
+            <p className="font-mono text-[.67rem] font-black uppercase tracking-[.17em] text-[#c84f24]">
+              Découvrir TR1
+            </p>
+            <h2 className="mt-5 text-4xl font-black leading-[.98] tracking-[-.06em] sm:text-5xl lg:text-6xl">
+              Faites grandir votre réseau officinal.
+            </h2>
+            <p className="mx-auto mt-7 max-w-2xl text-lg leading-8 text-[#667384]">
+              Découvrez comment TR1 peut structurer votre développement commercial et terrain.
+            </p>
+          </div>
+
+          <div className="mx-auto mt-14 grid max-w-5xl items-start gap-10 lg:grid-cols-[.8fr_1.2fr]">
+            <div className="pt-3">
+              <p className="text-xl font-black tracking-[-.03em]">
+                En 30 minutes, faisons le point sur votre réseau.
+              </p>
+              <div className="mt-7 space-y-4 border-t border-[#0b1e32]/10 pt-6 text-[#667384]">
+                <p>Votre portefeuille officinal</p>
+                <p>Votre organisation terrain</p>
+                <p>Vos outils actuels</p>
+                <p>Les points où TR1 peut simplifier le pilotage</p>
+              </div>
+            </div>
+
+            <div>
+              <LeadForm />
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  );
 }
