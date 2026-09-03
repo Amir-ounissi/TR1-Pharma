@@ -106,7 +106,7 @@ export default async function DashboardPage() {
                       </p>
                     </div>
                     <Button asChild size="sm" variant="outline">
-                      <Link href={`/dashboard/admin/onboarding?brandId=${sessionItem.brandId}`}>Reprendre l’onboarding</Link>
+                      <Link href={`/dashboard/admin/onboarding?brand=${sessionItem.brandId}`}>Reprendre l’onboarding</Link>
                     </Button>
                   </div>
                 </div>

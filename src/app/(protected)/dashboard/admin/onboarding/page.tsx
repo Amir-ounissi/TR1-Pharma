@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { ImportType } from "@/lib/imports/import-types";
+import { selectOnboardingSession } from "@/lib/onboarding/select-onboarding-session";
 import { requirePlatformAdmin } from "@/lib/auth";
 
 const lifecycleLabels: Record<string, string> = {
@@ -80,7 +81,7 @@ export default async function BrandOnboardingPage({
     supabase.from("brand_onboarding_sessions").select("*").order("created_at", { ascending: false }),
     supabase.from("import_templates").select("import_type,documentation").eq("is_active", true).order("import_type"),
   ]);
-  const selectedSession = sessions?.find((session) => session.brand_id === params.brand) ?? sessions?.[0] ?? null;
+  const selectedSession = selectOnboardingSession(sessions, params.brand);
   const brandIds = (sessions ?? []).map((session) => session.brand_id);
   const organizationIds = (sessions ?? []).map((session) => session.organization_id);
   const [{ data: brands }, { data: organizations }] = await Promise.all([
@@ -122,13 +123,29 @@ export default async function BrandOnboardingPage({
         ) : null}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>1. Nouvelle organisation et première marque</CardTitle>
-          <CardDescription>Réservé aux administrateurs TR1. La marque reste inactive jusqu’au contrôle final.</CardDescription>
-        </CardHeader>
-        <CardContent><OnboardingCreateForm /></CardContent>
-      </Card>
+      {!params.brand ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>1. Nouvelle organisation et première marque</CardTitle>
+            <CardDescription>Réservé aux administrateurs TR1. La marque reste inactive jusqu’au contrôle final.</CardDescription>
+          </CardHeader>
+          <CardContent><OnboardingCreateForm /></CardContent>
+        </Card>
+      ) : !selectedSession ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Onboarding introuvable</CardTitle>
+            <CardDescription>
+              Aucun onboarding en cours n’est associé à cette marque.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="outline">
+              <Link href="/dashboard/admin/onboarding">Retour aux onboardings</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {(sessions ?? []).length ? (
         <Card>

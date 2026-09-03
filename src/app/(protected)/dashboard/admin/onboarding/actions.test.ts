@@ -18,7 +18,8 @@ describe("onboarding brand configuration actions", () => {
 
   it("passes the explicit slug during brand creation", async () => {
     const rpc = vi.fn(async () => ({ data: [{ brand_id: "brand-1" }], error: null }));
-    mocks.requirePlatformAdmin.mockResolvedValue({ supabase: { rpc } });
+    const from = vi.fn(() => createLookupQuery(null));
+    mocks.requirePlatformAdmin.mockResolvedValue({ supabase: { rpc, from } });
     const formData = new FormData();
     formData.set("legalName", "VK Swiss SA");
     formData.set("countryCode", "CH");
@@ -36,6 +37,47 @@ describe("onboarding brand configuration actions", () => {
     expect(rpc).toHaveBeenCalledWith("create_brand_onboarding", expect.objectContaining({
       brand_data: expect.objectContaining({ slug: "vk-swiss" }),
     }));
+  });
+
+  it("blocks creation with a clear error when the organization slug already exists", async () => {
+    const rpc = vi.fn();
+    const from = vi.fn((table: string) =>
+      createLookupQuery(table === "organizations" ? { id: "organization-1" } : null),
+    );
+    mocks.requirePlatformAdmin.mockResolvedValue({ supabase: { rpc, from } });
+    const formData = createOnboardingFormData();
+
+    await expect(createBrandOnboardingAction({}, formData)).resolves.toEqual({
+      error: "Une organisation ou une marque avec ce slug existe déjà. Reprenez son onboarding existant au lieu d’en créer un nouveau.",
+    });
+
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("blocks creation with a clear error when the brand slug already exists", async () => {
+    const rpc = vi.fn();
+    const from = vi.fn((table: string) =>
+      createLookupQuery(table === "brands" ? { id: "brand-1" } : null),
+    );
+    mocks.requirePlatformAdmin.mockResolvedValue({ supabase: { rpc, from } });
+
+    await expect(createBrandOnboardingAction({}, createOnboardingFormData())).resolves.toEqual({
+      error: "Une organisation ou une marque avec ce slug existe déjà. Reprenez son onboarding existant au lieu d’en créer un nouveau.",
+    });
+
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("maps a concurrent duplicate constraint to the same business error", async () => {
+    const rpc = vi.fn(async () => ({ data: null, error: { code: "23505", message: "duplicate key" } }));
+    const from = vi.fn(() => createLookupQuery(null));
+    mocks.requirePlatformAdmin.mockResolvedValue({ supabase: { rpc, from } });
+
+    await expect(createBrandOnboardingAction({}, createOnboardingFormData())).resolves.toEqual({
+      error: "Une organisation ou une marque avec ce slug existe déjà. Reprenez son onboarding existant au lieu d’en créer un nouveau.",
+    });
+
+    expect(rpc).toHaveBeenCalledOnce();
   });
 
   it("passes brand operational fields through the canonical settings RPC", async () => {
@@ -80,3 +122,28 @@ describe("onboarding brand configuration actions", () => {
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/dashboard/admin/onboarding");
   });
 });
+
+function createLookupQuery(data: unknown) {
+  const query = {
+    select: vi.fn(),
+    eq: vi.fn(),
+    maybeSingle: vi.fn(async () => ({ data, error: null })),
+  };
+  query.select.mockReturnValue(query);
+  query.eq.mockReturnValue(query);
+  return query;
+}
+
+function createOnboardingFormData() {
+  const formData = new FormData();
+  formData.set("legalName", "VK Swiss SA");
+  formData.set("countryCode", "CH");
+  formData.set("currencyCode", "CHF");
+  formData.set("timezone", "Europe/Zurich");
+  formData.set("locale", "fr-CH");
+  formData.set("brandName", "VK Swiss");
+  formData.set("brandCode", "VK_SWISS");
+  formData.set("brandSlug", "vk-swiss");
+  formData.set("accentColor", "#123456");
+  return formData;
+}
