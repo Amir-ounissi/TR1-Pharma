@@ -17,6 +17,7 @@ export type NavigationScope = "tenant" | "platform";
 const agentItems: NavigationItem[] = [
   { href: "/dashboard/agent", label: "Ma journée", shortLabel: "Accueil", icon: "sun" },
   { href: "/dashboard/pharmacies", label: "Pharmacies", icon: "building" },
+  { href: "/dashboard/orders", label: "Mes commandes", icon: "clipboard" },
   { href: "/dashboard/missions", label: "Missions", icon: "calendar" },
   { href: "/dashboard/tasks", label: "Agenda", icon: "clipboard" },
   { href: "/dashboard/agent/performance", label: "Ma performance", icon: "chart" },
@@ -28,6 +29,7 @@ const managerItems: NavigationItem[] = [
   { href: "/dashboard", label: "Vue d’ensemble", shortLabel: "Accueil", icon: "layout" },
   { href: "/dashboard/commercial-health", label: "Priorités", icon: "target" },
   { href: "/dashboard/pharmacies", label: "Pharmacies", icon: "building" },
+  { href: "/dashboard/orders", label: "Commandes", icon: "clipboard" },
   { href: "/dashboard/missions", label: "Missions", icon: "calendar" },
   { href: "/dashboard/network", label: "Performance", icon: "chart" },
 ];

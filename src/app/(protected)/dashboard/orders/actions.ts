@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
+import { translateUiMessage } from "@/lib/ui-copy";
 
 export type OrderActionState = { error?: string; success?: string; orderId?: string };
 export type OrderPharmacySearchResult = {
@@ -19,7 +20,7 @@ const optionalUuid = z.preprocess(
   uuid.optional(),
 );
 const orderTypes = ["initial", "reorder", "complementary", "replacement", "sample", "return", "credit_note", "other"] as const;
-const orderStatuses = ["draft", "pending", "confirmed", "invoiced", "partially_delivered", "delivered", "cancelled", "refunded"] as const;
+const orderStatuses = ["draft", "pending", "needs_correction", "confirmed", "invoiced", "partially_delivered", "delivered", "rejected", "cancelled", "refunded"] as const;
 
 export async function createOrderAction(_state: OrderActionState, formData: FormData): Promise<OrderActionState> {
   const header = z.object({
@@ -52,8 +53,8 @@ export async function createOrderAction(_state: OrderActionState, formData: Form
   const { supabase, brand } = await requireActiveBrand();
   const contexts = await getBrandContexts();
   const role = contexts.find((context) => context.id === brand.id)?.role;
-  if (role === "agent" && !["draft", "pending", "confirmed"].includes(header.data.orderStatus)) {
-    return { error: "Un agent ne peut pas déclarer une commande facturée ou livrée." };
+  if (role === "agent" && !["draft", "pending"].includes(header.data.orderStatus)) {
+    return { error: "Une commande agent doit être enregistrée en brouillon ou envoyée à la marque." };
   }
   const uniqueProductIds = [...new Set(parsedItems.data.map((item) => item.product_id))];
   const { data: products, error: productsError } = await supabase
@@ -127,11 +128,21 @@ export async function changeOrderStatusAction(_state: OrderActionState, formData
   if (!parsed.success) return { error: "Changement de statut invalide." };
   const { supabase } = await requireActiveBrand();
   const { error } = await supabase.rpc("change_order_status", { target_order_id: parsed.data.orderId, target_status: parsed.data.orderStatus, reason: parsed.data.reason || null });
-  if (error) return { error: error.message };
+  if (error) return { error: translateUiMessage(error.message) };
   revalidatePath(`/dashboard/orders/${parsed.data.orderId}`);
   revalidatePath("/dashboard/orders");
   revalidatePath("/dashboard/network");
-  return { success: "Statut de commande mis à jour." };
+  const success =
+    parsed.data.orderStatus === "pending"
+      ? "Commande envoyée à la marque."
+      : parsed.data.orderStatus === "confirmed"
+        ? "Commande validée."
+        : parsed.data.orderStatus === "needs_correction"
+          ? "Correction demandée à l’agent."
+          : parsed.data.orderStatus === "rejected"
+            ? "Commande refusée."
+            : "Statut de commande mis à jour.";
+  return { success };
 }
 
 export async function recalculateActivityAction() {

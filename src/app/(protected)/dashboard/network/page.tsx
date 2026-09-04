@@ -135,9 +135,10 @@ function scopeLabel(scope: ObjectiveRow["scope_type"]) {
 export default async function NetworkPage({ searchParams }: { searchParams: SearchParams }) {
   const query = await searchParams;
   const today = new Date();
-  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const thirtyDaysAgo = new Date(today);
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
   const view = ["overview", "network", "missions", "team"].includes(query.view ?? "") ? (query.view as keyof typeof performanceViewLabels) : "overview";
-  const from = parseDate(query.from, monthStart);
+  const from = parseDate(query.from, thirtyDaysAgo);
   const to = parseDate(query.to, today);
   const territoryId = query.territory && query.territory !== "all" ? query.territory : null;
   const agentId = query.agent && query.agent !== "all" ? query.agent : null;

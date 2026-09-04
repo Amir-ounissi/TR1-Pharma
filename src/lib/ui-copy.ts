@@ -1,8 +1,9 @@
 const valueLabels: Record<string, string> = {
   // Commandes
   draft: "Brouillon",
-  pending: "En attente",
-  confirmed: "Confirmée",
+  pending: "À valider",
+  needs_correction: "À corriger",
+  confirmed: "Validée",
   invoiced: "Facturée",
   partially_delivered: "Partiellement livrée",
   delivered: "Livrée",
@@ -129,6 +130,27 @@ const exactMessages: Record<string, string> = {
     "Vos droits sont insuffisants pour cette marque.",
   "Pharmacy unavailable":
     "Cette pharmacie n’est pas disponible.",
+  "Authentication required":
+    "Votre session n’est plus valide. Reconnectez-vous puis réessayez.",
+  "Order unavailable":
+    "Cette commande n’est pas disponible.",
+  "Order status change forbidden":
+    "Vous n’êtes pas autorisé à modifier le statut de cette commande.",
+  "Agent order must be submitted to the brand":
+    "La commande doit être envoyée à la marque pour validation.",
+  "Corrected order must be resubmitted to the brand":
+    "La commande corrigée doit être renvoyée à la marque.",
+  "Pending order is awaiting brand review":
+    "Cette commande attend la décision de la marque.",
+  "Only the brand can change a reviewed order":
+    "Seule la marque peut modifier une commande déjà examinée.",
+  "Pending order must be reviewed before invoicing":
+    "La commande doit être validée avant de pouvoir être facturée.",
+  "Historical invoiced order status is immutable":
+    "Une commande déjà facturée ou livrée ne peut plus revenir à un statut antérieur.",
+  "A review reason is required":
+    "Un motif est obligatoire pour demander une correction, refuser ou annuler la commande.",
+
 };
 
 export function translateUiMessage(value: string | null | undefined) {

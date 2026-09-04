@@ -120,20 +120,22 @@ export default async function DashboardPage() {
 
   const { supabase, brand, profile } = session;
   const today = new Date();
-  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
+  const periodStartDate = new Date(today);
+  periodStartDate.setDate(periodStartDate.getDate() - 29);
+  const periodStart = periodStartDate.toISOString().slice(0, 10);
   const todayDate = today.toISOString().slice(0, 10);
   const [{ data: contexts }, { data: dashboard }, { data: objectives }, { data: priorities }] = await Promise.all([
     supabase.rpc("get_my_brand_contexts"),
     supabase.rpc("get_performance_overview", {
       target_brand_id: brand.id,
-      target_period_start: monthStart,
+      target_period_start: periodStart,
       target_period_end: todayDate,
       target_agent_id: null,
       target_territory_id: null,
     }),
     supabase.rpc("get_objective_progress", {
       target_brand_id: brand.id,
-      target_filter_start: monthStart,
+      target_filter_start: periodStart,
       target_filter_end: todayDate,
       target_scope_type: "brand",
       target_territory_id: null,
@@ -178,7 +180,7 @@ export default async function DashboardPage() {
       <PageHeader eyebrow={`Pilotage commercial · ${brand.name}`} title="Je constate, je comprends, j’agis" description="Le dashboard reste orienté décision: objectifs clés, alertes prioritaires, activité terrain et comptes à traiter." tone="dark" />
 
       <section aria-labelledby="objective-title" className="space-y-3">
-        <SectionHeader id="objective-title" title="Objectifs principaux" description="Objectif, réalisé, atteinte et projection du mois." action={<Button asChild variant="outline"><Link href="/dashboard/network?view=overview">Ouvrir Performance <ArrowRight /></Link></Button>} />
+        <SectionHeader id="objective-title" title="Objectifs principaux" description="Lecture commerciale sur les 30 derniers jours." action={<Button asChild variant="outline"><Link href="/dashboard/network?view=overview">Ouvrir Performance <ArrowRight /></Link></Button>} />
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {topObjectives.length ? topObjectives.map((objective) => (
             <Card key={objective.metric_key}>

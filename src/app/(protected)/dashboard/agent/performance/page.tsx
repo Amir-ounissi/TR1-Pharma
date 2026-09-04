@@ -51,8 +51,9 @@ function parseDate(value: string | undefined, fallback: Date) {
 export default async function AgentPerformancePage({ searchParams }: { searchParams: SearchParams }) {
   const query = await searchParams;
   const today = new Date();
-  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-  const from = parseDate(query.from, monthStart);
+  const thirtyDaysAgo = new Date(today);
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
+  const from = parseDate(query.from, thirtyDaysAgo);
   const to = parseDate(query.to, today);
   const { supabase, brand, profile, userId } = await requireActiveBrand();
   const [{ data: overview }, { data: objectives }, { data: networkRows }, { data: priorities }] = await Promise.all([

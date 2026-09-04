@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { requireActiveBrand } from "@/lib/auth";
+import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
 import { extractPdfOrder, PdfOrderImportError } from "@/lib/orders/pdf-order-extraction";
 import { calculateOrderTotal, consolidatePdfOrderLines, hasMeaningfulTotalDifference, matchPdfPharmacy, matchPdfProduct, normalizePdfOrderDate, resolvedLinePrice, type PharmacyCandidate, type ProductCandidate } from "@/lib/orders/pdf-order-matching";
 import type { PdfOrderExtraction } from "@/lib/orders/pdf-order-schema";
@@ -145,6 +145,8 @@ export async function confirmPdfOrderAction(_state: PdfOrderActionState, formDat
   if (!parsed.success) return { error: "La confirmation de commande est invalide." };
   if (Number(Boolean(parsed.data.brandPharmacyId)) + Number(Boolean(parsed.data.pharmacyId)) + Number(Boolean(parsed.data.newPharmacy)) !== 1) return { error: "Sélectionnez ou créez explicitement une pharmacie." };
   const { supabase, brand } = await requireActiveBrand();
+  const contexts = await getBrandContexts();
+  const isAgent = contexts.find((context) => context.id === brand.id)?.role === "agent";
   const [{ data: products, error: productsError }, { data: externalDuplicate }, { data: numberDuplicate }] = await Promise.all([
     supabase.from("products").select("id,tax_rate").eq("brand_id", brand.id).eq("is_active", true).is("discontinued_at", null).in("id", [...new Set(parsed.data.items.map((item) => item.productId))]),
     supabase.from("orders").select("id").eq("brand_id", brand.id).eq("external_order_id", parsed.data.orderNumber).maybeSingle(),
@@ -168,12 +170,12 @@ export async function confirmPdfOrderAction(_state: PdfOrderActionState, formDat
       city: parsed.data.newPharmacy.city || null,
       address_line_1: parsed.data.newPharmacy.address || null,
     } : null,
-    order_payload: { external_order_id: parsed.data.orderNumber, order_number: parsed.data.orderNumber, order_type: "other", order_status: "confirmed", order_date: new Date(parsed.data.orderDate).toISOString(), shipping_amount_ht: 0, payment_status: "pending", notes: "Commande créée depuis un PDF vérifié par l’utilisateur.", source: "import" },
+    order_payload: { external_order_id: parsed.data.orderNumber, order_number: parsed.data.orderNumber, order_type: "other", order_status: isAgent ? "pending" : "confirmed", order_date: new Date(parsed.data.orderDate).toISOString(), shipping_amount_ht: 0, payment_status: "pending", notes: "Commande créée depuis un PDF vérifié par l’utilisateur.", source: "import" },
     item_payload: trustedItems,
   });
   if (error) return { error: error.code === "23505" ? "Cette commande existe déjà." : error.message };
   revalidatePath("/dashboard/orders");
   revalidatePath("/dashboard/pharmacies");
   const result = Array.isArray(data) ? data[0] : data;
-  return { success: "Commande PDF confirmée.", orderId: result?.order_id as string };
+  return { success: isAgent ? "Commande envoyée à la marque." : "Commande PDF validée.", orderId: result?.order_id as string };
 }

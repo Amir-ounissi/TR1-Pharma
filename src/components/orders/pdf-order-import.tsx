@@ -23,15 +23,15 @@ function ProductSelect({ line, value, onChange }: { line: PdfOrderPreview["lines
   </select>;
 }
 
-export function OrderEntryModes({ manual }: { manual: ReactNode }) {
+export function OrderEntryModes({ manual, isAgent = false }: { manual: ReactNode; isAgent?: boolean }) {
   const [mode, setMode] = useState<"manual" | "pdf">("manual");
   return <div className="space-y-5">
     <div className="flex gap-2 border-b pb-4"><Button type="button" variant={mode === "manual" ? "default" : "outline"} onClick={() => setMode("manual")}>Saisie manuelle</Button><Button type="button" variant={mode === "pdf" ? "default" : "outline"} onClick={() => setMode("pdf")}>Importer un PDF</Button></div>
-    {mode === "manual" ? manual : <PdfOrderImport />}
+    {mode === "manual" ? manual : <PdfOrderImport isAgent={isAgent} />}
   </div>;
 }
 
-export function PdfOrderImport() {
+export function PdfOrderImport({ isAgent = false }: { isAgent?: boolean }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [analysis, analyzeAction, analyzing] = useActionState(analyzePdfOrderAction, {});
   const [fileName, setFileName] = useState("");
@@ -54,11 +54,11 @@ export function PdfOrderImport() {
       <Button disabled={analyzing || Boolean(fileError)}>{analyzing ? "Analyse du PDF…" : "Analyser le PDF"}</Button>
     </form>
 
-    {preview ? <PdfOrderPreviewForm key={`${preview.extraction.orderNumber}-${preview.extraction.orderDate}-${preview.lines.length}`} preview={preview} /> : null}
+    {preview ? <PdfOrderPreviewForm key={`${preview.extraction.orderNumber}-${preview.extraction.orderDate}-${preview.lines.length}`} preview={preview} isAgent={isAgent} /> : null}
   </div>;
 }
 
-function PdfOrderPreviewForm({ preview }: { preview: PdfOrderPreview }) {
+function PdfOrderPreviewForm({ preview, isAgent }: { preview: PdfOrderPreview; isAgent: boolean }) {
   const [confirmation, confirmAction, confirming] = useActionState(confirmPdfOrderAction, {});
   const [pharmacyId, setPharmacyId] = useState(preview.pharmacy.selectedPharmacyId || "");
   const [brandPharmacyId, setBrandPharmacyId] = useState(preview.pharmacy.selectedBrandPharmacyId || "");
@@ -81,6 +81,6 @@ function PdfOrderPreviewForm({ preview }: { preview: PdfOrderPreview }) {
       <input type="hidden" name="brandPharmacyId" value={brandPharmacyId} /><input type="hidden" name="pharmacyId" value={brandPharmacyId ? "" : pharmacyId} /><input type="hidden" name="newPharmacy" value={createMissing ? JSON.stringify(newPharmacy) : ""} /><input type="hidden" name="items" value={JSON.stringify(lines.map((line) => ({ productId: line.productId, quantity: Number(line.quantity), freeQuantity: Number(line.freeQuantity || "0"), unitPriceHt: Number(line.unitPriceHt), discountRate: line.discountRate === "" ? null : Number(line.discountRate) })))} />
       <div className="overflow-x-auto"><table className="w-full text-sm"><thead className="border-b text-left text-muted-foreground"><tr><th className="p-2">Produit PDF</th><th className="p-2">Produit TR1</th><th className="p-2">Qté</th><th className="p-2">UG</th><th className="p-2">Prix HT</th><th className="p-2">Remise</th><th className="p-2">TVA TR1</th></tr></thead><tbody>{preview.lines.map((line, index) => { const selected = line.product.candidates.find((candidate) => candidate.id === lines[index]?.productId); return <tr key={line.index} className="border-b align-top"><td className="p-2"><p className="font-medium">{line.label || "Libellé absent"}</p><p className="text-xs text-muted-foreground">{line.ean || line.sku || "Référence absente"}</p></td><td className="min-w-56 p-2"><ProductSelect line={line} value={lines[index]?.productId ?? ""} onChange={(value) => updateLine(index, "productId", value)} /><p className="mt-1 text-xs text-muted-foreground">{line.product.status === "matched" ? `Correspondance ${translateMatchMethod(line.product.method)}` : "Sélection requise."}</p></td><td className="p-2"><Input aria-label={`Quantité ${index + 1}`} type="number" min="1" value={lines[index]?.quantity ?? ""} onChange={(event) => updateLine(index, "quantity", event.target.value)} /></td><td className="p-2"><Input aria-label={`UG ${index + 1}`} type="number" min="0" value={lines[index]?.freeQuantity ?? "0"} onChange={(event) => updateLine(index, "freeQuantity", event.target.value)} /></td><td className="p-2"><Input aria-label={`Prix HT ${index + 1}`} type="number" min="0" step="0.01" value={lines[index]?.unitPriceHt ?? ""} onChange={(event) => updateLine(index, "unitPriceHt", event.target.value)} />{line.priceWarning ? <p className="mt-1 text-xs text-amber-700">{line.priceWarning}</p> : null}</td><td className="p-2"><Input aria-label={`Remise ${index + 1}`} type="number" min="0" max="100" step="0.01" value={lines[index]?.discountRate ?? ""} onChange={(event) => updateLine(index, "discountRate", event.target.value)} /></td><td className="p-2">{selected?.taxRate ?? "—"}%</td></tr>; })}</tbody></table></div>
       <div className="space-y-1 rounded-md bg-muted/40 p-4 text-sm"><p>Total PDF HT : <strong>{preview.extraction.totalHt == null ? "Non indiqué" : `${preview.extraction.totalHt.toFixed(2)} €`}</strong></p><p>Total TR1 HT : <strong>{totalTr1.toFixed(2)} €</strong></p>{preview.extraction.totalHt != null && Math.abs(preview.extraction.totalHt - totalTr1) > 0.02 ? <p className="font-medium text-amber-700">Attention : le total PDF diffère du total recalculé TR1 de plus de 0,02 €.</p> : null}{preview.warnings.map((warning) => <p className="text-amber-700" key={warning}>{translateUiMessage(warning)}</p>)}</div>
-      <div className="flex flex-wrap items-center gap-3"><Button disabled={!canConfirm || confirming}>{confirming ? "Confirmation…" : "Confirmer la commande"}</Button>{confirmation.orderId ? <Link className="text-sm underline" href={`/dashboard/orders/${confirmation.orderId}`}>Ouvrir la commande</Link> : null}</div>
+      <div className="flex flex-wrap items-center gap-3"><Button disabled={!canConfirm || confirming}>{confirming ? "Enregistrement…" : isAgent ? "Envoyer à la marque" : "Valider la commande"}</Button>{confirmation.orderId ? <Link className="text-sm underline" href={`/dashboard/orders/${confirmation.orderId}`}>Ouvrir la commande</Link> : null}</div>
   </form>;
 }
