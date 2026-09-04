@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { OrderForm } from "@/components/orders/order-forms";
 import { OrderEntryModes } from "@/components/orders/pdf-order-import";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +10,15 @@ export default async function NewOrderPage({ searchParams }: { searchParams: Sea
   const { pharmacy } = await searchParams;
   const { supabase, brand } = await requireActiveBrand();
   const contexts = await getBrandContexts();
-  const isAgent = contexts.find((context) => context.id === brand.id)?.role === "agent";
+  const role =
+    contexts.find((context) => context.id === brand.id)?.role ??
+    "brand_user";
+
+  if (!["agent", "tr1_manager", "brand_admin", "super_admin"].includes(role)) {
+    redirect("/dashboard/orders");
+  }
+
+  const isAgent = role === "agent";
   const [{ data: initialRelation }, { data: products }] = await Promise.all([
     pharmacy ? supabase.from("brand_pharmacies").select("id,pharmacy_id,pharmacies(legal_name,trade_name,city,cip_code,siret)").eq("id", pharmacy).eq("brand_id", brand.id).is("archived_at", null).maybeSingle() : Promise.resolve({ data: null }),
     supabase.from("products").select("id,name,sku,ean,wholesale_price_ht,tax_rate,units_per_case,minimum_order_quantity").eq("brand_id", brand.id).eq("is_active", true).is("discontinued_at", null).order("name"),

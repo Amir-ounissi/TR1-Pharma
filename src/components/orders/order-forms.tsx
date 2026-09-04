@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { changeOrderStatusAction, createOrderAction, searchOrderPharmaciesAction, type OrderPharmacySearchResult } from "@/app/(protected)/dashboard/orders/actions";
+import { changeOrderStatusAction, createOrderAction, reviseOrderAction, searchOrderPharmaciesAction, type OrderPharmacySearchResult } from "@/app/(protected)/dashboard/orders/actions";
 import { ActionFeedback } from "@/components/reference/action-feedback";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -59,7 +59,344 @@ export function OrderForm({ products, initialPharmacy, isAgent = false }: { prod
   </form>;
 }
 
-export function OrderStatusForm({ orderId, currentStatus, isAgent = false, reviewNote = null }: { orderId: string; currentStatus: string; isAgent?: boolean; reviewNote?: string | null }) {
+
+type OrderRevisionItem = {
+  id?: string;
+  productId: string;
+  quantity: number;
+  freeQuantity: number;
+  unitPriceHt: number | string;
+  discountRate: number | string | null;
+};
+
+type OrderRevisionHeader = {
+  externalOrderId?: string | null;
+  orderNumber?: string | null;
+  orderType: string;
+  orderDate: string;
+  shippingAmountHt: number | string | null;
+  notes?: string | null;
+  reviewNote?: string | null;
+};
+
+function localDateTimeValue(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const local = new Date(
+    date.getTime() - date.getTimezoneOffset() * 60000,
+  );
+  return local.toISOString().slice(0, 16);
+}
+
+export function OrderRevisionForm({
+  orderId,
+  order,
+  initialItems,
+  products,
+  isAgent,
+}: {
+  orderId: string;
+  order: OrderRevisionHeader;
+  initialItems: OrderRevisionItem[];
+  products: Option[];
+  isAgent: boolean;
+}) {
+  const [state, action, pending] = useActionState(
+    reviseOrderAction,
+    {},
+  );
+
+  const [lines, setLines] = useState(
+    initialItems.map((item, index) => ({
+      key: item.id || `initial-${index}`,
+      productId: item.productId,
+      quantity: String(item.quantity),
+      freeQuantity: String(item.freeQuantity),
+      unitPriceHt: String(item.unitPriceHt),
+      discountRate:
+        item.discountRate == null ? "" : String(item.discountRate),
+    })),
+  );
+
+  function updateLine(
+    index: number,
+    patch: Partial<(typeof lines)[number]>,
+  ) {
+    setLines((current) =>
+      current.map((line, lineIndex) =>
+        lineIndex === index ? { ...line, ...patch } : line,
+      ),
+    );
+  }
+
+  return (
+    <form action={action} className="space-y-5">
+      <input type="hidden" name="orderId" value={orderId} />
+      <ActionFeedback {...state} />
+
+      {order.reviewNote ? (
+        <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm">
+          <strong>Correction demandée :</strong> {order.reviewNote}
+        </div>
+      ) : null}
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-2">
+          <Label>Date de commande</Label>
+          <Input
+            name="orderDate"
+            type="datetime-local"
+            defaultValue={localDateTimeValue(order.orderDate)}
+            required
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Type</Label>
+          <Select name="orderType" defaultValue={order.orderType}>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[
+                "initial",
+                "reorder",
+                "complementary",
+                "replacement",
+                "sample",
+                "return",
+                "credit_note",
+                "other",
+              ].map((value) => (
+                <SelectItem key={value} value={value}>
+                  {uiLabel(value)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Port HT</Label>
+          <Input
+            name="shippingAmountHt"
+            type="number"
+            min="0"
+            step="0.01"
+            defaultValue={order.shippingAmountHt ?? 0}
+            required
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Référence externe</Label>
+          <Input
+            name="externalOrderId"
+            defaultValue={order.externalOrderId ?? ""}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Numéro de commande</Label>
+          <Input
+            name="orderNumber"
+            defaultValue={order.orderNumber ?? ""}
+          />
+        </div>
+
+        <div className="space-y-2 sm:col-span-2 lg:col-span-3">
+          <Label>Notes</Label>
+          <Textarea
+            name="notes"
+            defaultValue={order.notes ?? ""}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="font-medium">Lignes</h3>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() =>
+              setLines((current) => [
+                ...current,
+                {
+                  key: crypto.randomUUID(),
+                  productId: "",
+                  quantity: "1",
+                  freeQuantity: "0",
+                  unitPriceHt: "",
+                  discountRate: "",
+                },
+              ])
+            }
+          >
+            Ajouter une ligne
+          </Button>
+        </div>
+
+        {lines.map((line, index) => {
+          const product = products.find(
+            (item) => item.id === line.productId,
+          );
+
+          return (
+            <div
+              key={line.key}
+              className="grid gap-3 rounded-md border p-3 sm:grid-cols-2 lg:grid-cols-6"
+            >
+              <div className="space-y-2 lg:col-span-2">
+                <Label>Produit</Label>
+                <Select
+                  name="productId"
+                  value={line.productId}
+                  onValueChange={(value) => {
+                    const selected = products.find(
+                      (item) => item.id === value,
+                    );
+                    updateLine(index, {
+                      productId: value,
+                      unitPriceHt:
+                        selected?.price == null
+                          ? line.unitPriceHt
+                          : String(selected.price),
+                    });
+                  }}
+                  required
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Produit" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {products.map((item) => (
+                      <SelectItem key={item.id} value={item.id}>
+                        {item.name} · {item.detail}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {product ? (
+                  <p className="text-xs text-muted-foreground">
+                    TVA {product.taxRate ?? 0}% · Colisage{" "}
+                    {product.unitsPerCase ?? "—"} · Minimum{" "}
+                    {product.minimumOrderQuantity ?? "—"}
+                  </p>
+                ) : null}
+              </div>
+
+              <div>
+                <Label>Quantité</Label>
+                <Input
+                  name="quantity"
+                  type="number"
+                  min="1"
+                  value={line.quantity}
+                  onChange={(event) =>
+                    updateLine(index, {
+                      quantity: event.target.value,
+                    })
+                  }
+                  required
+                />
+              </div>
+
+              <div>
+                <Label>Gratuits</Label>
+                <Input
+                  name="freeQuantity"
+                  type="number"
+                  min="0"
+                  value={line.freeQuantity}
+                  onChange={(event) =>
+                    updateLine(index, {
+                      freeQuantity: event.target.value,
+                    })
+                  }
+                />
+              </div>
+
+              <div>
+                <Label>Prix unitaire HT</Label>
+                <Input
+                  name="unitPriceHt"
+                  type="number"
+                  step="0.01"
+                  value={line.unitPriceHt}
+                  onChange={(event) =>
+                    updateLine(index, {
+                      unitPriceHt: event.target.value,
+                    })
+                  }
+                  required
+                />
+              </div>
+
+              <div>
+                <Label>Remise %</Label>
+                <Input
+                  name="discountRate"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={line.discountRate}
+                  onChange={(event) =>
+                    updateLine(index, {
+                      discountRate: event.target.value,
+                    })
+                  }
+                />
+              </div>
+
+              {lines.length > 1 ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="sm:col-span-2 lg:col-span-6"
+                  onClick={() =>
+                    setLines((current) =>
+                      current.filter(
+                        (_, currentIndex) => currentIndex !== index,
+                      ),
+                    )
+                  }
+                >
+                  Retirer la ligne
+                </Button>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <Button
+          name="submitAfterRevision"
+          value="false"
+          variant={isAgent ? "outline" : "default"}
+          disabled={pending}
+        >
+          {pending ? "Enregistrement…" : "Enregistrer les modifications"}
+        </Button>
+
+        {isAgent ? (
+          <Button
+            name="submitAfterRevision"
+            value="true"
+            disabled={pending}
+          >
+            Corriger et renvoyer à la marque
+          </Button>
+        ) : null}
+      </div>
+    </form>
+  );
+}
+
+export function OrderStatusForm({ orderId, currentStatus, isAgent = false, canOperate = false, reviewNote = null }: { orderId: string; currentStatus: string; isAgent?: boolean; canOperate?: boolean; reviewNote?: string | null }) {
   const [state, action, pending] = useActionState(changeOrderStatusAction, {});
 
   if (isAgent && currentStatus === "pending") {
@@ -71,16 +408,17 @@ export function OrderStatusForm({ orderId, currentStatus, isAgent = false, revie
   }
 
   if (isAgent && (currentStatus === "draft" || currentStatus === "needs_correction")) {
-    return <form action={action} className="space-y-3">
-      <input type="hidden" name="orderId" value={orderId} />
-      <input type="hidden" name="orderStatus" value="pending" />
-      <ActionFeedback {...state} />
-      {currentStatus === "needs_correction" && reviewNote ? <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm"><strong>Correction demandée :</strong> {reviewNote}</div> : null}
-      <Button disabled={pending} className="w-full">{pending ? "Envoi…" : currentStatus === "needs_correction" ? "Renvoyer à la marque" : "Envoyer à la marque"}</Button>
-    </form>;
+    return <div className="space-y-2">
+      <Badge variant={currentStatus === "needs_correction" ? "destructive" : "secondary"}>
+        {orderStatusLabel(currentStatus)}
+      </Badge>
+      <p className="text-sm text-muted-foreground">
+        Modifiez les lignes de la commande puis enregistrez ou renvoyez-la à la marque.
+      </p>
+    </div>;
   }
 
-  if (!isAgent && currentStatus === "pending") {
+  if (canOperate && currentStatus === "pending") {
     return <form action={action} className="space-y-3">
       <input type="hidden" name="orderId" value={orderId} />
       <ActionFeedback {...state} />
@@ -95,6 +433,13 @@ export function OrderStatusForm({ orderId, currentStatus, isAgent = false, revie
 
   if (isAgent) {
     return <div className="space-y-2"><Badge variant="secondary">{orderStatusLabel(currentStatus)}</Badge><p className="text-sm text-muted-foreground">La suite du traitement est gérée par la marque.</p></div>;
+  }
+
+  if (!canOperate) {
+    return <div className="space-y-2">
+      <Badge variant="secondary">{orderStatusLabel(currentStatus)}</Badge>
+      <p className="text-sm text-muted-foreground">Consultation uniquement.</p>
+    </div>;
   }
 
   const nextStatuses =

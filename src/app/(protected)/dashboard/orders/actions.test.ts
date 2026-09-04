@@ -29,7 +29,7 @@ describe("order server actions", () => {
 
   it("delegates order creation and lines to the SQL RPC", async () => {
     const formData = new FormData();
-    Object.entries({ brandPharmacyId: relationId, pharmacyId: "", orderType: "other", orderStatus: "invoiced", orderDate: "2026-07-21T10:00", shippingAmountHt: "0", paymentStatus: "pending", productId, quantity: "2", freeQuantity: "1", unitPriceHt: "10", discountRate: "5", taxRate: "20" }).forEach(([key,value]) => formData.append(key,value));
+    Object.entries({ brandPharmacyId: relationId, pharmacyId: "", orderType: "other", orderStatus: "confirmed", orderDate: "2026-07-21T10:00", shippingAmountHt: "0", paymentStatus: "pending", productId, quantity: "2", freeQuantity: "1", unitPriceHt: "10", discountRate: "5", taxRate: "20" }).forEach(([key,value]) => formData.append(key,value));
     expect(await createOrderAction({}, formData)).toEqual({ success: "Commande créée et indicateurs recalculés.", orderId: "33333333-3333-4333-8333-333333333333" });
     expect(rpc).toHaveBeenCalledWith("create_order_with_pharmacy_resolution", expect.objectContaining({ target_brand_id: "brand-id", target_brand_pharmacy_id: relationId, target_pharmacy_id: null, item_payload: [expect.objectContaining({ product_id: productId, quantity: 2, tax_rate: 5.5 })] }));
   });
@@ -45,7 +45,31 @@ describe("order server actions", () => {
     mocks.getBrandContexts.mockResolvedValue([{ id: "brand-id", role: "agent" }]);
     const formData = new FormData();
     Object.entries({ brandPharmacyId: relationId, pharmacyId: "", orderType: "other", orderStatus: "invoiced", orderDate: "2026-07-21T10:00", shippingAmountHt: "0", paymentStatus: "pending", productId, quantity: "1", freeQuantity: "0", unitPriceHt: "10" }).forEach(([key, value]) => formData.append(key, value));
-    await expect(createOrderAction({}, formData)).resolves.toEqual({ error: "Un agent ne peut pas déclarer une commande facturée ou livrée." });
+    await expect(createOrderAction({}, formData)).resolves.toEqual({ error: "Une commande agent doit être enregistrée en brouillon ou envoyée à la marque." });
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("blocks order creation for a read-only brand user", async () => {
+    mocks.getBrandContexts.mockResolvedValue([{ id: "brand-id", role: "brand_user" }]);
+
+    const formData = new FormData();
+    Object.entries({
+      brandPharmacyId: relationId,
+      pharmacyId: "",
+      orderType: "other",
+      orderStatus: "draft",
+      orderDate: "2026-07-21T10:00",
+      shippingAmountHt: "0",
+      productId,
+      quantity: "1",
+      freeQuantity: "0",
+      unitPriceHt: "10",
+    }).forEach(([key, value]) => formData.append(key, value));
+
+    await expect(createOrderAction({}, formData)).resolves.toEqual({
+      error: "Votre rôle ne permet pas de créer une commande.",
+    });
+
     expect(rpc).not.toHaveBeenCalled();
   });
 

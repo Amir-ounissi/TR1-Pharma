@@ -118,6 +118,48 @@ export async function updateBrandPharmacyAction(_state: ReferenceActionState, fo
   return { success: "Relation commerciale mise à jour." };
 }
 
+
+export async function updateAgentPotentialAction(
+  _state: ReferenceActionState,
+  formData: FormData,
+): Promise<ReferenceActionState> {
+  const parsed = z.object({
+    id: z.string().uuid(),
+    potentialLevel: z.enum(potentialLevels),
+    potentialScore: z.union([
+      z.coerce.number().min(0).max(100),
+      z.literal(""),
+    ]),
+    notes: z.string().trim().max(4000).optional().or(z.literal("")),
+  }).safeParse(Object.fromEntries(formData));
+
+  if (!parsed.success) {
+    return { error: "Le potentiel renseigné est invalide." };
+  }
+
+  const { supabase, brand } = await requireActiveBrand();
+
+  const { error } = await supabase
+    .from("brand_pharmacies")
+    .update({
+      potential_level: parsed.data.potentialLevel,
+      potential_score:
+        parsed.data.potentialScore === ""
+          ? null
+          : parsed.data.potentialScore,
+      notes: parsed.data.notes || null,
+    })
+    .eq("id", parsed.data.id)
+    .eq("brand_id", brand.id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath(`/dashboard/pharmacies/${parsed.data.id}`);
+  revalidatePath("/dashboard/pharmacies");
+
+  return { success: "Potentiel mis à jour." };
+}
+
 export async function archiveBrandPharmacyAction(formData: FormData) {
   const id = z.string().uuid().parse(formData.get("id"));
   const { supabase, brand } = await requireActiveBrand();

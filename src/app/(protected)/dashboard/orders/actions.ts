@@ -52,8 +52,17 @@ export async function createOrderAction(_state: OrderActionState, formData: Form
   const { supabase, brand } = await requireActiveBrand();
   const contexts = await getBrandContexts();
   const role = contexts.find((context) => context.id === brand.id)?.role;
+
+  if (!role || !["agent", "tr1_manager", "brand_admin", "super_admin"].includes(role)) {
+    return { error: "Votre rôle ne permet pas de créer une commande." };
+  }
+
   if (role === "agent" && !["draft", "pending"].includes(header.data.orderStatus)) {
     return { error: "Une commande agent doit être enregistrée en brouillon ou envoyée à la marque." };
+  }
+
+  if (role !== "agent" && !["draft", "confirmed"].includes(header.data.orderStatus)) {
+    return { error: "Une saisie manuelle marque doit être créée en brouillon ou validée." };
   }
   const uniqueProductIds = [...new Set(parsedItems.data.map((item) => item.product_id))];
   const { data: products, error: productsError } = await supabase
@@ -87,6 +96,118 @@ export async function createOrderAction(_state: OrderActionState, formData: Form
   if (error) return { error: error.code === "23505" ? "Cette commande externe existe déjà." : error.message };
   const result = Array.isArray(data) ? data[0] : data;
   return { success: "Commande créée et indicateurs recalculés.", orderId: result?.order_id as string };
+}
+
+
+export async function reviseOrderAction(
+  _state: OrderActionState,
+  formData: FormData,
+): Promise<OrderActionState> {
+  const header = z.object({
+    orderId: uuid,
+    externalOrderId: z.string().trim().max(120).optional(),
+    orderNumber: z.string().trim().max(120).optional(),
+    orderType: z.enum(orderTypes),
+    orderDate: z.string().min(1),
+    shippingAmountHt: z.coerce.number().min(0),
+    notes: z.string().trim().max(4000).optional(),
+  }).safeParse(Object.fromEntries(formData));
+
+  const productIds = formData.getAll("productId").map(String);
+  const quantities = formData.getAll("quantity").map(String);
+  const freeQuantities = formData.getAll("freeQuantity").map(String);
+  const unitPrices = formData.getAll("unitPriceHt").map(String);
+  const discountRates = formData.getAll("discountRate").map(String);
+
+  const items = productIds.map((productId, index) => ({
+    product_id: productId,
+    quantity: Number(quantities[index]),
+    free_quantity: Number(freeQuantities[index] || 0),
+    unit_price_ht: Number(unitPrices[index]),
+    discount_rate: discountRates[index]
+      ? Number(discountRates[index])
+      : null,
+  }));
+
+  const parsedItems = z.array(
+    z.object({
+      product_id: uuid,
+      quantity: z.number().int().positive(),
+      free_quantity: z.number().int().min(0),
+      unit_price_ht: z.number(),
+      discount_rate: z.number().min(0).max(100).nullable(),
+    }),
+  ).min(1).safeParse(items);
+
+  if (!header.success || !parsedItems.success) {
+    return { error: "La commande ou ses lignes sont invalides." };
+  }
+
+  const submitAfterRevision =
+    formData.get("submitAfterRevision") === "true";
+
+  const { supabase, brand } = await requireActiveBrand();
+
+  const uniqueProductIds = [
+    ...new Set(parsedItems.data.map((item) => item.product_id)),
+  ];
+
+  const { data: products, error: productsError } = await supabase
+    .from("products")
+    .select("id,tax_rate")
+    .eq("brand_id", brand.id)
+    .eq("is_active", true)
+    .is("discontinued_at", null)
+    .in("id", uniqueProductIds);
+
+  if (
+    productsError ||
+    products?.length !== uniqueProductIds.length
+  ) {
+    return {
+      error:
+        "Un produit sélectionné n’est plus disponible pour cette marque.",
+    };
+  }
+
+  const productById = new Map(
+    products.map((product) => [product.id, product]),
+  );
+
+  const trustedItems = parsedItems.data.map((item) => ({
+    ...item,
+    tax_rate: Number(
+      productById.get(item.product_id)?.tax_rate ?? 0,
+    ),
+  }));
+
+  const { error } = await supabase.rpc("revise_order", {
+    target_order_id: header.data.orderId,
+    order_payload: {
+      external_order_id: header.data.externalOrderId || null,
+      order_number: header.data.orderNumber || null,
+      order_type: header.data.orderType,
+      order_date: new Date(header.data.orderDate).toISOString(),
+      shipping_amount_ht: header.data.shippingAmountHt,
+      notes: header.data.notes || null,
+    },
+    item_payload: trustedItems,
+    submit_after_revision: submitAfterRevision,
+  });
+
+  if (error) {
+    return { error: translateUiMessage(error.message) };
+  }
+
+  revalidatePath(`/dashboard/orders/${header.data.orderId}`);
+  revalidatePath("/dashboard/orders");
+  revalidatePath("/dashboard/network");
+
+  return {
+    success: submitAfterRevision
+      ? "Commande corrigée et renvoyée à la marque."
+      : "Modifications enregistrées.",
+  };
 }
 
 export async function searchOrderPharmaciesAction(search: string): Promise<OrderPharmacySearchResult[]> {

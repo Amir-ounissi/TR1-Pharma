@@ -38,7 +38,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
     label: item.label,
     href: item.href,
   }));
-  const quickActions: SearchItem[] = getRoleFamily(role) === "facilitator" ? [] : [
+  const family = getRoleFamily(role);
+  const canOperate = !["brand_user", "facilitator"].includes(role);
+  const quickActions: SearchItem[] = !canOperate || family === "facilitator" ? [] : [
     { id: "action-new-order", kind: "action", label: "Créer une commande", href: "/dashboard/orders/new", keywords: ["nouvelle", "saisie"] },
     { id: "action-new-task", kind: "action", label: "Planifier une relance", href: "/dashboard/tasks", keywords: ["tâche", "rappel"] },
   ];

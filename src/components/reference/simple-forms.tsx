@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { addBrandPharmacyProductAction, createContactAction, createGroupAction, createProductAction, createTerritoryAction, updateBrandPharmacyAction, updateGroupAction, updateProductAction, updateTerritoryAction } from "@/app/(protected)/dashboard/reference/actions";
+import { addBrandPharmacyProductAction, createContactAction, createGroupAction, createProductAction, createTerritoryAction, updateAgentPotentialAction, updateBrandPharmacyAction, updateGroupAction, updateProductAction, updateTerritoryAction } from "@/app/(protected)/dashboard/reference/actions";
 import { ActionFeedback } from "@/components/reference/action-feedback";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -210,6 +210,70 @@ export function ProductEditForm({
 export function AddImplantedProductForm({ brandPharmacyId, products }: { brandPharmacyId: string; products: Array<{ id: string; name: string }> }) {
   const [state, action, pending] = useActionState(addBrandPharmacyProductAction, {});
   return <form action={action} className="grid gap-3 sm:grid-cols-2"><input type="hidden" name="brandPharmacyId" value={brandPharmacyId} /><div className="sm:col-span-2"><ActionFeedback {...state} /></div><div className="space-y-2"><Label>Produit</Label><Select name="productId" required><SelectTrigger className="w-full"><SelectValue placeholder="Sélectionner" /></SelectTrigger><SelectContent>{products.map((product) => <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>)}</SelectContent></Select></div><div className="space-y-2"><Label>Statut</Label><Select name="status" defaultValue="planned"><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="planned">Planifié</SelectItem><SelectItem value="implanted">Implanté</SelectItem><SelectItem value="active">Actif</SelectItem><SelectItem value="temporarily_unavailable">Indisponible</SelectItem></SelectContent></Select></div><Button disabled={pending} className="sm:col-span-2">Ajouter le produit</Button></form>;
+}
+
+
+export function AgentPotentialForm({
+  relation,
+}: {
+  relation: Record<string, string | number | null>;
+}) {
+  const [state, action, pending] = useActionState(
+    updateAgentPotentialAction,
+    {},
+  );
+
+  return (
+    <form action={action} className="grid gap-3 sm:grid-cols-2">
+      <input type="hidden" name="id" value={String(relation.id)} />
+
+      <div className="sm:col-span-2">
+        <ActionFeedback {...state} />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Potentiel</Label>
+        <Select
+          name="potentialLevel"
+          defaultValue={String(relation.potential_level)}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {potentialLevels.map((value) => (
+              <SelectItem key={value} value={value}>
+                {labels.potentialLevel[value]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Score potentiel</Label>
+        <Input
+          name="potentialScore"
+          type="number"
+          min="0"
+          max="100"
+          defaultValue={relation.potential_score ?? ""}
+        />
+      </div>
+
+      <div className="space-y-2 sm:col-span-2">
+        <Label>Notes</Label>
+        <Textarea
+          name="notes"
+          defaultValue={String(relation.notes ?? "")}
+        />
+      </div>
+
+      <Button disabled={pending} className="sm:col-span-2">
+        {pending ? "Enregistrement…" : "Mettre à jour le potentiel"}
+      </Button>
+    </form>
+  );
 }
 
 export function RelationForm({ relation, territories, agents }: { relation: Record<string, string | number | null>; territories: Array<{ id: string; name: string }>; agents: Array<{ id: string; name: string }> }) {

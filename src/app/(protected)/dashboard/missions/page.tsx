@@ -8,12 +8,15 @@ import { CompactPageHeader } from "@/components/ux/compact-page-header";
 import { EmptyState } from "@/components/ux/empty-state";
 import { InlineError } from "@/components/ux/inline-error";
 import { Toolbar, ToolbarMeta, ToolbarRow } from "@/components/ux/toolbar";
-import { requireActiveBrand } from "@/lib/auth";
+import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
 import { missionStatuses, missionTypes } from "@/lib/missions";
 import { uiLabel } from "@/lib/ui-copy";
 
 export default async function MissionsPage({ searchParams }: { searchParams: Promise<{ q?:string; status?:string; type?:string }> }) {
   const filters=await searchParams; const {supabase,brand}=await requireActiveBrand();
+  const contexts = await getBrandContexts();
+  const role = contexts.find((context) => context.id === brand.id)?.role ?? "brand_user";
+  const canCreateMission = ["brand_admin", "tr1_manager", "super_admin"].includes(role);
   let query=supabase.from("missions").select("id,title,mission_type,status,priority,scheduled_start_at,report_due_at,assigned_user_id,managed_by,users!missions_assigned_user_id_fkey(user_profiles(full_name)),pharmacies(legal_name,trade_name,city)").eq("brand_id",brand.id).is("archived_at",null).order("scheduled_start_at",{ascending:false}).limit(100);
   if(filters.q) query=query.ilike("title",`%${filters.q}%`); if(filters.status) query=query.eq("status",filters.status); if(filters.type) query=query.eq("mission_type",filters.type);
   const {data:missions,error}=await query;
@@ -23,7 +26,7 @@ export default async function MissionsPage({ searchParams }: { searchParams: Pro
       eyebrow={`Terrain / ${brand.name}`}
       title="Missions"
       description="Le planning, les affectations et les statuts se suivent ici dans une lecture opérationnelle plus directe."
-      actions={<Button asChild className="h-9 rounded-md bg-[var(--tr1-navy)] px-3.5 text-sm font-medium text-white hover:bg-[var(--tr1-navy-soft)]"><Link href="/dashboard/missions/new"><CalendarPlus className="size-4" />Nouvelle mission</Link></Button>}
+      actions={canCreateMission ? <Button asChild className="h-9 rounded-md bg-[var(--tr1-navy)] px-3.5 text-sm font-medium text-white hover:bg-[var(--tr1-navy-soft)]"><Link href="/dashboard/missions/new"><CalendarPlus className="size-4" />Nouvelle mission</Link></Button> : undefined}
     />
 
     <Toolbar>
@@ -56,7 +59,7 @@ export default async function MissionsPage({ searchParams }: { searchParams: Pro
         tone={hasActiveFilters ? "no_results" : "no_data"}
         title={hasActiveFilters ? "Aucune mission ne correspond à ces filtres." : "Aucune mission disponible."}
         description={hasActiveFilters ? "Essayez d’élargir votre recherche ou de réinitialiser les filtres." : "Créez une première mission pour commencer à piloter les interventions terrain."}
-        action={hasActiveFilters ? <Button asChild size="sm" variant="outline"><Link href="/dashboard/missions"><RotateCcw className="size-3.5" />Réinitialiser</Link></Button> : <Button asChild size="sm" className="h-9 bg-[var(--tr1-navy)] px-3.5 text-sm font-medium text-white hover:bg-[var(--tr1-navy-soft)]"><Link href="/dashboard/missions/new"><CalendarPlus className="size-3.5" />Nouvelle mission</Link></Button>}
+        action={hasActiveFilters ? <Button asChild size="sm" variant="outline"><Link href="/dashboard/missions"><RotateCcw className="size-3.5" />Réinitialiser</Link></Button> : canCreateMission ? <Button asChild size="sm" className="h-9 bg-[var(--tr1-navy)] px-3.5 text-sm font-medium text-white hover:bg-[var(--tr1-navy-soft)]"><Link href="/dashboard/missions/new"><CalendarPlus className="size-3.5" />Nouvelle mission</Link></Button> : undefined}
       />
     ) : (
       <div className="overflow-hidden rounded-[0.8rem] border border-[var(--tr1-line)] bg-white/78">

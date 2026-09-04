@@ -21,7 +21,7 @@ const agentItems: NavigationItem[] = [
   { href: "/dashboard/missions", label: "Missions", icon: "calendar" },
   { href: "/dashboard/tasks", label: "Agenda", icon: "clipboard" },
   { href: "/dashboard/agent/performance", label: "Ma performance", icon: "chart" },
-  { href: "/dashboard/reports", label: "Documents", icon: "file" },
+  { href: "/dashboard/reports", label: "Mes comptes rendus", icon: "file" },
   { href: "/dashboard/agent/assistant", label: "Assistant Terrain", icon: "sparkles" },
 ];
 
@@ -65,10 +65,16 @@ export function getRoleLandingPath(role: string) {
   return "/dashboard";
 }
 
-export function getNavigationSections(role: string, scope: NavigationScope = "tenant"): NavigationSection[] {
+export function getNavigationSections(
+  role: string,
+  scope: NavigationScope = "tenant",
+): NavigationSection[] {
   const family = getRoleFamily(role);
 
-  if (family === "agent") return [{ label: "Terrain", items: agentItems }];
+  if (family === "agent") {
+    return [{ label: "Terrain", items: agentItems }];
+  }
+
   if (family === "facilitator") {
     return [{
       label: "Missions",
@@ -83,17 +89,34 @@ export function getNavigationSections(role: string, scope: NavigationScope = "te
     return [{ label: "Plateforme TR1", items: platformAdminItems }];
   }
 
-  const sections: NavigationSection[] = [{ label: "Pilotage", items: managerItems }];
+  const pilotageItems = [...managerItems];
+
+  if (role === "tr1_manager" || role === "super_admin") {
+    pilotageItems.push({
+      href: "/dashboard/reports",
+      label: "Rapports à valider",
+      icon: "file",
+    });
+  }
+
+  const sections: NavigationSection[] = [
+    { label: "Pilotage", items: pilotageItems },
+  ];
+
   if (family === "admin") {
     sections.push({
       label: "Administration marque",
       items: tenantAdminItems,
     });
   }
+
   return sections;
 }
 
-export function getNavigationItems(role: string, scope: NavigationScope = "tenant") {
+export function getNavigationItems(
+  role: string,
+  scope: NavigationScope = "tenant",
+) {
   return getNavigationSections(role, scope).flatMap((section) => section.items);
 }
 
