@@ -13,7 +13,7 @@ test("scénario 1 — Agent desktop", async ({ page }) => {
   await expect(sidebar.getByText("Ma journée", { exact: true })).toBeVisible();
   await expect(sidebar.getByText("Priorités", { exact: true })).toHaveCount(0);
   await expect(page.getByTestId("next-visit-card")).toContainText("Pharmacie République");
-  await expect(page.getByRole("link", { name: "Démarrer ma prochaine visite" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Démarrer", exact: true })).toBeVisible();
   await page.screenshot({ path: `${artifacts}/agent-day-desktop.png`, fullPage: true });
 
   await page.getByRole("button", { name: "Démarrer", exact: true }).click();

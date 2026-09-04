@@ -51,7 +51,7 @@ export function QuickInteraction({
   commercialStatus: string;
   lastOrderAt?: string | null;
   visitStartedAt?: string;
-  onSuccess?: () => void;
+  onSuccess?: (message: string) => void;
 }) {
   const key = useMemo(() => draftKey("interaction", brandPharmacyId), [brandPharmacyId]);
   const [draft, setDraft] = useState(createInitialDraft);
@@ -71,7 +71,7 @@ export function QuickInteraction({
   useEffect(() => {
     if (state.success) {
       clearDraft(localStorage, key);
-      onSuccess?.();
+      onSuccess?.(state.success);
       const timer = window.setTimeout(() => setDraft(createInitialDraft()), 0);
       return () => window.clearTimeout(timer);
     }
