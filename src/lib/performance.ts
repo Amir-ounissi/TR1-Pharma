@@ -1,13 +1,14 @@
 import { presentationLabel } from "@/lib/presentation";
 
 export const performanceMetricLabels = {
-  revenue_ht: "CA HT",
+  revenue_ht: "CA facturé HT",
+  booked_revenue_ht: "CA commandé HT",
   implantations: "Implantations",
   reorders: "Réassorts",
   first_reorder_rate: "Taux de premier réassort",
   active_pharmacies: "Pharmacies actives",
-  avg_distribution_rate: "DN moyenne",
-  strategic_distribution_rate: "DN stratégique",
+  avg_distribution_rate: "Assortiment moyen",
+  strategic_distribution_rate: "Assortiment stratégique",
   missions: "Missions",
   animations: "Animations",
   trainings: "Formations",
@@ -63,7 +64,7 @@ export function formatCompactCurrency(value?: number | string | null) {
 }
 
 export function formatPerformanceValue(metric: string, value?: number | string | null) {
-  if (metric === "revenue_ht") return formatCompactCurrency(value);
+  if (metric === "revenue_ht" || metric === "booked_revenue_ht") return formatCompactCurrency(value);
   if (metric.includes("rate") || metric.includes("distribution")) return formatCompactPercent(value);
   return formatCompactNumber(value);
 }

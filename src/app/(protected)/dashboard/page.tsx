@@ -179,7 +179,7 @@ export default async function DashboardPage() {
 
       <section aria-labelledby="objective-title" className="space-y-3">
         <SectionHeader id="objective-title" title="Objectifs principaux" description="Objectif, réalisé, atteinte et projection du mois." action={<Button asChild variant="outline"><Link href="/dashboard/network?view=overview">Ouvrir Performance <ArrowRight /></Link></Button>} />
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {topObjectives.length ? topObjectives.map((objective) => (
             <Card key={objective.metric_key}>
               <CardContent className="pt-5">
@@ -196,7 +196,8 @@ export default async function DashboardPage() {
             </Card>
           )) : (
             <>
-              <Card><CardContent className="pt-5"><p className="text-2xl font-semibold">{formatCompactCurrency(metrics.revenue_ht)}</p><p className="text-sm font-medium">CA HT</p><p className="text-xs text-muted-foreground">Objectif non défini</p></CardContent></Card>
+              <Card><CardContent className="pt-5"><p className="text-2xl font-semibold">{formatCompactCurrency(metrics.booked_revenue_ht)}</p><p className="text-sm font-medium">CA commandé HT</p><p className="text-xs text-muted-foreground">Commandes confirmées</p></CardContent></Card>
+              <Card><CardContent className="pt-5"><p className="text-2xl font-semibold">{formatCompactCurrency(metrics.revenue_ht)}</p><p className="text-sm font-medium">CA facturé HT</p><p className="text-xs text-muted-foreground">Commandes facturées ou livrées</p></CardContent></Card>
               <Card><CardContent className="pt-5"><p className="text-2xl font-semibold">{formatCompactNumber(metrics.implantations)}</p><p className="text-sm font-medium">Implantations</p><p className="text-xs text-muted-foreground">Réalisées ce mois-ci</p></CardContent></Card>
               <Card><CardContent className="pt-5"><p className="text-2xl font-semibold">{formatCompactPercent(metrics.first_reorder_rate)}</p><p className="text-sm font-medium">Premier réassort</p><p className="text-xs text-muted-foreground">Base éligible</p></CardContent></Card>
             </>
@@ -236,8 +237,8 @@ export default async function DashboardPage() {
               ["Formations", formatCompactNumber(metrics.trainings_completed)],
               ["Missions terminées", formatCompactNumber(metrics.missions_completed)],
               ["Sell-out déclaré", `${formatCompactNumber(metrics.sell_out_units)} unités`],
-              ["DN moyenne", formatCompactPercent(metrics.avg_distribution_rate)],
-              ["DN stratégique", formatCompactPercent(metrics.strategic_distribution_rate)],
+              ["Assortiment moyen", formatCompactPercent(metrics.avg_distribution_rate)],
+              ["Assortiment stratégique", formatCompactPercent(metrics.strategic_distribution_rate)],
             ].map(([label, value]) => <div key={label} className="rounded-[0.35rem] border border-[var(--tr1-line)] bg-transparent p-3"><p className="font-mono text-lg font-black tracking-[-0.05em]">{value}</p><p className="font-mono text-[0.58rem] uppercase tracking-[0.08em] text-muted-foreground">{label}</p></div>)}
           </CardContent>
         </Card>

@@ -35,7 +35,7 @@ type NetworkRow = {
   has_next_action: boolean;
   next_action_at: string | null;
   distribution_rate: number;
-  strategic_distribution_rate: number;
+  strategic_distribution_rate: number | null;
 };
 
 function toDateInput(value: Date) {
@@ -132,7 +132,7 @@ export default async function AgentPerformancePage({ searchParams }: { searchPar
             </Card>
           )) : (
             <>
-              <MetricCard icon={Target} label="CA HT" value={formatCompactCurrency(summary.revenue_ht)} detail="Aucun objectif individuel défini" />
+              <MetricCard icon={Target} label="CA commandé HT" value={formatCompactCurrency(summary.booked_revenue_ht)} detail="Commandes confirmées" />
               <MetricCard icon={TrendingUp} label="Implantations" value={formatCompactNumber(summary.implantations)} detail="Sur la période" />
               <MetricCard icon={Gauge} label="Premier réassort" value={formatCompactPercent(summary.first_reorder_rate)} detail="Lecture éligible" />
               <MetricCard icon={ArrowRight} label="Réassorts" value={formatCompactNumber(summary.reorders)} detail="Rythme terrain" />
@@ -148,6 +148,8 @@ export default async function AgentPerformancePage({ searchParams }: { searchPar
             <CardDescription>Ce que tu as réellement exécuté et déclaré.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-2">
+            <Detail label="CA commandé HT" value={formatCompactCurrency(summary.booked_revenue_ht)} />
+            <Detail label="CA facturé HT" value={formatCompactCurrency(summary.revenue_ht)} />
             <Detail label="Implantations" value={formatCompactNumber(summary.implantations)} />
             <Detail label="Réassorts" value={formatCompactNumber(summary.reorders)} />
             <Detail label="Missions réalisées" value={formatCompactNumber(summary.missions_completed)} />
@@ -169,8 +171,8 @@ export default async function AgentPerformancePage({ searchParams }: { searchPar
             <Detail label="À risque" value={formatCompactNumber(summary.at_risk_accounts)} />
             <Detail label="Dormantes" value={formatCompactNumber(summary.dormant_accounts)} />
             <Detail label="Sans prochaine action" value={formatCompactNumber(summary.without_next_action_count)} />
-            <Detail label="DN moyenne" value={formatCompactPercent(summary.avg_distribution_rate)} />
-            <Detail label="DN stratégique" value={formatCompactPercent(summary.strategic_distribution_rate)} />
+            <Detail label="Assortiment moyen" value={formatCompactPercent(summary.avg_distribution_rate)} />
+            <Detail label="Assortiment stratégique" value={formatCompactPercent(summary.strategic_distribution_rate)} />
           </CardContent>
         </Card>
       </section>
@@ -212,7 +214,7 @@ export default async function AgentPerformancePage({ searchParams }: { searchPar
                   </div>
                   <p className="mt-2 text-sm text-muted-foreground">{row.recommendation}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    DN {formatCompactPercent(row.distribution_rate)} · DN strat. {formatCompactPercent(row.strategic_distribution_rate)} · {row.has_next_action ? "Suivi planifié" : "Aucune prochaine action"}
+                    Assortiment {formatCompactPercent(row.distribution_rate)} · Strat. {formatCompactPercent(row.strategic_distribution_rate)} · {row.has_next_action ? "Suivi planifié" : "Aucune prochaine action"}
                   </p>
                 </Link>
               ))}

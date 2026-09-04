@@ -63,7 +63,7 @@ type NetworkRow = {
   implantations: number;
   reorders: number;
   distribution_rate: number;
-  strategic_distribution_rate: number;
+  strategic_distribution_rate: number | null;
   missions_completed: number;
   animations_completed: number;
   trainings_completed: number;
@@ -82,13 +82,26 @@ type TeamRow = {
   dormant_accounts: number;
   without_next_action_count: number;
   avg_distribution_rate: number;
-  strategic_distribution_rate: number;
+  strategic_distribution_rate: number | null;
   missions_completed: number;
   animations_completed: number;
   trainings_completed: number;
   sell_out_units: number;
   participants_count: number;
   complete_data_rate: number;
+};
+
+type ProductDistributionRow = {
+  product_id: string;
+  product_name: string;
+  sku: string | null;
+  customer_pharmacies: number;
+  distributing_pharmacies: number;
+  distribution_rate: number | null;
+  paid_units: number;
+  free_units: number;
+  booked_revenue_ht: number;
+  invoiced_revenue_ht: number;
 };
 
 type MissionImpactListRow = {
@@ -206,11 +219,20 @@ export default async function NetworkPage({ searchParams }: { searchParams: Sear
       .eq("roles.key", "agent"),
   ]);
 
+  const { data: productDistribution } = await supabase.rpc("get_product_distribution", {
+    target_brand_id: brand.id,
+    target_period_start: from,
+    target_period_end: to,
+    target_territory_id: territoryId,
+    target_agent_id: agentId,
+  });
+
   const objectiveRows = (objectives ?? []) as ObjectiveRow[];
   const topObjectives = objectiveRows
     .filter((objective) => ["revenue_ht", "implantations", "first_reorder_rate", "reorders"].includes(objective.metric_key))
     .slice(0, 4);
   const summary = (overview ?? {}) as Record<string, number | null>;
+  const productDistributionRows = (productDistribution ?? []) as ProductDistributionRow[];
   const agentOptions = (memberships ?? []).map((membership) => {
     const user = Array.isArray(membership.users) ? membership.users[0] : membership.users;
     const profile = Array.isArray(user?.user_profiles) ? user.user_profiles[0] : user?.user_profiles;
@@ -265,12 +287,59 @@ export default async function NetworkPage({ searchParams }: { searchParams: Sear
 
       {view === "overview" ? (
         <div className="space-y-6">
-          <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <MetricCard icon={Target} label="CA HT" value={formatCompactCurrency(summary.revenue_ht)} detail="Sur la période filtrée" />
-            <MetricCard icon={TrendingUp} label="Implantations" value={formatCompactNumber(summary.implantations)} detail="Commandes initiales validées" />
+          <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            <MetricCard icon={Target} label="CA commandé HT" value={formatCompactCurrency(summary.booked_revenue_ht)} detail="Commandes confirmées ou facturées" />
+            <MetricCard icon={TrendingUp} label="CA facturé HT" value={formatCompactCurrency(summary.revenue_ht)} detail="Commandes facturées ou livrées" />
+            <MetricCard icon={TrendingUp} label="Implantations" value={formatCompactNumber(summary.implantations)} detail="Premières commandes confirmées" />
             <MetricCard icon={Gauge} label="Premier réassort" value={formatCompactPercent(summary.first_reorder_rate)} detail="Base éligible uniquement" />
             <MetricCard icon={ArrowRight} label="Pharmacies actives" value={formatCompactNumber(summary.active_pharmacies)} detail="Portefeuille vivant" />
           </section>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>DN par produit</CardTitle>
+              <CardDescription>
+                Part des pharmacies clientes qui distribuent chaque référence. La base clients correspond aux pharmacies ayant au moins une commande commerciale confirmée.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Produit</TableHead>
+                    <TableHead>DN clients</TableHead>
+                    <TableHead>Pharmacies</TableHead>
+                    <TableHead>Unités payantes</TableHead>
+                    <TableHead>UG</TableHead>
+                    <TableHead>CA commandé HT</TableHead>
+                    <TableHead>CA facturé HT</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {productDistributionRows.length ? productDistributionRows.map((row) => (
+                    <TableRow key={row.product_id}>
+                      <TableCell>
+                        <p className="font-medium">{row.product_name}</p>
+                        <p className="text-xs text-muted-foreground">{row.sku ?? "Sans référence"}</p>
+                      </TableCell>
+                      <TableCell>{formatCompactPercent(row.distribution_rate)}</TableCell>
+                      <TableCell>{row.distributing_pharmacies} / {row.customer_pharmacies}</TableCell>
+                      <TableCell>{formatCompactNumber(row.paid_units)}</TableCell>
+                      <TableCell>{formatCompactNumber(row.free_units)}</TableCell>
+                      <TableCell>{formatCompactCurrency(row.booked_revenue_ht)}</TableCell>
+                      <TableCell>{formatCompactCurrency(row.invoiced_revenue_ht)}</TableCell>
+                    </TableRow>
+                  )) : (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-muted-foreground">
+                        Aucune donnée produit sur cette période.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
 
           <section className="grid gap-6 xl:grid-cols-[1.2fr_.8fr]">
             <Card>
@@ -324,8 +393,8 @@ export default async function NetworkPage({ searchParams }: { searchParams: Sear
                 <Detail label="Animations" value={formatCompactNumber(summary.animations_completed)} />
                 <Detail label="Formations" value={formatCompactNumber(summary.trainings_completed)} />
                 <Detail label="Sell-out déclaré" value={`${formatCompactNumber(summary.sell_out_units)} unités`} />
-                <Detail label="DN moyenne" value={formatCompactPercent(summary.avg_distribution_rate)} />
-                <Detail label="DN stratégique" value={formatCompactPercent(summary.strategic_distribution_rate)} />
+                <Detail label="Assortiment moyen" value={formatCompactPercent(summary.avg_distribution_rate)} />
+                <Detail label="Assortiment stratégique" value={formatCompactPercent(summary.strategic_distribution_rate)} />
               </CardContent>
             </Card>
           </section>
@@ -380,10 +449,10 @@ export default async function NetworkPage({ searchParams }: { searchParams: Sear
                 <TableRow>
                   <TableHead>Pharmacie</TableHead>
                   <TableHead>Santé</TableHead>
-                  <TableHead>CA</TableHead>
+                  <TableHead>CA facturé</TableHead>
                   <TableHead>Implant.</TableHead>
                   <TableHead>Réassorts</TableHead>
-                  <TableHead>DN</TableHead>
+                  <TableHead>Assortiment</TableHead>
                   <TableHead>Terrain</TableHead>
                   <TableHead>Action</TableHead>
                 </TableRow>
@@ -484,7 +553,7 @@ export default async function NetworkPage({ searchParams }: { searchParams: Sear
               <TableHeader>
                 <TableRow>
                   <TableHead>Agent</TableHead>
-                  <TableHead>CA</TableHead>
+                  <TableHead>CA facturé</TableHead>
                   <TableHead>Implant.</TableHead>
                   <TableHead>Réassorts</TableHead>
                   <TableHead>1er réassort</TableHead>
@@ -516,7 +585,7 @@ export default async function NetworkPage({ searchParams }: { searchParams: Sear
                     </TableCell>
                     <TableCell>
                       {formatCompactPercent(row.complete_data_rate)}
-                      <p className="text-xs text-muted-foreground">DN strat. {formatCompactPercent(row.strategic_distribution_rate)}</p>
+                      <p className="text-xs text-muted-foreground">Assort. strat. {formatCompactPercent(row.strategic_distribution_rate)}</p>
                     </TableCell>
                   </TableRow>
                 ))}
