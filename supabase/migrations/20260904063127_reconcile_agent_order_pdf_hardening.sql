@@ -1,5 +1,3 @@
--- Keep order facts authoritative even when a browser or an import supplies stale values.
-
 create or replace function private.validate_order_item()
 returns trigger language plpgsql security definer set search_path = '' as $$
 declare
@@ -73,4 +71,4 @@ revoke all on function private.validate_order_item() from public, anon, authenti
 revoke all on function public.create_order(uuid, jsonb, jsonb) from public, anon;
 revoke all on function public.change_order_status(uuid, public.order_status, text) from public, anon;
 grant execute on function public.create_order(uuid, jsonb, jsonb) to authenticated;
-grant execute on function public.change_order_status(uuid, public.order_status, text) to authenticated;
+grant execute on function public.change_order_status(uuid, public.order_status, text) to authenticated;;

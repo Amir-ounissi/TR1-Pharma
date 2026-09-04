@@ -316,4 +316,4 @@ grant execute on function public.approve_access_request_with_departments(
   uuid,
   text[],
   text
-) to authenticated;
+) to authenticated;;
