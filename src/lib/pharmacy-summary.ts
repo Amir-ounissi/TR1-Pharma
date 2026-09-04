@@ -46,7 +46,6 @@ type BrandPharmacyTimelineRow = {
   event_type: string;
   title: string | null;
   details: string | null;
-  author_name: string | null;
   occurred_at: string;
 };
 
@@ -248,7 +247,7 @@ function mapTimelineEvent(row: BrandPharmacyTimelineRow): PharmacyQuickEvent {
       kind: "interaction",
       label: row.title || "Interaction commerciale",
       date: formatDate(row.occurred_at),
-      detail: row.details || row.author_name,
+      detail: row.details,
     };
   }
   if (row.event_type === "status_change") {
@@ -315,7 +314,7 @@ export async function loadPharmacySummary(supabase: SupabaseLike, brandPharmacyI
     unwrapQuery(
       supabase
         .from("brand_pharmacy_timeline")
-        .select("brand_pharmacy_id,event_type,title,details,author_name,occurred_at")
+        .select("brand_pharmacy_id,event_type,title,details,occurred_at")
         .eq("brand_pharmacy_id", brandPharmacyId)
         .order("occurred_at", { ascending: false })
         .limit(3),
