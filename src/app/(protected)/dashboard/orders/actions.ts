@@ -32,7 +32,6 @@ export async function createOrderAction(_state: OrderActionState, formData: Form
     orderStatus: z.enum(orderStatuses),
     orderDate: z.string().min(1),
     shippingAmountHt: z.coerce.number().min(0),
-    paymentStatus: z.enum(["not_applicable", "pending", "partially_paid", "paid", "overdue", "refunded"]),
     notes: z.string().trim().max(4000).optional(),
   }).safeParse(Object.fromEntries(formData));
   const productIds = formData.getAll("productId").map(String);
@@ -79,7 +78,7 @@ export async function createOrderAction(_state: OrderActionState, formData: Form
       order_status: header.data.orderStatus,
       order_date: new Date(header.data.orderDate).toISOString(),
       shipping_amount_ht: header.data.shippingAmountHt,
-      payment_status: header.data.paymentStatus,
+      payment_status: "not_applicable",
       notes: header.data.notes || null,
       source: "manual",
     },

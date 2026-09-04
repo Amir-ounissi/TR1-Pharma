@@ -170,7 +170,7 @@ export async function confirmPdfOrderAction(_state: PdfOrderActionState, formDat
       city: parsed.data.newPharmacy.city || null,
       address_line_1: parsed.data.newPharmacy.address || null,
     } : null,
-    order_payload: { external_order_id: parsed.data.orderNumber, order_number: parsed.data.orderNumber, order_type: "other", order_status: isAgent ? "pending" : "confirmed", order_date: new Date(parsed.data.orderDate).toISOString(), shipping_amount_ht: 0, payment_status: "pending", notes: "Commande créée depuis un PDF vérifié par l’utilisateur.", source: "import" },
+    order_payload: { external_order_id: parsed.data.orderNumber, order_number: parsed.data.orderNumber, order_type: "other", order_status: isAgent ? "pending" : "confirmed", order_date: new Date(parsed.data.orderDate).toISOString(), shipping_amount_ht: 0, payment_status: "not_applicable", notes: "Commande créée depuis un PDF vérifié par l’utilisateur.", source: "import" },
     item_payload: trustedItems,
   });
   if (error) return { error: error.code === "23505" ? "Cette commande existe déjà." : error.message };
