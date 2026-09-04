@@ -21,12 +21,99 @@ const recentMissionTitle = `Animation récente ${suffix}`;
 
 async function createOrder(externalId: string, date: Date, type: "initial" | "reorder", amount: number) {
   const manager = await userClient("admin@dermavita.local");
-  const { error } = await manager.rpc("create_order", {
+  const { data: orderId, error } = await manager.rpc("create_order", {
     target_brand_pharmacy_id: relationId,
-    order_payload: { external_order_id: externalId, order_status: "delivered", order_type: type, order_date: date.toISOString() },
+    order_payload: {
+      external_order_id: externalId,
+      order_status: "confirmed",
+      order_type: type,
+      order_date: date.toISOString(),
+    },
     item_payload: [{ product_id: productId, quantity: 1, unit_price_ht: amount }],
   });
   expect(error).toBeNull();
+  expect(orderId).toBeTruthy();
+
+  const { error: invoicedError } = await manager.rpc("change_order_status", {
+    target_order_id: orderId,
+    target_status: "invoiced",
+    reason: null,
+  });
+  expect(invoicedError).toBeNull();
+
+  const { error: deliveredError } = await manager.rpc("change_order_status", {
+    target_order_id: orderId,
+    target_status: "delivered",
+    reason: null,
+  });
+  expect(deliveredError).toBeNull();
+}
+
+async function createCompletedMissionFixture({
+  id,
+  missionType,
+  title,
+  objective,
+  startAt,
+  endAt,
+  providerCostHt,
+  travelCostHt = 0,
+  reportPayload,
+}: {
+  id: string;
+  missionType: "animation" | "training";
+  title: string;
+  objective: string;
+  startAt: Date;
+  endAt: Date;
+  providerCostHt: number;
+  travelCostHt?: number;
+  reportPayload: Record<string, unknown>;
+}) {
+  const admin = adminClient();
+  const providerId = "00000000-0000-0000-0000-0000000000a5";
+
+  const { error: missionError } = await admin.from("missions").insert({
+    id,
+    organization_id: organizationId,
+    brand_id: brandId,
+    brand_pharmacy_id: relationId,
+    pharmacy_id: pharmacyId,
+    mission_type: missionType,
+    status: "in_progress",
+    title,
+    objective,
+    managed_by: managerId,
+    created_by: managerId,
+    assigned_user_id: providerId,
+    scheduled_start_at: startAt.toISOString(),
+    scheduled_end_at: endAt.toISOString(),
+    actual_start_at: startAt.toISOString(),
+    actual_end_at: endAt.toISOString(),
+    provider_cost_ht: providerCostHt,
+    travel_cost_ht: travelCostHt,
+    source: "import",
+  });
+  expect(missionError).toBeNull();
+
+  const provider = await userClient("animatrice@dermavita.local");
+  const { data: reportId, error: reportError } = await provider.rpc("save_mission_report", {
+    target_mission_id: id,
+    report_payload: {
+      report_status: "submitted",
+      ...reportPayload,
+    },
+  });
+  expect(reportError).toBeNull();
+  expect(reportId).toBeTruthy();
+
+  const tr1 = await userClient("superadmin@tr1.local");
+  const { error: reviewError } = await tr1.rpc("review_mission_report", {
+    target_report_id: reportId,
+    target_status: "validated",
+    reason: null,
+  });
+  expect(reviewError).toBeNull();
 }
 
 test.describe.serial("Sprint 10 — Performance des missions", () => {
@@ -55,96 +142,56 @@ test.describe.serial("Sprint 10 — Performance des missions", () => {
       created_by: managerId,
     });
     expect(relationError).toBeNull();
-    const { error: missionError } = await admin.from("missions").insert({
+    await createCompletedMissionFixture({
       id: missionId,
-      organization_id: organizationId,
-      brand_id: brandId,
-      brand_pharmacy_id: relationId,
-      pharmacy_id: pharmacyId,
-      mission_type: "animation",
-      status: "completed",
+      missionType: "animation",
       title: missionTitle,
       objective: "Mesurer les résultats observés",
-      briefing: "Présenter la gamme sans allégation causale.",
-      managed_by: managerId,
-      created_by: managerId,
-      actual_start_at: new Date(missionDate.getTime() - 6 * 3_600_000).toISOString(),
-      actual_end_at: missionDate.toISOString(),
-      completed_at: missionDate.toISOString(),
-      provider_cost_ht: 200,
-      travel_cost_ht: 50,
+      startAt: new Date(missionDate.getTime() - 6 * 3_600_000),
+      endAt: missionDate,
+      providerCostHt: 200,
+      travelCostHt: 50,
+      reportPayload: {
+        summary: "Animation menée avec résultats complets.",
+        units_sold: 20,
+        duration_minutes: 360,
+        customer_contacts: 50,
+        participant_count: 12,
+        satisfaction_score: 90,
+      },
     });
-    expect(missionError).toBeNull();
-    const { error: reportError } = await admin.from("mission_reports").insert({
-      organization_id: organizationId,
-      brand_id: brandId,
-      mission_id: missionId,
-      submitted_by: managerId,
-      report_status: "validated",
-      visibility: "shared",
-      summary: "Animation menée avec résultats complets.",
-      units_sold: 20,
-      duration_minutes: 360,
-      customer_contacts: 50,
-      participant_count: 12,
-      satisfaction_score: 90,
-      validated_by: managerId,
-      validated_at: missionDate.toISOString(),
-    });
-    expect(reportError).toBeNull();
+
     const recentMissionDate = new Date(Date.now() - 10 * 86_400_000);
-    const { error: extraMissionError } = await admin.from("missions").insert([
-      {
-        id: recentMissionId,
-        organization_id: organizationId,
-        brand_id: brandId,
-        brand_pharmacy_id: relationId,
-        pharmacy_id: pharmacyId,
-        mission_type: "animation",
-        status: "completed",
-        title: recentMissionTitle,
-        objective: "Observer une fenêtre encore immature",
-        managed_by: managerId,
-        created_by: managerId,
-        actual_start_at: new Date(recentMissionDate.getTime() - 4 * 3_600_000).toISOString(),
-        actual_end_at: recentMissionDate.toISOString(),
-        completed_at: recentMissionDate.toISOString(),
-        provider_cost_ht: 120,
+    await createCompletedMissionFixture({
+      id: recentMissionId,
+      missionType: "animation",
+      title: recentMissionTitle,
+      objective: "Observer une fenêtre encore immature",
+      startAt: new Date(recentMissionDate.getTime() - 4 * 3_600_000),
+      endAt: recentMissionDate,
+      providerCostHt: 120,
+      reportPayload: {
+        summary: "Mission récente complète.",
+        units_sold: 8,
+        duration_minutes: 240,
+        customer_contacts: 20,
       },
-      {
-        id: overlappingMissionId,
-        organization_id: organizationId,
-        brand_id: brandId,
-        brand_pharmacy_id: relationId,
-        pharmacy_id: pharmacyId,
-        mission_type: "training",
-        status: "completed",
-        title: `Formation proche ${suffix}`,
-        objective: "Tester les interventions proches",
-        managed_by: managerId,
-        created_by: managerId,
-        actual_start_at: new Date(missionDate.getTime() + 4 * 86_400_000).toISOString(),
-        actual_end_at: new Date(missionDate.getTime() + 5 * 86_400_000).toISOString(),
-        completed_at: new Date(missionDate.getTime() + 5 * 86_400_000).toISOString(),
-        provider_cost_ht: 100,
-      },
-    ]);
-    expect(extraMissionError).toBeNull();
-    const { error: recentReportError } = await admin.from("mission_reports").insert({
-      organization_id: organizationId,
-      brand_id: brandId,
-      mission_id: recentMissionId,
-      submitted_by: managerId,
-      report_status: "validated",
-      visibility: "shared",
-      summary: "Mission récente complète.",
-      units_sold: 8,
-      duration_minutes: 240,
-      customer_contacts: 20,
-      validated_by: managerId,
-      validated_at: recentMissionDate.toISOString(),
     });
-    expect(recentReportError).toBeNull();
+
+    await createCompletedMissionFixture({
+      id: overlappingMissionId,
+      missionType: "training",
+      title: `Formation proche ${suffix}`,
+      objective: "Tester les interventions proches",
+      startAt: new Date(missionDate.getTime() + 4 * 86_400_000),
+      endAt: new Date(missionDate.getTime() + 5 * 86_400_000),
+      providerCostHt: 100,
+      reportPayload: {
+        summary: "Formation menée avec participants documentés.",
+        participant_count: 10,
+      },
+    });
+
     await createOrder(`S10-BEFORE-${suffix}`, new Date(missionDate.getTime() - 15 * 86_400_000), "initial", 100);
     await createOrder(`S10-AFTER-${suffix}`, new Date(missionDate.getTime() + 10 * 86_400_000), "reorder", 160);
     const { error: fixtureTaskError } = await admin.from("tasks").delete().eq("brand_pharmacy_id", relationId);
@@ -198,20 +245,33 @@ test.describe.serial("Sprint 10 — Performance des missions", () => {
   });
 
   test("relance recommandée exige une création explicite et persiste en base", async ({ page }) => {
+    const manager = await userClient("admin@dermavita.local");
+    const { data: impactBefore, error: impactBeforeError } = await manager.rpc("get_mission_impact", {
+      target_mission_id: recentMissionId,
+    });
+    expect(impactBeforeError).toBeNull();
+    expect(impactBefore?.[0].followup_recommended).toBe(true);
+
     await signIn(page, "admin@dermavita.local", /Dermavita/);
-    await page.goto(`/dashboard/missions/${missionId}`);
+    await page.goto(`/dashboard/missions/${recentMissionId}`);
     const form = page.getByTestId("mission-impact").locator("form");
     await form.locator('input[name="dueAt"]').fill("2026-12-01T10:00");
     await form.getByRole("button", { name: "Créer la tâche" }).click();
+
     const admin = adminClient();
     await expect.poll(async () => {
-      const { count } = await admin.from("tasks").select("*", { count: "exact", head: true })
-        .eq("brand_pharmacy_id", relationId).eq("title", `Suivi après mission — ${missionTitle}`);
+      const { count } = await admin
+        .from("tasks")
+        .select("*", { count: "exact", head: true })
+        .eq("brand_pharmacy_id", relationId)
+        .eq("title", `Suivi après mission — ${recentMissionTitle}`);
       return count;
     }).toBe(1);
-    const manager = await userClient("admin@dermavita.local");
+
     await expect.poll(async () => {
-      const { data } = await manager.rpc("get_mission_impact", { target_mission_id: missionId });
+      const { data } = await manager.rpc("get_mission_impact", {
+        target_mission_id: recentMissionId,
+      });
       return data?.[0].followup_recommended;
     }).toBe(false);
   });
