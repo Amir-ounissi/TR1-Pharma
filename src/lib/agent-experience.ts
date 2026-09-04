@@ -53,7 +53,7 @@ export function suggestNextAction(input: NextActionInput) {
     return { type: "follow_up", delayDays: 3, label: "Relancer l’offre" };
   }
   if (input.outcome === "order_expected") {
-    return { type: "request_order", delayDays: 5, label: "Confirmer la commande" };
+    return { type: "request_order", delayDays: 5, label: "Récupérer la commande" };
   }
   if (input.commercialStatus === "dormant") {
     return { type: "visit", delayDays: 7, label: "Planifier une visite de réactivation" };

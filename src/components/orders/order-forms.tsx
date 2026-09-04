@@ -3,12 +3,13 @@
 import { useActionState, useState } from "react";
 import { changeOrderStatusAction, createOrderAction, searchOrderPharmaciesAction, type OrderPharmacySearchResult } from "@/app/(protected)/dashboard/orders/actions";
 import { ActionFeedback } from "@/components/reference/action-feedback";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { uiLabel } from "@/lib/ui-copy";
+import { orderStatusLabel, uiLabel } from "@/lib/ui-copy";
 
 type Option = { id: string; name: string; detail?: string; price?: number | null; taxRate?: number | null; unitsPerCase?: number | null; minimumOrderQuantity?: number | null };
 
@@ -94,24 +95,26 @@ export function OrderStatusForm({ orderId, currentStatus, isAgent = false, revie
   }
 
   if (isAgent) {
-    return <div className="space-y-2"><Badge variant="secondary">{uiLabel(currentStatus)}</Badge><p className="text-sm text-muted-foreground">La suite du traitement est gérée par la marque.</p></div>;
+    return <div className="space-y-2"><Badge variant="secondary">{orderStatusLabel(currentStatus)}</Badge><p className="text-sm text-muted-foreground">La suite du traitement est gérée par la marque.</p></div>;
   }
 
   const nextStatuses =
-    currentStatus === "confirmed"
-      ? ["confirmed", "invoiced", "cancelled"]
-      : currentStatus === "invoiced"
-        ? ["invoiced", "partially_delivered", "delivered", "cancelled", "refunded"]
-        : currentStatus === "partially_delivered"
-          ? ["partially_delivered", "delivered", "cancelled", "refunded"]
-          : currentStatus === "delivered"
-            ? ["delivered", "cancelled", "refunded"]
-            : [currentStatus];
+    currentStatus === "draft"
+      ? ["draft", "confirmed", "cancelled"]
+      : currentStatus === "confirmed"
+        ? ["confirmed", "invoiced", "cancelled"]
+        : currentStatus === "invoiced"
+          ? ["invoiced", "partially_delivered", "delivered", "cancelled", "refunded"]
+          : currentStatus === "partially_delivered"
+            ? ["partially_delivered", "delivered", "cancelled", "refunded"]
+            : currentStatus === "delivered"
+              ? ["delivered", "cancelled", "refunded"]
+              : [currentStatus];
 
   return <form action={action} className="space-y-3">
     <input type="hidden" name="orderId" value={orderId} />
     <ActionFeedback {...state} />
-    <div className="space-y-2"><Label>Statut opérationnel</Label><Select name="orderStatus" defaultValue={currentStatus}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent>{nextStatuses.map((value) => <SelectItem key={value} value={value}>{uiLabel(value)}</SelectItem>)}</SelectContent></Select></div>
+    <div className="space-y-2"><Label>Statut opérationnel</Label><Select name="orderStatus" defaultValue={currentStatus}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent>{nextStatuses.map((value) => <SelectItem key={value} value={value}>{orderStatusLabel(value)}</SelectItem>)}</SelectContent></Select></div>
     <div className="space-y-2"><Label>Motif d’annulation</Label><Input name="reason" /></div>
     <Button disabled={pending} className="w-full">Mettre à jour</Button>
   </form>;

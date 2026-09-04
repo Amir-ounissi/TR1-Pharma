@@ -1,7 +1,7 @@
 const valueLabels: Record<string, string> = {
   // Commandes
   draft: "Brouillon",
-  pending: "À valider",
+  pending: "En attente",
   needs_correction: "À corriger",
   confirmed: "Validée",
   invoiced: "Facturée",
@@ -99,6 +99,24 @@ const valueLabels: Record<string, string> = {
 export function uiLabel(value: string | null | undefined) {
   if (!value) return "—";
   return valueLabels[value] ?? value;
+}
+
+const orderStatusLabels: Record<string, string> = {
+  draft: "Brouillon",
+  pending: "À valider",
+  needs_correction: "À corriger",
+  confirmed: "Validée",
+  invoiced: "Facturée",
+  partially_delivered: "Partiellement livrée",
+  delivered: "Livrée",
+  rejected: "Refusée",
+  cancelled: "Annulée",
+  refunded: "Remboursée",
+};
+
+export function orderStatusLabel(value: string | null | undefined) {
+  if (!value) return "—";
+  return orderStatusLabels[value] ?? uiLabel(value);
 }
 
 const exactMessages: Record<string, string> = {
