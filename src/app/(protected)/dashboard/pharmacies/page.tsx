@@ -13,7 +13,7 @@ import { InlineError } from "@/components/ux/inline-error";
 import { MetricStrip } from "@/components/ux/metric-strip";
 import { Toolbar, ToolbarMeta, ToolbarRow } from "@/components/ux/toolbar";
 import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
-import { loadPharmacySummary } from "@/lib/pharmacy-summary";
+import { loadPharmacySummaryAction } from "@/app/(protected)/dashboard/pharmacies/actions";
 import { loadNetworkMapData, type NetworkMapRoleScope, type NetworkMapView } from "@/lib/network-map";
 import { activityStatuses, commercialStatuses, labels, potentialLevels, priorityLevels } from "@/lib/reference-data";
 
@@ -69,21 +69,6 @@ export default async function PharmaciesPage({ searchParams }: { searchParams: S
 
   const hasActiveFilters = ["q", "status", "activity", "priority", "potential", "city", "postalCode", "agent", "territory", "group", "sort", "direction", "page"]
     .some((key) => typeof params[key] === "string" && params[key] !== "" && params[key] !== "all" && !(key === "sort" && params[key] === "trade_name") && !(key === "direction" && params[key] === "asc") && !(key === "page" && params[key] === "1"));
-
-  async function loadSummaryAction(brandPharmacyId: string) {
-    "use server";
-
-    try {
-      const summary = await loadPharmacySummary(supabase as never, brandPharmacyId);
-      return { summary, error: null };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Une erreur inconnue est survenue.";
-      if (message === "forbidden") {
-        return { summary: null, error: "Cette pharmacie n’est pas accessible dans votre périmètre actuel." };
-      }
-      return { summary: null, error: "Le résumé pharmacie est indisponible pour le moment." };
-    }
-  }
 
   return (
     <div className={view === "map" ? "flex min-h-[calc(100vh-8.5rem)] flex-col gap-3 overflow-hidden" : "space-y-3"}>
@@ -230,7 +215,7 @@ export default async function PharmaciesPage({ searchParams }: { searchParams: S
           }
         />
       ) : (
-        <PharmacyListWithPanel rows={rows} loadSummaryAction={loadSummaryAction} />
+        <PharmacyListWithPanel rows={rows} loadSummaryAction={loadPharmacySummaryAction} />
       )}
 
       {rows.length > 0 ? (
