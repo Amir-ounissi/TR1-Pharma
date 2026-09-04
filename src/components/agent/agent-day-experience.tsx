@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type ComponentProps, type ReactNode } from "react";
-import { AlertTriangle, ArrowRight, CalendarCheck, CalendarPlus, ClipboardCheck, ClipboardPlus, MapPin, MapPinned, Navigation, Phone, Play, ShoppingCart, Square, X } from "lucide-react";
+import { AlertTriangle, ArrowRight, CalendarCheck, CalendarPlus, CheckCircle2, ClipboardCheck, ClipboardPlus, MapPin, MapPinned, Navigation, Phone, Play, ShoppingCart, Square, X } from "lucide-react";
 import { trackProductEventAction } from "@/app/(protected)/dashboard/agent/actions";
 import { QuickInteraction } from "@/components/agent/quick-interaction";
 import { TrackedLink } from "@/components/agent/tracked-link";
+import { VisitCompletionFeedback } from "@/components/agent/visit-completion-feedback";
 import { ReorderFollowupForm } from "@/components/commercial/reorder-followup-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -61,7 +62,7 @@ export function AgentDayExperience({
 }) {
   const [activeVisit, setActiveVisit] = useState<ActiveVisit | null>(null);
   const [finishing, setFinishing] = useState(false);
-  const [completionMessage, setCompletionMessage] = useState(false);
+  const [completionMessage, setCompletionMessage] = useState<string | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
   const overdue = day.tasks.filter((task) => task.is_overdue);
   const draftScope = `${brandId}:${userId}`;
@@ -94,7 +95,7 @@ export function AgentDayExperience({
     saveActiveVisit(localStorage, started, userId);
     setActiveVisit(started);
     setFinishing(false);
-    setCompletionMessage(false);
+    setCompletionMessage(null);
     void trackProductEventAction("interaction_started", visit.pharmacy_id);
   }
 
@@ -107,16 +108,18 @@ export function AgentDayExperience({
     clearActiveVisit(localStorage, brandId, userId);
     setActiveVisit(null);
     setFinishing(false);
-    setCompletionMessage(false);
+    setCompletionMessage(null);
   }
 
-  const completeVisit = useCallback(() => {
+  const completeVisit = useCallback((message: string) => {
     clearActiveVisit(localStorage, brandId, userId);
     setActiveVisit(null);
     setFinishing(false);
-    setCompletionMessage(true);
+    setCompletionMessage(message);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [brandId, userId]);
+
+  const dismissCompletion = useCallback(() => setCompletionMessage(null), []);
 
   const formVisit = activeVisit ?? (visit ? {
     brandPharmacyId: visit.brand_pharmacy_id,
@@ -131,7 +134,7 @@ export function AgentDayExperience({
       ) : visit ? (
         <NextVisitCard visit={visit} wazeUrl={wazeUrl} mapsUrl={mapsUrl} onStart={startVisit} />
       ) : null}
-      {completionMessage ? <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">Visite terminée. Interaction et prochaine action enregistrées.</p> : null}
+      {completionMessage ? <VisitCompletionFeedback message={completionMessage} onDismiss={dismissCompletion} /> : null}
 
       {finishing && formVisit && visit ? (
         <div ref={reportRef} className="scroll-mt-24">
@@ -148,15 +151,15 @@ export function AgentDayExperience({
         </div>
       ) : null}
 
-      {!activeVisit && opportunities.length ? (
+      {!activeVisit ? (
         <section className="space-y-3" aria-labelledby="reorder-opportunities-title">
           <div className="flex items-center justify-between">
-            <div><p className="text-xs font-semibold uppercase tracking-[.16em] text-[#2d6f9f]">Priorités commerciales</p><h2 id="reorder-opportunities-title" className="text-xl font-semibold text-[#0f2740]">Opportunités de réassort</h2></div>
+            <div><p className="text-xs font-semibold uppercase tracking-[.16em] text-[var(--tr1-blue)]">Priorités commerciales</p><h2 id="reorder-opportunities-title" className="text-xl font-semibold text-[var(--tr1-navy)]">{opportunities.length ? `TR1 a détecté ${opportunities.length} opportunité${opportunities.length > 1 ? "s" : ""}` : "Opportunités de réassort"}</h2></div>
             <Badge variant="secondary">{opportunities.length}</Badge>
           </div>
-          <div className="grid gap-3 lg:grid-cols-2">
+          {opportunities.length ? <div className="grid gap-3 lg:grid-cols-2">
             {opportunities.map((opportunity) => (
-              <Card key={opportunity.brand_pharmacy_id} data-testid="agent-reorder-opportunity" className="border-[#e3d8c6] bg-[#fffaf0]">
+              <Card key={opportunity.brand_pharmacy_id} data-testid="agent-reorder-opportunity" className="agent-card-enter terrain-interactive border-[#e3d8c6] bg-[#fffaf0]">
                 <CardContent className="space-y-3 pt-5">
                   <div className="flex items-start justify-between gap-3">
                     <div><Link href={`/dashboard/pharmacies/${opportunity.brand_pharmacy_id}`} className="font-semibold text-[#0f2740] hover:underline">{opportunity.pharmacy_name}</Link><p className="text-sm text-muted-foreground">{presentationLabel(opportunity.health_status)} · {opportunity.expected_reorder_delay_days && opportunity.expected_reorder_delay_days > 0 ? `${opportunity.expected_reorder_delay_days} jours de retard` : opportunity.recommendation}</p></div>
@@ -167,24 +170,24 @@ export function AgentDayExperience({
                 </CardContent>
               </Card>
             ))}
-          </div>
+          </div> : <Card><CardContent className="flex items-start gap-3 py-5"><CheckCircle2 className="mt-0.5 size-5 text-[var(--tr1-success)]" /><div><p className="font-semibold text-[var(--tr1-navy)]">Aucune opportunité prioritaire détectée actuellement.</p><p className="mt-1 text-sm text-muted-foreground">Le moteur de réassort continuera de signaler les comptes qui nécessitent une action.</p></div></CardContent></Card>}
         </section>
       ) : null}
 
       <section className={`grid gap-4 md:grid-cols-2 xl:grid-cols-4 ${activeVisit ? "opacity-70" : ""}`} aria-label="Aujourd’hui">
-        <DayList title="En retard" icon={<AlertTriangle />} count={overdue.length}>
+        <DayList title="En retard" icon={<AlertTriangle />} count={overdue.length} emptyTitle="Aucun retard" emptyDetail="Votre suivi est à jour.">
           {overdue.map((task) => {
             const timing = formatActionTiming(task.due_at);
             return <DayLink key={task.id} href={`/dashboard/pharmacies/${task.brand_pharmacy_id}?tab=activity`} title={`${presentationLabel(task.task_type)} — ${presentationText(task.title)}`} detail={`${task.pharmacy_name} · ${timing.label} · ${formatDate(task.due_at, true)}`} />;
           })}
         </DayList>
-        <DayList title="Missions du jour" icon={<CalendarCheck />} count={day.missions.length}>
+        <DayList title="Missions du jour" icon={<CalendarCheck />} count={day.missions.length} emptyTitle="Aucune mission aujourd’hui" emptyDetail="Consultez vos relances pour préparer la suite.">
           {day.missions.map((mission) => <DayLink key={mission.id} href={`/dashboard/missions/${mission.id}`} title={presentationText(mission.title)} detail={`${mission.pharmacy_name} · ${formatDate(mission.scheduled_start_at, true)}`} />)}
         </DayList>
-        <DayList title="Relances" icon={<ArrowRight />} count={day.follow_ups.length}>
+        <DayList title="Relances" icon={<ArrowRight />} count={day.follow_ups.length} emptyTitle="Aucune relance sans suite" emptyDetail="Chaque compte actif possède une prochaine action.">
           {day.follow_ups.map((item) => <DayLink key={item.brand_pharmacy_id} href={`/dashboard/pharmacies/${item.brand_pharmacy_id}?tab=activity`} title={item.pharmacy_name} detail="Compte actif sans prochaine action" />)}
         </DayList>
-        <DayList title="Rapports à terminer" icon={<ClipboardCheck />} count={day.reports.length}>
+        <DayList title="Rapports à terminer" icon={<ClipboardCheck />} count={day.reports.length} emptyTitle="Tous les comptes rendus sont traités" emptyDetail="Aucun brouillon ou correctif en attente.">
           {day.reports.map((report) => <DayLink key={report.id} href={`/dashboard/missions/${report.mission_id}`} title={presentationText(report.title)} detail={presentationLabel(report.report_status)} />)}
         </DayList>
       </section>
@@ -206,12 +209,12 @@ export function AgentDayExperience({
 function NextVisitCard({ visit, wazeUrl, mapsUrl, onStart }: { visit: AgentNextVisit; wazeUrl: string; mapsUrl: string; onStart: () => void }) {
   const timing = formatActionTiming(visit.next_action_at);
   return (
-    <Card className="scroll-mt-24 overflow-hidden bg-[#fffaf0]" data-testid="next-visit-card" id="next-visit-card">
+    <Card className="agent-card-enter terrain-interactive scroll-mt-24 overflow-hidden bg-[#fffaf0]" data-testid="next-visit-card" id="next-visit-card">
       <div className="h-0.5 bg-[#ee6c3b]" />
       <CardHeader className="gap-2 px-4 py-4 sm:px-7 sm:py-6">
         <div className="flex items-start justify-between gap-2">
           <div><p className="font-mono text-[0.58rem] font-bold uppercase tracking-[.16em] text-[#c9562d]">Prochaine visite</p><CardTitle className="mt-1 font-mono text-xl font-black uppercase tracking-[-0.045em] text-[#0f2740] sm:text-2xl">{visit.name}</CardTitle></div>
-          <Badge variant="outline" className="border-[#ee6c3b] bg-transparent text-[#c9562d]">{presentationLabel(visit.priority)}</Badge>
+          <div className="text-right"><p className="font-mono text-sm font-black text-[var(--tr1-navy)]">{formatDate(visit.scheduled_at, true)}</p><Badge variant="outline" className="mt-1 border-[#ee6c3b] bg-transparent text-[#c9562d]">{presentationLabel(visit.priority)}</Badge></div>
         </div>
         <p className="hidden text-sm text-[#526274] sm:block">{visit.address}</p>
       </CardHeader>
@@ -289,8 +292,8 @@ function CompactContext({ label, value, wide = false, alert = false }: { label: 
   return <div className={`rounded-[0.35rem] border bg-transparent p-2.5 ${wide ? "col-span-2" : ""}`}><p className="font-mono text-[0.55rem] font-bold uppercase tracking-[0.08em] text-[#768392]">{label}</p><p className={`mt-1 text-sm font-semibold ${alert ? "text-[#b83a22]" : "text-[#0f2740]"}`}>{value}</p></div>;
 }
 
-function DayList({ title, icon, count, children }: { title: string; icon: ReactNode; count: number; children: ReactNode }) {
-  return <Card className="sm:min-h-44"><CardHeader className="flex-row items-center justify-between"><div className="flex items-center gap-2 text-[#0f2740]">{icon}<CardTitle className="text-base">{title}</CardTitle></div><Badge variant="secondary">{count}</Badge></CardHeader><CardContent className="space-y-2">{count ? children : <p className="text-sm text-muted-foreground">Rien à traiter.</p>}</CardContent></Card>;
+function DayList({ title, icon, count, children, emptyTitle, emptyDetail }: { title: string; icon: ReactNode; count: number; children: ReactNode; emptyTitle: string; emptyDetail: string }) {
+  return <Card className="agent-card-enter sm:min-h-44"><CardHeader className="flex-row items-center justify-between"><div className="flex items-center gap-2 text-[#0f2740]">{icon}<CardTitle className="text-base">{title}</CardTitle></div><Badge variant="secondary">{count}</Badge></CardHeader><CardContent className="space-y-2">{count ? children : <div className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 size-4 shrink-0 text-[var(--tr1-success)]" /><div><p className="text-sm font-semibold text-[var(--tr1-navy)]">{emptyTitle}</p><p className="mt-1 text-xs text-muted-foreground">{emptyDetail}</p></div></div>}</CardContent></Card>;
 }
 
 function DayLink({ href, title, detail }: { href: string; title: string; detail: string }) {

@@ -247,6 +247,44 @@
     letter-spacing: -0.035em;
     text-transform: uppercase;
   }
+
+  .agent-card-enter {
+    animation: tr1-card-enter 320ms ease-out both;
+  }
+
+  .terrain-interactive {
+    transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+  }
+
+  .terrain-interactive:hover,
+  .terrain-interactive:focus-within {
+    border-color: rgb(233 103 8 / 38%);
+    box-shadow: 0 12px 30px rgb(14 26 43 / 8%);
+    transform: translateY(-1px);
+  }
+
+  .visit-completion-feedback {
+    animation: tr1-completion-enter 360ms ease-out both;
+  }
+
+  .visit-completion-check {
+    animation: tr1-check-enter 300ms 100ms ease-out both;
+  }
+}
+
+@keyframes tr1-card-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes tr1-completion-enter {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes tr1-check-enter {
+  from { opacity: 0; transform: scale(0.82); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -94,5 +94,9 @@ export async function quickInteractionAction(
       target_metadata: { task_type: parsed.data.nextTaskType },
     });
   }
-  return { success: "Interaction et prochaine action enregistrées." };
+  return {
+    success: noNextAction
+      ? "Interaction enregistrée. Aucune prochaine action planifiée."
+      : "Interaction et prochaine action enregistrées.",
+  };
 }
