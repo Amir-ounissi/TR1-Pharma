@@ -127,8 +127,8 @@ cross join lateral (select id from public.users order by created_at limit 1) see
 
 insert into public.missions(
   organization_id,brand_id,pharmacy_id,brand_pharmacy_id,title,objective,status,
-  mission_type,scheduled_start_at,scheduled_end_at,actual_start_at,actual_end_at,
-  managed_by,created_by,completed_at,source,cost_actual_ht
+  mission_type,scheduled_start_at,scheduled_end_at,
+  managed_by,created_by,source,cost_actual_ht
 )
 select
   benchmark.organization_id,
@@ -137,15 +137,12 @@ select
   benchmark.brand_pharmacy_id,
   'Mission benchmark ' || benchmark.sequence,
   'Mesurer la performance',
-  'completed',
+  'requested',
   'animation',
   now() - make_interval(days => 30 + benchmark.sequence % 180),
   now() - make_interval(days => 30 + benchmark.sequence % 180) + interval '2 hours',
-  now() - make_interval(days => 30 + benchmark.sequence % 180),
-  now() - make_interval(days => 30 + benchmark.sequence % 180) + interval '2 hours',
   seed_user.id,
   seed_user.id,
-  now() - make_interval(days => 30 + benchmark.sequence % 180) + interval '2 hours',
   'import',
   80
 from benchmark_pharmacies benchmark

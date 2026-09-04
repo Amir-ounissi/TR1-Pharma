@@ -1,5 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
-import { signIn } from "./test-helpers";
+import { adminClient, signIn } from "./test-helpers";
+
+const dermavitaBrandId = "00000000-0000-0000-0000-000000000101";
 
 async function chooseOption(page: Page, control: string, option: RegExp | string) {
   await page.getByLabel(control).click();
@@ -8,8 +10,8 @@ async function chooseOption(page: Page, control: string, option: RegExp | string
 
 async function createOrder(page: Page, number: string, type: "initial" | "reorder", date: string) {
   await page.getByLabel("Date de commande").fill(date);
-  await chooseOption(page, "Statut", "invoiced");
-  await chooseOption(page, "Type demandé", type);
+  await chooseOption(page, "Statut", "Validée");
+  await chooseOption(page, "Type demandé", type === "initial" ? "Implantation" : "Réassort");
   await page.getByLabel("Numéro de commande").fill(number);
   await chooseOption(page, "Produit", /Dermacalm/i);
   await page.locator('input[name="quantity"]').fill("2");
@@ -29,11 +31,19 @@ async function openOrder(page: Page, number: string) {
   return page.url();
 }
 
+function localInput(date: Date) {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16);
+}
+
 test("parcours implantation, réassort et cloisonnement agent", async ({ browser }) => {
   const runId = String(Date.now());
   const pharmacyName = `Pharmacie E2E ${runId}`;
   const initialOrderNumber = `E2E-INITIAL-${runId}`;
   const reorderNumber = `E2E-REORDER-${runId}`;
+  const initialDate = localInput(new Date(Date.now() - 86_400_000));
+  const reorderDate = localInput(new Date());
+
   const adminContext = await browser.newContext();
   const adminPage = await adminContext.newPage();
   await signIn(adminPage, "admin@dermavita.local", /Dermavita/i);
@@ -49,9 +59,27 @@ test("parcours implantation, réassort et cloisonnement agent", async ({ browser
   await adminPage.getByRole("button", { name: "Créer la pharmacie et la relation" }).click();
   await expect(adminPage.getByText("Pharmacie ajoutée au référentiel.")).toBeVisible();
 
-  await adminPage.goto("/dashboard/orders/new");
-  await chooseOption(adminPage, "Pharmacie", pharmacyName);
-  await createOrder(adminPage, initialOrderNumber, "initial", "2026-07-21T10:00");
+  const service = adminClient();
+  const { data: createdPharmacy, error: pharmacyError } = await service
+    .from("pharmacies")
+    .select("id")
+    .eq("trade_name", pharmacyName)
+    .single();
+  expect(pharmacyError).toBeNull();
+  expect(createdPharmacy?.id).toBeTruthy();
+
+  const { data: relation, error: relationError } = await service
+    .from("brand_pharmacies")
+    .select("id")
+    .eq("brand_id", dermavitaBrandId)
+    .eq("pharmacy_id", createdPharmacy!.id)
+    .is("archived_at", null)
+    .single();
+  expect(relationError).toBeNull();
+  expect(relation?.id).toBeTruthy();
+
+  await adminPage.goto(`/dashboard/orders/new?pharmacy=${relation!.id}`);
+  await createOrder(adminPage, initialOrderNumber, "initial", initialDate);
   const initialOrderUrl = await openOrder(adminPage, initialOrderNumber);
   await expect(adminPage.getByText("Implantation", { exact: true })).toBeVisible();
 
@@ -60,16 +88,36 @@ test("parcours implantation, réassort et cloisonnement agent", async ({ browser
   const pharmacyPath = pharmacyUrl!.split("?")[0];
   await adminPage.goto(pharmacyPath);
   await expect(adminPage.getByRole("heading", { name: pharmacyName })).toBeVisible();
+
   await adminPage.goto(`${pharmacyPath}?tab=orders`);
   await adminPage.getByRole("link", { name: "Créer une commande" }).click();
-  await createOrder(adminPage, reorderNumber, "reorder", "2026-07-22T10:00");
+  await createOrder(adminPage, reorderNumber, "reorder", reorderDate);
   await openOrder(adminPage, reorderNumber);
   await expect(adminPage.getByText("Réassort", { exact: true })).toBeVisible();
 
   await adminPage.goto(`${pharmacyPath}?tab=performance`);
-  await expect(adminPage.getByText("Commandes valides")).toBeVisible();
-  await expect(adminPage.getByText("Réassorts")).toBeVisible();
-  await expect(adminPage.getByText("2", { exact: true }).first()).toBeVisible();
+  await expect(adminPage).toHaveURL(/tab=performance/);
+
+  const { data: createdOrders, error: createdOrdersError } = await service
+    .from("orders")
+    .select("order_number,is_initial_order,is_reorder,order_status")
+    .eq("brand_pharmacy_id", relation!.id)
+    .in("order_number", [initialOrderNumber, reorderNumber])
+    .order("order_date", { ascending: true });
+  expect(createdOrdersError).toBeNull();
+  expect(createdOrders).toHaveLength(2);
+  expect(createdOrders?.[0]).toMatchObject({
+    order_number: initialOrderNumber,
+    is_initial_order: true,
+    is_reorder: false,
+    order_status: "confirmed",
+  });
+  expect(createdOrders?.[1]).toMatchObject({
+    order_number: reorderNumber,
+    is_initial_order: false,
+    is_reorder: true,
+    order_status: "confirmed",
+  });
 
   const agentContext = await browser.newContext();
   const agentPage = await agentContext.newPage();
