@@ -1,10 +1,12 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { ProductEventTracker } from "@/components/agent/product-event-tracker";
 import {
   MissionAssignmentForm,
   MissionReportForm,
   MissionScheduleForm,
   MissionStatusForm,
+  ProposalResubmitForm,
 } from "@/components/missions/forms";
 import {
   MissionImpact,
@@ -213,6 +215,8 @@ export default async function MissionPage({
           ) : null}
         </div>
       </div>
+
+      {mission.proposal_source === "provider" ? <Card className="border-orange-200 bg-orange-50/60"><CardHeader><CardTitle>Proposition initiée par l’intervenant</CardTitle></CardHeader><CardContent className="space-y-3 text-sm"><div className="flex flex-wrap gap-2"><Badge variant="secondary">{presentationLabel(mission.proposal_review_status)}</Badge>{mission.proposal_reviewed_at?<span className="text-muted-foreground">Revue le {new Date(mission.proposal_reviewed_at).toLocaleString("fr-FR")}</span>:null}</div>{mission.proposal_review_note?<p className="rounded-md bg-white p-3"><strong>Retour marque :</strong> {mission.proposal_review_note}</p>:null}{mission.proposal_review_status==="needs_correction"&&mission.proposed_by_user_id===userId?<ProposalResubmitForm mission={mission}/>:null}{mission.proposal_review_status==="pending"&&(isTr1||isBrandAdmin)?<Button asChild><Link href="/dashboard/missions/proposals">Ouvrir la file de validation</Link></Button>:null}</CardContent></Card>:null}
 
       <div className="grid gap-6 xl:grid-cols-[1.5fr_1fr]">
         <div className="space-y-6">

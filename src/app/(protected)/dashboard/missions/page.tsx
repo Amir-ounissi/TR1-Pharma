@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarPlus, RotateCcw } from "lucide-react";
+import { CalendarPlus, RotateCcw, Inbox } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -26,7 +26,7 @@ export default async function MissionsPage({ searchParams }: { searchParams: Pro
       eyebrow={`Terrain / ${brand.name}`}
       title="Missions"
       description="Le planning, les affectations et les statuts se suivent ici dans une lecture opérationnelle plus directe."
-      actions={canCreateMission ? <Button asChild className="h-9 rounded-md bg-[var(--tr1-navy)] px-3.5 text-sm font-medium text-white hover:bg-[var(--tr1-navy-soft)]"><Link href="/dashboard/missions/new"><CalendarPlus className="size-4" />Nouvelle mission</Link></Button> : undefined}
+      actions={canCreateMission ? <div className="flex gap-2"><Button asChild variant="outline" className="h-9"><Link href="/dashboard/missions/proposals"><Inbox className="size-4"/>Propositions à valider</Link></Button><Button asChild className="h-9 rounded-md bg-[var(--tr1-navy)] px-3.5 text-sm font-medium text-white hover:bg-[var(--tr1-navy-soft)]"><Link href="/dashboard/missions/new"><CalendarPlus className="size-4" />Nouvelle mission</Link></Button></div> : undefined}
     />
 
     <Toolbar>

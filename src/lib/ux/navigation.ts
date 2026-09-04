@@ -19,7 +19,8 @@ const agentItems: NavigationItem[] = [
   { href: "/dashboard/pharmacies", label: "Pharmacies", icon: "building" },
   { href: "/dashboard/orders", label: "Mes commandes", icon: "clipboard" },
   { href: "/dashboard/missions", label: "Missions", icon: "calendar" },
-  { href: "/dashboard/tasks", label: "Agenda", icon: "clipboard" },
+  { href: "/dashboard/agenda", label: "Agenda", icon: "calendar" },
+  { href: "/dashboard/tasks", label: "Tâches", icon: "clipboard" },
   { href: "/dashboard/agent/performance", label: "Ma performance", icon: "chart" },
   { href: "/dashboard/reports", label: "Mes comptes rendus", icon: "file" },
   { href: "/dashboard/agent/assistant", label: "Assistant Terrain", icon: "sparkles" },
@@ -80,6 +81,8 @@ export function getNavigationSections(
       label: "Missions",
       items: [
         { href: "/dashboard/field", label: "Mes missions", shortLabel: "Accueil", icon: "route" },
+        { href: "/dashboard/agenda", label: "Agenda", icon: "calendar" },
+        { href: "/dashboard/missions/new", label: "Proposer une mission", icon: "target" },
         { href: "/dashboard/reports", label: "Mes rapports", icon: "file" },
       ],
     }];
@@ -90,6 +93,10 @@ export function getNavigationSections(
   }
 
   const pilotageItems = [...managerItems];
+
+  if (["brand_admin", "tr1_manager", "super_admin"].includes(role)) {
+    pilotageItems.push({ href: "/dashboard/missions/proposals", label: "Propositions à valider", icon: "target" });
+  }
 
   if (role === "tr1_manager" || role === "super_admin") {
     pilotageItems.push({
