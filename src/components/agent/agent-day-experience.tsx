@@ -154,7 +154,7 @@ export function AgentDayExperience({
       {!activeVisit ? (
         <section className="space-y-3" aria-labelledby="reorder-opportunities-title">
           <div className="flex items-center justify-between">
-            <div><p className="text-xs font-semibold uppercase tracking-[.16em] text-[var(--tr1-blue)]">Priorités commerciales</p><h2 id="reorder-opportunities-title" className="text-xl font-semibold text-[var(--tr1-navy)]">{opportunities.length ? `TR1 a détecté ${opportunities.length} opportunité${opportunities.length > 1 ? "s" : ""}` : "Opportunités de réassort"}</h2></div>
+            <div><p className="text-xs font-semibold uppercase tracking-[.16em] text-[var(--tr1-blue)]">Priorités commerciales</p><h2 id="reorder-opportunities-title" className="text-xl font-semibold text-[var(--tr1-navy)]">{opportunities.length ? `TR1 a détecté ${opportunities.length} opportunité${opportunities.length > 1 ? "s" : ""}` : "Opportunités de réassort"}</h2>{opportunities.length ? <p className="mt-1 text-sm text-muted-foreground">Opportunités de réassort classées par priorité métier.</p> : null}</div>
             <Badge variant="secondary">{opportunities.length}</Badge>
           </div>
           {opportunities.length ? <div className="grid gap-3 lg:grid-cols-2">
