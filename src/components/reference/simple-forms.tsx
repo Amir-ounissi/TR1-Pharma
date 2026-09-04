@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { activityStatuses, commercialStatuses, labels, pharmacySources, potentialLevels, priorityLevels } from "@/lib/reference-data";
+import { uiLabel } from "@/lib/ui-copy";
 
 export function ContactForm({ pharmacyId }: { pharmacyId: string }) {
   const [state, action, pending] = useActionState(createContactAction, {});
@@ -17,7 +18,7 @@ export function ContactForm({ pharmacyId }: { pharmacyId: string }) {
 
 export function ProductForm() {
   const [state, action, pending] = useActionState(createProductAction, {});
-  return <form action={action} className="grid gap-3 sm:grid-cols-2"><div className="sm:col-span-2"><ActionFeedback {...state} /></div><div className="space-y-2"><Label>Nom</Label><Input name="name" required /></div><div className="space-y-2"><Label>SKU</Label><Input name="sku" required /></div><div className="space-y-2"><Label>EAN</Label><Input name="ean" /></div><div className="space-y-2"><Label>Catégorie</Label><Input name="category" /></div><div className="space-y-2"><Label>Famille</Label><Input name="productFamily" /></div><div className="space-y-2"><Label>Format</Label><Input name="format" /></div><div className="space-y-2 sm:col-span-2"><Label>Description</Label><Textarea name="description" rows={3} /></div><div className="space-y-2"><Label>Prix pharmacie HT</Label><Input name="wholesalePrice" type="number" step="0.01" min="0" /></div><div className="space-y-2"><Label>PVC TTC recommandé</Label><Input name="retailPrice" type="number" step="0.01" min="0" /></div><div className="space-y-2"><Label>TVA (%)</Label><Input name="taxRate" type="number" step="0.01" min="0" max="100" /></div><div className="space-y-2"><Label>Colisage</Label><Input name="unitsPerCase" type="number" min="1" step="1" /></div><div className="space-y-2"><Label>MOQ</Label><Input name="minimumOrderQuantity" type="number" min="1" step="1" /></div><div className="space-y-2"><Label>Priorité stratégique</Label><Select name="strategicPriority" defaultValue="standard"><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="standard">Standard</SelectItem><SelectItem value="priority">Prioritaire</SelectItem><SelectItem value="strategic">Stratégique</SelectItem></SelectContent></Select></div><label className="flex items-center gap-2 text-sm"><input name="pharmacyEligible" type="checkbox" defaultChecked /> Éligible pharmacie</label><label className="flex items-center gap-2 text-sm"><input name="countsForDistribution" type="checkbox" defaultChecked /> Compte dans la DN</label><Button disabled={pending} className="sm:col-span-2">Créer le produit</Button></form>;
+  return <form action={action} className="grid gap-3 sm:grid-cols-2"><div className="sm:col-span-2"><ActionFeedback {...state} /></div><div className="space-y-2"><Label>Nom</Label><Input name="name" required /></div><div className="space-y-2"><Label>Référence interne</Label><Input name="sku" required /></div><div className="space-y-2"><Label>EAN</Label><Input name="ean" /></div><div className="space-y-2"><Label>Catégorie</Label><Input name="category" /></div><div className="space-y-2"><Label>Famille</Label><Input name="productFamily" /></div><div className="space-y-2"><Label>Format</Label><Input name="format" /></div><div className="space-y-2 sm:col-span-2"><Label>Description</Label><Textarea name="description" rows={3} /></div><div className="space-y-2"><Label>Prix pharmacie HT</Label><Input name="wholesalePrice" type="number" step="0.01" min="0" /></div><div className="space-y-2"><Label>PVC TTC recommandé</Label><Input name="retailPrice" type="number" step="0.01" min="0" /></div><div className="space-y-2"><Label>TVA (%)</Label><Input name="taxRate" type="number" step="0.01" min="0" max="100" /></div><div className="space-y-2"><Label>Colisage</Label><Input name="unitsPerCase" type="number" min="1" step="1" /></div><div className="space-y-2"><Label>Quantité minimale</Label><Input name="minimumOrderQuantity" type="number" min="1" step="1" /></div><div className="space-y-2"><Label>Priorité stratégique</Label><Select name="strategicPriority" defaultValue="standard"><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="standard">Standard</SelectItem><SelectItem value="priority">Prioritaire</SelectItem><SelectItem value="strategic">Stratégique</SelectItem></SelectContent></Select></div><label className="flex items-center gap-2 text-sm"><input name="pharmacyEligible" type="checkbox" defaultChecked /> Éligible pharmacie</label><label className="flex items-center gap-2 text-sm"><input name="countsForDistribution" type="checkbox" defaultChecked /> Compte dans la DN</label><Button disabled={pending} className="sm:col-span-2">Créer le produit</Button></form>;
 }
 
 
@@ -62,7 +63,7 @@ export function ProductEditForm({
       </div>
 
       <div className="space-y-2">
-        <Label>SKU / ACL</Label>
+        <Label>Référence / ACL</Label>
         <Input name="sku" defaultValue={product.sku} required />
       </div>
 
@@ -147,7 +148,7 @@ export function ProductEditForm({
       </div>
 
       <div className="space-y-2">
-        <Label>MOQ</Label>
+        <Label>Quantité minimale</Label>
         <Input
           name="minimumOrderQuantity"
           type="number"
@@ -219,7 +220,7 @@ export function RelationForm({ relation, territories, agents }: { relation: Reco
     <div className="space-y-2"><Label>Priorité</Label><Select name="priorityLevel" defaultValue={String(relation.priority_level)}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent>{priorityLevels.map((value) => <SelectItem key={value} value={value}>{labels.priorityLevel[value]}</SelectItem>)}</SelectContent></Select></div>
     <div className="space-y-2"><Label>Potentiel</Label><Select name="potentialLevel" defaultValue={String(relation.potential_level)}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent>{potentialLevels.map((value) => <SelectItem key={value} value={value}>{labels.potentialLevel[value]}</SelectItem>)}</SelectContent></Select></div>
     <div className="space-y-2"><Label>Score potentiel</Label><Input name="potentialScore" type="number" min="0" max="100" defaultValue={relation.potential_score ?? ""} /></div>
-    <div className="space-y-2"><Label>Source</Label><Select name="source" defaultValue={String(relation.source)}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent>{pharmacySources.map((value) => <SelectItem key={value} value={value}>{value.replaceAll("_", " ")}</SelectItem>)}</SelectContent></Select></div>
+    <div className="space-y-2"><Label>Source</Label><Select name="source" defaultValue={String(relation.source)}><SelectTrigger className="w-full"><SelectValue /></SelectTrigger><SelectContent>{pharmacySources.map((value) => <SelectItem key={value} value={value}>{uiLabel(value)}</SelectItem>)}</SelectContent></Select></div>
     <div className="space-y-2"><Label>Agent</Label><Select name="currentAgentUserId" defaultValue={String(relation.current_agent_user_id ?? "")}><SelectTrigger className="w-full"><SelectValue placeholder="Non affecté" /></SelectTrigger><SelectContent>{agents.map((agent) => <SelectItem key={agent.id} value={agent.id}>{agent.name}</SelectItem>)}</SelectContent></Select></div>
     <div className="space-y-2"><Label>Territoire</Label><Select name="territoryId" defaultValue={String(relation.territory_id ?? "")}><SelectTrigger className="w-full"><SelectValue placeholder="Aucun" /></SelectTrigger><SelectContent>{territories.map((territory) => <SelectItem key={territory.id} value={territory.id}>{territory.name}</SelectItem>)}</SelectContent></Select></div>
     <div className="space-y-2"><Label>Prochaine action</Label><Input name="nextActionType" defaultValue={String(relation.next_action_type ?? "")} /></div><div className="space-y-2"><Label>Date de la prochaine action</Label><Input name="nextActionAt" type="datetime-local" /></div>

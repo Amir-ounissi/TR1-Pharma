@@ -25,7 +25,7 @@ export function AppShell({ children, brandName, brandHint = "Marque active", rol
       <aside className="fixed inset-y-0 z-40 hidden w-[16.5rem] flex-col border-r border-white/10 bg-sidebar px-4 py-5 text-sidebar-foreground md:flex">
         <div className="mb-8 flex shrink-0 items-center gap-3 px-2">
           <span className="relative grid size-10 place-items-center rounded-[0.55rem] border border-white/15 bg-white/6 font-mono text-[0.68rem] font-black tracking-[-0.04em] text-white">TR1<span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-[var(--tr1-orange)]" /></span>
-          <div><p className="text-[0.86rem] font-black uppercase tracking-[-0.02em]">TR1 Pharma</p><p className="font-mono text-[0.55rem] uppercase tracking-[0.17em] text-sidebar-foreground/42">Terrain intelligence</p></div>
+          <div><p className="text-[0.86rem] font-black uppercase tracking-[-0.02em]">TR1 Pharma</p><p className="font-mono text-[0.55rem] uppercase tracking-[0.17em] text-sidebar-foreground/42">Intelligence terrain</p></div>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto pb-5"><RoleNavigation role={role} scope={navigationScope} /></div>
         <div className="shrink-0 space-y-3">
@@ -74,5 +74,5 @@ function initials(name: string) {
 }
 
 function roleLabel(role: string) {
-  return ({ super_admin: "Super administrateur", brand_admin: "Administrateur marque", tr1_manager: "Manager TR1", brand_user: "Manager marque", agent: "Agent terrain", facilitator: "Intervenant" } as Record<string, string>)[role] ?? role;
+  return ({ super_admin: "Super administrateur", brand_admin: "Administrateur marque", tr1_manager: "Responsable TR1", brand_user: "Responsable marque", agent: "Agent terrain", facilitator: "Intervenant" } as Record<string, string>)[role] ?? role;
 }

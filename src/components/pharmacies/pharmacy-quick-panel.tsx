@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { translateUiMessage } from "@/lib/ui-copy";
 import type { PharmacySummary } from "@/lib/pharmacy-summary";
 
 type PharmacyQuickPanelProps = {
@@ -60,7 +61,7 @@ export function PharmacyQuickPanel({ open, onOpenChange, summary, loading = fals
           {!loading && error ? (
             <section className="rounded-[0.95rem] border border-[var(--tr1-line)] bg-white/80 px-4 py-4">
               <p className="font-mono text-[0.64rem] font-black uppercase tracking-[0.12em] text-[var(--tr1-orange)]">Détail indisponible</p>
-              <p className="mt-2 text-sm text-muted-foreground">{error}</p>
+              <p className="mt-2 text-sm text-muted-foreground">{translateUiMessage(error)}</p>
             </section>
           ) : null}
 

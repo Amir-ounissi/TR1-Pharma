@@ -22,6 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatCurrency } from "@/lib/reference-data";
+import { uiLabel } from "@/lib/ui-copy";
 
 export type ProductCatalogItem = {
   id: string;
@@ -63,7 +64,7 @@ export function ProductCatalog({
         <TableHeader>
           <TableRow>
             <TableHead>Produit</TableHead>
-            <TableHead>SKU / EAN</TableHead>
+            <TableHead>Référence / EAN</TableHead>
             <TableHead>Référentiel</TableHead>
             <TableHead>Prix</TableHead>
             <TableHead>Logistique</TableHead>
@@ -104,7 +105,7 @@ export function ProductCatalog({
 
               <TableCell>
                 <Badge variant="outline">
-                  {product.strategic_priority}
+                  {uiLabel(product.strategic_priority)}
                 </Badge>
                 <p className="text-xs text-muted-foreground">
                   {product.counts_for_distribution
@@ -128,7 +129,7 @@ export function ProductCatalog({
               <TableCell>
                 PCB {product.units_per_case ?? "—"}
                 <p className="text-xs text-muted-foreground">
-                  MOQ {product.minimum_order_quantity ?? "—"}
+                  Minimum {product.minimum_order_quantity ?? "—"}
                 </p>
               </TableCell>
 

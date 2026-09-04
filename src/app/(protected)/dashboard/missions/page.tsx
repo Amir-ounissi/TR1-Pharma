@@ -9,6 +9,8 @@ import { EmptyState } from "@/components/ux/empty-state";
 import { InlineError } from "@/components/ux/inline-error";
 import { Toolbar, ToolbarMeta, ToolbarRow } from "@/components/ux/toolbar";
 import { requireActiveBrand } from "@/lib/auth";
+import { missionStatuses, missionTypes } from "@/lib/missions";
+import { uiLabel } from "@/lib/ui-copy";
 
 export default async function MissionsPage({ searchParams }: { searchParams: Promise<{ q?:string; status?:string; type?:string }> }) {
   const filters=await searchParams; const {supabase,brand}=await requireActiveBrand();
@@ -31,8 +33,14 @@ export default async function MissionsPage({ searchParams }: { searchParams: Pro
       </ToolbarRow>
       <form className="mt-2 grid gap-2 sm:grid-cols-[1.9fr_0.9fr_1fr_auto]">
         <Input name="q" placeholder="Rechercher une mission ou une pharmacie" defaultValue={filters.q} className="h-9 rounded-md bg-white/90 text-sm" />
-        <Input name="status" placeholder="Statut" defaultValue={filters.status} className="h-9 rounded-md bg-white/90 text-sm" />
-        <Input name="type" placeholder="Type de mission" defaultValue={filters.type} className="h-9 rounded-md bg-white/90 text-sm" />
+        <select name="status" defaultValue={filters.status ?? ""} className="h-9 rounded-md border bg-white/90 px-3 text-sm">
+          <option value="">Tous les statuts</option>
+          {missionStatuses.map((value) => <option key={value} value={value}>{uiLabel(value)}</option>)}
+        </select>
+        <select name="type" defaultValue={filters.type ?? ""} className="h-9 rounded-md border bg-white/90 px-3 text-sm">
+          <option value="">Tous les types</option>
+          {missionTypes.map((value) => <option key={value} value={value}>{uiLabel(value)}</option>)}
+        </select>
         <Button type="submit" className="h-9 rounded-md bg-[var(--tr1-navy)] px-3.5 text-sm font-medium text-white hover:bg-[var(--tr1-navy-soft)]">Filtrer</Button>
       </form>
     </Toolbar>
@@ -76,8 +84,8 @@ export default async function MissionsPage({ searchParams }: { searchParams: Pro
                   <p className="font-medium text-[var(--tr1-navy)]">{pharmacy?.trade_name||pharmacy?.legal_name||"Pharmacie"}</p>
                   <p className="text-[0.68rem] text-muted-foreground">{pharmacy?.city||"Ville non renseignée"}</p>
                 </TableCell>
-                <TableCell className="px-3 py-2.5 text-[0.72rem] text-[var(--tr1-navy)]">{mission.mission_type}</TableCell>
-                <TableCell className="px-3 py-2.5"><Badge variant={mission.status==="report_pending"?"destructive":"secondary"} className="h-5 rounded-full text-[0.54rem]">{mission.status}</Badge></TableCell>
+                <TableCell className="px-3 py-2.5 text-[0.72rem] text-[var(--tr1-navy)]">{uiLabel(mission.mission_type)}</TableCell>
+                <TableCell className="px-3 py-2.5"><Badge variant={mission.status==="report_pending"?"destructive":"secondary"} className="h-5 rounded-full text-[0.54rem]">{uiLabel(mission.status)}</Badge></TableCell>
                 <TableCell className="px-3 py-2.5 text-[0.72rem] text-[var(--tr1-navy)]">{profile?.full_name || "Non affectée"}</TableCell>
                 <TableCell className="px-3 py-2.5 text-[0.72rem] text-[var(--tr1-navy)]">{mission.scheduled_start_at?new Date(mission.scheduled_start_at).toLocaleString("fr-FR"):"À planifier"}</TableCell>
               </TableRow>;
