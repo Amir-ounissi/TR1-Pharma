@@ -1,0 +1,17 @@
+import { AgendaPlanner, type AgendaEvent, type BacklogItem, type PharmacyOption } from "@/components/agenda/agenda-planner";
+import { getBrandContexts, requireCompletedOnboarding } from "@/lib/auth";
+import { addCalendarDays, mondayOfWeek, parseCalendarDate, todayInParis } from "@/lib/agenda";
+
+export default async function AgendaPage({ searchParams }:{ searchParams:Promise<{date?:string;view?:string}> }) {
+  const params=await searchParams; const requested=params.date??todayInParis(); const safeDate=parseCalendarDate(requested)?requested:todayInParis(); const view=params.view==="week"?"week":"day"; const date=view==="week"?mondayOfWeek(safeDate):safeDate; const end=view==="week"?addCalendarDays(date,6):date;
+  const [{supabase},contexts]=await Promise.all([requireCompletedOnboarding(),getBrandContexts()]);
+  const brandIds=contexts.map((context)=>context.id);
+  const [{data:agenda,error:agendaError},{data:backlog,error:backlogError},{data:relations}]=await Promise.all([
+    supabase.rpc("get_my_field_agenda",{start_date:date,end_date:end,brand_filter:null}),
+    supabase.rpc("get_my_unplanned_agenda_items",{brand_filter:null}),
+    brandIds.length?supabase.from("brand_pharmacies").select("id,brand_id,pharmacy_id,brands(name),pharmacies(trade_name,legal_name,city)").in("brand_id",brandIds).is("archived_at",null):Promise.resolve({data:[]}),
+  ]);
+  if(agendaError) throw new Error(agendaError.message); if(backlogError) throw new Error(backlogError.message);
+  const grouped=new Map<string,PharmacyOption>(); for(const relation of relations??[]){const pharmacy=Array.isArray(relation.pharmacies)?relation.pharmacies[0]:relation.pharmacies;const brand=Array.isArray(relation.brands)?relation.brands[0]:relation.brands;if(!grouped.has(relation.pharmacy_id))grouped.set(relation.pharmacy_id,{id:relation.pharmacy_id,label:pharmacy?.trade_name||pharmacy?.legal_name||"Pharmacie",city:pharmacy?.city??undefined,brands:[]});grouped.get(relation.pharmacy_id)?.brands.push({relationId:relation.id,brandId:relation.brand_id,brandName:brand?.name||"Marque"});}
+  return <AgendaPlanner date={date} view={view} events={(agenda??[]) as AgendaEvent[]} backlog={(backlog??[]) as BacklogItem[]} brands={contexts.map(({id,name})=>({id,name}))} pharmacies={[...grouped.values()]} canCreateVisit={contexts.some((context)=>context.role==="agent")}/>;
+}

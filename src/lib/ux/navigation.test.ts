@@ -5,6 +5,7 @@ describe("role navigation", () => {
   it("keeps agent navigation focused on field work", () => {
     const links = getNavigationItems("agent").map((item) => item.href);
     expect(links).toContain("/dashboard/agent");
+    expect(links).toContain("/dashboard/agenda");
     expect(links).not.toContain("/dashboard/users");
     expect(links).not.toContain("/dashboard/admin/onboarding");
   });
@@ -38,7 +39,7 @@ describe("role navigation", () => {
 
     expect(brandAdminLinks).not.toContain("/dashboard/admin/users");
     expect(brandAdminLinks).not.toContain("/dashboard/admin/leads");
-    expect(facilitatorLinks).toEqual(["/dashboard/field", "/dashboard/reports"]);
+    expect(facilitatorLinks).toEqual(["/dashboard/field", "/dashboard/agenda", "/dashboard/missions/new", "/dashboard/reports"]);
   });
 
   it("classifies roles and nested active routes", () => {

@@ -78,7 +78,8 @@ test("scénario 4 — Mobile Agent", async ({ page }) => {
   await expect(mobileNav).toBeVisible();
   await expect(mobileNav.getByText("Accueil", { exact: true })).toBeVisible();
   await expect(mobileNav.getByRole("link", { name: "Créer une action" })).toBeVisible();
-  await expect(mobileNav.getByText("Documents", { exact: true })).toBeVisible();
+  await expect(mobileNav.locator('a[href="/dashboard/orders"]')).toBeVisible();
+  await expect(mobileNav.getByRole("link", { name: "Tâches", exact: true })).toBeVisible();
   await expect(page.getByTestId("next-visit-card")).toBeInViewport();
   await expect(page.getByRole("button", { name: "Démarrer", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Waze", exact: true }).first()).toBeVisible();
@@ -115,7 +116,7 @@ test("scénario 6 — Non-régression et navigation Admin", async ({ page }) => 
   await page.goto("/dashboard/tasks");
   await expect(page.getByRole("heading", { name: "Tâches commerciales" })).toBeVisible();
   await page.goto("/dashboard/missions/new");
-  await expect(page.getByRole("button", { name: "Créer la mission" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Envoyer la demande de mission" })).toBeVisible();
   await page.goto("/dashboard/orders/new");
   await expect(page.getByRole("heading", { name: "Nouvelle commande" })).toBeVisible();
   await page.goto("/dashboard/imports");

@@ -24,7 +24,7 @@ async function createFinalizedOrder(
     target_brand_pharmacy_id: relationId,
     order_payload: {
       external_order_id: externalId,
-      order_status: "delivered",
+      order_status: "confirmed",
       order_date: orderDate,
     },
     item_payload: [{ product_id: productId, quantity: 4, unit_price_ht: 25 }],

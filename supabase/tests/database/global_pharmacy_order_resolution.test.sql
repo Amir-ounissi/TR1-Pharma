@@ -4,13 +4,20 @@ set local search_path = public, extensions;
 
 select plan(12);
 
+-- Explicit fixture: the agent covers department 75.
+update public.memberships
+set territory_id = '00000000-0000-0000-0000-000000000201'
+where user_id = '00000000-0000-0000-0000-0000000000a3'
+  and brand_id = '00000000-0000-0000-0000-000000000101'
+  and status = 'active';
+
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}',true);
 
 insert into public.pharmacies (id, legal_name, trade_name, siret, cip_code, finess_code, postal_code, city, address_line_1)
 values
-  ('00000000-0000-0000-0000-00000000f501','Pharmacie Globale Commande','Pharmacie Globale Commande','12345678900999','CIP-GLOBAL-ORDER','FINESS-GLOBAL-ORDER','69001','Lyon','1 rue des Tests'),
-  ('00000000-0000-0000-0000-00000000f502','Pharmacie Rollback','Pharmacie Rollback','12345678900998','CIP-ROLLBACK','FINESS-ROLLBACK','69002','Lyon','2 rue des Tests');
+  ('00000000-0000-0000-0000-00000000f501','Pharmacie Globale Commande','Pharmacie Globale Commande','12345678900999','CIP-GLOBAL-ORDER','FINESS-GLOBAL-ORDER','75001','Paris','1 rue des Tests'),
+  ('00000000-0000-0000-0000-00000000f502','Pharmacie Rollback','Pharmacie Rollback','12345678900998','CIP-ROLLBACK','FINESS-ROLLBACK','75002','Paris','2 rue des Tests');
 
 select is(
   (select relation_status from public.search_pharmacy_directory_for_order('00000000-0000-0000-0000-000000000101', null, null, 'CIP-GLOBAL-ORDER', null, null, null, 12)),
@@ -22,7 +29,7 @@ select set_config('request.jwt.claims','{"sub":"00000000-0000-0000-0000-00000000
 
 select lives_ok($$select * from public.create_order_with_pharmacy_resolution(
   '00000000-0000-0000-0000-000000000101', null, '00000000-0000-0000-0000-00000000f501', null,
-  '{"external_order_id":"GLOBAL-FIRST","source":"agent","order_status":"confirmed"}',
+  '{"external_order_id":"GLOBAL-FIRST","source":"agent","order_status":"pending"}',
   '[{"product_id":"00000000-0000-0000-0000-000000000601","quantity":1,"unit_price_ht":10}]'
 )$$, 'first order creates the brand relation atomically for an agent');
 
@@ -44,7 +51,7 @@ select is(
 
 select lives_ok($$select * from public.create_order_with_pharmacy_resolution(
   '00000000-0000-0000-0000-000000000101', null, '00000000-0000-0000-0000-00000000f501', null,
-  '{"external_order_id":"GLOBAL-SECOND","source":"agent","order_status":"confirmed"}',
+  '{"external_order_id":"GLOBAL-SECOND","source":"agent","order_status":"pending"}',
   '[{"product_id":"00000000-0000-0000-0000-000000000601","quantity":1,"unit_price_ht":10}]'
 )$$, 'second order reuses the existing relation');
 select is(
@@ -55,7 +62,7 @@ select is(
 
 select throws_ok($$select * from public.create_order_with_pharmacy_resolution(
   '00000000-0000-0000-0000-000000000101', null, '00000000-0000-0000-0000-00000000f502', null,
-  '{"external_order_id":"GLOBAL-ROLLBACK","source":"agent","order_status":"confirmed"}',
+  '{"external_order_id":"GLOBAL-ROLLBACK","source":"agent","order_status":"pending"}',
   '[{"product_id":"00000000-0000-0000-0000-999999999999","quantity":1,"unit_price_ht":10}]'
 )$$, '23514', 'Order item product is unavailable for this brand', 'order failure rolls back the newly created brand relation');
 select is(

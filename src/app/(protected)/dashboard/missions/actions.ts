@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireActiveBrand } from "@/lib/auth";
+import { parisLocalToIso } from "@/lib/agenda";
 import {
   missionStatuses,
   missionTypes,
@@ -85,6 +86,29 @@ export async function createMissionAction(
 
   revalidatePath("/dashboard/missions");
   redirect(`/dashboard/missions/${data}?brand=${brand.id}`);
+}
+
+export async function proposeMissionAction(_state: MissionActionState, formData: FormData): Promise<MissionActionState> {
+  const parsed=z.object({brandPharmacyId:uuid,missionType:z.enum(missionTypes),title:z.string().trim().min(3).max(180),objective:z.string().trim().min(3).max(2000),briefing:z.string().trim().max(10000).optional(),scheduledStartAt:z.string().min(16),scheduledEndAt:z.string().min(16),priority:z.enum(["low","normal","high","urgent"]),locationMode:z.enum(["in_pharmacy","remote","hybrid","external_event"]),budgetEstimatedHt:z.coerce.number().min(0)}).safeParse(Object.fromEntries(formData));
+  if(!parsed.success)return{error:"Les informations de proposition sont invalides."};
+  const {supabase,brand}=await requireActiveBrand(); const productIds=formData.getAll("productId").map(String).filter(Boolean);
+  let missionId:string|null=null;
+  try {
+    const {data,error}=await supabase.rpc("propose_mission",{target_brand_pharmacy_id:parsed.data.brandPharmacyId,mission_payload:{mission_type:parsed.data.missionType,title:parsed.data.title,objective:parsed.data.objective,briefing:parsed.data.briefing||null,scheduled_start_at:parisLocalToIso(parsed.data.scheduledStartAt),scheduled_end_at:parisLocalToIso(parsed.data.scheduledEndAt),priority:parsed.data.priority,location_mode:parsed.data.locationMode,budget_estimated_ht:parsed.data.budgetEstimatedHt},product_payload:productIds.map((product_id)=>({product_id}))});
+    if(error)return{error:error.message}; missionId=data; revalidatePath("/dashboard/field"); revalidatePath("/dashboard/agenda");
+  } catch(error){return{error:error instanceof Error?error.message:"Proposition invalide."};}
+  redirect(`/dashboard/missions/${missionId}?brand=${brand.id}`);
+}
+
+export async function reviewProviderProposalAction(_state:MissionActionState,formData:FormData):Promise<MissionActionState>{
+  const parsed=z.object({missionId:uuid,decision:z.enum(["approved","needs_correction","rejected"]),reviewNote:z.string().trim().max(2000).optional(),scheduledStartAt:z.string().optional(),scheduledEndAt:z.string().optional(),budgetEstimatedHt:z.union([z.literal(""),z.coerce.number().min(0)]).optional(),objective:z.string().trim().max(2000).optional(),briefing:z.string().trim().max(10000).optional()}).safeParse(Object.fromEntries(formData));
+  if(!parsed.success)return{error:"Décision de validation invalide."}; const {supabase}=await requireActiveBrand();
+  try{const{error}=await supabase.rpc("review_provider_mission_proposal",{target_mission_id:parsed.data.missionId,target_decision:parsed.data.decision,review_note:parsed.data.reviewNote||null,target_start_at:parsed.data.scheduledStartAt?parisLocalToIso(parsed.data.scheduledStartAt):null,target_end_at:parsed.data.scheduledEndAt?parisLocalToIso(parsed.data.scheduledEndAt):null,target_budget_ht:parsed.data.budgetEstimatedHt===""?null:parsed.data.budgetEstimatedHt??null,target_objective:parsed.data.objective||null,target_briefing:parsed.data.briefing||null});if(error)return{error:error.message};revalidatePath("/dashboard/missions/proposals");revalidatePath(`/dashboard/missions/${parsed.data.missionId}`);revalidatePath("/dashboard/agenda");return{success:parsed.data.decision==="approved"?"Proposition validée et planifiée.":"Décision enregistrée."};}catch(error){return{error:error instanceof Error?error.message:"Décision invalide."};}
+}
+
+export async function resubmitProviderProposalAction(_state:MissionActionState,formData:FormData):Promise<MissionActionState>{
+  const parsed=z.object({missionId:uuid,title:z.string().trim().min(3),objective:z.string().trim().min(3),briefing:z.string().optional(),scheduledStartAt:z.string().min(16),scheduledEndAt:z.string().min(16),budgetEstimatedHt:z.coerce.number().min(0)}).safeParse(Object.fromEntries(formData));if(!parsed.success)return{error:"Correction invalide."};const{supabase}=await requireActiveBrand();
+  try{const{error}=await supabase.rpc("resubmit_provider_mission_proposal",{target_mission_id:parsed.data.missionId,mission_payload:{title:parsed.data.title,objective:parsed.data.objective,briefing:parsed.data.briefing||null,scheduled_start_at:parisLocalToIso(parsed.data.scheduledStartAt),scheduled_end_at:parisLocalToIso(parsed.data.scheduledEndAt),budget_estimated_ht:parsed.data.budgetEstimatedHt},product_payload:null});if(error)return{error:error.message};revalidatePath(`/dashboard/missions/${parsed.data.missionId}`);revalidatePath("/dashboard/agenda");return{success:"Proposition corrigée et renvoyée."};}catch(error){return{error:error instanceof Error?error.message:"Correction invalide."};}
 }
 
 export async function changeMissionStatusAction(
