@@ -52,5 +52,23 @@ export async function loginAction(
   }
 
   if (platformAdmin) redirect("/dashboard");
+
+  const [{ data: autonomousOnboarding }, { data: pendingBrandRequest }] = await Promise.all([
+    supabase.rpc("get_my_self_service_onboarding"),
+    supabase
+      .from("access_requests")
+      .select("id")
+      .eq("user_id", signInData.user.id)
+      .eq("requested_profile_type", "brand")
+      .eq("status", "pending")
+      .maybeSingle(),
+  ]);
+
+  if (autonomousOnboarding?.length || pendingBrandRequest) {
+    const cookieStore = await cookies();
+    cookieStore.delete(ACTIVE_BRAND_COOKIE);
+    redirect("/setup");
+  }
+
   redirect("/select-brand");
 }
