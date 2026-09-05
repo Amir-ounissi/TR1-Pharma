@@ -2,7 +2,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(13);
+select plan(14);
 
 select has_table('public','data_mapping_profiles','mapping profiles table exists');
 select has_function('public','save_data_mapping_profile',array['uuid','uuid','text','import_entity_type','text','jsonb','jsonb','boolean'],'mapping profile save RPC exists');
