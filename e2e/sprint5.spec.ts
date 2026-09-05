@@ -224,7 +224,7 @@ test("parcours complet animation Sprint 5 avec vérification en base", async ({ 
   const otherAnimatorPage = await otherAnimatorContext.newPage();
   await signIn(otherAnimatorPage, "autre-animatrice@dermavita.local", /Dermavita/i);
   await otherAnimatorPage.goto(missionUrl);
-  await expect(otherAnimatorPage.getByRole("heading", { name: "404", exact: true })).toBeVisible();
+  await expect(otherAnimatorPage).toHaveURL(/\/dashboard\/field$/);
 
   const otherAnimator = await userClient("autre-animatrice@dermavita.local");
   expect((await otherAnimator.from("mission_reports").select("id").eq("mission_id", missionId)).data).toEqual([]);
