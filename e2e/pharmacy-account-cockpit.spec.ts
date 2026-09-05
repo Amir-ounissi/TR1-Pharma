@@ -49,7 +49,7 @@ test("Intervenant reste limité à ses missions et ne reçoit pas le CRM complet
   await signIn(page, "animatrice@dermavita.local", /Dermavita/i);
   await page.goto("/dashboard/field");
 
-  await expect(page.getByRole("heading", { name: "Mon terrain" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Aujourd’hui" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Pharmacies" })).toHaveCount(0);
   await page.goto(`/dashboard/pharmacies/${brandPharmacyId}`);
   await expect(page.getByTestId("pharmacy-cockpit")).toHaveCount(0);

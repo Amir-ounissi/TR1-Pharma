@@ -42,7 +42,7 @@ select
 from public.brand_pharmacies;
 grant select on rls_expected_counts to authenticated;
 
-select plan(57);
+select plan(62);
 
 select is((select count(*) from public.brand_pharmacies where pharmacy_id = '00000000-0000-0000-0000-000000000401' and archived_at is null), 2::bigint, 'one physical pharmacy can have two brand relations');
 select throws_ok($$insert into public.brand_pharmacies (brand_id, pharmacy_id) values ('00000000-0000-0000-0000-000000000101','00000000-0000-0000-0000-000000000401')$$, '23505', null, 'duplicate active brand relation is rejected');
@@ -60,6 +60,8 @@ set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}', true);
 select is((select count(*) from public.brand_pharmacies), (select brand_101_relations from rls_expected_counts), 'brand admin sees only its brand relations');
 select is((select count(*) from public.pharmacies), (select brand_101_pharmacies from rls_expected_counts), 'brand admin sees only physical pharmacies connected to its brand');
+select is((select count(*) from public.pharmacy_groups where id = '00000000-0000-0000-0000-000000000301'), 1::bigint, 'brand admin sees a group attached to an accessible pharmacy');
+select is((select count(*) from public.pharmacy_groups where id = '00000000-0000-0000-0000-000000000302'), 0::bigint, 'brand admin cannot see a group outside its pharmacy scope');
 select is((select count(*) from public.brand_pharmacies where brand_id = '00000000-0000-0000-0000-000000000102'), 0::bigint, 'brand admin cannot read another brand relation');
 with changed as (update public.brand_pharmacies set notes = 'Hacked' where id = '00000000-0000-0000-0000-000000000413' returning 1)
 select is((select count(*) from changed), 0::bigint, 'brand admin cannot update another brand relation');
@@ -73,6 +75,7 @@ select is((select count(*) from public.missions where brand_id = '00000000-0000-
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a3","role":"authenticated"}', true);
 select is((select count(*) from public.brand_pharmacies), 1::bigint, 'agent sees only assigned brand pharmacies');
 select is((select count(*) from public.pharmacies), 1::bigint, 'agent sees only assigned physical pharmacies');
+select is((select count(*) from public.pharmacy_groups where id = '00000000-0000-0000-0000-000000000301'), 1::bigint, 'agent sees the group of an assigned pharmacy');
 select is((select count(*) from public.brand_pharmacies where id = '00000000-0000-0000-0000-000000000412'), 0::bigint, 'agent cannot read an unassigned pharmacy');
 with changed as (update public.brand_pharmacies set notes = 'Compte rendu agent' where id = '00000000-0000-0000-0000-000000000411' returning 1)
 select is((select count(*) from changed), 1::bigint, 'agent can update notes on its assigned pharmacy');
@@ -83,6 +86,7 @@ select is((select count(*) from public.brand_pharmacies where id = '00000000-000
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000b4","role":"authenticated"}', true);
 select is((select count(*) from public.brand_pharmacies), 0::bigint, 'facilitator has no general referential access');
 select is((select count(*) from public.pharmacies), 0::bigint, 'facilitator cannot read physical pharmacies');
+select is((select count(*) from public.pharmacy_groups), 0::bigint, 'facilitator cannot read groups without pharmacy access');
 select is((select count(*) from public.missions), 1::bigint, 'facilitator sees only assigned missions');
 select is((select count(*) from public.missions where id = '00000000-0000-0000-0000-000000000903'), 0::bigint, 'facilitator cannot read another intervenor mission');
 
@@ -98,6 +102,7 @@ select is((select count(*) from public.brand_pharmacies), (select both_brand_rel
 select is((select count(*) from public.pharmacies), (select both_brand_pharmacies from rls_expected_counts), 'multi-brand user sees shared physical pharmacy only once');
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}', true);
+select is((select count(*) from public.pharmacy_groups), 2::bigint, 'TR1 super admin keeps global group visibility');
 update public.memberships set role_id = (select id from public.roles where key = 'agent') where user_id = '00000000-0000-0000-0000-0000000000b3';
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000b3","role":"authenticated"}', true);
 select is((select count(*) from public.brand_pharmacies), 0::bigint, 'role change is applied immediately by RLS');

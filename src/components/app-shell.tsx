@@ -74,5 +74,5 @@ function initials(name: string) {
 }
 
 function roleLabel(role: string) {
-  return ({ super_admin: "Super administrateur", brand_admin: "Administrateur marque", tr1_manager: "Responsable TR1", brand_user: "Responsable marque", agent: "Agent terrain", facilitator: "Intervenant" } as Record<string, string>)[role] ?? role;
+  return ({ super_admin: "Super administrateur", brand_admin: "Administrateur marque", tr1_manager: "Responsable TR1", brand_user: "Responsable marque", agent: "Agent terrain", facilitator: "Intervenant terrain" } as Record<string, string>)[role] ?? role;
 }
