@@ -69,4 +69,35 @@ describe("signUpAction", () => {
     expect(result.success).toMatch(/missions/i);
     expect(signUp).toHaveBeenCalledOnce();
   });
+
+  it("returns a user error without creating a Supabase client when the redirect URL is invalid", async () => {
+    const signUp = vi.fn();
+    const configurationError = new Error("Invalid authentication redirect configuration");
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    mocks.resolveOnboardingRedirectUrl.mockImplementationOnce(() => {
+      throw configurationError;
+    });
+    mocks.createClient.mockResolvedValue({ auth: { signUp } });
+
+    const formData = new FormData();
+    formData.set("fullName", "Amir Ounissi");
+    formData.set("email", "amir.agent@example.com");
+    formData.set("password", "TestVKSwiss!2026");
+    formData.set("confirmPassword", "TestVKSwiss!2026");
+    formData.set("profileType", "agent");
+    formData.set("currentOrganization", "VK Swiss");
+    formData.set("territory", "Suisse romande");
+
+    await expect(signUpAction({}, formData)).resolves.toEqual({
+      error: "La création de compte est momentanément indisponible. Contactez l’administrateur TR1.",
+    });
+    expect(consoleError).toHaveBeenCalledWith(
+      "Configuration de redirection d’authentification invalide pour le signup.",
+      configurationError,
+    );
+    expect(mocks.createClient).not.toHaveBeenCalled();
+    expect(signUp).not.toHaveBeenCalled();
+
+    consoleError.mockRestore();
+  });
 });

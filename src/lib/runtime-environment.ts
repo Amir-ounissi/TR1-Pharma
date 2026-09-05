@@ -25,7 +25,14 @@ function getAppEnvironment(environment: RuntimeEnvironmentInput) {
 
 export function resolveAppUrl(environment: RuntimeEnvironmentInput = process.env) {
   if (environment.NEXT_PUBLIC_APP_URL) return environment.NEXT_PUBLIC_APP_URL;
-  if (environment.VERCEL_ENV === "preview" && environment.VERCEL_URL) return `https://${environment.VERCEL_URL}`;
+
+  const vercelUrl = environment.VERCEL_ENV === "production"
+    ? environment.VERCEL_PROJECT_PRODUCTION_URL || environment.VERCEL_URL
+    : environment.VERCEL_ENV === "preview"
+      ? environment.VERCEL_URL
+      : undefined;
+
+  if (vercelUrl) return vercelUrl.includes("://") ? vercelUrl : `https://${vercelUrl}`;
   return undefined;
 }
 

@@ -11,20 +11,27 @@ if (missing.length) {
   console.error(`Variables staging manquantes : ${missing.join(", ")}`);
   process.exit(1);
 }
-if (process.env.APP_ENV !== "staging") {
-  console.error("APP_ENV=staging est obligatoire.");
+if (!["staging", "production"].includes(process.env.APP_ENV)) {
+  console.error("APP_ENV=staging ou APP_ENV=production est obligatoire.");
   process.exit(1);
 }
 
 function resolveAppUrl(environment = process.env) {
   if (environment.NEXT_PUBLIC_APP_URL) return environment.NEXT_PUBLIC_APP_URL;
-  if (environment.VERCEL_ENV === "preview" && environment.VERCEL_URL) return `https://${environment.VERCEL_URL}`;
+
+  const vercelUrl = environment.VERCEL_ENV === "production"
+    ? environment.VERCEL_PROJECT_PRODUCTION_URL || environment.VERCEL_URL
+    : environment.VERCEL_ENV === "preview"
+      ? environment.VERCEL_URL
+      : undefined;
+
+  if (vercelUrl) return vercelUrl.includes("://") ? vercelUrl : `https://${vercelUrl}`;
   return undefined;
 }
 
 const resolvedAppUrl = resolveAppUrl(process.env);
 if (!resolvedAppUrl) {
-  console.error("NEXT_PUBLIC_APP_URL ou un contexte Preview Vercel valide est obligatoire.");
+  console.error("NEXT_PUBLIC_APP_URL ou une URL système Vercel exploitable est obligatoire.");
   process.exit(1);
 }
 
@@ -48,4 +55,4 @@ if (Object.keys(process.env).some((name) => /^NEXT_PUBLIC_.*(SECRET|SERVICE_ROLE
   console.error("Un secret serveur est exposé avec le préfixe NEXT_PUBLIC_.");
   process.exit(1);
 }
-console.log("Configuration staging : OK");
+console.log(`Configuration ${process.env.APP_ENV} : OK`);
