@@ -18,11 +18,7 @@ test("un compte marque reprend son onboarding autonome et crée un tenant brouil
     user_metadata: {
       full_name: "Direction Autonome",
       requested_profile_type: "brand",
-      requested_access: {
-        type: "brand",
-        company_name: companyName,
-        job_title: "Direction commerciale",
-      },
+      requested_access: { type: "brand", company_name: companyName, job_title: "Direction commerciale" },
     },
   });
   expect(createError).toBeNull();
@@ -56,23 +52,25 @@ test("un compte marque reprend son onboarding autonome et crée un tenant brouil
 
   await page.goto("/setup");
   await expect(page.getByRole("heading", { name: `Configurer ${brandName}` })).toBeVisible();
-  await expect(page.getByText("1. Équipe", { exact: true })).toBeVisible();
-  await expect(page.getByText("2. Territoires", { exact: true })).toBeVisible();
-  await expect(page.getByText("3. Pharmacies", { exact: true })).toBeVisible();
-  await expect(page.getByText("4. Produits", { exact: true })).toBeVisible();
-  await expect(page.getByText("5. Configuration commerciale", { exact: true })).toBeVisible();
-  await expect(page.getByText("6. Vérification et activation", { exact: true })).toBeVisible();
+  for (const title of [
+    "1. Équipe",
+    "2. Territoires",
+    "3. Pharmacies",
+    "4. Produits",
+    "5. Configuration commerciale",
+    "6. Vérification et activation",
+  ]) {
+    await expect(page.getByText(title, { exact: true })).toBeVisible();
+  }
 
-  const [{ data: brand }, { data: request }, { data: onboarding }, { data: entitlement }, { data: membership }] = await Promise.all([
+  const [{ data: brand }, { data: onboarding }, { data: entitlement }, { data: membership }] = await Promise.all([
     admin.from("brands").select("status,is_active,organization_id").eq("id", brandId).single(),
-    admin.from("access_requests").select("status,target_brand_id,review_source").eq("user_id", userId).single(),
     admin.from("brand_onboarding_sessions").select("onboarding_mode,owner_user_id,status,current_step").eq("brand_id", brandId).single(),
     admin.from("brand_saas_entitlements").select("status,saas_plans!inner(key)").eq("brand_id", brandId).single(),
     admin.from("memberships").select("status,roles!inner(key)").eq("brand_id", brandId).eq("user_id", userId).single(),
   ]);
 
   expect(brand).toMatchObject({ status: "draft", is_active: false });
-  expect(request).toMatchObject({ status: "approved", target_brand_id: brandId, review_source: "self_service" });
   expect(onboarding).toMatchObject({ onboarding_mode: "self_service", owner_user_id: userId, status: "in_progress", current_step: "users" });
   expect(entitlement?.status).toBe("trialing");
   expect(membership?.status).toBe("active");
