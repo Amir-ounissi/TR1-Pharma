@@ -42,7 +42,7 @@ describe("Executive Cockpit", () => {
     expect(runRateProjection(50, "2026-01-01", "2026-12-31", "2026-06-30")).toBeCloseTo(100.83, 2);
   });
 
-  it("privilégie l’objectif marque qui correspond exactement à l’exercice", () => {
+  it("retient uniquement l’objectif marque correspondant exactement à l’exercice", () => {
     const objectives: ExecutiveObjective[] = [
       {
         objective_id: "quarter",
@@ -71,6 +71,7 @@ describe("Executive Cockpit", () => {
     ];
 
     expect(pickExecutiveObjective(objectives, "revenue_ht", "2026-01-01", "2026-12-31")?.objective_id).toBe("year");
+    expect(pickExecutiveObjective(objectives, "revenue_ht", "2027-01-01", "2027-12-31")).toBeNull();
   });
 
   it("priorise les alertes actionnables et explicables", () => {
