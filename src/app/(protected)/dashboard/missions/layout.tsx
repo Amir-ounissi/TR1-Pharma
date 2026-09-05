@@ -1,6 +1,6 @@
-import { requireActiveBrandCapability } from "@/lib/saas/server";
+import { requireWorkspaceCapability } from "@/lib/saas/server";
 
 export default async function MissionsCapabilityLayout({ children }: { children: React.ReactNode }) {
-  await requireActiveBrandCapability("missions");
+  await requireWorkspaceCapability("missions");
   return children;
 }
