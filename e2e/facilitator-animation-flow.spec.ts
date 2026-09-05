@@ -25,7 +25,9 @@ test("animateur accède directement à son espace et prépare plusieurs animatio
 
   const pharmacySearch = page.getByPlaceholder("Nom, ville, CP, adresse ou CIP…").first();
   await pharmacySearch.fill("75003");
-  await expect(page.getByText(/Pharmacie République/i).first()).toBeVisible();
+  const pharmacyResult = page.getByRole("button", { name: /Pharmacie République.*75003/i }).first();
+  await expect(pharmacyResult).toBeVisible();
+  await pharmacyResult.click();
 
   await page.getByRole("button", { name: "Ajouter une animation" }).click();
   await expect(page.locator('input[type="date"]')).toHaveCount(2);
