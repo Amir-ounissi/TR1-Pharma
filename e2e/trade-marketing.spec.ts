@@ -30,7 +30,7 @@ test("un administrateur crée une campagne Trade Marketing et cible une pharmaci
   await page.locator('input[name="reason"]').fill("Compte stratégique");
   await page.getByRole("button", { name: "Ajouter au ciblage" }).click();
 
-  await expect(page.getByRole("heading", { name: "Pharmacies ciblées" })).toBeVisible();
+  await expect(page.getByText("Pharmacies ciblées", { exact: true })).toBeVisible();
   await expect(page.getByText("Pharmacie République", { exact: true })).toBeVisible();
 });
 
