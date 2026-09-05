@@ -105,8 +105,8 @@ select throws_ok(
     (select brand_id from public.brand_onboarding_sessions where owner_user_id='00000000-0000-0000-0000-0000000000b1')
   )$$,
   '23514',
-  'Brand activation blocked: 3 required checks missing',
-  'activation is blocked until the standard required checklist is complete'
+  'Brand activation blocked: 1 required checks missing',
+  'activation is blocked until the required commercial settings step is complete'
 );
 
 select lives_ok(
@@ -146,11 +146,12 @@ set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"00000000-0000-0000-0000-0000000000b1","role":"authenticated"}',true);
 
 select lives_ok(
-  $$select public.update_onboarding_settings(
+  $$select public.mark_self_service_onboarding_step(
     (select brand_id from public.brand_onboarding_sessions where owner_user_id='00000000-0000-0000-0000-0000000000b1'),
-    '{}'::jsonb
+    'settings',
+    'completed'
   )$$,
-  'workspace owner can validate the standard business settings'
+  'workspace owner can validate the required commercial settings step'
 );
 
 select lives_ok(
