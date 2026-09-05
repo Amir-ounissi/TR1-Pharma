@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { PageHeader } from "@/components/ux/page-header";
 import { SectionHeader } from "@/components/ux/section-header";
 import { requireActiveBrand } from "@/lib/auth";
+import { nextIsoDate, parisYearToDate } from "@/lib/business-date";
 import {
   formatCompactCurrency,
   formatCompactNumber,
@@ -38,25 +39,25 @@ type NetworkRow = {
   strategic_distribution_rate: number | null;
 };
 
-function toDateInput(value: Date) {
-  return value.toISOString().slice(0, 10);
-}
-
-function parseDate(value: string | undefined, fallback: Date) {
-  if (!value) return toDateInput(fallback);
+function parseDate(value: string | undefined, fallback: string) {
+  if (!value) return fallback;
   const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? toDateInput(fallback) : value;
+  return Number.isNaN(parsed.getTime()) ? fallback : value;
 }
 
 export default async function AgentPerformancePage({ searchParams }: { searchParams: SearchParams }) {
   const query = await searchParams;
-  const today = new Date();
-  const thirtyDaysAgo = new Date(today);
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
-  const from = parseDate(query.from, thirtyDaysAgo);
-  const to = parseDate(query.to, today);
+  const defaultPeriod = parisYearToDate();
+  const from = parseDate(query.from, defaultPeriod.from);
+  const to = parseDate(query.to, defaultPeriod.to);
   const { supabase, brand, profile, userId } = await requireActiveBrand();
-  const [{ data: overview }, { data: objectives }, { data: networkRows }, { data: priorities }] = await Promise.all([
+  const [
+    { data: overview },
+    { data: objectives },
+    { data: networkRows },
+    { data: priorities },
+    { count: orderCount },
+  ] = await Promise.all([
     supabase.rpc("get_performance_overview", {
       target_brand_id: brand.id,
       target_period_start: from,
@@ -84,6 +85,13 @@ export default async function AgentPerformancePage({ searchParams }: { searchPar
       target_filter: null,
       result_limit: 5,
     }),
+    supabase
+      .from("performance_order_facts")
+      .select("order_id", { count: "exact", head: true })
+      .eq("brand_id", brand.id)
+      .eq("agent_user_id_at_order", userId)
+      .gte("order_date", `${from}T00:00:00.000Z`)
+      .lt("order_date", `${nextIsoDate(to)}T00:00:00.000Z`),
   ]);
 
   const summary = (overview ?? {}) as Record<string, number | null>;
@@ -110,6 +118,9 @@ export default async function AgentPerformancePage({ searchParams }: { searchPar
             <input className="h-10 rounded-md border bg-background px-3" name="to" type="date" defaultValue={to} />
             <button className="inline-flex h-10 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground">Mettre à jour</button>
           </form>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Par défaut : depuis le 1er janvier de l’année en cours.
+          </p>
         </CardContent>
       </Card>
 
@@ -149,6 +160,7 @@ export default async function AgentPerformancePage({ searchParams }: { searchPar
             <CardDescription>Ce que tu as réellement exécuté et déclaré.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-2">
+            <Detail label="Commandes" value={formatCompactNumber(orderCount)} />
             <Detail label="CA commandé HT" value={formatCompactCurrency(summary.booked_revenue_ht)} />
             <Detail label="CA facturé HT" value={formatCompactCurrency(summary.revenue_ht)} />
             <Detail label="Implantations" value={formatCompactNumber(summary.implantations)} />

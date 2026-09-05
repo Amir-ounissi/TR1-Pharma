@@ -2,8 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { requireActiveBrand } from "@/lib/auth";
+import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
 import { parseCsv } from "@/lib/csv-import";
+import { canAdministerProducts } from "@/lib/product-permissions";
 import {
   activityStatuses, commercialStatuses, pharmacySources, potentialLevels, priorityLevels,
   type ImportEntity, type ImportStrategy,
@@ -255,6 +256,14 @@ function productMutationPayload(
   };
 }
 
+async function getProductAdministrationSession() {
+  const session = await requireActiveBrand();
+  const contexts = await getBrandContexts();
+  const role = contexts.find((context) => context.id === session.brand.id)?.role;
+
+  return canAdministerProducts(role) ? session : null;
+}
+
 export async function createProductAction(
   _state: ReferenceActionState,
   formData: FormData,
@@ -265,7 +274,9 @@ export async function createProductAction(
     return { error: "Produit invalide." };
   }
 
-  const { supabase, brand } = await requireActiveBrand();
+  const session = await getProductAdministrationSession();
+  if (!session) return { error: "Action non autorisée." };
+  const { supabase, brand } = session;
 
   const { error } = await supabase.from("products").insert({
     brand_id: brand.id,
@@ -301,7 +312,9 @@ export async function updateProductAction(
     return { error: "Produit invalide." };
   }
 
-  const { supabase, brand } = await requireActiveBrand();
+  const session = await getProductAdministrationSession();
+  if (!session) return { error: "Action non autorisée." };
+  const { supabase, brand } = session;
 
   const { id, ...productData } = parsed.data;
 
@@ -377,7 +390,9 @@ export async function updateTerritoryAction(_state: ReferenceActionState, formDa
 
 export async function toggleProductAction(formData: FormData) {
   const parsed = z.object({ id: z.string().uuid(), active: z.enum(["true", "false"]) }).parse(Object.fromEntries(formData));
-  const { supabase, brand } = await requireActiveBrand();
+  const session = await getProductAdministrationSession();
+  if (!session) throw new Error("Action non autorisée.");
+  const { supabase, brand } = session;
   const isActive = parsed.active === "true";
   const { error } = await supabase.from("products").update({ is_active: isActive, discontinued_at: isActive ? null : new Date().toISOString() }).eq("id", parsed.id).eq("brand_id", brand.id);
   if (error) throw new Error(error.message);

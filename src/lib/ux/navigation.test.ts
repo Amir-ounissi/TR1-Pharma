@@ -6,6 +6,7 @@ describe("role navigation", () => {
     const links = getNavigationItems("agent").map((item) => item.href);
     expect(links).toContain("/dashboard/agent");
     expect(links).toContain("/dashboard/agenda");
+    expect(links).toContain("/dashboard/products");
     expect(links).not.toContain("/dashboard/users");
     expect(links).not.toContain("/dashboard/admin/onboarding");
   });

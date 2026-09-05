@@ -21,6 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
+import { isIncompleteHubSpotHistory } from "@/lib/orders/historical-import";
 import { formatCurrency } from "@/lib/reference-data";
 import {
   translateUiMessage,
@@ -100,6 +101,8 @@ export default async function OrderDetailPage({
 
   if (!order) notFound();
 
+  const isHistoricalImport = isIncompleteHubSpotHistory(order);
+
   const pharmacy = Array.isArray(order.pharmacies)
     ? order.pharmacies[0]
     : order.pharmacies;
@@ -151,6 +154,17 @@ export default async function OrderDetailPage({
         </Card>
       ) : null}
 
+      {isHistoricalImport ? (
+        <Card className="border-amber-300 bg-amber-50/70">
+          <CardHeader>
+            <CardTitle>Historique importé</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-amber-950">
+            Le montant et la date de cette commande proviennent de HubSpot. Le détail produits disponible dans la source est incomplet : aucune ligne manquante n’a été inventée.
+          </CardContent>
+        </Card>
+      ) : null}
+
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-6">
           <Card>
@@ -184,6 +198,10 @@ export default async function OrderDetailPage({
                   }))}
                   products={productOptions}
                 />
+              ) : isHistoricalImport && !(items ?? []).length ? (
+                <p className="p-6 text-sm text-muted-foreground">
+                  Détail produits non disponible de façon exhaustive dans la source historique.
+                </p>
               ) : (
                 <Table>
                   <TableHeader>

@@ -22,6 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatCurrency } from "@/lib/reference-data";
+import { productDistributionPercent } from "@/lib/product-distribution";
 import { uiLabel } from "@/lib/ui-copy";
 
 export type ProductCatalogItem = {
@@ -42,14 +43,18 @@ export type ProductCatalogItem = {
   units_per_case: number | null;
   minimum_order_quantity: number | null;
   is_active: boolean;
+  distribution_present_count: number;
+  distribution_portfolio_count: number;
 };
 
 export function ProductCatalog({
   products,
   currency,
+  canManage,
 }: {
   products: ProductCatalogItem[];
   currency: string;
+  canManage: boolean;
 }) {
   const [selectedProduct, setSelectedProduct] =
     useState<ProductCatalogItem | null>(null);
@@ -65,11 +70,11 @@ export function ProductCatalog({
           <TableRow>
             <TableHead>Produit</TableHead>
             <TableHead>Référence / EAN</TableHead>
-            <TableHead>Référentiel</TableHead>
+            <TableHead>DN</TableHead>
             <TableHead>Prix</TableHead>
             <TableHead>Logistique</TableHead>
             <TableHead>État</TableHead>
-            <TableHead>Action</TableHead>
+            {canManage ? <TableHead>Action</TableHead> : null}
           </TableRow>
         </TableHeader>
 
@@ -104,18 +109,11 @@ export function ProductCatalog({
               </TableCell>
 
               <TableCell>
-                <Badge variant="outline">
-                  {uiLabel(product.strategic_priority)}
-                </Badge>
-                <p className="text-xs text-muted-foreground">
-                  {product.counts_for_distribution
-                    ? "Compté DN"
-                    : "Hors DN"}
-                </p>
+                <ProductDistribution product={product} />
               </TableCell>
 
               <TableCell>
-                {formatCurrency(product.wholesale_price_ht, currency)}
+                Achat HT {formatCurrency(product.wholesale_price_ht, currency)}
                 <p className="text-xs text-muted-foreground">
                   PVC{" "}
                   {formatCurrency(product.retail_price_ttc, currency)}
@@ -139,22 +137,24 @@ export function ProductCatalog({
                 </Badge>
               </TableCell>
 
-              <TableCell
-                onClick={(event) => event.stopPropagation()}
-                onKeyDown={(event) => event.stopPropagation()}
-              >
-                <form action={toggleProductAction}>
-                  <input type="hidden" name="id" value={product.id} />
-                  <input
-                    type="hidden"
-                    name="active"
-                    value={product.is_active ? "false" : "true"}
-                  />
-                  <Button variant="outline" size="sm">
-                    {product.is_active ? "Arrêter" : "Réactiver"}
-                  </Button>
-                </form>
-              </TableCell>
+              {canManage ? (
+                <TableCell
+                  onClick={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => event.stopPropagation()}
+                >
+                  <form action={toggleProductAction}>
+                    <input type="hidden" name="id" value={product.id} />
+                    <input
+                      type="hidden"
+                      name="active"
+                      value={product.is_active ? "false" : "true"}
+                    />
+                    <Button variant="outline" size="sm">
+                      {product.is_active ? "Arrêter" : "Réactiver"}
+                    </Button>
+                  </form>
+                </TableCell>
+              ) : null}
             </TableRow>
           ))}
         </TableBody>
@@ -172,21 +172,97 @@ export function ProductCatalog({
               <SheetHeader className="border-b pr-12">
                 <SheetTitle>{selectedProduct.name}</SheetTitle>
                 <SheetDescription>
-                  Complétez ou modifiez la fiche produit. Les données
-                  importées sont déjà préremplies.
+                  {canManage
+                    ? "Complétez ou modifiez la fiche produit. Les données importées sont déjà préremplies."
+                    : "Informations du catalogue et diffusion dans votre portefeuille."}
                 </SheetDescription>
               </SheetHeader>
 
               <div className="px-4 pb-8">
-                <ProductEditForm
-                  key={selectedProduct.id}
-                  product={selectedProduct}
-                />
+                {canManage ? (
+                  <ProductEditForm
+                    key={selectedProduct.id}
+                    product={selectedProduct}
+                  />
+                ) : (
+                  <ProductReadOnlyDetails
+                    product={selectedProduct}
+                    currency={currency}
+                  />
+                )}
               </div>
             </>
           ) : null}
         </SheetContent>
       </Sheet>
     </>
+  );
+}
+
+function ProductDistribution({ product }: { product: ProductCatalogItem }) {
+  if (!product.counts_for_distribution) {
+    return <Badge variant="outline">Hors DN</Badge>;
+  }
+
+  const percentage = productDistributionPercent(
+    product.distribution_present_count,
+    product.distribution_portfolio_count,
+  );
+
+  return (
+    <div>
+      <p className="font-medium">
+        {product.distribution_present_count} / {product.distribution_portfolio_count}
+      </p>
+      <p className="text-xs text-muted-foreground">
+        {percentage === null ? "—" : `${percentage.toLocaleString("fr-FR")} %`}
+      </p>
+    </div>
+  );
+}
+
+function ProductReadOnlyDetails({
+  product,
+  currency,
+}: {
+  product: ProductCatalogItem;
+  currency: string;
+}) {
+  return (
+    <div className="grid gap-4 text-sm sm:grid-cols-2">
+      <Detail label="Référence" value={product.sku} />
+      <Detail label="EAN" value={product.ean ?? "—"} />
+      <Detail label="Famille" value={product.product_family ?? product.category ?? "—"} />
+      <Detail label="Format" value={product.format ?? "—"} />
+      <Detail label="Priorité" value={uiLabel(product.strategic_priority)} />
+      <div>
+        <p className="text-xs text-muted-foreground">DN</p>
+        <div className="mt-1"><ProductDistribution product={product} /></div>
+      </div>
+      <Detail label="Prix achat HT" value={formatCurrency(product.wholesale_price_ht, currency)} />
+      <Detail label="PVC TTC" value={formatCurrency(product.retail_price_ttc, currency)} />
+      <Detail
+        label="TVA"
+        value={product.tax_rate == null ? "—" : `${Number(product.tax_rate).toLocaleString("fr-FR")} %`}
+      />
+      <Detail label="PCB" value={product.units_per_case?.toLocaleString("fr-FR") ?? "—"} />
+      <Detail label="Minimum de commande" value={product.minimum_order_quantity?.toLocaleString("fr-FR") ?? "—"} />
+      <Detail label="État" value={product.is_active ? "Actif" : "Arrêté"} />
+      {product.description ? (
+        <div className="sm:col-span-2">
+          <p className="text-xs text-muted-foreground">Description</p>
+          <p className="mt-1 whitespace-pre-wrap">{product.description}</p>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 font-medium">{value}</p>
+    </div>
   );
 }

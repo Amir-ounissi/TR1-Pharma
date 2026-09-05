@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createProductAction,
+  toggleProductAction,
   updateProductAction,
 } from "./actions";
 
 const mocks = vi.hoisted(() => ({
   revalidatePath: vi.fn(),
   requireActiveBrand: vi.fn(),
+  getBrandContexts: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({
@@ -15,6 +17,7 @@ vi.mock("next/cache", () => ({
 
 vi.mock("@/lib/auth", () => ({
   requireActiveBrand: mocks.requireActiveBrand,
+  getBrandContexts: mocks.getBrandContexts,
 }));
 
 function validProductFormData() {
@@ -42,6 +45,9 @@ function validProductFormData() {
 describe("product reference actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.getBrandContexts.mockResolvedValue([
+      { id: "brand-1", name: "Marque", slug: "marque", role: "brand_admin" },
+    ]);
   });
 
   it("rejects invalid VAT and logistics values", async () => {
@@ -163,5 +169,40 @@ describe("product reference actions", () => {
 
     expect(result).toEqual({ error: "Produit invalide." });
     expect(mocks.requireActiveBrand).not.toHaveBeenCalled();
+  });
+
+  it("rejects product creation for an agent before touching the database", async () => {
+    const from = vi.fn();
+    mocks.requireActiveBrand.mockResolvedValue({
+      brand: { id: "brand-1", name: "Naali", slug: "naali" },
+      supabase: { from },
+    });
+    mocks.getBrandContexts.mockResolvedValue([
+      { id: "brand-1", name: "Naali", slug: "naali", role: "agent" },
+    ]);
+
+    await expect(createProductAction({}, validProductFormData())).resolves.toEqual({
+      error: "Action non autorisée.",
+    });
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("rejects product activation changes for an agent before touching the database", async () => {
+    const from = vi.fn();
+    mocks.requireActiveBrand.mockResolvedValue({
+      brand: { id: "brand-1", name: "Naali", slug: "naali" },
+      supabase: { from },
+    });
+    mocks.getBrandContexts.mockResolvedValue([
+      { id: "brand-1", name: "Naali", slug: "naali", role: "agent" },
+    ]);
+    const formData = new FormData();
+    formData.set("id", "00000000-0000-4000-8000-000000000001");
+    formData.set("active", "true");
+
+    await expect(toggleProductAction(formData)).rejects.toThrow(
+      "Action non autorisée.",
+    );
+    expect(from).not.toHaveBeenCalled();
   });
 });

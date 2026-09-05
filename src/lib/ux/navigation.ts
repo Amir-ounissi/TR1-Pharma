@@ -18,6 +18,7 @@ const agentItems: NavigationItem[] = [
   { href: "/dashboard/agent", label: "Ma journée", shortLabel: "Accueil", icon: "sun" },
   { href: "/dashboard/pharmacies", label: "Pharmacies", icon: "building" },
   { href: "/dashboard/orders", label: "Mes commandes", icon: "clipboard" },
+  { href: "/dashboard/products", label: "Produits", icon: "boxes" },
   { href: "/dashboard/missions", label: "Missions", icon: "calendar" },
   { href: "/dashboard/agenda", label: "Agenda", icon: "calendar" },
   { href: "/dashboard/tasks", label: "Tâches", icon: "clipboard" },
