@@ -11,6 +11,11 @@ test("animateur accède directement à son espace et prépare plusieurs animatio
   await expect(page.getByRole("heading", { name: "Aujourd’hui" })).toBeVisible();
   await expect(page.getByText("Toutes vos marques, animations et rapports dans un seul espace.")).toBeVisible();
 
+  await page.goto("/dashboard/reports");
+  await expect(page).toHaveURL(/\/dashboard\/reports$/);
+  await expect(page.getByRole("heading", { name: "Mes comptes rendus" })).toBeVisible();
+  await expect(page.getByText(/quelle que soit la marque/i)).toBeVisible();
+
   await page.goto("/dashboard/missions/new");
   await expect(page.getByRole("heading", { name: "Planifier des animations" })).toBeVisible();
   await expect(page.getByText(/Animation = présentiel en pharmacie, gamme complète/)).toBeVisible();
