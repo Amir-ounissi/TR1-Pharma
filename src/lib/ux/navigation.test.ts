@@ -63,6 +63,25 @@ describe("role navigation", () => {
     ]);
   });
 
+  it("filters tenant navigation using the active brand capabilities", () => {
+    const coreCapabilities = ["core_crm", "orders", "agent_day", "missions", "performance", "distribution"] as const;
+    const managerLinks = getNavigationItems("tr1_manager", "tenant", coreCapabilities).map((item) => item.href);
+    const agentMoreLinks = getAgentMoreItems(coreCapabilities).map((item) => item.href);
+
+    expect(managerLinks).not.toContain("/dashboard/commercial-health");
+    expect(managerLinks).toContain("/dashboard/pharmacies");
+    expect(managerLinks).toContain("/dashboard/orders");
+    expect(agentMoreLinks).toContain("/dashboard/missions");
+    expect(agentMoreLinks).toContain("/dashboard/agent/performance");
+    expect(agentMoreLinks).not.toContain("/dashboard/agent/assistant");
+  });
+
+  it("lets an explicit capability immediately expose its module", () => {
+    const capabilities = ["core_crm", "orders", "agent_day", "missions", "performance", "assistant_terrain", "next_best_action"] as const;
+    expect(getAgentMoreItems(capabilities).map((item) => item.href)).toContain("/dashboard/agent/assistant");
+    expect(getNavigationItems("tr1_manager", "tenant", capabilities).map((item) => item.href)).toContain("/dashboard/commercial-health");
+  });
+
   it("declares the same five primary destinations on mobile for the agent", () => {
     expect(getMobileAgentNavigationItems().map((item) => item.href)).toEqual([
       "/dashboard/agent",
