@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import { CopyPlus, Plus, Search, Trash2 } from "lucide-react";
 import {
   proposeAnimationBatchAction,
@@ -90,20 +90,6 @@ export function FacilitatorAnimationPlanner({
     () => pharmacies.filter((pharmacy) => pharmacy.brandId === brandId),
     [brandId, pharmacies],
   );
-
-  useEffect(() => {
-    if (!state.success) return;
-    setRows([
-      {
-        key: nextKey,
-        pharmacyId: "",
-        date: "",
-        start: defaultStart,
-        end: defaultEnd,
-      },
-    ]);
-    setNextKey((value) => value + 1);
-  }, [state.success]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateRow = (key: number, patch: Partial<AnimationRow>) => {
     setRows((current) =>
@@ -207,6 +193,7 @@ export function FacilitatorAnimationPlanner({
                 {index === 0 ? <Badge variant="secondary">Recherche intelligente</Badge> : null}
               </div>
               <PharmacySearch
+                key={`${brandId}-${row.key}`}
                 pharmacies={brandPharmacies}
                 value={row.pharmacyId}
                 onChange={(pharmacyId) => updateRow(row.key, { pharmacyId })}
@@ -301,10 +288,6 @@ function PharmacySearch({
     [pharmacies, query],
   );
 
-  useEffect(() => {
-    if (!selected) setQuery("");
-  }, [selected]);
-
   return (
     <div className="relative">
       <div className="relative">
@@ -314,10 +297,7 @@ function PharmacySearch({
           value={query || (selected ? formatPharmacy(selected) : "")}
           placeholder="Nom, ville, CP, adresse ou CIP…"
           autoComplete="off"
-          onFocus={() => {
-            if (selected) setQuery("");
-            setOpen(true);
-          }}
+          onFocus={() => setOpen(true)}
           onChange={(event) => {
             setQuery(event.target.value);
             onChange("");
