@@ -5,7 +5,9 @@ import { z } from "zod";
 import { requireActiveBrand } from "@/lib/auth";
 import { assertActiveBrandCapability } from "@/lib/saas/server";
 
-const uuid = z.string().uuid();
+// PostgreSQL accepts canonical UUID text regardless of RFC version/variant bits.
+// Seeded deterministic IDs use that broader PostgreSQL domain, so validate shape here.
+const uuid = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
 const campaignType = z.enum(["activation", "launch", "animation", "training", "merchandising", "visibility", "sell_out", "sampling", "promotion", "other"]);
 const campaignStatus = z.enum(["draft", "planned", "active", "completed", "cancelled"]);
 
