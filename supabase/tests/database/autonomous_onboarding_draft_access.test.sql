@@ -78,6 +78,7 @@ insert into self_service_scope(brand_id, organization_id)
 select brand_id, organization_id
 from public.brand_onboarding_sessions
 where owner_user_id = '00000000-0000-4000-8000-0000000000c1';
+grant select on self_service_scope to authenticated;
 
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-0000000000c2","role":"authenticated"}',true);
