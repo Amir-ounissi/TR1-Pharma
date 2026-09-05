@@ -7,7 +7,9 @@ import { z } from "zod";
 import { requireActiveBrand } from "@/lib/auth";
 import { assertActiveBrandCapability } from "@/lib/saas/server";
 
-const uuid = z.string().uuid();
+// PostgreSQL accepts canonical UUID text regardless of RFC version/variant bits.
+// Seeded deterministic IDs use that broader PostgreSQL domain, so validate shape here.
+const uuid = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
 const captureMethod = z.enum(["document", "manual", "import", "stock_inference"]);
 const evidenceKind = z.enum(["photo", "pdf", "csv", "other"]);
 const allowedMimeTypes = new Set([
