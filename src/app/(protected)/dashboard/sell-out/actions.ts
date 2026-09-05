@@ -63,7 +63,16 @@ function safeFileName(value: string) {
 }
 
 export async function saveSellOutCaptureFormAction(formData: FormData): Promise<void> {
-  const parsed = captureSchema.safeParse(Object.fromEntries(formData));
+  const parsed = captureSchema.safeParse({
+    captureId: String(formData.get("captureId") ?? "").trim(),
+    brandPharmacyId: String(formData.get("brandPharmacyId") ?? "").trim(),
+    method: String(formData.get("method") ?? "").trim(),
+    periodStart: String(formData.get("periodStart") ?? "").trim(),
+    periodEnd: String(formData.get("periodEnd") ?? "").trim(),
+    sourceLabel: String(formData.get("sourceLabel") ?? "").trim(),
+    confidence: String(formData.get("confidence") ?? "").trim(),
+    tradeCampaignId: String(formData.get("tradeCampaignId") ?? "").trim(),
+  });
   if (!parsed.success) throw new Error("Relevé sell-out invalide.");
   if (parsed.data.periodEnd < parsed.data.periodStart) throw new Error("La date de fin doit suivre la date de début.");
   const confidence = parsed.data.confidence ? z.coerce.number().min(0).max(1).parse(parsed.data.confidence) : null;
