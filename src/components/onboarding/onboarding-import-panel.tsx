@@ -38,23 +38,43 @@ const modeOptions: Record<ImportType, Array<{ value: string; label: string }>> =
   orders: [{ value: "append_only", label: "Ajouter sans écraser l’historique" }],
 };
 
+type StageOnboardingImportAction = typeof stageOnboardingImportAction;
+
 export function OnboardingImportPanel({
   brandId,
   templates,
+  stageAction = stageOnboardingImportAction,
+  allowedTypes,
+  initialType,
+  idPrefix = "onboarding",
 }: {
   brandId: string;
   templates: Array<{ import_type: ImportType; documentation: string }>;
+  stageAction?: StageOnboardingImportAction;
+  allowedTypes?: ImportType[];
+  initialType?: ImportType;
+  idPrefix?: string;
 }) {
-  const [type, setType] = useState<ImportType>("products");
+  const selectableTypes = allowedTypes?.length
+    ? allowedTypes
+    : (Object.keys(typeLabels) as ImportType[]);
+  const resolvedInitialType = initialType && selectableTypes.includes(initialType)
+    ? initialType
+    : selectableTypes[0] ?? "products";
+  const [type, setType] = useState<ImportType>(resolvedInitialType);
   const [content, setContent] = useState("");
   const [fileName, setFileName] = useState("");
   const [mapping, setMapping] = useState<ColumnMapping>({});
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [previewError, setPreviewError] = useState("");
   const [dateFormat, setDateFormat] = useState("");
-  const [state, action, pending] = useActionState(stageOnboardingImportAction, {});
+  const [state, action, pending] = useActionState(stageAction, {});
   const documentation = templates.find((template) => template.import_type === type)?.documentation;
   const availableColumns = useMemo(() => [...IMPORT_COLUMNS[type].required, ...IMPORT_COLUMNS[type].optional], [type]);
+  const typeInputId = `${idPrefix}-import-type`;
+  const modeInputId = `${idPrefix}-import-mode`;
+  const dateFormatInputId = `${idPrefix}-date-format`;
+  const fileInputId = `${idPrefix}-file`;
 
   function refreshPreview(nextContent: string, nextType: ImportType, nextMapping?: ColumnMapping, nextDateFormat = dateFormat) {
     if (!nextContent) {
@@ -101,19 +121,20 @@ export function OnboardingImportPanel({
         <input type="hidden" name="mapping" value={JSON.stringify(mapping)} />
         <div className="md:col-span-2"><ActionFeedback error={state.error} success={state.success} /></div>
         <div className="space-y-2">
-          <Label htmlFor="onboarding-import-type">Données à importer</Label>
+          <Label htmlFor={typeInputId}>Données à importer</Label>
           <select
-            id="onboarding-import-type"
+            id={typeInputId}
             name="type"
             value={type}
             onChange={(event) => {
               const nextType = event.target.value as ImportType;
               setType(nextType);
-              refreshPreview(content, nextType);
+              setMapping({});
+              refreshPreview(content, nextType, {});
             }}
             className="border-input bg-background h-10 w-full rounded-md border px-3 text-sm"
           >
-            {Object.entries(typeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            {selectableTypes.map((value) => <option key={value} value={value}>{typeLabels[value]}</option>)}
           </select>
           <p className="text-xs text-muted-foreground">{documentation}</p>
           <a className="text-sm font-medium text-primary underline-offset-4 hover:underline" href={`/api/onboarding/templates/${type}`}>
@@ -121,16 +142,16 @@ export function OnboardingImportPanel({
           </a>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="onboarding-import-mode">Mode</Label>
-          <select id="onboarding-import-mode" name="mode" className="border-input bg-background h-10 w-full rounded-md border px-3 text-sm">
+          <Label htmlFor={modeInputId}>Mode</Label>
+          <select id={modeInputId} name="mode" className="border-input bg-background h-10 w-full rounded-md border px-3 text-sm">
             {modeOptions[type].map((mode) => <option key={mode.value} value={mode.value}>{mode.label}</option>)}
           </select>
         </div>
         {type === "orders" ? (
           <div className="space-y-2">
-            <Label htmlFor="dateFormat">Format des dates non ISO</Label>
+            <Label htmlFor={dateFormatInputId}>Format des dates non ISO</Label>
             <select
-              id="dateFormat"
+              id={dateFormatInputId}
               name="dateFormat"
               value={dateFormat}
               onChange={(event) => {
@@ -146,9 +167,9 @@ export function OnboardingImportPanel({
           </div>
         ) : null}
         <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="onboarding-file">Fichier CSV UTF-8 — 5 Mo et 10 000 lignes maximum</Label>
+          <Label htmlFor={fileInputId}>Fichier CSV UTF-8 — 5 Mo et 10 000 lignes maximum</Label>
           <input
-            id="onboarding-file"
+            id={fileInputId}
             name="file"
             type="file"
             accept=".csv,text/csv"
