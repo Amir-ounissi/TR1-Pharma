@@ -93,6 +93,12 @@ export default async function AgentPerformancePage({ searchParams }: { searchPar
     .slice(0, 4);
   const portfolio = (networkRows ?? []) as NetworkRow[];
   const firstName = profile.full_name.split(" ")[0];
+  const hasOrderPerformance = [
+    summary.booked_revenue_ht,
+    summary.revenue_ht,
+    summary.implantations,
+    summary.reorders,
+  ].some((value) => Number(value ?? 0) > 0);
 
   return (
     <main className="space-y-6">
@@ -112,6 +118,12 @@ export default async function AgentPerformancePage({ searchParams }: { searchPar
           </form>
         </CardContent>
       </Card>
+
+      {!hasOrderPerformance ? (
+        <p className="rounded-md border border-dashed p-5 text-center text-sm text-muted-foreground">
+          Les données de performance apparaîtront lorsque des commandes seront disponibles.
+        </p>
+      ) : null}
 
       <section className="space-y-3">
         <SectionHeader id="where-i-stand" title="Où j’en suis" description="Les 3 à 4 objectifs qui doivent guider ta journée." />

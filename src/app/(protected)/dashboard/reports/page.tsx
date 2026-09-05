@@ -163,7 +163,7 @@ export default async function ReportsPage() {
       {!error && !reports?.length ? (
         <p className="rounded-md border p-8 text-center text-muted-foreground">
           {isReviewer
-            ? "Aucun rapport en attente de validation."
+            ? "Aucun compte rendu à traiter."
             : "Aucun compte rendu disponible."}
         </p>
       ) : null}

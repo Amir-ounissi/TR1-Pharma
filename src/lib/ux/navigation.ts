@@ -18,8 +18,12 @@ const agentItems: NavigationItem[] = [
   { href: "/dashboard/agent", label: "Ma journée", shortLabel: "Accueil", icon: "sun" },
   { href: "/dashboard/pharmacies", label: "Pharmacies", icon: "building" },
   { href: "/dashboard/orders", label: "Mes commandes", icon: "clipboard" },
-  { href: "/dashboard/missions", label: "Missions", icon: "calendar" },
   { href: "/dashboard/agenda", label: "Agenda", icon: "calendar" },
+  { href: "/dashboard/agent/more", label: "Plus", icon: "menu" },
+];
+
+const agentMoreItems: NavigationItem[] = [
+  { href: "/dashboard/missions", label: "Missions", icon: "calendar" },
   { href: "/dashboard/tasks", label: "Tâches", icon: "clipboard" },
   { href: "/dashboard/agent/performance", label: "Ma performance", icon: "chart" },
   { href: "/dashboard/reports", label: "Mes comptes rendus", icon: "file" },
@@ -27,8 +31,7 @@ const agentItems: NavigationItem[] = [
 ];
 
 const managerItems: NavigationItem[] = [
-  { href: "/dashboard", label: "Vue d’ensemble", shortLabel: "Accueil", icon: "layout" },
-  { href: "/dashboard/commercial-health", label: "Priorités", icon: "target" },
+  { href: "/dashboard/commercial-health", label: "Priorités", shortLabel: "Priorités", icon: "target" },
   { href: "/dashboard/pharmacies", label: "Pharmacies", icon: "building" },
   { href: "/dashboard/orders", label: "Commandes", icon: "clipboard" },
   { href: "/dashboard/missions", label: "Missions", icon: "calendar" },
@@ -41,7 +44,6 @@ const tenantAdminItems: NavigationItem[] = [
   { href: "/dashboard/territories", label: "Territoires", icon: "map" },
   { href: "/dashboard/imports", label: "Imports", icon: "upload" },
   { href: "/dashboard/users", label: "Utilisateurs", icon: "users" },
-  { href: "/dashboard/admin/design-system", label: "Configuration UI", icon: "activity" },
 ];
 
 const platformAdminItems: NavigationItem[] = [
@@ -78,11 +80,11 @@ export function getNavigationSections(
 
   if (family === "facilitator") {
     return [{
-      label: "Missions",
+      label: "Intervenant terrain",
       items: [
-        { href: "/dashboard/field", label: "Mes missions", shortLabel: "Accueil", icon: "route" },
+        { href: "/dashboard/field", label: "Aujourd’hui", shortLabel: "Aujourd’hui", icon: "sun" },
+        { href: "/dashboard/missions", label: "Mes missions", icon: "route" },
         { href: "/dashboard/agenda", label: "Agenda", icon: "calendar" },
-        { href: "/dashboard/missions/new", label: "Proposer une mission", icon: "target" },
         { href: "/dashboard/reports", label: "Mes rapports", icon: "file" },
       ],
     }];
@@ -92,32 +94,31 @@ export function getNavigationSections(
     return [{ label: "Plateforme TR1", items: platformAdminItems }];
   }
 
-  const pilotageItems = [...managerItems];
-
-  if (["brand_admin", "tr1_manager", "super_admin"].includes(role)) {
-    pilotageItems.push({ href: "/dashboard/missions/proposals", label: "Propositions à valider", icon: "target" });
-  }
-
-  if (role === "tr1_manager" || role === "super_admin") {
-    pilotageItems.push({
-      href: "/dashboard/reports",
-      label: "Rapports à valider",
-      icon: "file",
-    });
-  }
-
   const sections: NavigationSection[] = [
-    { label: "Pilotage", items: pilotageItems },
+    { label: "Pilotage", items: managerItems },
   ];
+
+  const validationItems: NavigationItem[] = [];
+  if (["brand_admin", "tr1_manager", "super_admin"].includes(role)) validationItems.push({ href: "/dashboard/missions/proposals", label: "Propositions à valider", icon: "target" });
+  if (role === "tr1_manager" || role === "super_admin") validationItems.push({ href: "/dashboard/reports", label: "Rapports à valider", icon: "file" });
+  if (validationItems.length) sections.push({ label: "Validation", items: validationItems });
 
   if (family === "admin") {
     sections.push({
-      label: "Administration marque",
+      label: "Paramètres",
       items: tenantAdminItems,
     });
   }
 
   return sections;
+}
+
+export function getAgentMoreItems() {
+  return agentMoreItems;
+}
+
+export function getMobileAgentNavigationItems() {
+  return agentItems.filter((item) => item.href !== "/dashboard/agent/more");
 }
 
 export function getNavigationItems(

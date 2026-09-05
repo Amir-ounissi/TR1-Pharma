@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { getNavigationItems, getRoleFamily, getRoleLandingPath, isNavigationItemActive } from "./navigation";
+import { getAgentMoreItems, getMobileAgentNavigationItems, getNavigationItems, getNavigationSections, getRoleFamily, getRoleLandingPath, isNavigationItemActive } from "./navigation";
 
 describe("role navigation", () => {
   it("keeps agent navigation focused on field work", () => {
     const links = getNavigationItems("agent").map((item) => item.href);
     expect(links).toContain("/dashboard/agent");
-    expect(links).toContain("/dashboard/agenda");
+    expect(links).toEqual(["/dashboard/agent", "/dashboard/pharmacies", "/dashboard/orders", "/dashboard/agenda", "/dashboard/agent/more"]);
+    expect(links).not.toContain("/dashboard/missions");
+    expect(getAgentMoreItems().map((item) => item.href)).toEqual(["/dashboard/missions", "/dashboard/tasks", "/dashboard/agent/performance", "/dashboard/reports", "/dashboard/agent/assistant"]);
     expect(links).not.toContain("/dashboard/users");
     expect(links).not.toContain("/dashboard/admin/onboarding");
   });
@@ -13,6 +15,7 @@ describe("role navigation", () => {
   it("adds administration only for authorized roles", () => {
     expect(getNavigationItems("brand_admin").map((item) => item.href)).toContain("/dashboard/imports");
     expect(getNavigationItems("tr1_manager").map((item) => item.href)).not.toContain("/dashboard/imports");
+    expect(getNavigationItems("brand_admin").map((item) => item.href)).not.toContain("/dashboard/admin/design-system");
   });
 
   it("splits global superadmin navigation from tenant navigation", () => {
@@ -39,7 +42,27 @@ describe("role navigation", () => {
 
     expect(brandAdminLinks).not.toContain("/dashboard/admin/users");
     expect(brandAdminLinks).not.toContain("/dashboard/admin/leads");
-    expect(facilitatorLinks).toEqual(["/dashboard/field", "/dashboard/agenda", "/dashboard/missions/new", "/dashboard/reports"]);
+    expect(facilitatorLinks).toEqual(["/dashboard/field", "/dashboard/missions", "/dashboard/agenda", "/dashboard/reports"]);
+  });
+
+  it("keeps brand pilotage concise and moves reference pages under Paramètres", () => {
+    const sections = getNavigationSections("brand_admin");
+    expect(sections[0]).toEqual({ label: "Pilotage", items: expect.arrayContaining([
+      expect.objectContaining({ href: "/dashboard/commercial-health", label: "Priorités" }),
+      expect.objectContaining({ href: "/dashboard/pharmacies" }),
+      expect.objectContaining({ href: "/dashboard/orders" }),
+      expect.objectContaining({ href: "/dashboard/missions" }),
+      expect.objectContaining({ href: "/dashboard/network", label: "Performance" }),
+    ]) });
+    expect(sections.find((section) => section.label === "Paramètres")?.items.map((item) => item.href)).toEqual([
+      "/dashboard/products", "/dashboard/groups", "/dashboard/territories", "/dashboard/imports", "/dashboard/users",
+    ]);
+  });
+
+  it("declares mobile agent destinations explicitly", () => {
+    expect(getMobileAgentNavigationItems().map((item) => item.href)).toEqual([
+      "/dashboard/agent", "/dashboard/pharmacies", "/dashboard/orders", "/dashboard/agenda",
+    ]);
   });
 
   it("classifies roles and nested active routes", () => {

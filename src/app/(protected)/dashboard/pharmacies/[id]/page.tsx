@@ -1,19 +1,50 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { AssignmentForm, InteractionForm, StatusChangeForm, TaskForm } from "@/components/commercial/forms";
+import {
+  AssignmentForm,
+  InteractionForm,
+  StatusChangeForm,
+  TaskForm,
+} from "@/components/commercial/forms";
 import { CommercialHealthSummary } from "@/components/commercial/commercial-health-summary";
-import { MissionImpact, type ImpactRow } from "@/components/missions/mission-impact";
+import {
+  MissionImpact,
+  type ImpactRow,
+} from "@/components/missions/mission-impact";
 import { PharmacyCockpit } from "@/components/pharmacies/pharmacy-cockpit";
 import { TerrainPharmacyHeader } from "@/components/agent/terrain-pharmacy-header";
-import { AddImplantedProductForm, AgentPotentialForm, ContactForm, RelationForm } from "@/components/reference/simple-forms";
+import {
+  AddImplantedProductForm,
+  AgentPotentialForm,
+  ContactForm,
+  RelationForm,
+} from "@/components/reference/simple-forms";
 import { ArchiveButton } from "@/components/reference/archive-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { InlineError } from "@/components/ux/inline-error";
 import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
 import { formatMissionType } from "@/lib/performance";
+import {
+  getPharmacyDetailDataNeeds,
+  normalizePharmacyDetailTab,
+} from "@/lib/pharmacy-detail";
 import { presentationLabel } from "@/lib/presentation";
 import { orderStatusLabel, uiLabel } from "@/lib/ui-copy";
 import { formatCurrency, labels } from "@/lib/reference-data";
@@ -23,18 +54,40 @@ import { getPharmacyCockpit } from "@/lib/pharmacy-cockpit";
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ tab?: string; event?: string }>;
 
-export default async function PharmacyDetailPage({ params, searchParams }: { params: Params; searchParams: SearchParams }) {
+export default async function PharmacyDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Params;
+  searchParams: SearchParams;
+}) {
   const [{ id }, query] = await Promise.all([params, searchParams]);
-  const tab = query.tab ?? "overview";
-  const [{ supabase, brand, userId }, contexts] = await Promise.all([requireActiveBrand(), getBrandContexts()]);
-  const role = contexts.find((context) => context.id === brand.id)?.role ?? "brand_user";
+  const tab = normalizePharmacyDetailTab(query.tab);
+  const dataNeeds = getPharmacyDetailDataNeeds(tab);
+  const [{ supabase, brand, userId }, contexts] = await Promise.all([
+    requireActiveBrand(),
+    getBrandContexts(),
+  ]);
+  const role =
+    contexts.find((context) => context.id === brand.id)?.role ?? "brand_user";
   const isAgent = role === "agent";
-  const canViewFinancials = ["tr1_manager", "brand_admin", "brand_user", "super_admin"].includes(role);
-  const canManageAccount = ["tr1_manager", "brand_admin", "super_admin"].includes(role);
+  const canViewFinancials = [
+    "tr1_manager",
+    "brand_admin",
+    "brand_user",
+    "super_admin",
+  ].includes(role);
+  const canManageAccount = [
+    "tr1_manager",
+    "brand_admin",
+    "super_admin",
+  ].includes(role);
 
   const { data: settings } = await supabase
     .from("brand_settings")
-    .select("allow_agents_to_change_status,allow_agents_to_create_contacts,allow_agents_to_edit_potential")
+    .select(
+      "allow_agents_to_change_status,allow_agents_to_create_contacts,allow_agents_to_edit_potential",
+    )
     .eq("brand_id", brand.id)
     .maybeSingle();
 
@@ -57,42 +110,280 @@ export default async function PharmacyDetailPage({ params, searchParams }: { par
     "super_admin",
   ].includes(role);
 
-  const { data: relation } = await supabase.from("brand_pharmacies").select("*,pharmacies(*,pharmacy_groups(name)),territories(name)").eq("id", id).eq("brand_id", brand.id).maybeSingle();
+  const { data: relation, error: relationError } = await supabase
+    .from("brand_pharmacies")
+    .select("*,pharmacies(*,pharmacy_groups(name)),territories(name)")
+    .eq("id", id)
+    .eq("brand_id", brand.id)
+    .maybeSingle();
+  if (relationError) {
+    console.error("Impossible de charger la pharmacie.", {
+      code: relationError.code,
+      message: relationError.message,
+    });
+    return (
+      <InlineError
+        title="Impossible de charger cette pharmacie."
+        description="Les informations de la pharmacie sont momentanément indisponibles."
+        action={
+          <Button asChild size="sm" variant="outline">
+            <Link href={`/dashboard/pharmacies/${id}`}>Réessayer</Link>
+          </Button>
+        }
+      />
+    );
+  }
   if (!relation) notFound();
-  const pharmacy = Array.isArray(relation.pharmacies) ? relation.pharmacies[0] : relation.pharmacies;
-  const [{ data: contacts }, { data: implanted }, { data: products }, { data: territories }, { data: memberships }, { data: commercialMemberships }, { data: timeline }, { data: assignments }, { data: performance }, { data: bookedOrderFacts }, { data: pharmacyOrders }, { data: distribution }, { data: activityHistory }, { data: healthRows }, { data: missions }, { data: missionImpacts }] = await Promise.all([
-    supabase.from("pharmacy_contacts").select("*").eq("pharmacy_id", pharmacy.id).is("archived_at", null).order("is_primary", { ascending: false }),
-    supabase.from("brand_pharmacy_products").select("*,products(name,sku,format,retail_price_ttc)").eq("brand_pharmacy_id", id).order("created_at"),
-    supabase.from("products").select("id,name").eq("brand_id", brand.id).eq("is_active", true).order("name"),
-    supabase.from("territories").select("id,name").eq("brand_id", brand.id).is("archived_at", null).order("name"),
-    supabase.from("memberships").select("user_id,roles!inner(key),users(user_profiles(full_name))").eq("brand_id", brand.id).eq("status", "active").eq("roles.key", "agent"),
-    supabase.from("memberships").select("user_id,roles!inner(key),users(user_profiles(full_name))").eq("brand_id", brand.id).eq("status", "active").in("roles.key", ["tr1_manager", "brand_admin", "brand_user", "agent"]),
-    supabase.from("brand_pharmacy_timeline").select("*").eq("brand_pharmacy_id", id).order("occurred_at", { ascending: false }).limit(12),
-    supabase.from("pharmacy_assignments").select("*,users!pharmacy_assignments_user_id_fkey(user_profiles(full_name))").eq("brand_pharmacy_id", id).order("created_at", { ascending: false }),
-    supabase.from("brand_pharmacy_order_performance").select("*").eq("brand_pharmacy_id", id).maybeSingle(),
-    supabase.from("performance_booked_order_facts").select("net_amount_ht").eq("brand_pharmacy_id", id),
-    supabase.from("orders").select("id,order_number,external_order_id,order_date,order_status,order_type,is_initial_order,is_reorder,net_amount_ht,total_ttc").eq("brand_pharmacy_id", id).is("archived_at", null).order("order_date", { ascending: false }).limit(10),
-    supabase.from("brand_pharmacy_distribution").select("*").eq("brand_pharmacy_id", id).maybeSingle(),
-    supabase.from("brand_pharmacy_activity_history").select("*").eq("brand_pharmacy_id", id).order("calculated_at", { ascending: false }).limit(10),
-    supabase.rpc("get_commercial_health", { target_brand_pharmacy_id: id }),
-    supabase.from("missions").select("id,title,mission_type,status,scheduled_start_at,actual_end_at,completed_at").eq("brand_pharmacy_id", id).is("archived_at", null).order("scheduled_start_at", { ascending: false }).limit(20),
-    supabase.from("mission_impact").select("*").eq("brand_pharmacy_id", id).order("mission_date", { ascending: false }).limit(8),
+  const pharmacy = Array.isArray(relation.pharmacies)
+    ? relation.pharmacies[0]
+    : relation.pharmacies;
+  if (!pharmacy) notFound();
+  const [
+    { data: contacts, error: contactsError },
+    { data: implanted, error: implantedError },
+    { data: products, error: productsError },
+    { data: territories, error: territoriesError },
+    { data: memberships, error: membershipsError },
+    { data: commercialMemberships, error: commercialMembershipsError },
+    { data: timeline, error: timelineError },
+    { data: assignments, error: assignmentsError },
+    { data: performance, error: performanceError },
+    { data: bookedOrderFacts, error: bookedOrderFactsError },
+    { data: pharmacyOrders, error: pharmacyOrdersError },
+    { data: distribution, error: distributionError },
+    { data: activityHistory, error: activityHistoryError },
+    { data: healthRows, error: healthError },
+    { data: missions, error: missionsError },
+    { data: missionImpacts, error: missionImpactsError },
+  ] = await Promise.all([
+    dataNeeds.contacts
+      ? supabase
+          .from("pharmacy_contacts")
+          .select("*")
+          .eq("pharmacy_id", pharmacy.id)
+          .is("archived_at", null)
+          .order("is_primary", { ascending: false })
+      : Promise.resolve({ data: null, error: null }),
+    dataNeeds.implantedProducts
+      ? supabase
+          .from("brand_pharmacy_products")
+          .select("*,products(name,sku,format,retail_price_ttc)")
+          .eq("brand_pharmacy_id", id)
+          .order("created_at")
+      : Promise.resolve({ data: null, error: null }),
+    dataNeeds.productCatalog
+      ? supabase
+          .from("products")
+          .select("id,name")
+          .eq("brand_id", brand.id)
+          .eq("is_active", true)
+          .order("name")
+      : Promise.resolve({ data: null, error: null }),
+    dataNeeds.territories
+      ? supabase
+          .from("territories")
+          .select("id,name")
+          .eq("brand_id", brand.id)
+          .is("archived_at", null)
+          .order("name")
+      : Promise.resolve({ data: null, error: null }),
+    dataNeeds.agentMemberships
+      ? supabase
+          .from("memberships")
+          .select("user_id,roles!inner(key),users!memberships_user_id_fkey(user_profiles(full_name))")
+          .eq("brand_id", brand.id)
+          .eq("status", "active")
+          .eq("roles.key", "agent")
+      : Promise.resolve({ data: null, error: null }),
+    dataNeeds.commercialMemberships
+      ? supabase
+          .from("memberships")
+          .select("user_id,roles!inner(key),users!memberships_user_id_fkey(user_profiles(full_name))")
+          .eq("brand_id", brand.id)
+          .eq("status", "active")
+          .in("roles.key", [
+            "tr1_manager",
+            "brand_admin",
+            "brand_user",
+            "agent",
+          ])
+      : Promise.resolve({ data: null, error: null }),
+    dataNeeds.timeline
+      ? supabase
+          .from("brand_pharmacy_timeline")
+          .select("*")
+          .eq("brand_pharmacy_id", id)
+          .order("occurred_at", { ascending: false })
+          .limit(12)
+      : Promise.resolve({ data: null, error: null }),
+    dataNeeds.assignments
+      ? supabase
+          .from("pharmacy_assignments")
+          .select(
+            "*,users!pharmacy_assignments_user_id_fkey(user_profiles(full_name))",
+          )
+          .eq("brand_pharmacy_id", id)
+          .order("created_at", { ascending: false })
+      : Promise.resolve({ data: null, error: null }),
+    dataNeeds.performance
+      ? supabase
+          .from("brand_pharmacy_order_performance")
+          .select("*")
+          .eq("brand_pharmacy_id", id)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    dataNeeds.bookedOrders
+      ? supabase
+          .from("performance_booked_order_facts")
+          .select("net_amount_ht")
+          .eq("brand_pharmacy_id", id)
+      : Promise.resolve({ data: null, error: null }),
+    dataNeeds.orders
+      ? supabase
+          .from("orders")
+          .select(
+            "id,order_number,external_order_id,order_date,order_status,order_type,is_initial_order,is_reorder,net_amount_ht,total_ttc",
+          )
+          .eq("brand_pharmacy_id", id)
+          .is("archived_at", null)
+          .order("order_date", { ascending: false })
+          .limit(10)
+      : Promise.resolve({ data: null, error: null }),
+    dataNeeds.distribution
+      ? supabase
+          .from("brand_pharmacy_distribution")
+          .select("*")
+          .eq("brand_pharmacy_id", id)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    dataNeeds.activityHistory
+      ? supabase
+          .from("brand_pharmacy_activity_history")
+          .select("*")
+          .eq("brand_pharmacy_id", id)
+          .order("calculated_at", { ascending: false })
+          .limit(10)
+      : Promise.resolve({ data: null, error: null }),
+    dataNeeds.commercialHealth
+      ? supabase.rpc("get_commercial_health", { target_brand_pharmacy_id: id })
+      : Promise.resolve({ data: null, error: null }),
+    dataNeeds.missions
+      ? supabase
+          .from("missions")
+          .select(
+            "id,title,mission_type,status,scheduled_start_at,actual_end_at,completed_at",
+          )
+          .eq("brand_pharmacy_id", id)
+          .is("archived_at", null)
+          .order("scheduled_start_at", { ascending: false })
+          .limit(20)
+      : Promise.resolve({ data: null, error: null }),
+    dataNeeds.missionImpacts
+      ? supabase
+          .from("mission_impact")
+          .select("*")
+          .eq("brand_pharmacy_id", id)
+          .order("mission_date", { ascending: false })
+          .limit(8)
+      : Promise.resolve({ data: null, error: null }),
   ]);
-  const agents = (memberships ?? []).map((membership) => { const user = Array.isArray(membership.users) ? membership.users[0] : membership.users; const profile = Array.isArray(user?.user_profiles) ? user.user_profiles[0] : user?.user_profiles; return { id: membership.user_id, name: profile?.full_name ?? "Agent" }; });
-  const recentMissionImpact = tab === "performance" ? (missionImpacts ?? []).slice(0, 3) : [];
-  const users = (commercialMemberships ?? []).map((membership) => { const user = Array.isArray(membership.users) ? membership.users[0] : membership.users; const profile = Array.isArray(user?.user_profiles) ? user.user_profiles[0] : user?.user_profiles; return { id: membership.user_id, name: profile?.full_name ?? "Utilisateur" }; });
-  const contactOptions = (contacts ?? []).map((contact) => ({ id: contact.id, name: `${contact.first_name} ${contact.last_name}` }));
+  const tabLoadError = [
+    contactsError,
+    implantedError,
+    productsError,
+    territoriesError,
+    membershipsError,
+    commercialMembershipsError,
+    timelineError,
+    assignmentsError,
+    performanceError,
+    bookedOrderFactsError,
+    pharmacyOrdersError,
+    distributionError,
+    activityHistoryError,
+    healthError,
+    missionsError,
+    missionImpactsError,
+  ].find(Boolean);
+  if (tabLoadError)
+    console.error("Impossible de charger une section de la pharmacie.", {
+      code: tabLoadError.code,
+      message: tabLoadError.message,
+      tab,
+    });
+  const agents = (memberships ?? []).map((membership) => {
+    const user = Array.isArray(membership.users)
+      ? membership.users[0]
+      : membership.users;
+    const profile = Array.isArray(user?.user_profiles)
+      ? user.user_profiles[0]
+      : user?.user_profiles;
+    return { id: membership.user_id, name: profile?.full_name ?? "Agent" };
+  });
+  const recentMissionImpact =
+    tab === "performance" ? (missionImpacts ?? []).slice(0, 3) : [];
+  const users = (commercialMemberships ?? []).map((membership) => {
+    const user = Array.isArray(membership.users)
+      ? membership.users[0]
+      : membership.users;
+    const profile = Array.isArray(user?.user_profiles)
+      ? user.user_profiles[0]
+      : user?.user_profiles;
+    return {
+      id: membership.user_id,
+      name: profile?.full_name ?? "Utilisateur",
+    };
+  });
+  const contactOptions = (contacts ?? []).map((contact) => ({
+    id: contact.id,
+    name: `${contact.first_name} ${contact.last_name}`,
+  }));
   const accountTimeline = [
     ...(timeline ?? []),
-    ...(pharmacyOrders ?? []).map((order) => ({ brand_pharmacy_id: id, brand_id: brand.id, event_type: "order", event_id: order.id, occurred_at: order.order_date, title: order.is_initial_order ? "Première commande" : order.is_reorder ? "Réassort" : "Commande", details: `${order.order_number || order.external_order_id || order.id.slice(0, 8)} · ${formatCurrency(order.net_amount_ht)} HT` })),
+    ...(pharmacyOrders ?? []).map((order) => ({
+      brand_pharmacy_id: id,
+      brand_id: brand.id,
+      event_type: "order",
+      event_id: order.id,
+      occurred_at: order.order_date,
+      title: order.is_initial_order
+        ? "Première commande"
+        : order.is_reorder
+          ? "Réassort"
+          : "Commande",
+      details: `${order.order_number || order.external_order_id || order.id.slice(0, 8)} · ${formatCurrency(order.net_amount_ht)} HT`,
+    })),
     ...(missions ?? []).flatMap((mission) => {
-      const occurredAt = mission.actual_end_at || mission.completed_at || mission.scheduled_start_at;
-      return occurredAt ? [{ brand_pharmacy_id: id, brand_id: brand.id, event_type: "mission", event_id: mission.id, occurred_at: occurredAt, title: mission.title, details: `${formatMissionType(mission.mission_type)} · ${presentationLabel(mission.status)}` }] : [];
+      const occurredAt =
+        mission.actual_end_at ||
+        mission.completed_at ||
+        mission.scheduled_start_at;
+      return occurredAt
+        ? [
+            {
+              brand_pharmacy_id: id,
+              brand_id: brand.id,
+              event_type: "mission",
+              event_id: mission.id,
+              occurred_at: occurredAt,
+              title: mission.title,
+              details: `${formatMissionType(mission.mission_type)} · ${presentationLabel(mission.status)}`,
+            },
+          ]
+        : [];
     }),
-  ].sort((left, right) => new Date(right.occurred_at).getTime() - new Date(left.occurred_at).getTime());
-  const visibleEvents = query.event ? accountTimeline.filter((event) => event.event_type === query.event) : accountTimeline;
+  ].sort(
+    (left, right) =>
+      new Date(right.occurred_at).getTime() -
+      new Date(left.occurred_at).getTime(),
+  );
+  const visibleEvents = query.event
+    ? accountTimeline.filter((event) => event.event_type === query.event)
+    : accountTimeline;
   const health = (healthRows?.[0] ?? null) as CommercialHealthRow | null;
-  const missingProducts = Array.isArray(distribution?.missing_products) ? distribution.missing_products : [];
+  const missingProducts = Array.isArray(distribution?.missing_products)
+    ? distribution.missing_products
+    : [];
   const bookedRevenueHt = (bookedOrderFacts ?? []).reduce(
     (total, order) => total + Number(order.net_amount_ht ?? 0),
     0,
@@ -105,24 +396,885 @@ export default async function PharmacyDetailPage({ params, searchParams }: { par
     missingProducts,
     healthStatus: health?.health_status,
     priorityReasons: health?.priority_reasons,
-    hasNextAction: Boolean(relation.next_action_type || relation.next_action_at),
+    hasNextAction: Boolean(
+      relation.next_action_type || relation.next_action_at,
+    ),
     commercialStatus: relation.commercial_status,
   });
-  const tabs = [["overview", "Vue générale"], ["activity", "Activité"], ["orders", "Commandes"], ["performance", "Performance"], ["contacts", "Contacts"], ["products", "Produits / Assortiment"], ["history", "Historique"], ["admin", "Administratif"]];
-  return <div className="space-y-6"><TerrainPharmacyHeader brandPharmacyId={id} pharmacyId={pharmacy.id} name={pharmacy.trade_name || pharmacy.legal_name} phone={pharmacy.phone} address={`${pharmacy.address_line_1 || "Adresse non renseignée"} · ${pharmacy.postal_code} ${pharmacy.city}`} status={labels.commercialStatus[relation.commercial_status as keyof typeof labels.commercialStatus]} potential={labels.potentialLevel[relation.potential_level as keyof typeof labels.potentialLevel]} lastOrderAt={relation.last_order_at} nextActionType={relation.next_action_type} nextActionAt={relation.next_action_at} objective={cockpit.objectiveLabel} primaryAction={cockpit.primaryAction} navigation={{ latitude: pharmacy.latitude, longitude: pharmacy.longitude, address_line_1: pharmacy.address_line_1, postal_code: pharmacy.postal_code, city: pharmacy.city, country_code: pharmacy.country_code }} />{canManageAccount ? <div className="flex justify-end"><ArchiveButton id={id} /></div> : null}
-    <nav aria-label="Sections de la pharmacie" className="flex gap-1 overflow-x-auto rounded-[0.4rem] border border-[var(--tr1-line-strong)] bg-transparent p-1">{tabs.map(([value, label]) => <Button key={value} asChild variant={tab === value ? "secondary" : "ghost"} size="sm" className={tab === value ? "bg-[var(--tr1-navy)] text-white hover:bg-[var(--tr1-navy-soft)] hover:text-white" : ""}><Link aria-current={tab === value ? "page" : undefined} href={`/dashboard/pharmacies/${id}?tab=${value}`}>{label}</Link></Button>)}</nav>
-    {tab === "overview" ? <div className="space-y-6"><PharmacyCockpit brandPharmacyId={id} objective={cockpit} lastInteractionAt={relation.last_interaction_at} lastOrderAt={performance?.last_valid_order_at ?? relation.last_order_at} validOrderCount={performance?.valid_order_count} reorderCount={performance?.reorder_count} averageDaysBetweenOrders={performance?.average_days_between_orders} firstReorderAt={performance?.first_reorder_at} strategicDistributionRate={distribution?.strategic_distribution_rate} missingProductCount={missingProducts.length} nextActionType={relation.next_action_type} nextActionAt={relation.next_action_at} missions={missions ?? []} impacts={(missionImpacts ?? []) as ImpactRow[]} canViewFinancials={canViewFinancials} isOperational={role === "agent"} /><CommercialHealthSummary health={health} /><div className="grid gap-6 xl:grid-cols-[1.1fr_.9fr]">{canManageAccount ? <Card><CardHeader><CardTitle>Relation commerciale</CardTitle><CardDescription>Ces informations sont propres à {brand.name}.</CardDescription></CardHeader><CardContent><RelationForm relation={relation} territories={territories ?? []} agents={agents} /></CardContent></Card> : isAgent && canEditPotential ? <Card><CardHeader><CardTitle>Potentiel commercial</CardTitle><CardDescription>Ce réglage est autorisé par la marque pour les agents.</CardDescription></CardHeader><CardContent><AgentPotentialForm relation={relation} /></CardContent></Card> : null}<Card><CardHeader><CardTitle>Coordonnées principales</CardTitle></CardHeader><CardContent className="space-y-3 text-sm"><p><strong>Téléphone :</strong> {pharmacy.phone || "—"}</p><p><strong>Email :</strong> {pharmacy.email || "—"}</p><p><strong>Groupement :</strong> {(Array.isArray(pharmacy.pharmacy_groups) ? pharmacy.pharmacy_groups[0] : pharmacy.pharmacy_groups)?.name || "Indépendante"}</p><Separator /><p><strong>Territoire :</strong> {(Array.isArray(relation.territories) ? relation.territories[0] : relation.territories)?.name || "Non affecté"}</p><p><strong>Responsable :</strong> {agents.find((agent) => agent.id === relation.current_agent_user_id)?.name || "Non affecté"}</p></CardContent></Card></div></div> : null}
-    {tab === "contacts" ? <div className="grid gap-6 lg:grid-cols-2"><Card><CardHeader><CardTitle>Contacts actifs</CardTitle></CardHeader><CardContent className="space-y-3">{(contacts ?? []).length === 0 ? <p className="text-muted-foreground">Aucun contact.</p> : contacts?.map((contact) => <div key={contact.id} className="rounded-md border p-3"><p className="font-medium">{contact.first_name} {contact.last_name} {contact.is_primary ? <Badge variant="secondary">Principal</Badge> : null}</p><p className="text-sm text-muted-foreground">{contact.job_title || "Fonction non renseignée"}</p><p className="text-sm">{contact.email || contact.phone || "Aucune coordonnée"}</p></div>)}</CardContent></Card>{canCreateContacts ? <Card><CardHeader><CardTitle>Ajouter un contact</CardTitle></CardHeader><CardContent><ContactForm pharmacyId={pharmacy.id} /></CardContent></Card> : null}</div> : null}
-    {tab === "orders" ? <div className="space-y-6">{canCreateOrder ? <div className="flex justify-end"><Button asChild><Link href={`/dashboard/orders/new?pharmacy=${id}`}>Créer une commande</Link></Button></div> : null}<Card><CardHeader><CardTitle>Historique des commandes</CardTitle></CardHeader><CardContent className="space-y-3">{(pharmacyOrders ?? []).length === 0 ? <p className="text-muted-foreground">Aucune commande.</p> : pharmacyOrders?.map((order) => <Link key={order.id} href={`/dashboard/orders/${order.id}`} className="flex flex-col justify-between gap-2 rounded-md border p-3 hover:bg-muted sm:flex-row"><div><p className="font-medium">{order.order_number || order.external_order_id || order.id.slice(0,8)}</p><p className="text-sm text-muted-foreground">{new Date(order.order_date).toLocaleDateString("fr-FR")} · {order.is_initial_order ? "Implantation" : order.is_reorder ? "Réassort" : uiLabel(order.order_type)}</p></div><div className="text-right"><Badge variant="secondary">{orderStatusLabel(order.order_status)}</Badge><p className="text-sm">{formatCurrency(order.net_amount_ht)} HT</p></div></Link>)}</CardContent></Card></div> : null}
-    {tab === "performance" ? <div className="space-y-6"><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{[[formatCurrency(bookedRevenueHt),"CA commandé HT"],[formatCurrency(performance?.total_revenue_net_ht ?? 0),"CA facturé total HT"],[formatCurrency(performance?.last_90_day_revenue_ht ?? 0),"CA facturé 90 jours"],[formatCurrency(performance?.last_12_month_revenue_ht ?? 0),"CA facturé 12 mois"],[formatCurrency(performance?.average_order_value_ht ?? 0),"Panier moyen"],[performance?.valid_order_count ?? 0,"Commandes commerciales"],[performance?.reorder_count ?? 0,"Réassorts"],[`${Number(distribution?.distribution_rate ?? 0).toFixed(1)}%`,"Assortiment"],[distribution?.strategic_distribution_rate == null ? "—" : `${Number(distribution.strategic_distribution_rate).toFixed(1)}%`,"Assortiment stratégique"]].map(([value,label]) => <Card key={label}><CardContent className="pt-5"><p className="text-2xl font-semibold">{value}</p><p className="text-sm text-muted-foreground">{label}</p></CardContent></Card>)}</div><div className="grid gap-4 xl:grid-cols-4"><Card><CardHeader><CardTitle className="text-base">Missions</CardTitle></CardHeader><CardContent><p className="text-2xl font-semibold">{(missions ?? []).filter((mission) => mission.status === "completed").length}</p><p className="text-sm text-muted-foreground">Interventions réalisées</p></CardContent></Card><Card><CardHeader><CardTitle className="text-base">Animations</CardTitle></CardHeader><CardContent><p className="text-2xl font-semibold">{(missions ?? []).filter((mission) => mission.mission_type === "animation" && mission.status === "completed").length}</p><p className="text-sm text-muted-foreground">{(missionImpacts ?? []).filter((impact) => impact.mission_type === "animation").reduce((total, impact) => total + Number((impact as ImpactRow).sell_out_units ?? 0), 0)} unités vendues</p></CardContent></Card><Card><CardHeader><CardTitle className="text-base">Formations</CardTitle></CardHeader><CardContent><p className="text-2xl font-semibold">{(missions ?? []).filter((mission) => mission.mission_type === "training" && mission.status === "completed").length}</p><p className="text-sm text-muted-foreground">{(missionImpacts ?? []).filter((impact) => impact.mission_type === "training").reduce((total, impact) => total + Number((impact as ImpactRow).participants_count ?? 0), 0)} participants</p></CardContent></Card><Card><CardHeader><CardTitle className="text-base">Impact observé</CardTitle></CardHeader><CardContent><p className="text-2xl font-semibold">{(missionImpacts ?? []).filter((impact) => (impact as ImpactRow).first_order_after_at).length}</p><p className="text-sm text-muted-foreground">Commande observée dans les 30 jours</p></CardContent></Card></div>{(recentMissionImpact ?? []).length ? <div className="space-y-4"><h2 className="text-xl font-semibold">Actions terrain récentes</h2>{((recentMissionImpact ?? []) as ImpactRow[]).map((impact) => <MissionImpact key={impact.mission_id} impact={impact} compact />)}</div> : null}<div className="grid gap-6 lg:grid-cols-2"><Card><CardHeader><CardTitle>Cycle de commande</CardTitle></CardHeader><CardContent className="space-y-2 text-sm"><p><strong>Implantation :</strong> {performance?.first_valid_order_at ? new Date(performance.first_valid_order_at).toLocaleDateString("fr-FR") : "—"}</p><p><strong>Premier réassort :</strong> {performance?.first_reorder_at ? new Date(performance.first_reorder_at).toLocaleDateString("fr-FR") : "—"}</p><p><strong>Dernière commande :</strong> {performance?.last_valid_order_at ? new Date(performance.last_valid_order_at).toLocaleDateString("fr-FR") : "—"}</p><p><strong>Intervalle moyen :</strong> {performance?.average_days_between_orders ? `${performance.average_days_between_orders} jours` : "Données insuffisantes"}</p><p><strong>Prochaine commande estimée :</strong> {performance?.expected_next_order_at ? new Date(performance.expected_next_order_at).toLocaleDateString("fr-FR") : "Inconnue"}</p><p className="text-xs text-muted-foreground">Cette date est une estimation simple, pas une prévision certaine.</p></CardContent></Card><Card><CardHeader><CardTitle>Historique d’activité</CardTitle></CardHeader><CardContent className="space-y-3">{(activityHistory ?? []).map((event) => <div key={event.id} className="border-l-2 pl-3"><p className="font-medium">{uiLabel(event.previous_activity_status)} → {uiLabel(event.new_activity_status)}</p><p className="text-sm text-muted-foreground">{event.reason} · {new Date(event.calculated_at).toLocaleString("fr-FR")}</p></div>)}</CardContent></Card></div><Card><CardHeader><CardTitle>Historique missions & impact observé</CardTitle><CardDescription>Commande observée, réassort observé et CA observé restent décrits comme des observations postérieures, jamais comme une causalité certaine.</CardDescription></CardHeader><CardContent className="overflow-x-auto p-0"><Table><TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Type</TableHead><TableHead>Intervenant</TableHead><TableHead>Résultat immédiat</TableHead><TableHead>Coût</TableHead><TableHead>Sell-out</TableHead><TableHead>Impact observé</TableHead></TableRow></TableHeader><TableBody>{(missions ?? []).map((mission) => { const impact = ((missionImpacts ?? []) as ImpactRow[]).find((row) => row.mission_id === mission.id); return <TableRow key={mission.id}><TableCell>{new Date(mission.actual_end_at || mission.completed_at || mission.scheduled_start_at || Date.now()).toLocaleDateString("fr-FR")}</TableCell><TableCell>{formatMissionType(mission.mission_type)}</TableCell><TableCell>{String(impact?.assigned_user_name ?? "Intervenant")}</TableCell><TableCell>{String(impact?.summary ?? impact?.mission_effectiveness_status ?? mission.status)}</TableCell><TableCell>{formatCurrency(impact?.mission_total_cost ?? null)}</TableCell><TableCell>{impact?.sell_out_units == null ? "—" : `${impact.sell_out_units} unités`}</TableCell><TableCell>{impact?.first_order_after_at ? `Commande observée à ${impact.days_to_first_order_after} j` : impact?.reorder_observed_60d ? "Réassort observé sous 60 j" : "Aucun signal mature"}</TableCell></TableRow>; })}</TableBody></Table></CardContent></Card><Card><CardHeader><CardTitle>Références manquantes</CardTitle></CardHeader><CardContent className="flex flex-wrap gap-2">{Array.isArray(distribution?.missing_products) && distribution.missing_products.length ? distribution.missing_products.map((item: { id: string; name: string; sku: string }) => <Badge key={item.id} variant="outline">{item.name} · {item.sku}</Badge>) : <p className="text-muted-foreground">Aucune référence éligible manquante.</p>}</CardContent></Card></div> : null}
-    {tab === "products" ? <div className="grid gap-6 lg:grid-cols-2"><Card><CardHeader><CardTitle>Produits implantés</CardTitle></CardHeader><CardContent className="space-y-3">{(implanted ?? []).length === 0 ? <p className="text-muted-foreground">Aucun produit enregistré.</p> : implanted?.map((item) => { const product = Array.isArray(item.products) ? item.products[0] : item.products; return <div key={item.id} className="flex items-center justify-between rounded-md border p-3"><div><p className="font-medium">{product?.name}</p><p className="text-xs text-muted-foreground">{product?.sku} · {product?.format || "Format non renseigné"}</p></div><div className="text-right"><Badge variant="secondary">{item.status}</Badge><p className="text-xs text-muted-foreground">{formatCurrency(product?.retail_price_ttc ?? null)}</p></div></div>; })}</CardContent></Card>{canManageAccount ? <Card><CardHeader><CardTitle>Ajouter un produit</CardTitle></CardHeader><CardContent><AddImplantedProductForm brandPharmacyId={id} products={products ?? []} /></CardContent></Card> : null}</div> : null}
-    {tab === "activity" ? <div className="space-y-6"><div className="grid gap-6 xl:grid-cols-2"><Card><CardHeader><CardTitle>Ajouter une interaction</CardTitle><CardDescription>Une prochaine action crée automatiquement une tâche liée.</CardDescription></CardHeader><CardContent><InteractionForm brandPharmacyId={id} users={isAgent ? users.filter((user) => user.id === userId) : users} contacts={contactOptions} currentUserId={userId} role={role} /></CardContent></Card><Card><CardHeader><CardTitle>Créer une tâche rapide</CardTitle></CardHeader><CardContent><TaskForm brandPharmacyId={id} users={isAgent ? users.filter((user) => user.id === userId) : users} currentUserId={userId} /></CardContent></Card>{canChangeStatus ? <Card><CardHeader><CardTitle>Changer le statut</CardTitle></CardHeader><CardContent><StatusChangeForm brandPharmacyId={id} currentStatus={relation.commercial_status} /></CardContent></Card> : null}{canManageAccount ? <Card><CardHeader><CardTitle>Attribuer le compte</CardTitle></CardHeader><CardContent><AssignmentForm brandPharmacyId={id} users={users} /><Separator className="my-4" /><div className="space-y-2 text-sm">{assignments?.map((assignment) => { const user = Array.isArray(assignment.users) ? assignment.users[0] : assignment.users; const profile = Array.isArray(user?.user_profiles) ? user.user_profiles[0] : user?.user_profiles; return <div key={assignment.id} className="flex justify-between"><span>{profile?.full_name || assignment.user_id} · {assignment.assignment_type}</span><span>{assignment.ends_at ? `Terminé le ${assignment.ends_at}` : "Actif"}</span></div>; })}</div></CardContent></Card> : null}</div><Card><CardHeader><CardTitle>Timeline unique</CardTitle><CardDescription>Interactions, commandes, réassorts, missions, tâches, statuts et affectations dans une même histoire.</CardDescription></CardHeader><CardContent><div className="mb-4 flex flex-wrap gap-2">{["", "interaction", "order", "mission", "status_change", "task", "task_completed", "assignment"].map((event) => <Button key={event || "all"} asChild size="sm" variant={(query.event ?? "") === event ? "default" : "outline"}><Link href={`?tab=activity${event ? `&event=${event}` : ""}`}>{event ? event.replaceAll("_", " ") : "Tout"}</Link></Button>)}</div><div className="space-y-4">{visibleEvents.length === 0 ? <p className="text-muted-foreground">Aucune activité.</p> : visibleEvents.map((event) => <div key={`${event.event_type}-${event.event_id}`} className="border-l-2 pl-4"><div className="flex flex-wrap justify-between gap-2"><p className="font-medium">{event.title}</p><time className="text-xs text-muted-foreground">{new Date(event.occurred_at).toLocaleString("fr-FR")}</time></div><Badge variant="secondary">{event.event_type}</Badge>{event.details ? <p className="mt-1 text-sm text-muted-foreground">{event.details}</p> : null}</div>)}</div></CardContent></Card></div> : null}
-    {tab === "history" ? <History brandId={brand.id} entityId={id} /> : null}
-    {tab === "admin" ? <Card><CardHeader><CardTitle>Informations administratives</CardTitle></CardHeader><CardContent className="grid gap-4 text-sm sm:grid-cols-2"><p><strong>Raison sociale :</strong> {pharmacy.legal_name}</p><p><strong>SIRET :</strong> {pharmacy.siret || "—"}</p><p><strong>CIP :</strong> {pharmacy.cip_code || "—"}</p><p><strong>FINESS :</strong> {pharmacy.finess_code || "—"}</p><p><strong>Pays :</strong> {pharmacy.country_code}</p><p><strong>Identifiant physique :</strong> <code>{pharmacy.id}</code></p></CardContent></Card> : null}
-  </div>;
+  const tabs = [
+    ["overview", "Vue générale"],
+    ["activity", "Activité"],
+    ["orders", "Commandes"],
+    ["performance", "Performance"],
+    ["contacts", "Contacts"],
+    ["products", "Produits / Assortiment"],
+    ["history", "Historique"],
+    ["admin", "Administratif"],
+  ];
+  return (
+    <div className="space-y-6">
+      <TerrainPharmacyHeader
+        brandPharmacyId={id}
+        pharmacyId={pharmacy.id}
+        name={pharmacy.trade_name || pharmacy.legal_name}
+        phone={pharmacy.phone}
+        address={`${pharmacy.address_line_1 || "Adresse non renseignée"} · ${pharmacy.postal_code} ${pharmacy.city}`}
+        status={
+          labels.commercialStatus[
+            relation.commercial_status as keyof typeof labels.commercialStatus
+          ]
+        }
+        potential={
+          labels.potentialLevel[
+            relation.potential_level as keyof typeof labels.potentialLevel
+          ]
+        }
+        lastOrderAt={relation.last_order_at}
+        nextActionType={relation.next_action_type}
+        nextActionAt={relation.next_action_at}
+        objective={cockpit.objectiveLabel}
+        primaryAction={cockpit.primaryAction}
+        navigation={{
+          latitude: pharmacy.latitude,
+          longitude: pharmacy.longitude,
+          address_line_1: pharmacy.address_line_1,
+          postal_code: pharmacy.postal_code,
+          city: pharmacy.city,
+          country_code: pharmacy.country_code,
+        }}
+      />
+      {canManageAccount ? (
+        <div className="flex justify-end">
+          <ArchiveButton id={id} />
+        </div>
+      ) : null}
+      <nav
+        aria-label="Sections de la pharmacie"
+        className="flex gap-1 overflow-x-auto rounded-[0.4rem] border border-[var(--tr1-line-strong)] bg-transparent p-1"
+      >
+        {tabs.map(([value, label]) => (
+          <Button
+            key={value}
+            asChild
+            variant={tab === value ? "secondary" : "ghost"}
+            size="sm"
+            className={
+              tab === value
+                ? "bg-[var(--tr1-navy)] text-white hover:bg-[var(--tr1-navy-soft)] hover:text-white"
+                : ""
+            }
+          >
+            <Link
+              aria-current={tab === value ? "page" : undefined}
+              href={`/dashboard/pharmacies/${id}?tab=${value}`}
+            >
+              {label}
+            </Link>
+          </Button>
+        ))}
+      </nav>
+      {tabLoadError ? (
+        <InlineError
+          title="Impossible de charger cette section."
+          description="Les autres sections de la pharmacie restent accessibles. Réessayez dans un instant."
+          action={
+            <Button asChild size="sm" variant="outline">
+              <Link href={`/dashboard/pharmacies/${id}?tab=${tab}`}>
+                Réessayer
+              </Link>
+            </Button>
+          }
+        />
+      ) : null}
+      {tab === "overview" ? (
+        <div className="space-y-6">
+          <PharmacyCockpit
+            brandPharmacyId={id}
+            objective={cockpit}
+            lastInteractionAt={relation.last_interaction_at}
+            lastOrderAt={
+              performance?.last_valid_order_at ?? relation.last_order_at
+            }
+            validOrderCount={performance?.valid_order_count}
+            reorderCount={performance?.reorder_count}
+            averageDaysBetweenOrders={performance?.average_days_between_orders}
+            firstReorderAt={performance?.first_reorder_at}
+            strategicDistributionRate={
+              distribution?.strategic_distribution_rate
+            }
+            missingProductCount={missingProducts.length}
+            nextActionType={relation.next_action_type}
+            nextActionAt={relation.next_action_at}
+            missions={missions ?? []}
+            impacts={(missionImpacts ?? []) as ImpactRow[]}
+            canViewFinancials={canViewFinancials}
+            isOperational={role === "agent"}
+          />
+          <CommercialHealthSummary health={health} />
+          <div className="grid gap-6 xl:grid-cols-[1.1fr_.9fr]">
+            {canManageAccount ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Relation commerciale</CardTitle>
+                  <CardDescription>
+                    Ces informations sont propres à {brand.name}.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <RelationForm
+                    relation={relation}
+                    territories={territories ?? []}
+                    agents={agents}
+                  />
+                </CardContent>
+              </Card>
+            ) : isAgent && canEditPotential ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Potentiel commercial</CardTitle>
+                  <CardDescription>
+                    Ce réglage est autorisé par la marque pour les agents.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <AgentPotentialForm relation={relation} />
+                </CardContent>
+              </Card>
+            ) : null}
+            <Card>
+              <CardHeader>
+                <CardTitle>Coordonnées principales</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <p>
+                  <strong>Téléphone :</strong> {pharmacy.phone || "—"}
+                </p>
+                <p>
+                  <strong>Email :</strong> {pharmacy.email || "—"}
+                </p>
+                <p>
+                  <strong>Groupement :</strong>{" "}
+                  {(Array.isArray(pharmacy.pharmacy_groups)
+                    ? pharmacy.pharmacy_groups[0]
+                    : pharmacy.pharmacy_groups
+                  )?.name || "Indépendante"}
+                </p>
+                <Separator />
+                <p>
+                  <strong>Territoire :</strong>{" "}
+                  {(Array.isArray(relation.territories)
+                    ? relation.territories[0]
+                    : relation.territories
+                  )?.name || "Non affecté"}
+                </p>
+                <p>
+                  <strong>Responsable :</strong>{" "}
+                  {agents.find(
+                    (agent) => agent.id === relation.current_agent_user_id,
+                  )?.name || "Non affecté"}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      ) : null}
+      {tab === "contacts" ? (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Contacts actifs</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {(contacts ?? []).length === 0 ? (
+                <p className="text-muted-foreground">Aucun contact.</p>
+              ) : (
+                contacts?.map((contact) => (
+                  <div key={contact.id} className="rounded-md border p-3">
+                    <p className="font-medium">
+                      {contact.first_name} {contact.last_name}{" "}
+                      {contact.is_primary ? (
+                        <Badge variant="secondary">Principal</Badge>
+                      ) : null}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {contact.job_title || "Fonction non renseignée"}
+                    </p>
+                    <p className="text-sm">
+                      {contact.email || contact.phone || "Aucune coordonnée"}
+                    </p>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+          {canCreateContacts ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Ajouter un contact</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ContactForm pharmacyId={pharmacy.id} />
+              </CardContent>
+            </Card>
+          ) : null}
+        </div>
+      ) : null}
+      {tab === "orders" ? (
+        <div className="space-y-6">
+          {canCreateOrder ? (
+            <div className="flex justify-end">
+              <Button asChild>
+                <Link href={`/dashboard/orders/new?pharmacy=${id}`}>
+                  Créer une commande
+                </Link>
+              </Button>
+            </div>
+          ) : null}
+          <Card>
+            <CardHeader>
+              <CardTitle>Historique des commandes</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {(pharmacyOrders ?? []).length === 0 ? (
+                <p className="text-muted-foreground">Aucune commande.</p>
+              ) : (
+                pharmacyOrders?.map((order) => (
+                  <Link
+                    key={order.id}
+                    href={`/dashboard/orders/${order.id}`}
+                    className="flex flex-col justify-between gap-2 rounded-md border p-3 hover:bg-muted sm:flex-row"
+                  >
+                    <div>
+                      <p className="font-medium">
+                        {order.order_number ||
+                          order.external_order_id ||
+                          order.id.slice(0, 8)}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(order.order_date).toLocaleDateString("fr-FR")}{" "}
+                        ·{" "}
+                        {order.is_initial_order
+                          ? "Implantation"
+                          : order.is_reorder
+                            ? "Réassort"
+                            : uiLabel(order.order_type)}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <Badge variant="secondary">
+                        {orderStatusLabel(order.order_status)}
+                      </Badge>
+                      <p className="text-sm">
+                        {formatCurrency(order.net_amount_ht)} HT
+                      </p>
+                    </div>
+                  </Link>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
+      {tab === "performance" ? (
+        <div className="space-y-6">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              [formatCurrency(bookedRevenueHt), "CA commandé HT"],
+              [
+                formatCurrency(performance?.total_revenue_net_ht ?? 0),
+                "CA facturé total HT",
+              ],
+              [
+                formatCurrency(performance?.last_90_day_revenue_ht ?? 0),
+                "CA facturé 90 jours",
+              ],
+              [
+                formatCurrency(performance?.last_12_month_revenue_ht ?? 0),
+                "CA facturé 12 mois",
+              ],
+              [
+                formatCurrency(performance?.average_order_value_ht ?? 0),
+                "Panier moyen",
+              ],
+              [performance?.valid_order_count ?? 0, "Commandes commerciales"],
+              [performance?.reorder_count ?? 0, "Réassorts"],
+              [
+                `${Number(distribution?.distribution_rate ?? 0).toFixed(1)}%`,
+                "Assortiment",
+              ],
+              [
+                distribution?.strategic_distribution_rate == null
+                  ? "—"
+                  : `${Number(distribution.strategic_distribution_rate).toFixed(1)}%`,
+                "Assortiment stratégique",
+              ],
+            ].map(([value, label]) => (
+              <Card key={label}>
+                <CardContent className="pt-5">
+                  <p className="text-2xl font-semibold">{value}</p>
+                  <p className="text-sm text-muted-foreground">{label}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <div className="grid gap-4 xl:grid-cols-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Missions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-semibold">
+                  {
+                    (missions ?? []).filter(
+                      (mission) => mission.status === "completed",
+                    ).length
+                  }
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Interventions réalisées
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Animations</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-semibold">
+                  {
+                    (missions ?? []).filter(
+                      (mission) =>
+                        mission.mission_type === "animation" &&
+                        mission.status === "completed",
+                    ).length
+                  }
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {(missionImpacts ?? [])
+                    .filter((impact) => impact.mission_type === "animation")
+                    .reduce(
+                      (total, impact) =>
+                        total +
+                        Number((impact as ImpactRow).sell_out_units ?? 0),
+                      0,
+                    )}{" "}
+                  unités vendues
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Formations</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-semibold">
+                  {
+                    (missions ?? []).filter(
+                      (mission) =>
+                        mission.mission_type === "training" &&
+                        mission.status === "completed",
+                    ).length
+                  }
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {(missionImpacts ?? [])
+                    .filter((impact) => impact.mission_type === "training")
+                    .reduce(
+                      (total, impact) =>
+                        total +
+                        Number((impact as ImpactRow).participants_count ?? 0),
+                      0,
+                    )}{" "}
+                  participants
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Impact observé</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-semibold">
+                  {
+                    (missionImpacts ?? []).filter(
+                      (impact) => (impact as ImpactRow).first_order_after_at,
+                    ).length
+                  }
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Commande observée dans les 30 jours
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+          {(recentMissionImpact ?? []).length ? (
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold">
+                Actions terrain récentes
+              </h2>
+              {((recentMissionImpact ?? []) as ImpactRow[]).map((impact) => (
+                <MissionImpact
+                  key={impact.mission_id}
+                  impact={impact}
+                  compact
+                />
+              ))}
+            </div>
+          ) : null}
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Cycle de commande</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <p>
+                  <strong>Implantation :</strong>{" "}
+                  {performance?.first_valid_order_at
+                    ? new Date(
+                        performance.first_valid_order_at,
+                      ).toLocaleDateString("fr-FR")
+                    : "—"}
+                </p>
+                <p>
+                  <strong>Premier réassort :</strong>{" "}
+                  {performance?.first_reorder_at
+                    ? new Date(performance.first_reorder_at).toLocaleDateString(
+                        "fr-FR",
+                      )
+                    : "—"}
+                </p>
+                <p>
+                  <strong>Dernière commande :</strong>{" "}
+                  {performance?.last_valid_order_at
+                    ? new Date(
+                        performance.last_valid_order_at,
+                      ).toLocaleDateString("fr-FR")
+                    : "—"}
+                </p>
+                <p>
+                  <strong>Intervalle moyen :</strong>{" "}
+                  {performance?.average_days_between_orders
+                    ? `${performance.average_days_between_orders} jours`
+                    : "Données insuffisantes"}
+                </p>
+                <p>
+                  <strong>Prochaine commande estimée :</strong>{" "}
+                  {performance?.expected_next_order_at
+                    ? new Date(
+                        performance.expected_next_order_at,
+                      ).toLocaleDateString("fr-FR")
+                    : "Inconnue"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Cette date est une estimation simple, pas une prévision
+                  certaine.
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Historique d’activité</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {(activityHistory ?? []).map((event) => (
+                  <div key={event.id} className="border-l-2 pl-3">
+                    <p className="font-medium">
+                      {uiLabel(event.previous_activity_status)} →{" "}
+                      {uiLabel(event.new_activity_status)}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {event.reason} ·{" "}
+                      {new Date(event.calculated_at).toLocaleString("fr-FR")}
+                    </p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Historique missions & impact observé</CardTitle>
+              <CardDescription>
+                Commande observée, réassort observé et CA observé restent
+                décrits comme des observations postérieures, jamais comme une
+                causalité certaine.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="overflow-x-auto p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Intervenant</TableHead>
+                    <TableHead>Résultat immédiat</TableHead>
+                    <TableHead>Coût</TableHead>
+                    <TableHead>Sell-out</TableHead>
+                    <TableHead>Impact observé</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(missions ?? []).map((mission) => {
+                    const impact = ((missionImpacts ?? []) as ImpactRow[]).find(
+                      (row) => row.mission_id === mission.id,
+                    );
+                    return (
+                      <TableRow key={mission.id}>
+                        <TableCell>
+                          {new Date(
+                            mission.actual_end_at ||
+                              mission.completed_at ||
+                              mission.scheduled_start_at ||
+                              Date.now(),
+                          ).toLocaleDateString("fr-FR")}
+                        </TableCell>
+                        <TableCell>
+                          {formatMissionType(mission.mission_type)}
+                        </TableCell>
+                        <TableCell>
+                          {String(impact?.assigned_user_name ?? "Intervenant")}
+                        </TableCell>
+                        <TableCell>
+                            {String(
+                              impact?.summary ??
+                                presentationLabel(
+                                  String(
+                                    impact?.mission_effectiveness_status ??
+                                      mission.status,
+                                  ),
+                                ),
+                            )}
+                        </TableCell>
+                        <TableCell>
+                          {formatCurrency(impact?.mission_total_cost ?? null)}
+                        </TableCell>
+                        <TableCell>
+                          {impact?.sell_out_units == null
+                            ? "—"
+                            : `${impact.sell_out_units} unités`}
+                        </TableCell>
+                        <TableCell>
+                          {impact?.first_order_after_at
+                            ? `Commande observée à ${impact.days_to_first_order_after} j`
+                            : impact?.reorder_observed_60d
+                              ? "Réassort observé sous 60 j"
+                              : "Aucun signal mature"}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Références manquantes</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-2">
+              {Array.isArray(distribution?.missing_products) &&
+              distribution.missing_products.length ? (
+                distribution.missing_products.map(
+                  (item: { id: string; name: string; sku: string }) => (
+                    <Badge key={item.id} variant="outline">
+                      {item.name} · {item.sku}
+                    </Badge>
+                  ),
+                )
+              ) : (
+                <p className="text-muted-foreground">
+                  Aucune référence éligible manquante.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
+      {tab === "products" ? (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Produits implantés</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {(implanted ?? []).length === 0 ? (
+                <p className="text-muted-foreground">
+                  Aucun produit enregistré.
+                </p>
+              ) : (
+                implanted?.map((item) => {
+                  const product = Array.isArray(item.products)
+                    ? item.products[0]
+                    : item.products;
+                  return (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between rounded-md border p-3"
+                    >
+                      <div>
+                        <p className="font-medium">{product?.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {product?.sku} ·{" "}
+                          {product?.format || "Format non renseigné"}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <Badge variant="secondary">
+                          {uiLabel(item.status)}
+                        </Badge>
+                        <p className="text-xs text-muted-foreground">
+                          {formatCurrency(product?.retail_price_ttc ?? null)}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </CardContent>
+          </Card>
+          {canManageAccount ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Ajouter un produit</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <AddImplantedProductForm
+                  brandPharmacyId={id}
+                  products={products ?? []}
+                />
+              </CardContent>
+            </Card>
+          ) : null}
+        </div>
+      ) : null}
+      {tab === "activity" ? (
+        <div className="space-y-6">
+          <div className="grid gap-6 xl:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Ajouter une interaction</CardTitle>
+                <CardDescription>
+                  Une prochaine action crée automatiquement une tâche liée.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <InteractionForm
+                  brandPharmacyId={id}
+                  users={
+                    isAgent ? users.filter((user) => user.id === userId) : users
+                  }
+                  contacts={contactOptions}
+                  currentUserId={userId}
+                  role={role}
+                />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Créer une tâche rapide</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TaskForm
+                  brandPharmacyId={id}
+                  users={
+                    isAgent ? users.filter((user) => user.id === userId) : users
+                  }
+                  currentUserId={userId}
+                />
+              </CardContent>
+            </Card>
+            {canChangeStatus ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Changer le statut</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <StatusChangeForm
+                    brandPharmacyId={id}
+                    currentStatus={relation.commercial_status}
+                  />
+                </CardContent>
+              </Card>
+            ) : null}
+            {canManageAccount ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Attribuer le compte</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <AssignmentForm brandPharmacyId={id} users={users} />
+                  <Separator className="my-4" />
+                  <div className="space-y-2 text-sm">
+                    {assignments?.map((assignment) => {
+                      const user = Array.isArray(assignment.users)
+                        ? assignment.users[0]
+                        : assignment.users;
+                      const profile = Array.isArray(user?.user_profiles)
+                        ? user.user_profiles[0]
+                        : user?.user_profiles;
+                      return (
+                        <div
+                          key={assignment.id}
+                          className="flex justify-between"
+                        >
+                          <span>
+                            {profile?.full_name || assignment.user_id} ·{" "}
+                            {uiLabel(assignment.assignment_type)}
+                          </span>
+                          <span>
+                            {assignment.ends_at
+                              ? `Terminé le ${assignment.ends_at}`
+                              : "Actif"}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : null}
+          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Timeline unique</CardTitle>
+              <CardDescription>
+                Interactions, commandes, réassorts, missions, tâches, statuts et
+                affectations dans une même histoire.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-4 flex flex-wrap gap-2">
+                {[
+                  "",
+                  "interaction",
+                  "order",
+                  "mission",
+                  "status_change",
+                  "task",
+                  "task_completed",
+                  "assignment",
+                ].map((event) => (
+                  <Button
+                    key={event || "all"}
+                    asChild
+                    size="sm"
+                    variant={
+                      (query.event ?? "") === event ? "default" : "outline"
+                    }
+                  >
+                    <Link
+                      href={`?tab=activity${event ? `&event=${event}` : ""}`}
+                    >
+                      {event ? uiLabel(event) : "Tout"}
+                    </Link>
+                  </Button>
+                ))}
+              </div>
+              <div className="space-y-4">
+                {visibleEvents.length === 0 ? (
+                  <p className="text-muted-foreground">Aucune activité.</p>
+                ) : (
+                  visibleEvents.map((event) => (
+                    <div
+                      key={`${event.event_type}-${event.event_id}`}
+                      className="border-l-2 pl-4"
+                    >
+                      <div className="flex flex-wrap justify-between gap-2">
+                        <p className="font-medium">{event.title}</p>
+                        <time className="text-xs text-muted-foreground">
+                          {new Date(event.occurred_at).toLocaleString("fr-FR")}
+                        </time>
+                      </div>
+                      <Badge variant="secondary">
+                        {uiLabel(event.event_type)}
+                      </Badge>
+                      {event.details ? (
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {event.details}
+                        </p>
+                      ) : null}
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
+      {tab === "history" ? <History brandId={brand.id} entityId={id} /> : null}
+      {tab === "admin" ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Informations administratives</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4 text-sm sm:grid-cols-2">
+            <p>
+              <strong>Raison sociale :</strong> {pharmacy.legal_name}
+            </p>
+            <p>
+              <strong>SIRET :</strong> {pharmacy.siret || "—"}
+            </p>
+            <p>
+              <strong>CIP :</strong> {pharmacy.cip_code || "—"}
+            </p>
+            <p>
+              <strong>FINESS :</strong> {pharmacy.finess_code || "—"}
+            </p>
+            <p>
+              <strong>Pays :</strong> {pharmacy.country_code}
+            </p>
+            <p>
+              <strong>Identifiant physique :</strong> <code>{pharmacy.id}</code>
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
+    </div>
+  );
 
-  async function History({ brandId, entityId }: { brandId: string; entityId: string }) {
-    const { data: logs } = await supabase.from("activity_logs").select("id,action,created_at,entity_type").eq("brand_id", brandId).or(`entity_id.eq.${entityId},new_data->>id.eq.${entityId}`).order("created_at", { ascending: false }).limit(20);
-    return <Card><CardHeader><CardTitle>Historique minimal</CardTitle><CardDescription>Événements journalisés automatiquement.</CardDescription></CardHeader><CardContent className="space-y-3">{(logs ?? []).length === 0 ? <p className="text-muted-foreground">Aucun événement visible.</p> : logs?.map((log) => <div key={log.id} className="flex justify-between border-b pb-2 text-sm"><span>{log.action}</span><time>{new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short" }).format(new Date(log.created_at))}</time></div>)}</CardContent></Card>;
+  async function History({
+    brandId,
+    entityId,
+  }: {
+    brandId: string;
+    entityId: string;
+  }) {
+    const { data: logs } = await supabase
+      .from("activity_logs")
+      .select("id,action,created_at,entity_type")
+      .eq("brand_id", brandId)
+      .or(`entity_id.eq.${entityId},new_data->>id.eq.${entityId}`)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Historique minimal</CardTitle>
+          <CardDescription>
+            Événements journalisés automatiquement.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {(logs ?? []).length === 0 ? (
+            <p className="text-muted-foreground">Aucun événement visible.</p>
+          ) : (
+            logs?.map((log) => (
+              <div
+                key={log.id}
+                className="flex justify-between border-b pb-2 text-sm"
+              >
+                <span>{log.action}</span>
+                <time>
+                  {new Intl.DateTimeFormat("fr-FR", {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  }).format(new Date(log.created_at))}
+                </time>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+    );
   }
 }

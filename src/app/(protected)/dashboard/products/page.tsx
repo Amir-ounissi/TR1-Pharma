@@ -6,10 +6,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { requireActiveBrand } from "@/lib/auth";
+import { requireActiveBrandRole } from "@/lib/auth";
+import { referenceAdministrationRoles } from "@/lib/ux/permissions";
 
 export default async function ProductsPage() {
-  const { supabase, brand } = await requireActiveBrand();
+  const { supabase, brand } = await requireActiveBrandRole(referenceAdministrationRoles);
 
   const [{ data: products }, { data: brandRecord }] = await Promise.all([
     supabase
