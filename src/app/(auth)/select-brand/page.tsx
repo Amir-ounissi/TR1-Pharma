@@ -1,4 +1,5 @@
 import { Building2 } from "lucide-react";
+import { redirect } from "next/navigation";
 import { selectBrandAction, selectPlatformViewAction } from "@/app/(auth)/select-brand/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,11 @@ export default async function SelectBrandPage() {
     isPlatformAdmin(),
     supabase.from("access_requests").select("status,requested_profile_type,reviewer_note").eq("user_id", userId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
+
+  if (brands.length > 0 && brands.every((brand) => brand.role === "facilitator")) {
+    redirect("/dashboard/field");
+  }
+
   const request = accessRequest.data;
   return (
     <Card><CardHeader><CardTitle>Choisir un contexte</CardTitle><CardDescription>{platformAdmin ? "Commencez en vue globale TR1 ou entrez dans une marque pour travailler au niveau tenant." : "Votre contexte actif filtre toutes les données affichées."}</CardDescription></CardHeader><CardContent className="space-y-3">
