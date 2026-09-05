@@ -56,12 +56,12 @@ test("un compte marque reprend son onboarding autonome et crée un tenant brouil
 
   await page.goto("/setup");
   await expect(page.getByRole("heading", { name: `Configurer ${brandName}` })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "1. Équipe" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "2. Territoires" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "3. Pharmacies" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "4. Produits" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "5. Configuration commerciale" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "6. Vérification et activation" })).toBeVisible();
+  await expect(page.getByText("1. Équipe", { exact: true })).toBeVisible();
+  await expect(page.getByText("2. Territoires", { exact: true })).toBeVisible();
+  await expect(page.getByText("3. Pharmacies", { exact: true })).toBeVisible();
+  await expect(page.getByText("4. Produits", { exact: true })).toBeVisible();
+  await expect(page.getByText("5. Configuration commerciale", { exact: true })).toBeVisible();
+  await expect(page.getByText("6. Vérification et activation", { exact: true })).toBeVisible();
 
   const [{ data: brand }, { data: request }, { data: onboarding }, { data: entitlement }, { data: membership }] = await Promise.all([
     admin.from("brands").select("status,is_active,organization_id").eq("id", brandId).single(),
