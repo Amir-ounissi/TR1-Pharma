@@ -87,8 +87,12 @@ export function pickExecutiveObjective(
   periodStart: string,
   periodEnd: string,
 ) {
-  const candidates = objectives.filter((objective) => objective.scope_type === "brand" && objective.metric_key === metricKey);
-  return candidates.find((objective) => objective.period_start === periodStart && objective.period_end === periodEnd) ?? candidates[0] ?? null;
+  return objectives.find(
+    (objective) => objective.scope_type === "brand"
+      && objective.metric_key === metricKey
+      && objective.period_start === periodStart
+      && objective.period_end === periodEnd,
+  ) ?? null;
 }
 
 export function buildExecutiveAlerts(input: {
