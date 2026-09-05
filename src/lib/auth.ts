@@ -94,6 +94,14 @@ export async function requireActiveBrand() {
   return session as typeof session & { brand: { id: string; name: string; slug: string } };
 }
 
+export async function requireActiveBrandRole(allowedRoles: readonly string[], fallback = "/dashboard") {
+  const session = await requireActiveBrand();
+  const contexts = await getBrandContexts();
+  const role = contexts.find((context) => context.id === session.brand.id)?.role ?? "brand_user";
+  if (!allowedRoles.includes(role)) redirect(fallback);
+  return { ...session, role };
+}
+
 async function getPlatformAdminMembership(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
   const { data: membership, error } = await supabase
     .from("memberships")

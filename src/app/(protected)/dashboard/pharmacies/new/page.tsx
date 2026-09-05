@@ -7,7 +7,7 @@ export default async function NewPharmacyPage() {
   const [{ data: groups }, { data: territories }, { data: memberships }, { data: pharmacies }, { data: activeRelations }] = await Promise.all([
     supabase.from("pharmacy_groups").select("id,name").is("archived_at", null).order("name"),
     supabase.from("territories").select("id,name").eq("brand_id", brand.id).is("archived_at", null).order("name"),
-    supabase.from("memberships").select("user_id,roles!inner(key),users(user_profiles(full_name))").eq("brand_id", brand.id).eq("status", "active").eq("roles.key", "agent"),
+    supabase.from("memberships").select("user_id,roles!inner(key),users!memberships_user_id_fkey(user_profiles(full_name))").eq("brand_id", brand.id).eq("status", "active").eq("roles.key", "agent"),
     supabase.from("pharmacies").select("id,legal_name,trade_name,city,postal_code").is("archived_at", null).order("trade_name"),
     supabase.from("brand_pharmacies").select("pharmacy_id").eq("brand_id", brand.id).is("archived_at", null),
   ]);

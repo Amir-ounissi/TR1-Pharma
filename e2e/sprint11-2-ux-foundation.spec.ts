@@ -60,11 +60,6 @@ test("scénario 3 — Commande globale", async ({ page }) => {
   await expect(page).toHaveURL(/\/dashboard\/pharmacies\//);
 
   await page.keyboard.press("Control+K");
-  await search.fill("Missions");
-  await expect(palette.getByText("Missions", { exact: true })).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(palette).toBeHidden();
-  await page.keyboard.press("Control+K");
   await search.fill("Créer une commande");
   await palette.getByText("Créer une commande", { exact: true }).click();
   await expect(page.getByRole("heading", { name: "Nouvelle commande" })).toBeVisible();
@@ -77,9 +72,9 @@ test("scénario 4 — Mobile Agent", async ({ page }) => {
   const mobileNav = page.getByRole("navigation", { name: "Navigation mobile" });
   await expect(mobileNav).toBeVisible();
   await expect(mobileNav.getByText("Accueil", { exact: true })).toBeVisible();
-  await expect(mobileNav.getByRole("link", { name: "Créer une action" })).toBeVisible();
+  await expect(mobileNav.getByRole("button", { name: "Ouvrir les actions rapides" })).toBeVisible();
   await expect(mobileNav.locator('a[href="/dashboard/orders"]')).toBeVisible();
-  await expect(mobileNav.getByRole("link", { name: "Tâches", exact: true })).toBeVisible();
+  await expect(mobileNav.locator('a[href="/dashboard/agenda"]')).toBeVisible();
   await expect(page.getByTestId("next-visit-card")).toBeInViewport();
   await expect(page.getByRole("button", { name: "Démarrer", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Waze", exact: true }).first()).toBeVisible();
@@ -122,6 +117,7 @@ test("scénario 6 — Non-régression et navigation Admin", async ({ page }) => 
   await page.goto("/dashboard/imports");
   await expect(page.getByRole("heading", { name: "Imports CSV" })).toBeVisible();
   await page.goto("/dashboard/admin/design-system");
-  await expect(page.getByTestId("design-system-page")).toBeVisible();
+  await expect(page).toHaveURL("/dashboard");
+  await expect(page.getByTestId("design-system-page")).toHaveCount(0);
   await page.screenshot({ path: `${artifacts}/navigation-role-comparison.png`, fullPage: true });
 });

@@ -23,6 +23,7 @@ const valueLabels: Record<string, string> = {
   partially_paid: "Partiellement payé",
   paid: "Payé",
   overdue: "En retard",
+  open: "Ouverte",
 
   manual: "Saisie manuelle",
   agent: "Agent terrain",
@@ -54,6 +55,18 @@ const valueLabels: Record<string, string> = {
   completed: "Terminée",
   rejected: "Refusée",
   no_show: "Absence",
+
+  call: "Appel",
+  email: "E-mail",
+  visit: "Visite",
+  appointment: "Rendez-vous",
+  send_offer: "Envoyer une offre",
+  follow_up: "Relance",
+  qualify: "Qualification",
+  update_contact: "Mise à jour du contact",
+  check_stock: "Contrôle du stock",
+  request_order: "Demande de commande",
+  internal_review: "Revue interne",
 
   low: "Faible",
   normal: "Normale",
@@ -94,6 +107,15 @@ const valueLabels: Record<string, string> = {
   mission_created: "Mission créée",
   mission_updated: "Mission mise à jour",
   mission_status_changed: "Statut de mission modifié",
+  interaction: "Interaction",
+  order: "Commande",
+  mission: "Mission",
+  status_change: "Changement de statut",
+  task: "Tâche",
+  task_completed: "Tâche terminée",
+  assignment: "Affectation",
+  primary: "Principale",
+  secondary: "Secondaire",
 };
 
 export function uiLabel(value: string | null | undefined) {
