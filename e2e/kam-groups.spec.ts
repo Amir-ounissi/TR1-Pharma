@@ -14,7 +14,7 @@ test("un administrateur pilote les groupements et ouvre le parc officinal", asyn
   await groupLink.click();
 
   await expect(page.getByRole("heading", { name: "Santé Plus", exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Parc officinal" })).toBeVisible();
+  await expect(page.getByText("Parc officinal", { exact: true })).toBeVisible();
   await expect(page.getByText("Pharmacie République", { exact: true })).toBeVisible();
 });
 
