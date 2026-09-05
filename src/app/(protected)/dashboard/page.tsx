@@ -23,11 +23,12 @@ export default async function DashboardPage() {
     if (!platformAdmin) redirect("/select-brand");
 
     const { supabase, profile } = session;
-    const [{ data: brands }, { data: brandPharmacies }, { data: activeMemberships }, { count: leadCount }, { data: onboardingSessions }] = await Promise.all([
+    const [{ data: brands }, { data: brandPharmacies }, { data: activeMemberships }, { count: leadCount }, { count: pendingAccessRequestCount }, { data: onboardingSessions }] = await Promise.all([
       supabase.from("brands").select("id,is_active,status"),
       supabase.from("brand_pharmacies").select("pharmacy_id,archived_at").is("archived_at", null),
       supabase.from("memberships").select("user_id").eq("status", "active"),
       supabase.from("commercial_leads").select("id", { count: "exact", head: true }),
+      supabase.from("access_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
       supabase
         .from("brand_onboarding_sessions")
         .select("id,brand_id,status,created_at,current_step,step_statuses,brands(name)")
@@ -84,6 +85,14 @@ export default async function DashboardPage() {
               <Badge variant="secondary">TR1</Badge>
             </CardHeader>
             <CardContent className="grid gap-3 sm:grid-cols-2">
+              <Button asChild className="h-auto min-h-12 justify-between sm:col-span-2">
+                <Link href="/dashboard/admin/access-requests">
+                  <span>Demandes d’accès</span>
+                  <span className="rounded bg-white/15 px-2 py-1 font-mono text-xs">
+                    {pendingAccessRequestCount ?? 0} en attente
+                  </span>
+                </Link>
+              </Button>
               <Button asChild><Link href="/dashboard/admin/onboarding">Créer ou activer une marque <ArrowRight /></Link></Button>
               <Button asChild variant="outline"><Link href="/dashboard/admin/users">Piloter les accès globaux <ArrowRight /></Link></Button>
               <Button asChild variant="outline"><Link href="/dashboard/admin/leads">Suivre les leads TR1 <ArrowRight /></Link></Button>

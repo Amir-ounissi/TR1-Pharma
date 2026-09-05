@@ -1,13 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { getNavigationItems, getRoleFamily, getRoleLandingPath, isNavigationItemActive } from "./navigation";
+import { getNavigationItems, getNavigationSections, getRoleFamily, getRoleLandingPath, isNavigationItemActive } from "./navigation";
 
 describe("role navigation", () => {
   it("keeps agent navigation focused on field work", () => {
     const links = getNavigationItems("agent").map((item) => item.href);
-    expect(links).toContain("/dashboard/agent");
-    expect(links).toContain("/dashboard/agenda");
-    expect(links).not.toContain("/dashboard/users");
-    expect(links).not.toContain("/dashboard/admin/onboarding");
+    expect(links).toEqual([
+      "/dashboard/agent",
+      "/dashboard/pharmacies",
+      "/dashboard/orders",
+      "/dashboard/missions",
+      "/dashboard/agenda",
+      "/dashboard/tasks",
+      "/dashboard/agent/performance",
+      "/dashboard/reports",
+      "/dashboard/agent/assistant",
+    ]);
   });
 
   it("adds administration only for authorized roles", () => {
@@ -31,6 +38,45 @@ describe("role navigation", () => {
     expect(tenantLinks).toContain("/dashboard/users");
     expect(tenantLinks).toContain("/dashboard/imports");
     expect(tenantLinks).not.toContain("/dashboard/admin/leads");
+  });
+
+  it("prioritizes brand administration for a tenant superadmin", () => {
+    const sections = getNavigationSections("super_admin", "tenant");
+
+    expect(sections.map((section) => section.label)).toEqual([
+      "Administration marque",
+      "Consultation commerciale",
+    ]);
+    expect(sections[0]?.items.map((item) => item.label)).toEqual([
+      "Produits",
+      "Groupements",
+      "Territoires",
+      "Imports",
+      "Utilisateurs",
+      "Configuration UI",
+    ]);
+    expect(sections[1]?.items.map((item) => item.href)).toContain("/dashboard/commercial-health");
+  });
+
+  it("keeps brand admin navigation order unchanged", () => {
+    const sections = getNavigationSections("brand_admin", "tenant");
+
+    expect(sections.map((section) => section.label)).toEqual(["Pilotage", "Administration marque"]);
+    expect(sections.flatMap((section) => section.items.map((item) => item.href))).toEqual([
+      "/dashboard",
+      "/dashboard/commercial-health",
+      "/dashboard/pharmacies",
+      "/dashboard/orders",
+      "/dashboard/missions",
+      "/dashboard/network",
+      "/dashboard/missions/proposals",
+      "/dashboard/products",
+      "/dashboard/groups",
+      "/dashboard/territories",
+      "/dashboard/imports",
+      "/dashboard/users",
+      "/dashboard/admin/design-system",
+    ]);
   });
 
   it("keeps platform functions hidden from brand admins and preserves field roles", () => {

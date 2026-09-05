@@ -106,6 +106,13 @@ export function getNavigationSections(
     });
   }
 
+  if (role === "super_admin") {
+    return [
+      { label: "Administration marque", items: tenantAdminItems },
+      { label: "Consultation commerciale", items: pilotageItems },
+    ];
+  }
+
   const sections: NavigationSection[] = [
     { label: "Pilotage", items: pilotageItems },
   ];

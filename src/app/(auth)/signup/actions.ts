@@ -7,6 +7,11 @@ import { resolveOnboardingRedirectUrl } from "@/lib/runtime-environment";
 
 export type SignUpState = { error?: string; success?: string };
 
+const confirmationEmailErrorMessages = [
+  "could not send email",
+  "error sending confirmation email",
+];
+
 function getOptionalField(formData: FormData, key: string) {
   const value = formData.get(key);
   if (typeof value !== "string") return undefined;
@@ -64,6 +69,23 @@ export async function signUpAction(
   });
 
   if (error) {
+    console.error("Échec Supabase Auth lors du signup.", {
+      code: error.code,
+      status: error.status,
+      message: error.message,
+    });
+
+    const normalizedMessage = error.message.toLowerCase();
+    if (
+      error.code === "unexpected_failure"
+      || confirmationEmailErrorMessages.some((message) => normalizedMessage.includes(message))
+    ) {
+      return {
+        error:
+          "L’email de confirmation n’a pas pu être envoyé. Votre demande n’a pas été créée. Contactez l’administrateur TR1.",
+      };
+    }
+
     return { error: error.message };
   }
 
