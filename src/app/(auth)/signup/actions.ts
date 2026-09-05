@@ -14,6 +14,14 @@ function getOptionalField(formData: FormData, key: string) {
   return trimmedValue.length > 0 ? trimmedValue : undefined;
 }
 
+function getStringList(formData: FormData, key: string) {
+  return formData
+    .getAll(key)
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
 export async function signUpAction(
   _state: SignUpState,
   formData: FormData,
@@ -28,6 +36,7 @@ export async function signUpAction(
     jobTitle: getOptionalField(formData, "jobTitle"),
     currentOrganization: getOptionalField(formData, "currentOrganization"),
     territory: getOptionalField(formData, "territory"),
+    facilitatorActivities: getStringList(formData, "facilitatorActivities"),
     facilitatorKind: getOptionalField(formData, "facilitatorKind"),
     specialty: getOptionalField(formData, "specialty"),
   });
