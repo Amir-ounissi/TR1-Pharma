@@ -29,7 +29,7 @@ export async function previewMappedImportAction(
   formData: FormData,
 ): Promise<ImportActionState> {
   const profileId = String(formData.get("mappingProfileId") ?? "").trim();
-  if (!profileId) return previewImportAction(state, formData);
+  if (!profileId || profileId === "auto") return previewImportAction(state, formData);
 
   const entity = String(formData.get("entity") ?? "") as ImportEntity;
   const file = formData.get("file");
