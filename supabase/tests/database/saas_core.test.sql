@@ -2,7 +2,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(20);
+select plan(23);
 
 select has_table('public','saas_capabilities','SaaS capabilities catalog exists');
 select has_table('public','saas_plans','SaaS plans catalog exists');
