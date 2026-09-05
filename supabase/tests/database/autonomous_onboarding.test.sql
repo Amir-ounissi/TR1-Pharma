@@ -2,7 +2,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(22);
+select plan(25);
 
 select has_column('public','access_requests','review_source','access requests record their review source');
 select has_column('public','brand_onboarding_sessions','onboarding_mode','onboarding sessions record their mode');
