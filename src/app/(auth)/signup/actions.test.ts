@@ -126,4 +126,38 @@ describe("signUpAction", () => {
 
     consoleError.mockRestore();
   });
+
+  it("returns safe feedback when Supabase cannot send the confirmation email", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const signUp = vi.fn(async () => ({
+      data: { user: null, session: null },
+      error: {
+        code: "unexpected_failure",
+        status: 500,
+        message: "Error sending confirmation email",
+      },
+    }));
+    mocks.createClient.mockResolvedValue({ auth: { signUp } });
+
+    const formData = new FormData();
+    formData.set("fullName", "Amir Ounissi");
+    formData.set("email", "amir.agent@example.com");
+    formData.set("password", "TestVKSwiss!2026");
+    formData.set("confirmPassword", "TestVKSwiss!2026");
+    formData.set("profileType", "agent");
+    formData.set("currentOrganization", "VK Swiss");
+    formData.set("territory", "Suisse romande");
+
+    await expect(signUpAction({}, formData)).resolves.toEqual({
+      error: "L’email de confirmation n’a pas pu être envoyé. Votre demande n’a pas été créée. Contactez l’administrateur TR1.",
+    });
+    expect(consoleError).toHaveBeenCalledWith("Échec Supabase Auth lors du signup.", {
+      code: "unexpected_failure",
+      status: 500,
+      message: "Error sending confirmation email",
+    });
+    expect(signUp).toHaveBeenCalledOnce();
+
+    consoleError.mockRestore();
+  });
 });
