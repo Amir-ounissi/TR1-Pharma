@@ -2,18 +2,24 @@
 
 import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
-import { approveAgentAccessRequestAction, approveBrandAccessRequestAction, rejectAccessRequestAction } from "@/app/(protected)/dashboard/admin/access-requests/actions";
+import {
+  approveAgentAccessRequestAction,
+  approveBrandAccessRequestAction,
+  approveFacilitatorAccessRequestAction,
+  rejectAccessRequestAction,
+} from "@/app/(protected)/dashboard/admin/access-requests/actions";
 import { FranceDepartmentSelector } from "@/components/access-requests/france-department-selector";
-import { getFranceDepartmentLabel } from "@/lib/france-geography";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { getFranceDepartmentLabel } from "@/lib/france-geography";
 
 type Brand = { id: string; name: string; status: string; is_active: boolean };
 type Territory = { id: string; brandId: string; name: string; pharmacyCount: number };
+type FacilitatorActivity = "animation" | "training";
 
 export type AccessRequestCardData = {
   id: string;
@@ -38,10 +44,11 @@ export function AccessRequestReviewCard({ request, brands, territories, matchedB
   const [departmentCodes, setDepartmentCodes] = useState<string[]>([]);
   const [brandState, brandAction, approvingBrand] = useActionState(approveBrandAccessRequestAction, {});
   const [agentState, agentAction, approvingAgent] = useActionState(approveAgentAccessRequestAction, {});
+  const [facilitatorState, facilitatorAction, approvingFacilitator] = useActionState(approveFacilitatorAccessRequestAction, {});
   const [rejectState, rejectAction, rejecting] = useActionState(rejectAccessRequestAction, {});
   const selectedBrand = brands.find((brand) => brand.id === brandId) ?? null;
   const availableTerritories = useMemo(() => territories.filter((territory) => territory.brandId === brandId), [territories, brandId]);
-  const busy = approvingBrand || approvingAgent || rejecting;
+  const busy = approvingBrand || approvingAgent || approvingFacilitator || rejecting;
 
   return (
     <Card className="border-[var(--tr1-line-strong)]">
@@ -52,7 +59,7 @@ export function AccessRequestReviewCard({ request, brands, territories, matchedB
       <CardContent className="space-y-5">
         {request.profileType === "brand" ? <BrandReview request={request} matchedBrand={matchedBrand} state={brandState} action={brandAction} busy={busy} /> : null}
         {request.profileType === "agent" ? <AgentReview request={request} brands={brands} brandId={brandId} setBrandId={setBrandId} territories={availableTerritories} departmentCodes={departmentCodes} setDepartmentCodes={setDepartmentCodes} selectedBrand={selectedBrand} state={agentState} action={agentAction} busy={busy} /> : null}
-        {request.profileType === "facilitator" ? <Alert><AlertDescription>Workflow intervenant non activé pour le pilote. Cette demande historique peut être refusée, mais ne peut pas créer une membership incomplète.</AlertDescription></Alert> : null}
+        {request.profileType === "facilitator" ? <FacilitatorReview request={request} brands={brands} brandId={brandId} setBrandId={setBrandId} selectedBrand={selectedBrand} state={facilitatorState} action={facilitatorAction} busy={busy} /> : null}
         <RejectForm requestId={request.id} state={rejectState} action={rejectAction} busy={busy} />
       </CardContent>
     </Card>
@@ -190,14 +197,145 @@ function AgentReview({
     </form>
   );
 }
+
+function FacilitatorReview({
+  request,
+  brands,
+  brandId,
+  setBrandId,
+  selectedBrand,
+  state,
+  action,
+  busy,
+}: {
+  request: AccessRequestCardData;
+  brands: Brand[];
+  brandId: string;
+  setBrandId: (value: string) => void;
+  selectedBrand: Brand | null;
+  state: { error?: string; success?: string };
+  action: (payload: FormData) => void;
+  busy: boolean;
+}) {
+  const activities = getFacilitatorActivities(request.requestedAccess);
+  const activeBrands = brands.filter(
+    (brand) => brand.is_active && brand.status === "active",
+  );
+
+  return (
+    <form action={action} className="space-y-4 rounded-xl border bg-card p-4">
+      <input type="hidden" name="requestId" value={request.id} />
+      <input type="hidden" name="targetBrandId" value={brandId} />
+
+      {state.error || state.success ? (
+        <Alert variant={state.error ? "destructive" : "default"}>
+          <AlertDescription>{state.error ?? state.success}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      <div className="space-y-2">
+        <Label htmlFor={`facilitator-brand-${request.id}`}>Marque</Label>
+        <select
+          id={`facilitator-brand-${request.id}`}
+          value={brandId}
+          onChange={(event) => setBrandId(event.target.value)}
+          required
+          className="flex h-10 w-full rounded-md border bg-background px-3 text-sm"
+        >
+          <option value="">Sélectionner explicitement une marque</option>
+          {activeBrands.map((brand) => (
+            <option key={brand.id} value={brand.id}>
+              {brand.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <Alert>
+        <AlertDescription>
+          <strong>Activités à activer :</strong>{" "}
+          {activities.length
+            ? activities.map(facilitatorActivityLabel).join(" + ")
+            : "Aucune activité valide détectée"}
+          <br />
+          <span className="text-muted-foreground">
+            L’approbation crée une seule membership Intervenant et une seule fiche terrain, avec toutes les compétences demandées.
+          </span>
+        </AlertDescription>
+      </Alert>
+
+      <div className="space-y-2">
+        <Label htmlFor={`facilitator-note-${request.id}`}>
+          Note interne (facultative)
+        </Label>
+        <Textarea
+          id={`facilitator-note-${request.id}`}
+          name="reviewerNote"
+          maxLength={500}
+        />
+      </div>
+
+      <Button disabled={busy || !selectedBrand || activities.length === 0}>
+        Approuver l’intervenant
+      </Button>
+    </form>
+  );
+}
+
 function RejectForm({ requestId, state, action, busy }: { requestId: string; state: { error?: string; success?: string }; action: (payload: FormData) => void; busy: boolean }) {
   return <form action={action} className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-end"><input type="hidden" name="requestId" value={requestId} /><div className="min-w-0 flex-1 space-y-2"><Label htmlFor={`rejection-note-${requestId}`}>Motif de refus</Label><Textarea id={`rejection-note-${requestId}`} name="reviewerNote" required minLength={3} maxLength={500} placeholder="Expliquez la décision pour garder une trace." /></div><Button variant="outline" disabled={busy}>Refuser</Button>{state.error || state.success ? <p className={state.error ? "text-sm text-destructive" : "text-sm text-emerald-700"}>{state.error ?? state.success}</p> : null}</form>;
 }
 
 function DeclaredData({ request }: { request: AccessRequestCardData }) {
-  const keys = request.profileType === "brand" ? ["company_name", "job_title"] : request.profileType === "agent" ? ["organization", "territory"] : ["facilitator_kind", "specialty"];
-  return <dl className="grid gap-2 text-sm sm:grid-cols-2">{keys.map((key) => <div key={key} className="rounded-lg bg-muted/50 px-3 py-2"><dt className="text-xs text-muted-foreground">{fieldLabels[key]}</dt><dd className="mt-0.5 font-medium">{typeof request.requestedAccess[key] === "string" ? String(request.requestedAccess[key]) : "Non renseigné"}</dd></div>)}</dl>;
+  if (request.profileType === "facilitator") {
+    const activities = getFacilitatorActivities(request.requestedAccess);
+    const specialty = typeof request.requestedAccess.specialty === "string"
+      ? request.requestedAccess.specialty.trim()
+      : "";
+
+    return (
+      <dl className="grid gap-2 text-sm sm:grid-cols-2">
+        <DeclaredValue label="Activités" value={activities.length ? activities.map(facilitatorActivityLabel).join(" · ") : "Non renseigné"} />
+        {specialty ? <DeclaredValue label="Spécialité" value={specialty} /> : null}
+      </dl>
+    );
+  }
+
+  const keys = request.profileType === "brand"
+    ? ["company_name", "job_title"]
+    : ["organization", "territory"];
+
+  return <dl className="grid gap-2 text-sm sm:grid-cols-2">{keys.map((key) => <DeclaredValue key={key} label={fieldLabels[key]} value={typeof request.requestedAccess[key] === "string" ? String(request.requestedAccess[key]) : "Non renseigné"} />)}</dl>;
+}
+
+function DeclaredValue({ label, value }: { label: string; value: string }) {
+  return <div className="rounded-lg bg-muted/50 px-3 py-2"><dt className="text-xs text-muted-foreground">{label}</dt><dd className="mt-0.5 font-medium">{value}</dd></div>;
+}
+
+function getFacilitatorActivities(requestedAccess: Record<string, unknown>): FacilitatorActivity[] {
+  const activities = Array.isArray(requestedAccess.activities)
+    ? requestedAccess.activities.filter(
+        (value): value is FacilitatorActivity => value === "animation" || value === "training",
+      )
+    : [];
+
+  if (activities.length) {
+    return [...new Set(activities)];
+  }
+
+  const legacyKind = typeof requestedAccess.facilitator_kind === "string"
+    ? requestedAccess.facilitator_kind.trim().toLowerCase()
+    : "";
+
+  if (["animation", "animateur", "animator"].includes(legacyKind)) return ["animation"];
+  if (["formation", "formateur", "trainer"].includes(legacyKind)) return ["training"];
+  if (["mixte", "animation + formation", "animation et formation"].includes(legacyKind)) return ["animation", "training"];
+  return [];
+}
+
+function facilitatorActivityLabel(activity: FacilitatorActivity) {
+  return activity === "animation" ? "Animation" : "Formation";
 }
 
 const profileLabels = { brand: "Demande marque", agent: "Demande agent", facilitator: "Demande intervenant" };
-const fieldLabels: Record<string, string> = { company_name: "Société / marque déclarée", job_title: "Fonction", organization: "Structure actuelle", territory: "Secteur demandé", facilitator_kind: "Type d’intervention", specialty: "Spécialité" };
+const fieldLabels: Record<string, string> = { company_name: "Société / marque déclarée", job_title: "Fonction", organization: "Structure actuelle", territory: "Secteur demandé" };

@@ -1,13 +1,15 @@
 import { z } from "zod";
 
 export const signupProfileTypes = ["brand", "agent", "facilitator"] as const;
-
 export const facilitatorKinds = ["animateur", "formateur", "mixte"] as const;
+export const facilitatorActivities = ["animation", "training"] as const;
 
 export const signupProfileTypeSchema = z.enum(signupProfileTypes);
+const facilitatorActivitySchema = z.enum(facilitatorActivities);
 
 export type SignupProfileType = z.infer<typeof signupProfileTypeSchema>;
 export type FacilitatorKind = (typeof facilitatorKinds)[number];
+export type FacilitatorActivity = (typeof facilitatorActivities)[number];
 
 export const signupIntentSchema = z.object({
   fullName: z.string().trim().min(2, "Le nom complet est requis.").max(120),
@@ -19,6 +21,7 @@ export const signupIntentSchema = z.object({
   jobTitle: z.string().trim().max(120).optional(),
   currentOrganization: z.string().trim().max(120).optional(),
   territory: z.string().trim().max(120).optional(),
+  facilitatorActivities: z.array(facilitatorActivitySchema).max(2).optional(),
   facilitatorKind: z.enum(facilitatorKinds).optional(),
   specialty: z.string().trim().max(120).optional(),
 }).superRefine((data, ctx) => {
@@ -67,19 +70,16 @@ export const signupIntentSchema = z.object({
   }
 
   if (data.profileType === "facilitator") {
-    if (!data.facilitatorKind) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["facilitatorKind"],
-        message: "Le type d’intervention est requis.",
-      });
-    }
+    const activities = resolveFacilitatorActivities(
+      data.facilitatorActivities,
+      data.facilitatorKind,
+    );
 
-    if (!data.specialty || data.specialty.length < 2) {
+    if (activities.length === 0) {
       ctx.addIssue({
         code: "custom",
-        path: ["specialty"],
-        message: "Votre spécialité est requise.",
+        path: ["facilitatorActivities"],
+        message: "Sélectionnez au moins une activité : Animation ou Formation.",
       });
     }
   }
@@ -101,11 +101,7 @@ export function buildSignupMetadata(intent: SignupIntent) {
             organization: intent.currentOrganization,
             territory: intent.territory,
           }
-        : {
-            type: intent.profileType,
-            facilitator_kind: intent.facilitatorKind,
-            specialty: intent.specialty,
-          };
+        : buildFacilitatorRequestedAccess(intent);
 
   return {
     full_name: intent.fullName,
@@ -119,5 +115,42 @@ export function getSignupSuccessMessage(profileType: SignupProfileType) {
     ? "Compte créé. Vérifiez votre email puis attendez la validation de votre accès marque par TR1."
     : profileType === "agent"
       ? "Compte créé. Vérifiez votre email puis attendez votre rattachement à une marque et à vos pharmacies."
-      : "Compte créé. Vérifiez votre email puis attendez l’attribution de vos missions et accès terrain.";
+      : "Compte créé. Vérifiez votre email puis attendez la validation de votre accès intervenant et de vos activités.";
+}
+
+function buildFacilitatorRequestedAccess(intent: SignupIntent) {
+  const activities = resolveFacilitatorActivities(
+    intent.facilitatorActivities,
+    intent.facilitatorKind,
+  );
+
+  return {
+    type: "facilitator" as const,
+    activities,
+    facilitator_kind: facilitatorKindFromActivities(activities),
+    ...(intent.specialty ? { specialty: intent.specialty } : {}),
+  };
+}
+
+function resolveFacilitatorActivities(
+  activities: readonly FacilitatorActivity[] | undefined,
+  legacyKind: FacilitatorKind | undefined,
+): FacilitatorActivity[] {
+  if (activities?.length) {
+    return [...new Set(activities)].sort() as FacilitatorActivity[];
+  }
+
+  if (legacyKind === "animateur") return ["animation"];
+  if (legacyKind === "formateur") return ["training"];
+  if (legacyKind === "mixte") return ["animation", "training"];
+  return [];
+}
+
+function facilitatorKindFromActivities(
+  activities: readonly FacilitatorActivity[],
+): FacilitatorKind | undefined {
+  if (activities.length === 2) return "mixte";
+  if (activities[0] === "animation") return "animateur";
+  if (activities[0] === "training") return "formateur";
+  return undefined;
 }

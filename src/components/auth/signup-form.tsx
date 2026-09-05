@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
+type FacilitatorActivity = "animation" | "training";
+
 const profileOptions = [
   {
     value: "brand",
@@ -22,16 +24,42 @@ const profileOptions = [
     description: "Accéder au terrain et aux pharmacies.",
     accent: "Rattachement ensuite par TR1",
   },
+  {
+    value: "facilitator",
+    label: "Intervenant",
+    description: "Réaliser des animations et/ou formations en pharmacie.",
+    accent: "Validation puis rattachement à une marque",
+  },
 ] as const;
+
+const facilitatorActivityOptions: Array<{
+  value: FacilitatorActivity;
+  label: string;
+}> = [
+  { value: "animation", label: "Animation" },
+  { value: "training", label: "Formation" },
+];
 
 export function SignUpForm() {
   const [profileType, setProfileType] = useState<(typeof profileOptions)[number]["value"]>("brand");
+  const [facilitatorActivities, setFacilitatorActivities] = useState<FacilitatorActivity[]>([]);
   const [state, action, pending] = useActionState(signUpAction, {});
   const helperMessage = useMemo(() => {
     if (profileType === "brand") return "Votre accès final sera activé après validation de votre demande marque.";
     if (profileType === "agent") return "Votre accès final sera activé après rattachement à une marque et à votre périmètre.";
-    return "Votre accès final sera activé après rattachement à une marque et à votre périmètre.";
+    return "Votre accès final sera activé après validation de vos activités et rattachement à une marque.";
   }, [profileType]);
+
+  function toggleFacilitatorActivity(activity: FacilitatorActivity) {
+    setFacilitatorActivities((current) =>
+      current.includes(activity)
+        ? current.filter((value) => value !== activity)
+        : [...current, activity],
+    );
+  }
+
+  const facilitatorActivityMissing =
+    profileType === "facilitator" && facilitatorActivities.length === 0;
 
   return (
     <form action={action} className="space-y-5">
@@ -108,6 +136,42 @@ export function SignUpForm() {
           </>
         ) : null}
 
+        {profileType === "facilitator" ? (
+          <fieldset className="space-y-3 rounded-2xl border border-[#e6e8ec] bg-[#fafbfc] p-4 sm:col-span-2">
+            <legend className="px-1 text-sm font-medium text-[#0b1e32]">Votre activité</legend>
+            <p className="text-[.82rem] leading-5 text-[#667384]">
+              Sélectionnez au moins une activité. Vous pouvez choisir les deux avec un seul compte.
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {facilitatorActivityOptions.map((option) => {
+                const checked = facilitatorActivities.includes(option.value);
+                return (
+                  <label
+                    key={option.value}
+                    className={cn(
+                      "flex cursor-pointer items-center gap-3 rounded-xl border bg-white px-4 py-3 text-sm font-medium text-[#0b1e32] transition",
+                      checked ? "border-[#0b1e32]" : "border-[#dfe3ea] hover:border-[#cfd5dd]",
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      name="facilitatorActivities"
+                      value={option.value}
+                      checked={checked}
+                      onChange={() => toggleFacilitatorActivity(option.value)}
+                      className="size-4 rounded border-[#c8cdd5] accent-[#0b1e32]"
+                    />
+                    {option.label}
+                  </label>
+                );
+              })}
+            </div>
+            {facilitatorActivityMissing ? (
+              <p className="text-xs text-[#667384]">Au moins une activité est obligatoire.</p>
+            ) : null}
+          </fieldset>
+        ) : null}
+
         <div className="space-y-2">
           <Label htmlFor="password" className="text-sm font-medium text-[#0b1e32]">Mot de passe</Label>
           <Input id="password" name="password" type="password" autoComplete="new-password" minLength={8} required className="h-11 rounded-2xl border-[#dfe3ea] bg-white text-[#0b1e32] shadow-none placeholder:text-[#98a2b3] focus-visible:border-[#0b1e32]/30 focus-visible:ring-[#0b1e32]/10" placeholder="Au moins 8 caractères" />
@@ -119,7 +183,7 @@ export function SignUpForm() {
         </div>
       </div>
 
-      <Button className="h-11 w-full rounded-2xl bg-[#0b1e32] text-sm font-medium text-white shadow-none hover:bg-[#152a40]" disabled={pending}>
+      <Button className="h-11 w-full rounded-2xl bg-[#0b1e32] text-sm font-medium text-white shadow-none hover:bg-[#152a40]" disabled={pending || facilitatorActivityMissing}>
         {pending ? "Création…" : "Créer mon compte"}
       </Button>
 

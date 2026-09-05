@@ -50,7 +50,7 @@ describe("signUpAction", () => {
     }));
   });
 
-  it("accepts a facilitator signup when brand and agent fields are absent", async () => {
+  it("accepts a multiskill facilitator signup", async () => {
     const signUp = vi.fn(async () => ({ data: { user: { id: "00000000-0000-4000-8000-000000000002" }, session: null }, error: null }));
     mocks.createClient.mockResolvedValue({ auth: { signUp } });
 
@@ -60,14 +60,40 @@ describe("signUpAction", () => {
     formData.set("password", "TestVKSwiss!2026");
     formData.set("confirmPassword", "TestVKSwiss!2026");
     formData.set("profileType", "facilitator");
-    formData.set("facilitatorKind", "animateur");
-    formData.set("specialty", "Formation officinale");
+    formData.append("facilitatorActivities", "animation");
+    formData.append("facilitatorActivities", "training");
 
     const result = await signUpAction({}, formData);
 
     expect(result.error).toBeUndefined();
-    expect(result.success).toMatch(/missions/i);
-    expect(signUp).toHaveBeenCalledOnce();
+    expect(result.success).toMatch(/intervenant|activités/i);
+    expect(signUp).toHaveBeenCalledWith(expect.objectContaining({
+      email: "sonia.facilitator@example.com",
+      options: expect.objectContaining({
+        data: expect.objectContaining({
+          requested_profile_type: "facilitator",
+          requested_access: {
+            type: "facilitator",
+            activities: ["animation", "training"],
+            facilitator_kind: "mixte",
+          },
+        }),
+      }),
+    }));
+  });
+
+  it("rejects a facilitator signup without an activity before creating a Supabase client", async () => {
+    const formData = new FormData();
+    formData.set("fullName", "Sonia Leroy");
+    formData.set("email", "sonia.facilitator@example.com");
+    formData.set("password", "TestVKSwiss!2026");
+    formData.set("confirmPassword", "TestVKSwiss!2026");
+    formData.set("profileType", "facilitator");
+
+    const result = await signUpAction({}, formData);
+
+    expect(result.error).toMatch(/activité/i);
+    expect(mocks.createClient).not.toHaveBeenCalled();
   });
 
   it("returns a user error without creating a Supabase client when the redirect URL is invalid", async () => {

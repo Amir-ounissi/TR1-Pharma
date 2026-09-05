@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   approveAgentAccessRequestAction,
   approveBrandAccessRequestAction,
+  approveFacilitatorAccessRequestAction,
   rejectAccessRequestAction,
 } from "./actions";
 
@@ -68,6 +69,38 @@ describe("access request review actions", () => {
         review_note: null,
       },
     );
+  });
+
+  it("approves a facilitator on the selected brand", async () => {
+    const rpc = vi.fn(async () => ({ error: null }));
+
+    mocks.requirePlatformAdmin.mockResolvedValue({
+      supabase: { rpc },
+    });
+
+    const formData = new FormData();
+    formData.set("requestId", "00000000-0000-4000-8000-000000000003");
+    formData.set("targetBrandId", "00000000-0000-4000-8000-000000000002");
+    formData.set("reviewerNote", "Double compétence validée");
+
+    const result = await approveFacilitatorAccessRequestAction({}, formData);
+
+    expect(result.success).toMatch(/intervenant/i);
+    expect(rpc).toHaveBeenCalledWith("approve_facilitator_access_request", {
+      target_request_id: "00000000-0000-4000-8000-000000000003",
+      target_brand_id: "00000000-0000-4000-8000-000000000002",
+      review_note: "Double compétence validée",
+    });
+  });
+
+  it("rejects a facilitator approval without an explicit brand before calling the RPC", async () => {
+    const formData = new FormData();
+    formData.set("requestId", "00000000-0000-4000-8000-000000000003");
+
+    const result = await approveFacilitatorAccessRequestAction({}, formData);
+
+    expect(result.error).toMatch(/marque/i);
+    expect(mocks.requirePlatformAdmin).not.toHaveBeenCalled();
   });
 
   it("deduplicates selected departments", async () => {
