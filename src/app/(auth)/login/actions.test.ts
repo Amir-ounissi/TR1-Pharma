@@ -26,6 +26,7 @@ describe("loginAction", () => {
     membershipQuery.is.mockReturnValue(membershipQuery);
     mocks.createClient.mockResolvedValue({
       auth: { signInWithPassword: vi.fn(async () => ({ data: { user: { id: "00000000-0000-4000-8000-000000000001" } }, error: null })) },
+      rpc: vi.fn(async () => ({ data: [], error: null })),
       from: vi.fn(() => membershipQuery),
     });
     const formData = new FormData();
