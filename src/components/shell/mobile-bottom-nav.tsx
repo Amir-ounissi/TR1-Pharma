@@ -13,7 +13,15 @@ export function MobileBottomNav({ role }: { role: string }) {
   if (family !== "agent") return null;
 
   const items = getNavigationItems(role);
-  const primary = [items[0], items[1], items[2], items[5]].filter(Boolean);
+  const primaryHrefs = [
+    "/dashboard/agent",
+    "/dashboard/pharmacies",
+    "/dashboard/orders",
+    "/dashboard/tasks",
+  ];
+  const primary = primaryHrefs
+    .map((href) => items.find((item) => item.href === href))
+    .filter((item): item is NonNullable<typeof item> => Boolean(item));
 
   return (
     <nav aria-label="Navigation mobile" className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--tr1-line-strong)] bg-[var(--tr1-ivory)]/96 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg md:hidden">
