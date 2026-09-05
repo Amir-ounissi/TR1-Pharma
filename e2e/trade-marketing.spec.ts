@@ -22,7 +22,11 @@ test("un administrateur crée une campagne Trade Marketing et cible une pharmaci
 
   await expect(page.getByRole("heading", { name: campaignName, exact: true })).toBeVisible();
   await expect(page.getByText("ROI observé estimé", { exact: true })).toBeVisible();
-  await page.locator('select[name="brandPharmacyId"]').selectOption({ label: /Pharmacie République/ });
+  const pharmacySelect = page.locator('select[name="brandPharmacyId"]');
+  const pharmacyOption = pharmacySelect.locator("option").filter({ hasText: "Pharmacie République" }).first();
+  const pharmacyValue = await pharmacyOption.getAttribute("value");
+  expect(pharmacyValue).toBeTruthy();
+  await pharmacySelect.selectOption(pharmacyValue!);
   await page.locator('input[name="reason"]').fill("Compte stratégique");
   await page.getByRole("button", { name: "Ajouter au ciblage" }).click();
 
