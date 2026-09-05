@@ -35,6 +35,7 @@ const agentMoreItems: NavigationItem[] = [
 ];
 
 const managerItems: NavigationItem[] = [
+  { href: "/dashboard/executive", label: "Cockpit Direction", shortLabel: "Cockpit", icon: "layout", capability: "executive_cockpit" },
   { href: "/dashboard/commercial-health", label: "Priorités", shortLabel: "Priorités", icon: "target", capability: "next_best_action" },
   { href: "/dashboard/pharmacies", label: "Pharmacies", icon: "building", capability: "core_crm" },
   { href: "/dashboard/orders", label: "Commandes", icon: "clipboard", capability: "orders" },
