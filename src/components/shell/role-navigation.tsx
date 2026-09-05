@@ -3,15 +3,26 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NavigationIcon } from "@/components/shell/navigation-icons";
+import type { SaasCapability } from "@/lib/saas/capabilities";
 import { cn } from "@/lib/utils";
 import { getNavigationSections, isNavigationItemActive, type NavigationScope } from "@/lib/ux/navigation";
 
-export function RoleNavigation({ role, scope = "tenant", onNavigate }: { role: string; scope?: NavigationScope; onNavigate?: () => void }) {
+export function RoleNavigation({
+  role,
+  scope = "tenant",
+  capabilities,
+  onNavigate,
+}: {
+  role: string;
+  scope?: NavigationScope;
+  capabilities?: SaasCapability[];
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
 
   return (
     <nav aria-label="Navigation principale" className="space-y-7">
-      {getNavigationSections(role, scope).map((section) => (
+      {getNavigationSections(role, scope, capabilities).map((section) => (
         <section key={section.label} aria-labelledby={`nav-${section.label}`}>
           <p id={`nav-${section.label}`} className="mb-2.5 px-3 font-mono text-[0.57rem] font-bold uppercase tracking-[0.18em] text-sidebar-foreground/42">
             {section.label}
