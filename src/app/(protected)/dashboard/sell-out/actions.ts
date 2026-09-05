@@ -26,7 +26,7 @@ const captureSchema = z.object({
   periodStart: z.string().date(),
   periodEnd: z.string().date(),
   sourceLabel: z.string().trim().max(300).optional(),
-  confidence: z.union([z.coerce.number().min(0).max(1), z.literal("")]).optional(),
+  confidence: z.string().trim().max(16).optional(),
   tradeCampaignId: z.union([uuid, z.literal("")]).optional(),
 });
 
@@ -66,6 +66,7 @@ export async function saveSellOutCaptureFormAction(formData: FormData): Promise<
   const parsed = captureSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) throw new Error("Relevé sell-out invalide.");
   if (parsed.data.periodEnd < parsed.data.periodStart) throw new Error("La date de fin doit suivre la date de début.");
+  const confidence = parsed.data.confidence ? z.coerce.number().min(0).max(1).parse(parsed.data.confidence) : null;
 
   const { supabase, brand } = await requireSellOutBrand();
   const { data, error } = await supabase.rpc("save_sell_out_capture", {
@@ -76,7 +77,7 @@ export async function saveSellOutCaptureFormAction(formData: FormData): Promise<
     target_period_start: parsed.data.periodStart,
     target_period_end: parsed.data.periodEnd,
     target_source_label: parsed.data.sourceLabel || null,
-    target_confidence: parsed.data.confidence === "" || parsed.data.confidence === undefined ? null : parsed.data.confidence,
+    target_confidence: confidence,
     target_extraction_version: null,
     target_raw_extraction: null,
     target_trade_campaign_id: parsed.data.tradeCampaignId || null,
