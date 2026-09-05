@@ -65,14 +65,8 @@ export async function completeOnboardingAction(
 
   if (error) return { error: "Le profil n’a pas pu être enregistré." };
 
-  const { data: pendingBrandRequest } = await supabase
-    .from("access_requests")
-    .select("id")
-    .eq("user_id", userId)
-    .eq("requested_profile_type", "brand")
-    .eq("status", "pending")
-    .maybeSingle();
-
-  if (pendingBrandRequest) redirect("/setup");
+  if (!user.invited_at && user.user_metadata?.requested_profile_type === "brand") {
+    redirect("/setup");
+  }
   redirect("/select-brand");
 }
