@@ -29,6 +29,28 @@ describe("runtime environment", () => {
     }).NEXT_PUBLIC_APP_URL).toBe("https://tr1-preview-example.vercel.app");
   });
 
+  it("derives the production app URL from VERCEL_PROJECT_PRODUCTION_URL", () => {
+    expect(readRuntimeEnvironment({
+      ...valid,
+      APP_ENV: "production",
+      NEXT_PUBLIC_APP_URL: undefined,
+      VERCEL_ENV: "production",
+      VERCEL_PROJECT_PRODUCTION_URL: "tr1.example.com",
+      VERCEL_URL: "tr1-deployment.vercel.app",
+    }).NEXT_PUBLIC_APP_URL).toBe("https://tr1.example.com");
+  });
+
+  it("falls back to VERCEL_URL in production", () => {
+    expect(readRuntimeEnvironment({
+      ...valid,
+      APP_ENV: "production",
+      NEXT_PUBLIC_APP_URL: undefined,
+      VERCEL_ENV: "production",
+      VERCEL_PROJECT_PRODUCTION_URL: undefined,
+      VERCEL_URL: "tr1-production.vercel.app",
+    }).NEXT_PUBLIC_APP_URL).toBe("https://tr1-production.vercel.app");
+  });
+
   it("rejects localhost for staging", () => {
     expect(() => readRuntimeEnvironment({ ...valid, NEXT_PUBLIC_APP_URL: "http://127.0.0.1:3000" })).toThrow(/HTTPS|localhost/);
   });
@@ -38,6 +60,9 @@ describe("runtime environment", () => {
       ...valid,
       APP_ENV: "production",
       NEXT_PUBLIC_APP_URL: undefined,
+      VERCEL_ENV: "production",
+      VERCEL_PROJECT_PRODUCTION_URL: undefined,
+      VERCEL_URL: undefined,
     })).toThrow(/NEXT_PUBLIC_APP_URL/);
   });
 
@@ -74,6 +99,14 @@ describe("runtime environment", () => {
       VERCEL_ENV: "preview",
       VERCEL_URL: "tr1-preview-example.vercel.app",
     })).toBe("https://tr1-preview-example.vercel.app/auth/confirm?next=/onboarding");
+  });
+
+  it("builds onboarding redirect URLs from the resolved production URL", () => {
+    expect(resolveOnboardingRedirectUrl({
+      APP_ENV: "production",
+      VERCEL_ENV: "production",
+      VERCEL_PROJECT_PRODUCTION_URL: "tr1.example.com",
+    })).toBe("https://tr1.example.com/auth/confirm?next=/onboarding");
   });
 
   it("resolves a local authentication redirect without unrelated server secrets", () => {

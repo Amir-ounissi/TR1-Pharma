@@ -37,13 +37,29 @@ export async function signUpAction(
     return { error: message };
   }
 
+  let emailRedirectTo: string;
+
+  try {
+    emailRedirectTo = resolveOnboardingRedirectUrl();
+  } catch (error) {
+    console.error(
+      "Configuration de redirection d’authentification invalide pour le signup.",
+      error,
+    );
+
+    return {
+      error:
+        "La création de compte est momentanément indisponible. Contactez l’administrateur TR1.",
+    };
+  }
+
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
       data: buildSignupMetadata(parsed.data),
-      emailRedirectTo: resolveOnboardingRedirectUrl(),
+      emailRedirectTo,
     },
   });
 

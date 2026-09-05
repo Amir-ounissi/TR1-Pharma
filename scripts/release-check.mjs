@@ -24,6 +24,21 @@ const localReady = results.every((result) => result.passed);
 let pilotReady = false;
 
 if (level === "pilot") {
+  const remoteEnvironmentVariables = [
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+    "SUPABASE_SECRET_KEY",
+    "LEAD_CAPTURE_SALT",
+    "LEAD_CAPTURE_ENABLED",
+  ];
+  const hasRemoteEnvironment = ["staging", "production"].includes(process.env.APP_ENV)
+    && remoteEnvironmentVariables.every((name) => process.env[name]);
+
+  if (hasRemoteEnvironment) {
+    run("Configuration environnement distant", npm, ["run", "staging:check-env"]);
+  } else {
+    results.push({ label: "Variables environnement distant présentes", passed: false });
+  }
   run("Audit runtime", npm, ["audit", "--omit=dev", "--audit-level=high"]);
   run("Informations juridiques production", process.execPath, ["scripts/check-legal.mjs", "production"]);
   const sha = spawnSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).stdout.trim();

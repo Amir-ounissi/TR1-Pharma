@@ -3,7 +3,7 @@ if (!rawBaseUrl) throw new Error("BASE_URL est obligatoire.");
 const baseUrl = new URL(rawBaseUrl);
 if (baseUrl.protocol !== "https:" && process.env.ALLOW_LOCAL_SMOKE !== "true") throw new Error("BASE_URL doit utiliser HTTPS pour un smoke test distant.");
 
-const routes = ["/", "/merci", "/connexion", "/mentions-legales", "/politique-de-confidentialite", "/page-inexistante-smoke"];
+const routes = ["/", "/merci", "/connexion", "/signup", "/mentions-legales", "/politique-de-confidentialite", "/page-inexistante-smoke"];
 for (const route of routes) {
   const response = await fetch(new URL(route, baseUrl));
   const expected = route === "/page-inexistante-smoke" ? 404 : 200;
