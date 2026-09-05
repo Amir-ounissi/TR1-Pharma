@@ -12,6 +12,8 @@ const brandApprovalSchema = z.object({
   reviewerNote: z.string().trim().max(500).optional(),
 });
 
+const facilitatorApprovalSchema = brandApprovalSchema;
+
 const departmentCodeSchema = z
   .string()
   .trim()
@@ -165,6 +167,47 @@ export async function approveAgentAccessRequestAction(
   }
 }
 
+export async function approveFacilitatorAccessRequestAction(
+  _state: AccessRequestActionState,
+  formData: FormData,
+): Promise<AccessRequestActionState> {
+  const parsed = facilitatorApprovalSchema.safeParse({
+    requestId: formData.get("requestId"),
+    targetBrandId: formData.get("targetBrandId"),
+    reviewerNote: formData.get("reviewerNote") || undefined,
+  });
+
+  if (!parsed.success) {
+    return { error: "Choisissez explicitement une marque active." };
+  }
+
+  try {
+    const { supabase } = await requirePlatformAdmin();
+    const { error } = await supabase.rpc(
+      "approve_facilitator_access_request",
+      {
+        target_request_id: parsed.data.requestId,
+        target_brand_id: parsed.data.targetBrandId,
+        review_note: parsed.data.reviewerNote ?? null,
+      },
+    );
+
+    if (error) {
+      return { error: translateFacilitatorApprovalError(error.message) };
+    }
+
+    revalidateAccessRequestPaths();
+    return { success: "Intervenant activé avec ses activités." };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "L’accès intervenant n’a pas pu être accordé.",
+    };
+  }
+}
+
 export async function rejectAccessRequestAction(
   _state: AccessRequestActionState,
   formData: FormData,
@@ -236,6 +279,22 @@ function translateAgentApprovalError(message: string) {
 
   if (message.includes("Invalid French department code")) {
     return "La sélection contient un code département invalide.";
+  }
+
+  return message;
+}
+
+function translateFacilitatorApprovalError(message: string) {
+  if (message.includes("At least one facilitator activity is required")) {
+    return "La demande intervenant ne contient aucune activité valide.";
+  }
+
+  if (message.includes("Unsupported facilitator activity")) {
+    return "La demande contient une activité intervenant non prise en charge.";
+  }
+
+  if (message.includes("Target brand must be active")) {
+    return "Sélectionnez une marque active.";
   }
 
   return message;
