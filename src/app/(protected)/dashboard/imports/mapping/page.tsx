@@ -1,13 +1,11 @@
 import Link from "next/link";
-import { ArrowLeft, DatabaseZap, Save, Trash2 } from "lucide-react";
-import { archiveMappingProfileAction, saveMappingProfileAction } from "./actions";
+import { ArrowLeft, DatabaseZap, Trash2 } from "lucide-react";
+import { archiveMappingProfileAction } from "./actions";
+import { MappingProfileForm } from "@/components/reference/mapping-profile-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Textarea } from "@/components/ui/textarea";
 import { requireActiveBrandRole } from "@/lib/auth";
 import { canonicalImportFields } from "@/lib/data-mapping";
 import { referenceAdministrationRoles } from "@/lib/ux/permissions";
@@ -135,40 +133,7 @@ export default async function DataMappingStudioPage() {
               Le JSON associe chaque entête source au champ canonique TR1. Utilisez <code>__ignore__</code> pour ignorer une colonne.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <form action={saveMappingProfileAction.bind(null, {})} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nom du profil</Label>
-                <Input id="name" name="name" placeholder="Export HubSpot pharmacies" required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="sourceSystem">Système source</Label>
-                <Input id="sourceSystem" name="sourceSystem" defaultValue="generic_csv" placeholder="hubspot" required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="entityType">Type de données</Label>
-                <select id="entityType" name="entityType" defaultValue="pharmacies" className="border-input bg-background h-10 w-full rounded-md border px-3 text-sm">
-                  {entities.map((entity) => <option key={entity.key} value={entity.key}>{entity.label}</option>)}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="mappingJson">Mapping source → TR1</Label>
-                <Textarea
-                  id="mappingJson"
-                  name="mappingJson"
-                  rows={10}
-                  className="font-mono text-xs"
-                  defaultValue={'{\n  "Nom officine": "legal_name",\n  "Code postal": "postal_code",\n  "Ville": "city",\n  "Commentaire": "__ignore__"\n}'}
-                  required
-                />
-              </div>
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" name="isDefault" />
-                Utiliser ce profil par défaut pour ce type de données
-              </label>
-              <Button type="submit" className="w-full"><Save className="size-4" />Enregistrer le profil</Button>
-            </form>
-          </CardContent>
+          <CardContent><MappingProfileForm /></CardContent>
         </Card>
       </div>
 
