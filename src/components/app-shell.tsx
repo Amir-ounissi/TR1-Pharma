@@ -6,6 +6,7 @@ import { RoleNavigation } from "@/components/shell/role-navigation";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import type { SaasCapability } from "@/lib/saas/capabilities";
 import type { SearchItem } from "@/lib/ux/search";
 import type { NavigationScope } from "@/lib/ux/navigation";
 
@@ -15,11 +16,12 @@ type AppShellProps = {
   brandHint?: string;
   role: string;
   navigationScope?: NavigationScope;
+  capabilities?: SaasCapability[];
   searchItems: SearchItem[];
   userName: string;
 };
 
-export function AppShell({ children, brandName, brandHint = "Marque active", role, navigationScope = "tenant", searchItems, userName }: AppShellProps) {
+export function AppShell({ children, brandName, brandHint = "Marque active", role, navigationScope = "tenant", capabilities, searchItems, userName }: AppShellProps) {
   const showPlatformAdministrationReturn = role === "super_admin" && navigationScope === "tenant";
 
   return (
@@ -29,7 +31,7 @@ export function AppShell({ children, brandName, brandHint = "Marque active", rol
           <span className="relative grid size-10 place-items-center rounded-[0.55rem] border border-white/15 bg-white/6 font-mono text-[0.68rem] font-black tracking-[-0.04em] text-white">TR1<span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-[var(--tr1-orange)]" /></span>
           <div><p className="text-[0.86rem] font-black uppercase tracking-[-0.02em]">TR1 Pharma</p><p className="font-mono text-[0.55rem] uppercase tracking-[0.17em] text-sidebar-foreground/42">Intelligence terrain</p></div>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto pb-5"><RoleNavigation role={role} scope={navigationScope} /></div>
+        <div className="min-h-0 flex-1 overflow-y-auto pb-5"><RoleNavigation role={role} scope={navigationScope} capabilities={capabilities} /></div>
         <div className="shrink-0 space-y-3">
           {showPlatformAdministrationReturn ? <PlatformAdministrationReturn /> : null}
           <Separator className="bg-white/10" />
@@ -45,7 +47,7 @@ export function AppShell({ children, brandName, brandHint = "Marque active", rol
             <SheetContent className="w-[19rem] border-r-0 bg-sidebar text-sidebar-foreground" side="left">
               <SheetHeader className="border-white/10"><SheetTitle className="flex items-center gap-2 text-sidebar-foreground"><span className="grid size-8 place-items-center rounded-md border border-white/15 bg-white/6 font-mono text-[0.6rem] font-black">TR1</span>TR1 Pharma</SheetTitle></SheetHeader>
               <div className="flex min-h-0 flex-1 flex-col p-4">
-                <div className="min-h-0 flex-1 overflow-y-auto"><RoleNavigation role={role} scope={navigationScope} /></div>
+                <div className="min-h-0 flex-1 overflow-y-auto"><RoleNavigation role={role} scope={navigationScope} capabilities={capabilities} /></div>
                 <div className="mt-4 space-y-3 border-t border-white/10 pt-4">
                   {showPlatformAdministrationReturn ? <PlatformAdministrationReturn /> : null}
                   <div className="flex items-center gap-3 px-2"><span className="grid size-8 place-items-center rounded-full bg-white/10 text-xs font-semibold">{initials(userName)}</span><div className="min-w-0"><p className="truncate text-sm font-medium">{userName}</p><p className="truncate text-xs text-sidebar-foreground/45">{roleLabel(role)}</p></div></div>
@@ -68,7 +70,7 @@ export function AppShell({ children, brandName, brandHint = "Marque active", rol
         </header>
         <main className="mx-auto w-full max-w-[96rem] p-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:p-6 md:pb-8 lg:p-7">{children}</main>
       </div>
-      <MobileBottomNav role={role} />
+      <MobileBottomNav role={role} capabilities={capabilities} />
     </div>
   );
 }

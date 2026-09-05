@@ -6,8 +6,10 @@ import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
 import { extractPdfOrder, PdfOrderImportError } from "@/lib/orders/pdf-order-extraction";
 import { calculateOrderTotal, consolidatePdfOrderLines, hasMeaningfulTotalDifference, matchPdfPharmacy, matchPdfProduct, normalizePdfOrderDate, resolvedLinePrice, type PharmacyCandidate, type ProductCandidate } from "@/lib/orders/pdf-order-matching";
 import type { PdfOrderExtraction } from "@/lib/orders/pdf-order-schema";
+import { activeBrandHasCapability } from "@/lib/saas/server";
 
 const uuid = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+const pdfImportUnavailableMessage = "L’import PDF de commandes n’est pas activé pour cette marque.";
 
 type PreviewPharmacy = PharmacyCandidate;
 type PreviewProduct = Omit<ProductCandidate, "references">;
@@ -65,6 +67,7 @@ function readProduct(row: Record<string, unknown>): ProductCandidate {
 export async function analyzePdfOrderAction(_state: PdfOrderActionState, formData: FormData): Promise<PdfOrderActionState> {
   const candidate = formData.get("pdf");
   if (!(candidate instanceof File) || candidate.size === 0) return { error: "Ajoutez un PDF de commande." };
+  if (!(await activeBrandHasCapability("pdf_order_import"))) return { error: pdfImportUnavailableMessage };
   try {
     const { supabase, brand } = await requireActiveBrand();
     const rawExtraction = await extractPdfOrder(candidate);
@@ -128,6 +131,7 @@ const confirmationSchema = z.object({
 });
 
 export async function confirmPdfOrderAction(_state: PdfOrderActionState, formData: FormData): Promise<PdfOrderActionState> {
+  if (!(await activeBrandHasCapability("pdf_order_import"))) return { error: pdfImportUnavailableMessage };
   const rawItems = formData.get("items");
   let items: unknown;
   try { items = JSON.parse(typeof rawItems === "string" ? rawItems : "[]"); } catch { return { error: "Les lignes de commande sont invalides." }; }

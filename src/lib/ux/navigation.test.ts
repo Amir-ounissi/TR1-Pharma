@@ -16,6 +16,7 @@ describe("role navigation", () => {
     expect(getNavigationItems("brand_admin").map((item) => item.href)).toContain("/dashboard/imports");
     expect(getNavigationItems("tr1_manager").map((item) => item.href)).not.toContain("/dashboard/imports");
     expect(getNavigationItems("brand_admin").map((item) => item.href)).not.toContain("/dashboard/admin/design-system");
+    expect(getNavigationItems("brand_admin").map((item) => item.href)).not.toContain("/dashboard/admin/saas");
   });
 
   it("splits global superadmin navigation from tenant navigation", () => {
@@ -26,6 +27,7 @@ describe("role navigation", () => {
       "/dashboard",
       "/dashboard/admin/access-requests",
       "/dashboard/admin/onboarding",
+      "/dashboard/admin/saas",
       "/dashboard/admin/users",
       "/dashboard/admin/leads",
     ]);
@@ -34,6 +36,7 @@ describe("role navigation", () => {
     expect(tenantLinks).toContain("/dashboard/users");
     expect(tenantLinks).toContain("/dashboard/imports");
     expect(tenantLinks).not.toContain("/dashboard/admin/leads");
+    expect(tenantLinks).not.toContain("/dashboard/admin/saas");
   });
 
   it("keeps platform functions hidden from brand admins and preserves field roles", () => {
@@ -42,6 +45,7 @@ describe("role navigation", () => {
 
     expect(brandAdminLinks).not.toContain("/dashboard/admin/users");
     expect(brandAdminLinks).not.toContain("/dashboard/admin/leads");
+    expect(brandAdminLinks).not.toContain("/dashboard/admin/saas");
     expect(facilitatorLinks).toEqual(["/dashboard/field", "/dashboard/missions", "/dashboard/agenda", "/dashboard/reports"]);
   });
 
@@ -57,6 +61,25 @@ describe("role navigation", () => {
     expect(sections.find((section) => section.label === "Paramètres")?.items.map((item) => item.href)).toEqual([
       "/dashboard/products", "/dashboard/groups", "/dashboard/territories", "/dashboard/imports", "/dashboard/users",
     ]);
+  });
+
+  it("filters tenant navigation using the active brand capabilities", () => {
+    const coreCapabilities = ["core_crm", "orders", "agent_day", "missions", "performance", "distribution"] as const;
+    const managerLinks = getNavigationItems("tr1_manager", "tenant", coreCapabilities).map((item) => item.href);
+    const agentMoreLinks = getAgentMoreItems(coreCapabilities).map((item) => item.href);
+
+    expect(managerLinks).not.toContain("/dashboard/commercial-health");
+    expect(managerLinks).toContain("/dashboard/pharmacies");
+    expect(managerLinks).toContain("/dashboard/orders");
+    expect(agentMoreLinks).toContain("/dashboard/missions");
+    expect(agentMoreLinks).toContain("/dashboard/agent/performance");
+    expect(agentMoreLinks).not.toContain("/dashboard/agent/assistant");
+  });
+
+  it("lets an explicit capability immediately expose its module", () => {
+    const capabilities = ["core_crm", "orders", "agent_day", "missions", "performance", "assistant_terrain", "next_best_action"] as const;
+    expect(getAgentMoreItems(capabilities).map((item) => item.href)).toContain("/dashboard/agent/assistant");
+    expect(getNavigationItems("tr1_manager", "tenant", capabilities).map((item) => item.href)).toContain("/dashboard/commercial-health");
   });
 
   it("declares the same five primary destinations on mobile for the agent", () => {
