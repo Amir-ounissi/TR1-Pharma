@@ -5,6 +5,17 @@ import { isSaasCapability, type SaasCapability } from "@/lib/saas/capabilities";
 import { getNavigationItems, getRoleFamily } from "@/lib/ux/navigation";
 import type { SearchItem } from "@/lib/ux/search";
 
+type PharmacySearchRow = {
+  id: string;
+  pharmacies:
+    | { trade_name: string | null; legal_name: string | null; city: string | null }
+    | Array<{ trade_name: string | null; legal_name: string | null; city: string | null }>
+    | null;
+};
+
+type MissionSearchRow = { id: string; title: string; status: string };
+type TaskSearchRow = { id: string; title: string; status: string };
+
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [session, contexts, platformAdmin] = await Promise.all([getOptionalActiveBrand(), getBrandContexts(), isPlatformAdmin()]);
 
@@ -36,18 +47,17 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .filter((row) => row.enabled && isSaasCapability(row.capability_key))
     .map((row) => row.capability_key as SaasCapability);
   const enabled = new Set<SaasCapability>(enabledCapabilities);
-  const emptyResult = Promise.resolve({ data: [] as never[], error: null });
 
   const [pharmaciesResult, missionsResult, tasksResult] = await Promise.all([
     enabled.has("core_crm")
       ? supabase.from("brand_pharmacies").select("id,pharmacies(trade_name,legal_name,city)").eq("brand_id", brand.id).is("archived_at", null).limit(12)
-      : emptyResult,
+      : Promise.resolve({ data: [] }),
     enabled.has("missions")
       ? supabase.from("missions").select("id,title,status").eq("brand_id", brand.id).is("archived_at", null).limit(12)
-      : emptyResult,
+      : Promise.resolve({ data: [] }),
     enabled.has("core_crm")
       ? supabase.from("tasks").select("id,title,status").eq("brand_id", brand.id).is("archived_at", null).limit(12)
-      : emptyResult,
+      : Promise.resolve({ data: [] }),
   ]);
 
   const navigationItems: SearchItem[] = getNavigationItems(role, "tenant", enabledCapabilities).map((item) => ({
@@ -62,12 +72,15 @@ export default async function DashboardLayout({ children }: { children: React.Re
     ...(enabled.has("orders") ? [{ id: "action-new-order", kind: "action" as const, label: "Créer une commande", href: "/dashboard/orders/new", keywords: ["nouvelle", "saisie"] }] : []),
     ...(enabled.has("core_crm") ? [{ id: "action-new-task", kind: "action" as const, label: "Planifier une relance", href: "/dashboard/tasks", keywords: ["tâche", "rappel"] }] : []),
   ];
-  const pharmacyItems: SearchItem[] = (pharmaciesResult.data ?? []).map((relation) => {
+  const pharmacyRows = (pharmaciesResult.data ?? []) as unknown as PharmacySearchRow[];
+  const missionRows = (missionsResult.data ?? []) as unknown as MissionSearchRow[];
+  const taskRows = (tasksResult.data ?? []) as unknown as TaskSearchRow[];
+  const pharmacyItems: SearchItem[] = pharmacyRows.map((relation) => {
     const pharmacy = Array.isArray(relation.pharmacies) ? relation.pharmacies[0] : relation.pharmacies;
     return { id: `pharmacy-${relation.id}`, kind: "pharmacy", label: pharmacy?.trade_name || pharmacy?.legal_name || "Pharmacie", description: pharmacy?.city ?? undefined, href: `/dashboard/pharmacies/${relation.id}` };
   });
-  const missionItems: SearchItem[] = (missionsResult.data ?? []).map((mission) => ({ id: `mission-${mission.id}`, kind: "mission", label: mission.title, description: mission.status, href: `/dashboard/missions/${mission.id}` }));
-  const taskItems: SearchItem[] = (tasksResult.data ?? []).map((task) => ({ id: `task-${task.id}`, kind: "task", label: task.title, description: task.status, href: "/dashboard/tasks" }));
+  const missionItems: SearchItem[] = missionRows.map((mission) => ({ id: `mission-${mission.id}`, kind: "mission", label: mission.title, description: mission.status, href: `/dashboard/missions/${mission.id}` }));
+  const taskItems: SearchItem[] = taskRows.map((task) => ({ id: `task-${task.id}`, kind: "task", label: task.title, description: task.status, href: "/dashboard/tasks" }));
 
   return <AppShell brandName={brand.name} role={role} capabilities={enabledCapabilities} searchItems={[...quickActions, ...navigationItems, ...pharmacyItems, ...missionItems, ...taskItems]} userName={profile.full_name}>{children}</AppShell>;
 }
