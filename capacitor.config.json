@@ -1,0 +1,9 @@
+{
+  "appId": "com.tr1pharma.app",
+  "appName": "TR1 Pharma",
+  "webDir": "out",
+  "server": {
+    "url": "http://localhost:3002",
+    "cleartext": true
+  }
+}
