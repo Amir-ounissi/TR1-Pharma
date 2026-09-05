@@ -58,6 +58,28 @@ function buildAdmin(memberships: Array<{ id: string; status: "invited" | "active
 describe("completeOnboardingAction", () => {
   beforeEach(() => vi.clearAllMocks());
 
+  it("routes a confirmed brand signup into autonomous setup after completing the personal profile", async () => {
+    const profile = buildProfileQuery();
+    const selfServiceUser = {
+      id: "00000000-0000-4000-8000-000000000009",
+      invited_at: null,
+      user_metadata: { requested_profile_type: "brand" },
+    };
+    mocks.requireUser.mockResolvedValue({
+      userId: selfServiceUser.id,
+      supabase: {
+        auth: { getUser: vi.fn(async () => ({ data: { user: selfServiceUser }, error: null })) },
+        from: vi.fn(() => profile),
+      },
+    });
+
+    await expect(completeOnboardingAction({}, formData())).rejects.toThrow("redirect");
+
+    expect(profile.update).toHaveBeenCalledWith(expect.objectContaining({ full_name: "Marie Invitée", onboarding_completed_at: expect.any(String) }));
+    expect(mocks.createAdminClient).not.toHaveBeenCalled();
+    expect(mocks.redirect).toHaveBeenCalledWith("/setup");
+  });
+
   it("sets the invited password before activating only tenant memberships", async () => {
     const profile = buildProfileQuery();
     const updateUser = vi.fn(async () => ({ error: null }));
