@@ -2,7 +2,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(22);
+select plan(23);
 
 select has_table('public', 'sell_out_captures', 'Sell-out captures table exists');
 select has_table('public', 'sell_out_lines', 'Sell-out lines table exists');
@@ -165,7 +165,8 @@ select public.save_sell_out_capture(
   null
 ) as id;
 
-perform public.save_sell_out_line(
+create temp table _document_line as
+select public.save_sell_out_line(
   null,
   (select id from _document_capture),
   '00000000-0000-0000-0000-000000000601',
@@ -178,7 +179,7 @@ perform public.save_sell_out_line(
   null,
   null,
   0.92
-);
+) as id;
 
 select throws_ok(
   format('select public.submit_sell_out_capture(%L::uuid)', (select id from _document_capture)),
