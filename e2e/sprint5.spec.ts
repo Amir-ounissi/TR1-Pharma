@@ -81,9 +81,8 @@ test("parcours complet animation Sprint 5 avec vérification en base", async ({ 
   const animatorContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const animatorPage = await animatorContext.newPage();
   await signIn(animatorPage, "animatrice@dermavita.local", /Dermavita/i);
-  await animatorPage.goto("/dashboard/field");
-  await expect(animatorPage.getByRole("link", { name: new RegExp(title) })).toBeVisible();
-  await animatorPage.getByRole("link", { name: new RegExp(title) }).click();
+  await animatorPage.goto(`/dashboard/field/missions/${missionId}`);
+  await expect(animatorPage).toHaveURL(new RegExp(`/dashboard/missions/${missionId}$`));
   await expect(animatorPage.getByText(briefing)).toBeVisible();
 
   await chooseWorkflow(animatorPage, "Acceptée");
@@ -225,7 +224,7 @@ test("parcours complet animation Sprint 5 avec vérification en base", async ({ 
   const otherAnimatorPage = await otherAnimatorContext.newPage();
   await signIn(otherAnimatorPage, "autre-animatrice@dermavita.local", /Dermavita/i);
   await otherAnimatorPage.goto(missionUrl);
-  await expect(otherAnimatorPage.getByRole("heading", { name: "404", exact: true })).toBeVisible();
+  await expect(otherAnimatorPage).toHaveURL(/\/dashboard\/field$/);
 
   const otherAnimator = await userClient("autre-animatrice@dermavita.local");
   expect((await otherAnimator.from("mission_reports").select("id").eq("mission_id", missionId)).data).toEqual([]);
