@@ -16,6 +16,7 @@ describe("role navigation", () => {
     expect(getNavigationItems("brand_admin").map((item) => item.href)).toContain("/dashboard/imports");
     expect(getNavigationItems("tr1_manager").map((item) => item.href)).not.toContain("/dashboard/imports");
     expect(getNavigationItems("brand_admin").map((item) => item.href)).not.toContain("/dashboard/admin/design-system");
+    expect(getNavigationItems("brand_admin").map((item) => item.href)).not.toContain("/dashboard/admin/saas");
   });
 
   it("splits global superadmin navigation from tenant navigation", () => {
@@ -26,6 +27,7 @@ describe("role navigation", () => {
       "/dashboard",
       "/dashboard/admin/access-requests",
       "/dashboard/admin/onboarding",
+      "/dashboard/admin/saas",
       "/dashboard/admin/users",
       "/dashboard/admin/leads",
     ]);
@@ -34,6 +36,7 @@ describe("role navigation", () => {
     expect(tenantLinks).toContain("/dashboard/users");
     expect(tenantLinks).toContain("/dashboard/imports");
     expect(tenantLinks).not.toContain("/dashboard/admin/leads");
+    expect(tenantLinks).not.toContain("/dashboard/admin/saas");
   });
 
   it("keeps platform functions hidden from brand admins and preserves field roles", () => {
@@ -42,6 +45,7 @@ describe("role navigation", () => {
 
     expect(brandAdminLinks).not.toContain("/dashboard/admin/users");
     expect(brandAdminLinks).not.toContain("/dashboard/admin/leads");
+    expect(brandAdminLinks).not.toContain("/dashboard/admin/saas");
     expect(facilitatorLinks).toEqual(["/dashboard/field", "/dashboard/missions", "/dashboard/agenda", "/dashboard/reports"]);
   });
 
