@@ -7,7 +7,7 @@ test("un administrateur pilote les groupements et ouvre le parc officinal", asyn
 
   await expect(page.getByRole("heading", { name: "Mesurer la pénétration réseau et le potentiel restant" })).toBeVisible();
   await expect(page.getByText("Parc groupements", { exact: true })).toBeVisible();
-  await expect(page.getByText("Pénétration", { exact: true })).toBeVisible();
+  await expect(page.getByRole("columnheader", { name: "Pénétration" })).toBeVisible();
 
   const groupLink = page.getByRole("link", { name: "Santé Plus", exact: true });
   await expect(groupLink).toBeVisible();
