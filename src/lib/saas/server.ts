@@ -13,6 +13,12 @@ type CapabilityRow = {
   source: "override" | "plan" | "legacy_full" | "none";
 };
 
+export class SaasCapabilityUnavailableError extends Error {
+  constructor(readonly capability: SaasCapability) {
+    super(`SaaS capability unavailable: ${capability}`);
+  }
+}
+
 export type ActiveBrandSaasContext = {
   brandId: string;
   capabilities: ReadonlySet<SaasCapability>;
@@ -60,11 +66,26 @@ export async function activeBrandHasCapability(capability: SaasCapability) {
   return context.capabilities.has(capability);
 }
 
+export async function assertActiveBrandCapability(capability: SaasCapability) {
+  const context = await getActiveBrandSaasContext();
+  if (!context.capabilities.has(capability)) throw new SaasCapabilityUnavailableError(capability);
+  return context;
+}
+
 export async function requireActiveBrandCapability(
   capability: SaasCapability,
   fallback = "/dashboard",
 ) {
   const context = await getActiveBrandSaasContext();
   if (!context.capabilities.has(capability)) redirect(fallback);
+  return context;
+}
+
+export async function requireAnyActiveBrandCapability(
+  capabilities: readonly SaasCapability[],
+  fallback = "/dashboard",
+) {
+  const context = await getActiveBrandSaasContext();
+  if (!capabilities.some((capability) => context.capabilities.has(capability))) redirect(fallback);
   return context;
 }
