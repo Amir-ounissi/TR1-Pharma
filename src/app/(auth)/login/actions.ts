@@ -1,7 +1,9 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { ACTIVE_BRAND_COOKIE } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 export type LoginState = { error?: string };
@@ -26,15 +28,29 @@ export async function loginAction(
   const { data: signInData, error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error || !signInData.user) return { error: "Connexion impossible. Vérifiez vos identifiants." };
 
-  const { data: membership } = await supabase
+  const { data: memberships } = await supabase
     .from("memberships")
-    .select("id,roles!inner(key)")
+    .select("brand_id,roles!inner(key)")
     .eq("user_id", signInData.user.id)
-    .is("brand_id", null)
-    .eq("status", "active")
-    .eq("roles.key", "super_admin")
-    .maybeSingle();
+    .eq("status", "active");
 
-  if (membership) redirect("/dashboard");
+  const rows = memberships ?? [];
+  const roleKeys = rows.flatMap((membership) => {
+    const roles = Array.isArray(membership.roles) ? membership.roles : [membership.roles];
+    return roles.map((role) => role?.key).filter((key): key is string => Boolean(key));
+  });
+  const facilitatorOnly = roleKeys.length > 0 && roleKeys.every((key) => key === "facilitator");
+  const platformAdmin = rows.some((membership) => {
+    const roles = Array.isArray(membership.roles) ? membership.roles : [membership.roles];
+    return membership.brand_id === null && roles.some((role) => role?.key === "super_admin");
+  });
+
+  if (facilitatorOnly) {
+    const cookieStore = await cookies();
+    cookieStore.delete(ACTIVE_BRAND_COOKIE);
+    redirect("/dashboard/field");
+  }
+
+  if (platformAdmin) redirect("/dashboard");
   redirect("/select-brand");
 }

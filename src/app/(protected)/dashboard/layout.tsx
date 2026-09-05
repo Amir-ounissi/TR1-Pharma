@@ -6,6 +6,17 @@ import type { SearchItem } from "@/lib/ux/search";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [session, contexts, platformAdmin] = await Promise.all([getOptionalActiveBrand(), getBrandContexts(), isPlatformAdmin()]);
+  const facilitatorOnly = contexts.length > 0 && contexts.every((context) => context.role === "facilitator");
+
+  if (facilitatorOnly) {
+    const navigationItems: SearchItem[] = getNavigationItems("facilitator").map((item) => ({
+      id: `navigation-${item.href}`,
+      kind: "navigation",
+      label: item.label,
+      href: item.href,
+    }));
+    return <AppShell brandHint="Espace terrain" brandName="Toutes mes marques" role="facilitator" searchItems={navigationItems} userName={session.profile.full_name}>{children}</AppShell>;
+  }
 
   if (!session.brand) {
     if (!platformAdmin) {
