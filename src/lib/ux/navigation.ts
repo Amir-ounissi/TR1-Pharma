@@ -51,6 +51,7 @@ const platformAdminItems: NavigationItem[] = [
   { href: "/dashboard", label: "Vue globale", shortLabel: "Accueil", icon: "layout" },
   { href: "/dashboard/admin/access-requests", label: "Demandes d’accès", icon: "users" },
   { href: "/dashboard/admin/onboarding", label: "Marques & onboardings", icon: "badge" },
+  { href: "/dashboard/admin/saas", label: "SaaS & capacités", icon: "boxes" },
   { href: "/dashboard/admin/users", label: "Utilisateurs & accès", icon: "users" },
   { href: "/dashboard/admin/leads", label: "Leads TR1", icon: "leads" },
 ];
