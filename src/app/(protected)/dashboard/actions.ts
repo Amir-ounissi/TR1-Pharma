@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { ACTIVE_BRAND_COOKIE, requireUser } from "@/lib/auth";
+import { ACTIVE_BRAND_COOKIE, isPlatformAdmin, requireUser } from "@/lib/auth";
 
 export async function signOutAction() {
   const { supabase } = await requireUser();
@@ -16,4 +16,14 @@ export async function changeBrandAction() {
   const cookieStore = await cookies();
   cookieStore.delete(ACTIVE_BRAND_COOKIE);
   redirect("/select-brand");
+}
+
+export async function returnToPlatformAdministrationAction() {
+  if (!(await isPlatformAdmin())) {
+    redirect("/dashboard");
+  }
+
+  const cookieStore = await cookies();
+  cookieStore.delete(ACTIVE_BRAND_COOKIE);
+  redirect("/dashboard");
 }

@@ -59,9 +59,13 @@ describe("role navigation", () => {
     ]);
   });
 
-  it("declares mobile agent destinations explicitly", () => {
+  it("declares the same five primary destinations on mobile for the agent", () => {
     expect(getMobileAgentNavigationItems().map((item) => item.href)).toEqual([
-      "/dashboard/agent", "/dashboard/pharmacies", "/dashboard/orders", "/dashboard/agenda",
+      "/dashboard/agent",
+      "/dashboard/pharmacies",
+      "/dashboard/orders",
+      "/dashboard/agenda",
+      "/dashboard/agent/more",
     ]);
   });
 
