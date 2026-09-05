@@ -1,27 +1,44 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { reviewReportAction } from "../missions/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
+import { getBrandContexts, getOptionalActiveBrand } from "@/lib/auth";
 import { presentationLabel } from "@/lib/presentation";
 
 export default async function ReportsPage() {
-  const { supabase, brand, userId } = await requireActiveBrand();
-  const contexts = await getBrandContexts();
-  const role =
-    contexts.find((context) => context.id === brand.id)?.role ?? "brand_user";
+  const [session, contexts] = await Promise.all([
+    getOptionalActiveBrand(),
+    getBrandContexts(),
+  ]);
+  const facilitatorOnly =
+    contexts.length > 0 && contexts.every((context) => context.role === "facilitator");
 
+  let role = "brand_user";
+  if (facilitatorOnly) {
+    role = "facilitator";
+  } else {
+    if (!session.brand) redirect("/select-brand");
+    role =
+      contexts.find((context) => context.id === session.brand?.id)?.role ??
+      "brand_user";
+  }
+
+  const { supabase, userId } = session;
   const isContributor = role === "agent" || role === "facilitator";
   const isReviewer = role === "tr1_manager" || role === "super_admin";
 
   let reportsQuery = supabase
     .from("mission_reports")
     .select(
-      "id,mission_id,submitted_by,report_status,summary,submitted_at,data_quality_status,created_at,rejection_reason",
-    )
-    .eq("brand_id", brand.id);
+      "id,mission_id,brand_id,submitted_by,report_status,summary,submitted_at,data_quality_status,created_at,rejection_reason",
+    );
+
+  if (!facilitatorOnly) {
+    reportsQuery = reportsQuery.eq("brand_id", session.brand!.id);
+  }
 
   if (isContributor) {
     reportsQuery = reportsQuery
@@ -48,12 +65,14 @@ export default async function ReportsPage() {
     ascending: false,
   });
 
-  const missionIds = [...new Set((reports ?? []).map((report) => report.mission_id))];
+  const missionIds = [
+    ...new Set((reports ?? []).map((report) => report.mission_id)),
+  ];
 
   const { data: missions } = missionIds.length
     ? await supabase
         .from("missions")
-        .select("id,title,mission_type,status")
+        .select("id,title,mission_type,status,brand_id,brands(name)")
         .in("id", missionIds)
     : { data: [] };
 
@@ -67,11 +86,13 @@ export default async function ReportsPage() {
       ? "Rapports à valider"
       : "Rapports terrain";
 
-  const description = isContributor
-    ? "Retrouvez vos brouillons, corrections demandées et rapports transmis."
-    : isReviewer
-      ? "Validation TR1 obligatoire avant clôture d’une mission."
-      : "Lecture des comptes rendus terrain partagés avec la marque.";
+  const description = facilitatorOnly
+    ? "Tous vos brouillons, corrections et rapports, quelle que soit la marque."
+    : isContributor
+      ? "Retrouvez vos brouillons, corrections demandées et rapports transmis."
+      : isReviewer
+        ? "Validation TR1 obligatoire avant clôture d’une mission."
+        : "Lecture des comptes rendus terrain partagés avec la marque.";
 
   return (
     <div className="space-y-6">
@@ -88,12 +109,25 @@ export default async function ReportsPage() {
 
       {(reports ?? []).map((report) => {
         const mission = missionById.get(report.mission_id);
+        const brand = Array.isArray(mission?.brands)
+          ? mission?.brands[0]
+          : mission?.brands;
+        const missionHref = facilitatorOnly
+          ? `/dashboard/field/missions/${report.mission_id}`
+          : `/dashboard/missions/${report.mission_id}`;
 
         return (
           <Card key={report.id} data-mission-id={report.mission_id}>
             <CardHeader>
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <CardTitle>{mission?.title || "Mission"}</CardTitle>
+                <div>
+                  <CardTitle>{mission?.title || "Mission"}</CardTitle>
+                  {facilitatorOnly && brand?.name ? (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {brand.name}
+                    </p>
+                  ) : null}
+                </div>
                 <Badge variant="secondary">
                   {presentationLabel(report.report_status)}
                 </Badge>
@@ -147,9 +181,11 @@ export default async function ReportsPage() {
                 </form>
               ) : (
                 <Button asChild variant="outline">
-                  <Link href={`/dashboard/missions/${report.mission_id}`}>
+                  <Link href={missionHref}>
                     {isContributor &&
-                    ["draft", "needs_correction"].includes(report.report_status)
+                    ["draft", "needs_correction"].includes(
+                      report.report_status,
+                    )
                       ? "Continuer le compte rendu"
                       : "Ouvrir la mission"}
                   </Link>
