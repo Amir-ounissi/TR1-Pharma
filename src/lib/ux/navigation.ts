@@ -30,6 +30,7 @@ const agentMoreItems: NavigationItem[] = [
   { href: "/dashboard/missions", label: "Missions", icon: "calendar", capability: "missions" },
   { href: "/dashboard/tasks", label: "Tâches", icon: "clipboard", capability: "core_crm" },
   { href: "/dashboard/agent/performance", label: "Ma performance", icon: "chart", capability: "performance" },
+  { href: "/dashboard/sell-out", label: "Sell-out", icon: "chart", capability: "sell_out" },
   { href: "/dashboard/reports", label: "Mes comptes rendus", icon: "file", capability: "missions" },
   { href: "/dashboard/agent/assistant", label: "Assistant Terrain", icon: "sparkles", capability: "assistant_terrain" },
 ];
@@ -38,6 +39,7 @@ const managerItems: NavigationItem[] = [
   { href: "/dashboard/executive", label: "Cockpit Direction", shortLabel: "Cockpit", icon: "layout", capability: "executive_cockpit" },
   { href: "/dashboard/kam-groups", label: "KAM Groupements", shortLabel: "Groupements", icon: "network", capability: "kam_groups" },
   { href: "/dashboard/trade", label: "Trade Marketing", shortLabel: "Trade", icon: "target", capability: "trade_marketing" },
+  { href: "/dashboard/sell-out", label: "Sell-out", icon: "chart", capability: "sell_out" },
   { href: "/dashboard/commercial-health", label: "Priorités", shortLabel: "Priorités", icon: "target", capability: "next_best_action" },
   { href: "/dashboard/pharmacies", label: "Pharmacies", icon: "building", capability: "core_crm" },
   { href: "/dashboard/orders", label: "Commandes", icon: "clipboard", capability: "orders" },
