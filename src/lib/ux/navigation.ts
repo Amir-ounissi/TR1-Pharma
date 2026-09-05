@@ -119,7 +119,7 @@ export function getAgentMoreItems() {
 }
 
 export function getMobileAgentNavigationItems() {
-  return agentItems.filter((item) => item.href !== "/dashboard/agent/more");
+  return agentItems;
 }
 
 export function getNavigationItems(
