@@ -12,6 +12,9 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "TR1 Pharma",
   },
+  other: {
+    "apple-mobile-web-app-capable": "yes",
+  },
   icons: {
     apple: [
       {
