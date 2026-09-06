@@ -1,15 +1,17 @@
 import { StatusBar } from "expo-status-bar";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import type { BrandContext } from "../../App";
+import { refreshFieldReminders } from "../lib/field-notifications";
 import { ManualOrderWorkflow } from "./manual-order";
 import { MissionAgendaWorkspace } from "./mission-agenda-workspace";
+import { NotificationSettings } from "./notification-settings";
 import { OrderHistoryWorkspace } from "./order-history";
 import { OrderWorkflow } from "./order-workflow";
 import { PharmacyWorkspace } from "./pharmacy-workspace";
 
-type Route = "home" | "pharmacies" | "orders" | "manualOrder" | "orderHistory" | "missions" | "agenda";
+type Route = "home" | "pharmacies" | "orders" | "manualOrder" | "orderHistory" | "missions" | "agenda" | "notifications";
 
 type Props = {
   brand: BrandContext;
@@ -21,24 +23,17 @@ type Props = {
 export function FieldWorkspace({ brand, canSwitchBrand, onSwitchBrand, onSignOut }: Props) {
   const [route, setRoute] = useState<Route>("home");
 
-  if (route === "pharmacies") {
-    return <PharmacyWorkspace brand={brand} onBack={() => setRoute("home")} />;
-  }
-  if (route === "orders") {
-    return <OrderWorkflow brand={brand} onBack={() => setRoute("home")} onDone={() => setRoute("home")} />;
-  }
-  if (route === "manualOrder") {
-    return <ManualOrderWorkflow brand={brand} onBack={() => setRoute("home")} onDone={() => setRoute("home")} />;
-  }
-  if (route === "orderHistory") {
-    return <OrderHistoryWorkspace brand={brand} onBack={() => setRoute("home")} />;
-  }
-  if (route === "missions") {
-    return <MissionAgendaWorkspace brand={brand} mode="missions" onBack={() => setRoute("home")} />;
-  }
-  if (route === "agenda") {
-    return <MissionAgendaWorkspace brand={brand} mode="agenda" onBack={() => setRoute("home")} />;
-  }
+  useEffect(() => {
+    void refreshFieldReminders(brand.id).catch(() => undefined);
+  }, [brand.id]);
+
+  if (route === "pharmacies") return <PharmacyWorkspace brand={brand} onBack={() => setRoute("home")} />;
+  if (route === "orders") return <OrderWorkflow brand={brand} onBack={() => setRoute("home")} onDone={() => setRoute("home")} />;
+  if (route === "manualOrder") return <ManualOrderWorkflow brand={brand} onBack={() => setRoute("home")} onDone={() => setRoute("home")} />;
+  if (route === "orderHistory") return <OrderHistoryWorkspace brand={brand} onBack={() => setRoute("home")} />;
+  if (route === "missions") return <MissionAgendaWorkspace brand={brand} mode="missions" onBack={() => setRoute("home")} />;
+  if (route === "agenda") return <MissionAgendaWorkspace brand={brand} mode="agenda" onBack={() => setRoute("home")} />;
+  if (route === "notifications") return <NotificationSettings brand={brand} onBack={() => setRoute("home")} />;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -50,56 +45,37 @@ export function FieldWorkspace({ brand, canSwitchBrand, onSwitchBrand, onSignOut
             <Text style={styles.title}>{brand.name}</Text>
             <Text style={styles.meta}>{brand.role}</Text>
           </View>
-          {canSwitchBrand ? (
-            <Pressable onPress={onSwitchBrand} style={styles.smallButton}>
-              <Text style={styles.smallButtonText}>Changer</Text>
-            </Pressable>
-          ) : null}
+          {canSwitchBrand ? <Pressable onPress={onSwitchBrand} style={styles.smallButton}><Text style={styles.smallButtonText}>Changer</Text></Pressable> : null}
         </View>
 
         <View style={styles.hero}>
           <Text style={styles.heroKicker}>AUJOURD’HUI</Text>
           <Text style={styles.heroTitle}>Votre journée terrain commence ici.</Text>
-          <Text style={styles.heroText}>Pharmacies, commandes, missions et agenda sont accessibles en quelques gestes.</Text>
+          <Text style={styles.heroText}>Pharmacies, commandes, missions, agenda et rappels sont accessibles en quelques gestes.</Text>
         </View>
 
         <Text style={styles.sectionTitle}>Actions rapides</Text>
-        <Pressable onPress={() => setRoute("orders")} style={[styles.actionCard, styles.actionFeatured]}>
-          <Text style={styles.actionTitle}>Scanner une commande</Text>
-          <Text style={styles.actionText}>Photo → analyse → correction → validation</Text>
-          <Text style={styles.openLabel}>OUVRIR LA CAMÉRA</Text>
-        </Pressable>
-        <Pressable onPress={() => setRoute("manualOrder")} style={styles.actionCard}>
-          <Text style={styles.actionTitle}>Saisir une commande</Text>
-          <Text style={styles.actionText}>Pharmacie → produits → revue → validation explicite</Text>
-          <Text style={styles.openLabel}>SAISIE MANUELLE</Text>
-        </Pressable>
-        <Pressable onPress={() => setRoute("orderHistory")} style={styles.actionCard}>
-          <Text style={styles.actionTitle}>Historique commandes</Text>
-          <Text style={styles.actionText}>Statuts, corrections, montants et détail produits</Text>
-          <Text style={styles.openLabel}>CONSULTER</Text>
-        </Pressable>
-        <Pressable onPress={() => setRoute("pharmacies")} style={styles.actionCard}>
-          <Text style={styles.actionTitle}>Pharmacies</Text>
-          <Text style={styles.actionText}>Portefeuille, recherche et fiche compte</Text>
-          <Text style={styles.openLabel}>OUVRIR</Text>
-        </Pressable>
-        <Pressable onPress={() => setRoute("missions")} style={styles.actionCard}>
-          <Text style={styles.actionTitle}>Missions</Text>
-          <Text style={styles.actionText}>Animations et priorités qui vous sont affectées</Text>
-          <Text style={styles.openLabel}>OUVRIR</Text>
-        </Pressable>
-        <Pressable onPress={() => setRoute("agenda")} style={styles.actionCard}>
-          <Text style={styles.actionTitle}>Agenda</Text>
-          <Text style={styles.actionText}>Planning du jour et éléments à planifier</Text>
-          <Text style={styles.openLabel}>OUVRIR</Text>
-        </Pressable>
+        <Action title="Scanner une commande" text="Photo → analyse → correction → validation" label="OUVRIR LA CAMÉRA" featured onPress={() => setRoute("orders")} />
+        <Action title="Saisir une commande" text="Pharmacie → produits → revue → validation explicite" label="SAISIE MANUELLE" onPress={() => setRoute("manualOrder")} />
+        <Action title="Historique commandes" text="Statuts, corrections, montants et détail produits" label="CONSULTER" onPress={() => setRoute("orderHistory")} />
+        <Action title="Pharmacies" text="Portefeuille, recherche et fiche compte" label="OUVRIR" onPress={() => setRoute("pharmacies")} />
+        <Action title="Missions" text="Animations et priorités qui vous sont affectées" label="OUVRIR" onPress={() => setRoute("missions")} />
+        <Action title="Agenda" text="Planning du jour et éléments à planifier" label="OUVRIR" onPress={() => setRoute("agenda")} />
+        <Action title="Rappels terrain" text="Notifications locales synchronisées avec votre agenda" label="RÉGLER" onPress={() => setRoute("notifications")} />
 
-        <Pressable onPress={onSignOut} style={styles.signOut}>
-          <Text style={styles.signOutText}>Se déconnecter</Text>
-        </Pressable>
+        <Pressable onPress={onSignOut} style={styles.signOut}><Text style={styles.signOutText}>Se déconnecter</Text></Pressable>
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function Action({ title, text, label, onPress, featured = false }: { title: string; text: string; label: string; onPress: () => void; featured?: boolean }) {
+  return (
+    <Pressable onPress={onPress} style={[styles.actionCard, featured && styles.actionFeatured]}>
+      <Text style={styles.actionTitle}>{title}</Text>
+      <Text style={styles.actionText}>{text}</Text>
+      <Text style={styles.openLabel}>{label}</Text>
+    </Pressable>
   );
 }
 
