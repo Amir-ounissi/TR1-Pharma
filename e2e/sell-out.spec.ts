@@ -17,7 +17,8 @@ test("un administrateur saisit puis valide un sell-out déclaré", async ({ page
   await page.locator('input[name="sourceLabel"]').fill("Déclaration E2E terrain");
   await page.getByRole("button", { name: "Créer le relevé" }).click();
 
-  await expect(page.getByText("Déclaration terrain", { exact: true }).first()).toBeVisible({ timeout: 30_000 });
+  await expect(page).toHaveURL(/\/dashboard\/sell-out\/[0-9a-f-]+$/i, { timeout: 30_000 });
+  await expect(page.getByText("Déclaration E2E terrain", { exact: true })).toBeVisible({ timeout: 30_000 });
   await page.locator('input[name="label"]').fill("Produit E2E sell-out");
   await page.locator('input[name="unitsSold"]').fill("5");
   await page.locator('input[name="revenueHt"]').fill("50");
