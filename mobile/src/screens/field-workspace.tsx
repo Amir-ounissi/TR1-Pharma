@@ -4,10 +4,11 @@ import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "rea
 
 import type { BrandContext } from "../../App";
 import { MissionAgendaWorkspace } from "./mission-agenda-workspace";
+import { OrderHistoryWorkspace } from "./order-history";
 import { OrderWorkflow } from "./order-workflow";
 import { PharmacyWorkspace } from "./pharmacy-workspace";
 
-type Route = "home" | "pharmacies" | "orders" | "missions" | "agenda";
+type Route = "home" | "pharmacies" | "orders" | "orderHistory" | "missions" | "agenda";
 
 type Props = {
   brand: BrandContext;
@@ -24,6 +25,9 @@ export function FieldWorkspace({ brand, canSwitchBrand, onSwitchBrand, onSignOut
   }
   if (route === "orders") {
     return <OrderWorkflow brand={brand} onBack={() => setRoute("home")} onDone={() => setRoute("home")} />;
+  }
+  if (route === "orderHistory") {
+    return <OrderHistoryWorkspace brand={brand} onBack={() => setRoute("home")} />;
   }
   if (route === "missions") {
     return <MissionAgendaWorkspace brand={brand} mode="missions" onBack={() => setRoute("home")} />;
@@ -60,6 +64,11 @@ export function FieldWorkspace({ brand, canSwitchBrand, onSwitchBrand, onSignOut
           <Text style={styles.actionTitle}>Scanner une commande</Text>
           <Text style={styles.actionText}>Photo → analyse → correction → validation</Text>
           <Text style={styles.openLabel}>OUVRIR LA CAMÉRA</Text>
+        </Pressable>
+        <Pressable onPress={() => setRoute("orderHistory")} style={styles.actionCard}>
+          <Text style={styles.actionTitle}>Historique commandes</Text>
+          <Text style={styles.actionText}>Statuts, corrections, montants et détail produits</Text>
+          <Text style={styles.openLabel}>CONSULTER</Text>
         </Pressable>
         <Pressable onPress={() => setRoute("pharmacies")} style={styles.actionCard}>
           <Text style={styles.actionTitle}>Pharmacies</Text>
