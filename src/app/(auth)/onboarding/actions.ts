@@ -65,5 +65,8 @@ export async function completeOnboardingAction(
 
   if (error) return { error: "Le profil n’a pas pu être enregistré." };
 
+  if (!user.invited_at && user.user_metadata?.requested_profile_type === "brand") {
+    redirect("/setup");
+  }
   redirect("/select-brand");
 }

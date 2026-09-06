@@ -101,7 +101,6 @@ as $$
 declare
   actor uuid := (select auth.uid());
   resolved_brand_pharmacy_id uuid;
-  resolved_pharmacy_id uuid;
   created_order_id uuid;
   actor_is_agent boolean;
   existing_duplicate uuid;
@@ -130,8 +129,8 @@ begin
   end if;
 
   if target_brand_pharmacy_id is not null then
-    select relation.id, relation.pharmacy_id
-    into resolved_brand_pharmacy_id, resolved_pharmacy_id
+    select relation.id
+    into resolved_brand_pharmacy_id
     from public.brand_pharmacies relation
     where relation.id = target_brand_pharmacy_id
       and relation.brand_id = target_brand_id

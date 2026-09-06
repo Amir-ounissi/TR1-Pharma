@@ -1,3 +1,10 @@
+import {
+  IGNORE_MAPPING_TARGET,
+  normalizeMappingHeader,
+  resolveExplicitMapping,
+  suggestCanonicalField,
+  type DataMapping,
+} from "@/lib/data-mapping";
 import type { ImportEntity } from "@/lib/reference-data";
 
 export type CsvPreviewRow = {
@@ -47,70 +54,17 @@ function splitCsvLine(line: string, separator: string) {
   return values;
 }
 
-function normalizeHeader(header: string) {
-  return header
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_|_$/g, "");
+function canonicalHeader(header: string, entity: ImportEntity, explicitMapping: DataMapping) {
+  const explicit = resolveExplicitMapping(header, explicitMapping);
+  if (explicit === IGNORE_MAPPING_TARGET) return `__ignored_${normalizeMappingHeader(header)}`;
+  if (explicit) return explicit;
+  return suggestCanonicalField(header, entity) ?? normalizeMappingHeader(header);
 }
 
-function canonicalHeader(header: string, entity: ImportEntity) {
-  const normalized = normalizeHeader(header);
+function looksLikeProductCatalog(headers: string[], explicitMapping: DataMapping) {
+  const productHeaders = headers.map((header) => canonicalHeader(header, "products", explicitMapping));
 
-  const sharedAliases: Record<string, string> = {};
-
-  const aliasesByEntity: Partial<
-    Record<ImportEntity, Record<string, string>>
-  > = {
-    products: {
-      product_code: "sku",
-      code_produit: "sku",
-      reference: "sku",
-      reference_produit: "sku",
-      acl: "sku",
-      acl_fr: "sku",
-
-      product_name: "name",
-      nom_produit: "name",
-      produit: "name",
-
-      active: "is_active",
-      actif: "is_active",
-
-      ean13: "ean",
-      ean_13: "ean",
-      code_ean: "ean",
-
-      conditionnement: "format",
-
-      unit_price_ht: "wholesale_price_ht",
-      prix_achat_ht: "wholesale_price_ht",
-      prix_achat_ht_eur: "wholesale_price_ht",
-      prix_gros_ht: "wholesale_price_ht",
-      prix_de_gros_ht: "wholesale_price_ht",
-
-      pvc_ttc: "retail_price_ttc",
-      pvc_ttc_eur: "retail_price_ttc",
-      prix_public_ttc: "retail_price_ttc",
-      prix_vente_ttc: "retail_price_ttc",
-
-      strategic: "strategic_priority",
-    },
-  };
-
-  return aliasesByEntity[entity]?.[normalized] ?? sharedAliases[normalized] ?? normalized;
-}
-
-function looksLikeProductCatalog(headers: string[]) {
-  const productHeaders = headers.map((header) =>
-    canonicalHeader(header, "products"),
-  );
-
-  const hasIdentity =
-    productHeaders.includes("name") && productHeaders.includes("sku");
+  const hasIdentity = productHeaders.includes("name") && productHeaders.includes("sku");
 
   const productSignals = [
     "ean",
@@ -135,10 +89,7 @@ function validate(entity: ImportEntity, row: Record<string, string>) {
     errors.push("SIRET invalide (14 chiffres attendus)");
   }
 
-  if (
-    row.country_code &&
-    !/^[A-Z]{2}$/.test(row.country_code.toUpperCase())
-  ) {
+  if (row.country_code && !/^[A-Z]{2}$/.test(row.country_code.toUpperCase())) {
     errors.push("Code pays invalide");
   }
 
@@ -167,16 +118,14 @@ function validate(entity: ImportEntity, row: Record<string, string>) {
 
   if (
     row.units_per_case &&
-    (!Number.isInteger(Number(row.units_per_case)) ||
-      Number(row.units_per_case) <= 0)
+    (!Number.isInteger(Number(row.units_per_case)) || Number(row.units_per_case) <= 0)
   ) {
     errors.push("Colisage invalide");
   }
 
   if (
     row.minimum_order_quantity &&
-    (!Number.isInteger(Number(row.minimum_order_quantity)) ||
-      Number(row.minimum_order_quantity) <= 0)
+    (!Number.isInteger(Number(row.minimum_order_quantity)) || Number(row.minimum_order_quantity) <= 0)
   ) {
     errors.push("MOQ invalide");
   }
@@ -191,9 +140,7 @@ function validate(entity: ImportEntity, row: Record<string, string>) {
 
   if (
     row.pharmacy_id &&
-    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      row.pharmacy_id,
-    )
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(row.pharmacy_id)
   ) {
     errors.push("Identifiant pharmacie invalide");
   }
@@ -237,6 +184,7 @@ function validate(entity: ImportEntity, row: Record<string, string>) {
 export function parseCsv(
   content: string,
   entity: ImportEntity,
+  explicitMapping: DataMapping = {},
 ): CsvPreview {
   const lines = content
     .replace(/^\uFEFF/, "")
@@ -248,21 +196,18 @@ export function parseCsv(
   }
 
   const separator =
-    (lines[0].match(/;/g)?.length ?? 0) >
-    (lines[0].match(/,/g)?.length ?? 0)
+    (lines[0].match(/;/g)?.length ?? 0) > (lines[0].match(/,/g)?.length ?? 0)
       ? ";"
       : ",";
 
   const headers = splitCsvLine(lines[0], separator);
-  const normalizedHeaders = headers.map((header) =>
-    canonicalHeader(header, entity),
-  );
+  const normalizedHeaders = headers.map((header) => canonicalHeader(header, entity, explicitMapping));
 
   const mapping = Object.fromEntries(
     headers.map((header, index) => [header, normalizedHeaders[index]]),
   );
 
-  if (entity === "pharmacies" && looksLikeProductCatalog(headers)) {
+  if (entity === "pharmacies" && looksLikeProductCatalog(headers, explicitMapping)) {
     return {
       headers,
       mapping,
@@ -280,9 +225,7 @@ export function parseCsv(
     };
   }
 
-  const missing = requiredColumns[entity].filter(
-    (column) => !normalizedHeaders.includes(column),
-  );
+  const missing = requiredColumns[entity].filter((column) => !normalizedHeaders.includes(column));
 
   if (missing.length > 0) {
     return {
@@ -293,9 +236,7 @@ export function parseCsv(
           lineNumber: 1,
           payload: {},
           normalizedPayload: {},
-          errors: missing.map(
-            (column) => `Colonne manquante : ${column}`,
-          ),
+          errors: missing.map((column) => `Colonne manquante : ${column}`),
           isValid: false,
         },
       ],
@@ -306,42 +247,35 @@ export function parseCsv(
     const values = splitCsvLine(line, separator);
 
     const payload = Object.fromEntries(
-      headers.map((header, column) => [
-        header,
-        values[column] ?? "",
-      ]),
+      headers.map((header, column) => [header, values[column] ?? ""]),
     );
 
     const normalizedPayload = Object.fromEntries(
-      normalizedHeaders.map((header, column) => [
-        header,
-        (values[column] ?? "").trim(),
-      ]),
+      normalizedHeaders.map((header, column) => [header, (values[column] ?? "").trim()]),
     );
 
+    for (const key of Object.keys(normalizedPayload)) {
+      if (key.startsWith("__ignored_")) delete normalizedPayload[key];
+    }
+
     if (normalizedPayload.country_code) {
-      normalizedPayload.country_code =
-        normalizedPayload.country_code.toUpperCase();
+      normalizedPayload.country_code = normalizedPayload.country_code.toUpperCase();
     }
 
     if (normalizedPayload.wholesale_price_ht) {
-      normalizedPayload.wholesale_price_ht =
-        normalizedPayload.wholesale_price_ht.replace(",", ".");
+      normalizedPayload.wholesale_price_ht = normalizedPayload.wholesale_price_ht.replace(",", ".");
     }
 
     if (normalizedPayload.retail_price_ttc) {
-      normalizedPayload.retail_price_ttc =
-        normalizedPayload.retail_price_ttc.replace(",", ".");
+      normalizedPayload.retail_price_ttc = normalizedPayload.retail_price_ttc.replace(",", ".");
     }
 
     if (normalizedPayload.tax_rate) {
-      normalizedPayload.tax_rate =
-        normalizedPayload.tax_rate.replace(",", ".");
+      normalizedPayload.tax_rate = normalizedPayload.tax_rate.replace(",", ".");
     }
 
     if (normalizedPayload.unit_price_ht) {
-      normalizedPayload.unit_price_ht =
-        normalizedPayload.unit_price_ht.replace(",", ".");
+      normalizedPayload.unit_price_ht = normalizedPayload.unit_price_ht.replace(",", ".");
     }
 
     const errors = validate(entity, normalizedPayload);

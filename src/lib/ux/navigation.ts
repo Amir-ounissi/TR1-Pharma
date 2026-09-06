@@ -1,10 +1,13 @@
-export type RoleFamily = "agent" | "manager" | "admin" | "facilitator";
+import type { SaasCapability } from "@/lib/saas/capabilities";
+
+export type RoleFamily = "agent" | "manager" | "admin" | "direction" | "facilitator";
 
 export type NavigationItem = {
   href: string;
   label: string;
   shortLabel?: string;
   icon: string;
+  capability?: SaasCapability;
 };
 
 export type NavigationSection = {
@@ -15,49 +18,85 @@ export type NavigationSection = {
 export type NavigationScope = "tenant" | "platform";
 
 const agentItems: NavigationItem[] = [
-  { href: "/dashboard/agent", label: "Ma journée", shortLabel: "Accueil", icon: "sun" },
-  { href: "/dashboard/pharmacies", label: "Pharmacies", icon: "building" },
-  { href: "/dashboard/orders", label: "Mes commandes", icon: "clipboard" },
-  { href: "/dashboard/agenda", label: "Agenda", icon: "calendar" },
+  { href: "/dashboard/agent", label: "Ma journée", shortLabel: "Accueil", icon: "sun", capability: "agent_day" },
+  { href: "/dashboard/pharmacies", label: "Pharmacies", icon: "building", capability: "core_crm" },
+  { href: "/dashboard/orders", label: "Mes commandes", icon: "clipboard", capability: "orders" },
+  { href: "/dashboard/agenda", label: "Agenda", icon: "calendar", capability: "core_crm" },
   { href: "/dashboard/agent/more", label: "Plus", icon: "menu" },
 ];
 
 const agentMoreItems: NavigationItem[] = [
-  { href: "/dashboard/products", label: "Produits", icon: "boxes" },
-  { href: "/dashboard/missions", label: "Missions", icon: "calendar" },
-  { href: "/dashboard/tasks", label: "Tâches", icon: "clipboard" },
-  { href: "/dashboard/agent/performance", label: "Ma performance", icon: "chart" },
-  { href: "/dashboard/reports", label: "Mes comptes rendus", icon: "file" },
-  { href: "/dashboard/agent/assistant", label: "Assistant Terrain", icon: "sparkles" },
+  { href: "/dashboard/products", label: "Produits", icon: "boxes", capability: "core_crm" },
+  { href: "/dashboard/missions", label: "Missions", icon: "calendar", capability: "missions" },
+  { href: "/dashboard/tasks", label: "Tâches", icon: "clipboard", capability: "core_crm" },
+  { href: "/dashboard/agent/performance", label: "Ma performance", icon: "chart", capability: "performance" },
+  { href: "/dashboard/sell-out", label: "Sell-out", icon: "chart", capability: "sell_out" },
+  { href: "/dashboard/reports", label: "Mes comptes rendus", icon: "file", capability: "missions" },
+  { href: "/dashboard/agent/assistant", label: "Assistant Terrain", icon: "sparkles", capability: "assistant_terrain" },
 ];
 
 const managerItems: NavigationItem[] = [
-  { href: "/dashboard/commercial-health", label: "Priorités", shortLabel: "Priorités", icon: "target" },
-  { href: "/dashboard/pharmacies", label: "Pharmacies", icon: "building" },
-  { href: "/dashboard/orders", label: "Commandes", icon: "clipboard" },
-  { href: "/dashboard/missions", label: "Missions", icon: "calendar" },
-  { href: "/dashboard/network", label: "Performance", icon: "chart" },
+  { href: "/dashboard/executive", label: "Cockpit Direction", shortLabel: "Cockpit", icon: "layout", capability: "executive_cockpit" },
+  { href: "/dashboard/forecast", label: "Forecast", shortLabel: "Forecast", icon: "chart", capability: "forecast" },
+  { href: "/dashboard/pharma-360", label: "Pharma 360", shortLabel: "Pharma 360", icon: "building", capability: "pharma_360" },
+  { href: "/dashboard/kam-groups", label: "KAM Groupements", shortLabel: "Groupements", icon: "network", capability: "kam_groups" },
+  { href: "/dashboard/trade", label: "Trade Marketing", shortLabel: "Trade", icon: "target", capability: "trade_marketing" },
+  { href: "/dashboard/sell-out", label: "Sell-out", icon: "chart", capability: "sell_out" },
+  { href: "/dashboard/commercial-health", label: "Priorités", shortLabel: "Priorités", icon: "target", capability: "next_best_action" },
+  { href: "/dashboard/providers", label: "Prestataires", shortLabel: "Prestataires", icon: "users", capability: "multi_provider" },
+  { href: "/dashboard/pharmacies", label: "Pharmacies", icon: "building", capability: "core_crm" },
+  { href: "/dashboard/orders", label: "Commandes", icon: "clipboard", capability: "orders" },
+  { href: "/dashboard/missions", label: "Missions", icon: "calendar", capability: "missions" },
+  { href: "/dashboard/network", label: "Performance", icon: "chart", capability: "performance" },
+];
+
+const directionItems: NavigationItem[] = [
+  { href: "/dashboard/direction", label: "Vue Direction", shortLabel: "Direction", icon: "layout", capability: "direction_workspace" },
 ];
 
 const tenantAdminItems: NavigationItem[] = [
-  { href: "/dashboard/products", label: "Produits", icon: "boxes" },
-  { href: "/dashboard/groups", label: "Groupements", icon: "network" },
-  { href: "/dashboard/territories", label: "Territoires", icon: "map" },
-  { href: "/dashboard/imports", label: "Imports", icon: "upload" },
-  { href: "/dashboard/users", label: "Utilisateurs", icon: "users" },
+  { href: "/dashboard/products", label: "Produits", icon: "boxes", capability: "core_crm" },
+  { href: "/dashboard/groups", label: "Groupements", icon: "network", capability: "core_crm" },
+  { href: "/dashboard/territories", label: "Territoires", icon: "map", capability: "core_crm" },
+  { href: "/dashboard/imports", label: "Imports", icon: "upload", capability: "core_crm" },
+  { href: "/dashboard/connectors", label: "Intégrations", icon: "network", capability: "connectors" },
+  { href: "/dashboard/users", label: "Utilisateurs", icon: "users", capability: "core_crm" },
+  { href: "/dashboard/subscription", label: "Abonnement & usage", icon: "badge" },
+];
+
+const facilitatorItems: NavigationItem[] = [
+  { href: "/dashboard/field", label: "Aujourd’hui", shortLabel: "Aujourd’hui", icon: "sun", capability: "missions" },
+  { href: "/dashboard/missions", label: "Mes missions", icon: "route", capability: "missions" },
+  { href: "/dashboard/agenda", label: "Agenda", icon: "calendar", capability: "missions" },
+  { href: "/dashboard/reports", label: "Mes rapports", icon: "file", capability: "missions" },
 ];
 
 const platformAdminItems: NavigationItem[] = [
   { href: "/dashboard", label: "Vue globale", shortLabel: "Accueil", icon: "layout" },
   { href: "/dashboard/admin/access-requests", label: "Demandes d’accès", icon: "users" },
   { href: "/dashboard/admin/onboarding", label: "Marques & onboardings", icon: "badge" },
+  { href: "/dashboard/admin/saas", label: "SaaS & capacités", icon: "boxes" },
+  { href: "/dashboard/admin/saas-commercial", label: "Quotas & billing", icon: "chart" },
   { href: "/dashboard/admin/users", label: "Utilisateurs & accès", icon: "users" },
   { href: "/dashboard/admin/leads", label: "Leads TR1", icon: "leads" },
 ];
 
+function filterItems(items: NavigationItem[], enabledCapabilities?: readonly SaasCapability[]) {
+  if (!enabledCapabilities) return items;
+  const enabled = new Set(enabledCapabilities);
+  return items.filter((item) => !item.capability || enabled.has(item.capability));
+}
+
+function compactSections(sections: NavigationSection[], enabledCapabilities?: readonly SaasCapability[]) {
+  return sections
+    .map((section) => ({ ...section, items: filterItems(section.items, enabledCapabilities) }))
+    .filter((section) => section.items.length > 0);
+}
+
 export function getRoleFamily(role: string): RoleFamily {
   if (role === "agent") return "agent";
   if (role === "facilitator") return "facilitator";
+  if (role === "brand_direction") return "direction";
   if (role === "super_admin" || role === "brand_admin") return "admin";
   return "manager";
 }
@@ -66,33 +105,31 @@ export function getRoleLandingPath(role: string) {
   const family = getRoleFamily(role);
   if (family === "agent") return "/dashboard/agent";
   if (family === "facilitator") return "/dashboard/field";
+  if (family === "direction") return "/dashboard/direction";
   return "/dashboard";
 }
 
 export function getNavigationSections(
   role: string,
   scope: NavigationScope = "tenant",
+  enabledCapabilities?: readonly SaasCapability[],
 ): NavigationSection[] {
   const family = getRoleFamily(role);
 
+  if (scope === "platform") {
+    return [{ label: "Plateforme TR1", items: platformAdminItems }];
+  }
+
   if (family === "agent") {
-    return [{ label: "Terrain", items: agentItems }];
+    return compactSections([{ label: "Terrain", items: agentItems }], enabledCapabilities);
   }
 
   if (family === "facilitator") {
-    return [{
-      label: "Intervenant terrain",
-      items: [
-        { href: "/dashboard/field", label: "Aujourd’hui", shortLabel: "Aujourd’hui", icon: "sun" },
-        { href: "/dashboard/missions", label: "Mes missions", icon: "route" },
-        { href: "/dashboard/agenda", label: "Agenda", icon: "calendar" },
-        { href: "/dashboard/reports", label: "Mes rapports", icon: "file" },
-      ],
-    }];
+    return compactSections([{ label: "Intervenant terrain", items: facilitatorItems }], enabledCapabilities);
   }
 
-  if (scope === "platform") {
-    return [{ label: "Plateforme TR1", items: platformAdminItems }];
+  if (family === "direction") {
+    return compactSections([{ label: "Pilotage Direction", items: directionItems }], enabledCapabilities);
   }
 
   const sections: NavigationSection[] = [
@@ -100,8 +137,8 @@ export function getNavigationSections(
   ];
 
   const validationItems: NavigationItem[] = [];
-  if (["brand_admin", "tr1_manager", "super_admin"].includes(role)) validationItems.push({ href: "/dashboard/missions/proposals", label: "Propositions à valider", icon: "target" });
-  if (role === "tr1_manager" || role === "super_admin") validationItems.push({ href: "/dashboard/reports", label: "Rapports à valider", icon: "file" });
+  if (["brand_admin", "tr1_manager", "super_admin"].includes(role)) validationItems.push({ href: "/dashboard/missions/proposals", label: "Propositions à valider", icon: "target", capability: "missions" });
+  if (role === "tr1_manager" || role === "super_admin") validationItems.push({ href: "/dashboard/reports", label: "Rapports à valider", icon: "file", capability: "missions" });
   if (validationItems.length) sections.push({ label: "Validation", items: validationItems });
 
   if (family === "admin") {
@@ -111,22 +148,23 @@ export function getNavigationSections(
     });
   }
 
-  return sections;
+  return compactSections(sections, enabledCapabilities);
 }
 
-export function getAgentMoreItems() {
-  return agentMoreItems;
+export function getAgentMoreItems(enabledCapabilities?: readonly SaasCapability[]) {
+  return filterItems(agentMoreItems, enabledCapabilities);
 }
 
-export function getMobileAgentNavigationItems() {
-  return agentItems;
+export function getMobileAgentNavigationItems(enabledCapabilities?: readonly SaasCapability[]) {
+  return filterItems(agentItems, enabledCapabilities);
 }
 
 export function getNavigationItems(
   role: string,
   scope: NavigationScope = "tenant",
+  enabledCapabilities?: readonly SaasCapability[],
 ) {
-  return getNavigationSections(role, scope).flatMap((section) => section.items);
+  return getNavigationSections(role, scope, enabledCapabilities).flatMap((section) => section.items);
 }
 
 export function isNavigationItemActive(pathname: string, href: string) {

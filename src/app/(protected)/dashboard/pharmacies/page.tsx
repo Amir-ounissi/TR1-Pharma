@@ -95,7 +95,7 @@ export default async function PharmaciesPage({ searchParams }: { searchParams: S
           items={[
             { icon: Building2, label: role === "agent" ? "Mon portefeuille" : "Portefeuille total", value: count ?? 0, detail: "Pharmacies référencées" },
             { icon: CircleAlert, label: "Priorités", value: strategicCount, detail: "Sur cette page", accent: true },
-            role === "agent" ? { icon: CircleAlert, label: "À relancer", value: rows.filter((row) => row.activity_status === "at_risk" || row.activity_status === "dormant").length, detail: "Sur cette page" } : { icon: UserRound, label: "Sans agent", value: unassignedCount, detail: "Affectation à compléter" },
+            role === "agent" ? { icon: CircleAlert, label: "À relancer", value: rows.filter((row) => row.activity_status === "at_risk" || row.activity_status === "dormant").length, detail: "Sur cette page" } : { icon: UserRound, label: "Sans agent", value: unassignedCount, detail: "Sur cette page · affectation à compléter" },
             { icon: MapPin, label: "Villes couvertes", value: cityCount, detail: "Sur cette page" },
           ]}
         />
@@ -139,6 +139,15 @@ export default async function PharmaciesPage({ searchParams }: { searchParams: S
             </div>
             <Select name="status" defaultValue={typeof params.status === "string" ? params.status : "all"}><SelectTrigger className="h-9 w-full rounded-md bg-white/90 lg:w-[11rem] lg:min-w-[11rem]"><SelectValue placeholder="Statut" /></SelectTrigger><SelectContent><SelectItem value="all">Tous les statuts</SelectItem>{commercialStatuses.map((status) => <SelectItem key={status} value={status}>{labels.commercialStatus[status]}</SelectItem>)}</SelectContent></Select>
             <Select name="activity" defaultValue={typeof params.activity === "string" ? params.activity : "all"}><SelectTrigger className="h-9 w-full rounded-md bg-white/90 lg:w-[11rem] lg:min-w-[11rem]"><SelectValue placeholder="Activité" /></SelectTrigger><SelectContent><SelectItem value="all">Toute activité</SelectItem>{activityStatuses.map((status) => <SelectItem key={status} value={status}>{labels.activityStatus[status]}</SelectItem>)}</SelectContent></Select>
+            <input type="hidden" name="city" value={typeof params.city === "string" ? params.city : ""} />
+            <input type="hidden" name="postalCode" value={typeof params.postalCode === "string" ? params.postalCode : ""} />
+            <input type="hidden" name="priority" value={typeof params.priority === "string" ? params.priority : "all"} />
+            <input type="hidden" name="potential" value={typeof params.potential === "string" ? params.potential : "all"} />
+            <input type="hidden" name="agent" value={typeof params.agent === "string" ? params.agent : ""} />
+            <input type="hidden" name="territory" value={typeof params.territory === "string" ? params.territory : ""} />
+            <input type="hidden" name="group" value={typeof params.group === "string" ? params.group : ""} />
+            <input type="hidden" name="sort" value={sort} />
+            <input type="hidden" name="direction" value={descending ? "desc" : "asc"} />
             <Sheet>
               <SheetTrigger asChild>
                 <Button type="button" variant="outline" className="h-9 rounded-md border-[var(--tr1-line-strong)] bg-white/80 px-3 text-sm text-[var(--tr1-navy)] lg:w-[8.25rem] lg:min-w-[8.25rem]">
@@ -147,28 +156,33 @@ export default async function PharmaciesPage({ searchParams }: { searchParams: S
                 </Button>
               </SheetTrigger>
               <SheetContent className="w-full max-w-xl border-l border-[var(--tr1-line)] bg-[var(--tr1-ivory)] px-5">
-                <SheetHeader>
-                  <SheetTitle className="text-left text-lg font-semibold text-[var(--tr1-navy)]">Filtres avancés</SheetTitle>
-                </SheetHeader>
-                <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                  <Input name="city" defaultValue={typeof params.city === "string" ? params.city : ""} className="h-10 rounded-md bg-white text-sm" placeholder="Ville" />
-                  <Input name="postalCode" defaultValue={typeof params.postalCode === "string" ? params.postalCode : ""} className="h-10 rounded-md bg-white text-sm" placeholder="Code postal" />
-                  <Select name="priority" defaultValue={typeof params.priority === "string" ? params.priority : "all"}><SelectTrigger className="h-10 w-full rounded-md bg-white"><SelectValue placeholder="Priorité" /></SelectTrigger><SelectContent><SelectItem value="all">Toute priorité</SelectItem>{priorityLevels.map((value) => <SelectItem key={value} value={value}>{labels.priorityLevel[value]}</SelectItem>)}</SelectContent></Select>
-                  <Select name="potential" defaultValue={typeof params.potential === "string" ? params.potential : "all"}><SelectTrigger className="h-10 w-full rounded-md bg-white"><SelectValue placeholder="Potentiel" /></SelectTrigger><SelectContent><SelectItem value="all">Tout potentiel</SelectItem>{potentialLevels.map((value) => <SelectItem key={value} value={value}>{labels.potentialLevel[value]}</SelectItem>)}</SelectContent></Select>
-                  <Input name="agent" defaultValue={typeof params.agent === "string" ? params.agent : ""} className="h-10 rounded-md bg-white text-sm" placeholder="Agent" />
-                  <Input name="territory" defaultValue={typeof params.territory === "string" ? params.territory : ""} className="h-10 rounded-md bg-white text-sm" placeholder="Territoire" />
-                  <Input name="group" defaultValue={typeof params.group === "string" ? params.group : ""} className="h-10 rounded-md bg-white text-sm sm:col-span-2" placeholder="Groupement" />
-                  <Select name="sort" defaultValue={sort}><SelectTrigger className="h-10 w-full rounded-md bg-white"><SelectValue placeholder="Trier par" /></SelectTrigger><SelectContent><SelectItem value="trade_name">Nom</SelectItem><SelectItem value="city">Ville</SelectItem><SelectItem value="commercial_status">Statut</SelectItem><SelectItem value="priority_level">Priorité</SelectItem><SelectItem value="potential_level">Potentiel</SelectItem></SelectContent></Select>
-                  <Select name="direction" defaultValue={descending ? "desc" : "asc"}><SelectTrigger className="h-10 w-full rounded-md bg-white sm:col-span-2"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="asc">Tri croissant</SelectItem><SelectItem value="desc">Tri décroissant</SelectItem></SelectContent></Select>
-                </div>
-                <div className="mt-5 flex items-center justify-between gap-2">
-                  <Button asChild type="button" variant="ghost" className="h-9 px-0 text-[var(--tr1-navy)] hover:bg-transparent hover:text-[var(--tr1-orange)]">
-                    <Link href="/dashboard/pharmacies?view=list">Réinitialiser</Link>
-                  </Button>
-                  <Button type="submit" className="h-9 rounded-md bg-[var(--tr1-navy)] px-3.5 text-sm font-medium text-white hover:bg-[var(--tr1-navy-soft)]">
-                    Appliquer
-                  </Button>
-                </div>
+                <form className="contents">
+                  <input type="hidden" name="q" value={search} />
+                  <input type="hidden" name="status" value={typeof params.status === "string" ? params.status : "all"} />
+                  <input type="hidden" name="activity" value={typeof params.activity === "string" ? params.activity : "all"} />
+                  <SheetHeader>
+                    <SheetTitle className="text-left text-lg font-semibold text-[var(--tr1-navy)]">Filtres avancés</SheetTitle>
+                  </SheetHeader>
+                  <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                    <Input name="city" defaultValue={typeof params.city === "string" ? params.city : ""} className="h-10 rounded-md bg-white text-sm" placeholder="Ville" />
+                    <Input name="postalCode" defaultValue={typeof params.postalCode === "string" ? params.postalCode : ""} className="h-10 rounded-md bg-white text-sm" placeholder="Code postal" />
+                    <Select name="priority" defaultValue={typeof params.priority === "string" ? params.priority : "all"}><SelectTrigger className="h-10 w-full rounded-md bg-white"><SelectValue placeholder="Priorité" /></SelectTrigger><SelectContent><SelectItem value="all">Toute priorité</SelectItem>{priorityLevels.map((value) => <SelectItem key={value} value={value}>{labels.priorityLevel[value]}</SelectItem>)}</SelectContent></Select>
+                    <Select name="potential" defaultValue={typeof params.potential === "string" ? params.potential : "all"}><SelectTrigger className="h-10 w-full rounded-md bg-white"><SelectValue placeholder="Potentiel" /></SelectTrigger><SelectContent><SelectItem value="all">Tout potentiel</SelectItem>{potentialLevels.map((value) => <SelectItem key={value} value={value}>{labels.potentialLevel[value]}</SelectItem>)}</SelectContent></Select>
+                    <Input name="agent" defaultValue={typeof params.agent === "string" ? params.agent : ""} className="h-10 rounded-md bg-white text-sm" placeholder="Agent" />
+                    <Input name="territory" defaultValue={typeof params.territory === "string" ? params.territory : ""} className="h-10 rounded-md bg-white text-sm" placeholder="Territoire" />
+                    <Input name="group" defaultValue={typeof params.group === "string" ? params.group : ""} className="h-10 rounded-md bg-white text-sm sm:col-span-2" placeholder="Groupement" />
+                    <Select name="sort" defaultValue={sort}><SelectTrigger className="h-10 w-full rounded-md bg-white"><SelectValue placeholder="Trier par" /></SelectTrigger><SelectContent><SelectItem value="trade_name">Nom</SelectItem><SelectItem value="city">Ville</SelectItem><SelectItem value="commercial_status">Statut</SelectItem><SelectItem value="priority_level">Priorité</SelectItem><SelectItem value="potential_level">Potentiel</SelectItem></SelectContent></Select>
+                    <Select name="direction" defaultValue={descending ? "desc" : "asc"}><SelectTrigger className="h-10 w-full rounded-md bg-white sm:col-span-2"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="asc">Tri croissant</SelectItem><SelectItem value="desc">Tri décroissant</SelectItem></SelectContent></Select>
+                  </div>
+                  <div className="mt-5 flex items-center justify-between gap-2">
+                    <Button asChild type="button" variant="ghost" className="h-9 px-0 text-[var(--tr1-navy)] hover:bg-transparent hover:text-[var(--tr1-orange)]">
+                      <Link href="/dashboard/pharmacies?view=list">Réinitialiser</Link>
+                    </Button>
+                    <Button type="submit" className="h-9 rounded-md bg-[var(--tr1-navy)] px-3.5 text-sm font-medium text-white hover:bg-[var(--tr1-navy-soft)]">
+                      Appliquer
+                    </Button>
+                  </div>
+                </form>
               </SheetContent>
             </Sheet>
             <Button type="submit" className="h-9 rounded-md bg-[var(--tr1-navy)] px-3 text-sm font-medium text-white hover:bg-[var(--tr1-navy-soft)] lg:min-w-[6.5rem]">

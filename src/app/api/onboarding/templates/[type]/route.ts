@@ -1,14 +1,14 @@
 import type { NextRequest } from "next/server";
 import { recordsToCsv } from "@/lib/imports/control-export";
 import type { ImportType } from "@/lib/imports/import-types";
-import { requirePlatformAdmin } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 
 const allowedTypes = new Set<ImportType>(["products", "pharmacies", "orders", "users", "territories"]);
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ type: string }> }) {
   const { type } = await params;
   if (!allowedTypes.has(type as ImportType)) return new Response("Modèle inconnu.", { status: 404 });
-  const { supabase } = await requirePlatformAdmin();
+  const { supabase } = await requireUser();
   const { data: template } = await supabase
     .from("import_templates")
     .select("csv_header")

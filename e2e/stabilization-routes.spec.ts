@@ -63,6 +63,8 @@ test("routes Marque et protections applicatives", async ({ page }) => {
 
   await page.goto("/dashboard/admin/design-system");
   await expect(page).toHaveURL(/\/dashboard$/);
+  await page.goto("/dashboard/admin/saas");
+  await expect(page).toHaveURL(/\/dashboard$/);
   await page.goto("/dashboard/pipeline");
   await expect(page).toHaveURL(/\/dashboard\/commercial-health$/);
 });
@@ -83,7 +85,10 @@ test("routes Administration TR1", async ({ page }) => {
     "/dashboard",
     "/dashboard/admin/access-requests",
     "/dashboard/admin/onboarding",
+    "/dashboard/admin/saas",
     "/dashboard/admin/users",
     "/dashboard/admin/leads",
   ]);
+  await page.goto("/dashboard/admin/saas");
+  await expect(page.getByRole("heading", { name: "SaaS & capacités" })).toBeVisible();
 });
