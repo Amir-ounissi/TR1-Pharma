@@ -61,6 +61,9 @@ export function CreateUserForm() {
                 <SelectItem value="brand_admin">
                   Administrateur de marque
                 </SelectItem>
+                <SelectItem value="brand_direction">
+                  Direction de marque
+                </SelectItem>
                 <SelectItem value="brand_user">
                   Utilisateur de marque
                 </SelectItem>
