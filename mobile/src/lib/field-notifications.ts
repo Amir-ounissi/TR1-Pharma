@@ -129,11 +129,13 @@ async function syncFieldReminders(brandId: string, ensureChannel: boolean) {
     const idealReminderAt = startsAt.getTime() - REMINDER_MINUTES * 60_000;
     const triggerAt = Math.max(idealReminderAt, Date.now() + 60_000);
     const seconds = Math.max(1, Math.round((triggerAt - Date.now()) / 1000));
+    const minutesBeforeStart = Math.max(1, Math.round((startsAt.getTime() - triggerAt) / 60_000));
+    const reminderTitle = minutesBeforeStart >= 2 ? `TR1 · dans ${minutesBeforeStart} min` : "TR1 · rendez-vous imminent";
     const place = [event.pharmacy_name, event.city].filter(Boolean).join(" · ");
 
     const identifier = await Notifications.scheduleNotificationAsync({
       content: {
-        title: `TR1 · dans ${REMINDER_MINUTES} min`,
+        title: reminderTitle,
         body: place ? `${event.title} · ${place}` : event.title,
         data: {
           kind: "field_agenda",
