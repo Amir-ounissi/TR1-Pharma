@@ -2,6 +2,7 @@ import { AlertTriangle, Clock3, ShieldAlert, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { CommercialEventTracker } from "@/components/commercial/commercial-event-tracker";
 import { CommercialSettingsForm } from "@/components/commercial/commercial-settings-form";
+import { NextBestActionPanel } from "@/components/commercial/next-best-action-panel";
 import { ReorderFollowupForm } from "@/components/commercial/reorder-followup-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import { SectionHeader } from "@/components/ux/section-header";
 import { SavedViewControls } from "@/components/ux/saved-view-controls";
 import { requireActiveBrand } from "@/lib/auth";
 import type { CommercialHealthRow } from "@/lib/commercial-health";
+import type { NextBestActionRow } from "@/lib/next-best-action";
 import { presentationLabel } from "@/lib/presentation";
 
 type SearchParams = Promise<{ filter?: string }>;
@@ -57,12 +59,25 @@ export default async function CommercialHealthPage({ searchParams }: { searchPar
   const rows = (priorities ?? []) as CommercialHealthRow[];
   const role = contexts?.find((context: { brand_id: string }) => context.brand_id === brand.id)?.role_key;
   const canManageSettings = role === "tr1_manager" || role === "brand_admin" || role === "super_admin";
+  const canUseNextBestAction = ["tr1_manager", "brand_admin", "brand_user", "super_admin"].includes(role ?? "");
+  let nextBestActions: NextBestActionRow[] = [];
+  if (canUseNextBestAction) {
+    const { data, error } = await supabase.rpc("get_next_best_actions", {
+      target_brand_id: brand.id,
+      result_limit: 50,
+      target_brand_pharmacy_id: null,
+    });
+    if (error) throw error;
+    nextBestActions = (data ?? []) as NextBestActionRow[];
+  }
   const firstReorders = rows.filter((row) => row.orders_count === 1).slice(0, 5);
 
   return (
     <main className="mx-auto max-w-7xl space-y-6">
       <CommercialEventTracker eventName="commercial_priority_opened" />
       <PageHeader eyebrow={`Console de décision · ${brand.name}`} title="Priorités commerciales" description="Les comptes à traiter maintenant, classés par urgence et accompagnés d’une recommandation explicable." tone="dark" />
+
+      {canUseNextBestAction ? <NextBestActionPanel rows={nextBestActions} /> : null}
 
       <div className="flex flex-col gap-3 rounded-xl border bg-background p-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0">
