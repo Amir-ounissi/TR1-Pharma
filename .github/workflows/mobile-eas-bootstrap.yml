@@ -1,0 +1,93 @@
+name: Mobile EAS Bootstrap
+
+on:
+  push:
+    branches:
+      - feat/mobile-mvp-foundation
+    paths:
+      - ".github/workflows/mobile-eas-bootstrap.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mobile-eas-bootstrap-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  bootstrap:
+    name: Link EAS and build Android preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+
+      - name: Check Expo authentication
+        id: expo_auth
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "${EXPO_TOKEN:-}" ]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Expo authentication required::Repository secret EXPO_TOKEN is not configured. No EAS project or build was created."
+          else
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install mobile dependencies
+        if: steps.expo_auth.outputs.available == 'true'
+        working-directory: mobile
+        run: npm install --no-audit --no-fund
+
+      - name: Link or create EAS project
+        if: steps.expo_auth.outputs.available == 'true'
+        working-directory: mobile
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          WHOAMI="$(npx --yes eas-cli@latest whoami)"
+          ACCOUNT="$(printf '%s\n' "$WHOAMI" | tail -n 1 | awk '{print $NF}')"
+          echo "Expo account: $ACCOUNT"
+          npx --yes eas-cli@latest init --account "$ACCOUNT" --non-interactive
+          npx --yes eas-cli@latest project:info
+          npx --yes eas-cli@latest config --platform android --profile preview --non-interactive
+
+      - name: Persist EAS project link
+        if: steps.expo_auth.outputs.available == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add mobile/app.json
+          if git diff --cached --quiet; then
+            echo "EAS project link already persisted."
+          else
+            git commit -m "chore: link mobile EAS project"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
+
+      - name: Start first Android internal build
+        if: steps.expo_auth.outputs.available == 'true'
+        working-directory: mobile
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          set +e
+          npx --yes eas-cli@latest build --platform android --profile preview --non-interactive --wait 2>&1 | tee /tmp/eas-android-build.log
+          BUILD_STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$BUILD_STATUS" -ne 0 ]; then
+            echo "::warning title=Android EAS build needs one-time credential setup::EAS project initialization succeeded, but the first Android build could not complete non-interactively. This normally means the Android signing keystore must be created once interactively."
+          else
+            echo "Android internal build completed successfully."
+          fi
+
+      - name: Expo token missing summary
+        if: steps.expo_auth.outputs.available != 'true'
+        run: |
+          echo "EAS bootstrap is prepared, but EXPO_TOKEN is missing from GitHub repository secrets."
+          echo "Once the secret exists, run this workflow manually; it will link/create the EAS project and attempt the Android internal build."
