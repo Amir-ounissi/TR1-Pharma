@@ -2,7 +2,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path=public,extensions;
 
-select plan(8);
+select plan(10);
 
 select ok(
   not has_function_privilege('anon','public.assign_mission(uuid,uuid,timestamp with time zone,timestamp with time zone)','EXECUTE'),
@@ -29,6 +29,15 @@ select ok(
 select ok(
   has_function_privilege('authenticated','public.revise_order(uuid,jsonb,jsonb,boolean)','EXECUTE'),
   'authenticated users retain the order revision entry point'
+);
+
+select ok(
+  not has_function_privilege('authenticated','public.process_overdue_mission_reports()','EXECUTE'),
+  'tenant users cannot execute the global overdue mission processor'
+);
+select ok(
+  has_function_privilege('service_role','public.process_overdue_mission_reports()','EXECUTE'),
+  'service role retains the global overdue mission processor'
 );
 
 select is(
