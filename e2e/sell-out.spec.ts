@@ -27,7 +27,7 @@ test("un administrateur saisit puis valide un sell-out déclaré", async ({ page
   await expect(page.getByText("Produit E2E sell-out", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Soumettre pour relecture humaine" }).click();
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Validation humaine" })).toBeVisible();
+  await expect(page.getByText("Validation humaine", { exact: true })).toBeVisible();
   await page.locator('textarea[name="notes"]').fill("Relecture E2E validée");
   await page.getByRole("button", { name: "Valider le relevé" }).click();
   await page.reload();
