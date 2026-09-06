@@ -9,14 +9,18 @@ describe("role navigation", () => {
     expect(links).not.toContain("/dashboard/missions");
     expect(getAgentMoreItems().map((item) => item.href)).toEqual(["/dashboard/products", "/dashboard/missions", "/dashboard/tasks", "/dashboard/agent/performance", "/dashboard/sell-out", "/dashboard/reports", "/dashboard/agent/assistant"]);
     expect(links).not.toContain("/dashboard/users");
+    expect(links).not.toContain("/dashboard/subscription");
     expect(links).not.toContain("/dashboard/admin/onboarding");
   });
 
   it("adds administration only for authorized roles", () => {
     expect(getNavigationItems("brand_admin").map((item) => item.href)).toContain("/dashboard/imports");
+    expect(getNavigationItems("brand_admin").map((item) => item.href)).toContain("/dashboard/subscription");
     expect(getNavigationItems("tr1_manager").map((item) => item.href)).not.toContain("/dashboard/imports");
+    expect(getNavigationItems("tr1_manager").map((item) => item.href)).not.toContain("/dashboard/subscription");
     expect(getNavigationItems("brand_admin").map((item) => item.href)).not.toContain("/dashboard/admin/design-system");
     expect(getNavigationItems("brand_admin").map((item) => item.href)).not.toContain("/dashboard/admin/saas");
+    expect(getNavigationItems("brand_admin").map((item) => item.href)).not.toContain("/dashboard/admin/saas-commercial");
   });
 
   it("splits global superadmin navigation from tenant navigation", () => {
@@ -28,6 +32,7 @@ describe("role navigation", () => {
       "/dashboard/admin/access-requests",
       "/dashboard/admin/onboarding",
       "/dashboard/admin/saas",
+      "/dashboard/admin/saas-commercial",
       "/dashboard/admin/users",
       "/dashboard/admin/leads",
     ]);
@@ -37,8 +42,10 @@ describe("role navigation", () => {
     expect(tenantLinks).toContain("/dashboard/imports");
     expect(tenantLinks).toContain("/dashboard/connectors");
     expect(tenantLinks).toContain("/dashboard/providers");
+    expect(tenantLinks).toContain("/dashboard/subscription");
     expect(tenantLinks).not.toContain("/dashboard/admin/leads");
     expect(tenantLinks).not.toContain("/dashboard/admin/saas");
+    expect(tenantLinks).not.toContain("/dashboard/admin/saas-commercial");
   });
 
   it("keeps platform functions hidden from brand admins and preserves field roles", () => {
@@ -48,6 +55,7 @@ describe("role navigation", () => {
     expect(brandAdminLinks).not.toContain("/dashboard/admin/users");
     expect(brandAdminLinks).not.toContain("/dashboard/admin/leads");
     expect(brandAdminLinks).not.toContain("/dashboard/admin/saas");
+    expect(brandAdminLinks).not.toContain("/dashboard/admin/saas-commercial");
     expect(facilitatorLinks).toEqual(["/dashboard/field", "/dashboard/missions", "/dashboard/agenda", "/dashboard/reports"]);
   });
 
@@ -64,7 +72,7 @@ describe("role navigation", () => {
       expect.objectContaining({ href: "/dashboard/network", label: "Performance" }),
     ]) });
     expect(sections.find((section) => section.label === "Paramètres")?.items.map((item) => item.href)).toEqual([
-      "/dashboard/products", "/dashboard/groups", "/dashboard/territories", "/dashboard/imports", "/dashboard/connectors", "/dashboard/users",
+      "/dashboard/products", "/dashboard/groups", "/dashboard/territories", "/dashboard/imports", "/dashboard/connectors", "/dashboard/users", "/dashboard/subscription",
     ]);
   });
 
@@ -87,6 +95,7 @@ describe("role navigation", () => {
     expect(managerLinks).toContain("/dashboard/pharmacies");
     expect(managerLinks).toContain("/dashboard/orders");
     expect(adminLinks).not.toContain("/dashboard/connectors");
+    expect(adminLinks).toContain("/dashboard/subscription");
     expect(agentMoreLinks).toContain("/dashboard/missions");
     expect(agentMoreLinks).toContain("/dashboard/agent/performance");
     expect(agentMoreLinks).not.toContain("/dashboard/sell-out");
@@ -104,6 +113,7 @@ describe("role navigation", () => {
     expect(managerLinks).toContain("/dashboard/pharma-360");
     expect(managerLinks).toContain("/dashboard/providers");
     expect(adminLinks).toContain("/dashboard/connectors");
+    expect(adminLinks).toContain("/dashboard/subscription");
   });
 
   it("declares the same five primary destinations on mobile for the agent", () => {
