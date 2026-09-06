@@ -52,6 +52,7 @@ describe("role navigation", () => {
   it("keeps brand pilotage concise and moves reference pages under Paramètres", () => {
     const sections = getNavigationSections("brand_admin");
     expect(sections[0]).toEqual({ label: "Pilotage", items: expect.arrayContaining([
+      expect.objectContaining({ href: "/dashboard/forecast", label: "Forecast" }),
       expect.objectContaining({ href: "/dashboard/commercial-health", label: "Priorités" }),
       expect.objectContaining({ href: "/dashboard/pharmacies" }),
       expect.objectContaining({ href: "/dashboard/orders" }),
@@ -68,6 +69,7 @@ describe("role navigation", () => {
     const managerLinks = getNavigationItems("tr1_manager", "tenant", coreCapabilities).map((item) => item.href);
     const agentMoreLinks = getAgentMoreItems(coreCapabilities).map((item) => item.href);
 
+    expect(managerLinks).not.toContain("/dashboard/forecast");
     expect(managerLinks).not.toContain("/dashboard/commercial-health");
     expect(managerLinks).toContain("/dashboard/pharmacies");
     expect(managerLinks).toContain("/dashboard/orders");
@@ -78,10 +80,12 @@ describe("role navigation", () => {
   });
 
   it("lets an explicit capability immediately expose its module", () => {
-    const capabilities = ["core_crm", "orders", "agent_day", "missions", "performance", "assistant_terrain", "next_best_action", "sell_out"] as const;
+    const capabilities = ["core_crm", "orders", "agent_day", "missions", "performance", "assistant_terrain", "next_best_action", "sell_out", "forecast"] as const;
     expect(getAgentMoreItems(capabilities).map((item) => item.href)).toContain("/dashboard/agent/assistant");
     expect(getAgentMoreItems(capabilities).map((item) => item.href)).toContain("/dashboard/sell-out");
-    expect(getNavigationItems("tr1_manager", "tenant", capabilities).map((item) => item.href)).toContain("/dashboard/commercial-health");
+    const managerLinks = getNavigationItems("tr1_manager", "tenant", capabilities).map((item) => item.href);
+    expect(managerLinks).toContain("/dashboard/commercial-health");
+    expect(managerLinks).toContain("/dashboard/forecast");
   });
 
   it("declares the same five primary destinations on mobile for the agent", () => {

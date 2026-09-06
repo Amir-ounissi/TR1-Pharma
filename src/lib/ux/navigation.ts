@@ -37,6 +37,7 @@ const agentMoreItems: NavigationItem[] = [
 
 const managerItems: NavigationItem[] = [
   { href: "/dashboard/executive", label: "Cockpit Direction", shortLabel: "Cockpit", icon: "layout", capability: "executive_cockpit" },
+  { href: "/dashboard/forecast", label: "Forecast", shortLabel: "Forecast", icon: "chart", capability: "forecast" },
   { href: "/dashboard/kam-groups", label: "KAM Groupements", shortLabel: "Groupements", icon: "network", capability: "kam_groups" },
   { href: "/dashboard/trade", label: "Trade Marketing", shortLabel: "Trade", icon: "target", capability: "trade_marketing" },
   { href: "/dashboard/sell-out", label: "Sell-out", icon: "chart", capability: "sell_out" },
