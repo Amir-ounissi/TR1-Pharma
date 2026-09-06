@@ -27,9 +27,10 @@ export type ManualOrderDraft = {
 };
 
 async function draftKey(brandId: string) {
-  const { data, error } = await supabase.auth.getUser();
-  if (error || !data.user) throw new Error("Votre session TR1 a expiré. Reconnectez-vous.");
-  return `tr1:manual-order-draft:v1:${data.user.id}:${brandId}`;
+  const { data } = await supabase.auth.getSession();
+  const userId = data.session?.user.id;
+  if (!userId) throw new Error("Votre session TR1 a expiré. Reconnectez-vous.");
+  return `tr1:manual-order-draft:v1:${userId}:${brandId}`;
 }
 
 export async function loadManualOrderDraft(brandId: string): Promise<ManualOrderDraft | null> {
