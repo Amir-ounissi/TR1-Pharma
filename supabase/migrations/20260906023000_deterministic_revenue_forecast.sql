@@ -21,7 +21,11 @@ begin
     raise exception 'Forecast reference date is outside the period' using errcode = '22007';
   end if;
 
-  if not private.performance_scope_allowed(target_brand_id, null, null) then
+  if not public.has_brand_capability(target_brand_id, 'forecast')
+    or not (
+      private.has_global_role(array['super_admin'])
+      or private.has_brand_role(target_brand_id, array['tr1_manager','brand_admin','brand_user'])
+    ) then
     raise exception 'Revenue forecast forbidden' using errcode = '42501';
   end if;
 
