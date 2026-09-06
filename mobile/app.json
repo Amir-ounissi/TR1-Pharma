@@ -18,7 +18,10 @@
     ],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.tr1pharma.mobile"
+      "bundleIdentifier": "com.tr1pharma.mobile",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.tr1pharma.mobile",
