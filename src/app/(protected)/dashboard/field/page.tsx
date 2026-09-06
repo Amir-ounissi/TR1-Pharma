@@ -35,6 +35,14 @@ type RelationRow = {
   pharmacy_id: string;
 };
 
+const CLOSED_STATUSES = new Set([
+  "completed",
+  "cancelled",
+  "rejected",
+  "no_show",
+  "refunded",
+]);
+
 function time(value: string) {
   return new Intl.DateTimeFormat("fr-FR", {
     hour: "2-digit",
@@ -77,10 +85,9 @@ export default async function FieldPage() {
         event.brand_ids.includes(relation.brand_id),
     ) ?? (relations ?? []).find((relation) => relation.pharmacy_id === event.pharmacy_id);
 
-  const now = Date.now();
   const nextEvent =
     events.find((event) => event.status === "in_progress") ??
-    events.find((event) => Date.parse(event.end_at) >= now) ??
+    events.find((event) => !CLOSED_STATUSES.has(event.status)) ??
     null;
 
   const pharmacyHref = (event: FieldAgendaEvent) => {
