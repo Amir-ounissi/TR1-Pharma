@@ -7,6 +7,15 @@ import { requireActiveBrand } from "@/lib/auth";
 export type CommercialHealthActionState = { error?: string; success?: string };
 
 const uuid = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+const nextBestActionType = z.enum([
+  "reactivate_account",
+  "recover_at_risk",
+  "secure_first_reorder",
+  "recover_reorder",
+  "prepare_reorder",
+  "follow_up_mission",
+  "schedule_follow_up",
+]);
 
 export async function createReorderFollowupAction(
   _state: CommercialHealthActionState,
@@ -49,6 +58,54 @@ export async function createReorderFollowupAction(
   revalidatePath("/dashboard/agent");
   revalidatePath(`/dashboard/pharmacies/${health.brand_pharmacy_id}`);
   return { success: "Relance créée et ajoutée à votre journée." };
+}
+
+export async function createNextBestActionTaskAction(
+  _state: CommercialHealthActionState,
+  formData: FormData,
+): Promise<CommercialHealthActionState> {
+  const parsed = z.object({
+    brandPharmacyId: uuid,
+    actionType: nextBestActionType,
+    dueAt: z.string().min(1),
+  }).safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "Action recommandée invalide." };
+
+  const { supabase, brand } = await requireActiveBrand();
+  const { data: rows, error: recommendationError } = await supabase.rpc("get_next_best_actions", {
+    target_brand_id: brand.id,
+    result_limit: 10,
+    target_brand_pharmacy_id: parsed.data.brandPharmacyId,
+  });
+  if (recommendationError) return { error: recommendationError.message };
+
+  const recommendation = rows?.find((row: { action_type?: string }) => row.action_type === parsed.data.actionType);
+  if (!recommendation) return { error: "La recommandation a changé. Rechargez la page." };
+  if (recommendation.has_next_action) {
+    return { error: "Une action est déjà ouverte pour ce compte. Vérifiez-la avant d’en créer une autre." };
+  }
+
+  const dueAt = new Date(parsed.data.dueAt);
+  if (Number.isNaN(dueAt.getTime())) return { error: "Échéance invalide." };
+  const rationale = Array.isArray(recommendation.rationale)
+    ? recommendation.rationale.filter((value: unknown): value is string => typeof value === "string").join(" ")
+    : "";
+
+  const { error } = await supabase.rpc("create_agent_task", {
+    target_brand_pharmacy_id: recommendation.brand_pharmacy_id,
+    target_task_type: "call",
+    target_title: `Action recommandée — ${recommendation.action_label}`,
+    target_due_at: dueAt.toISOString(),
+    target_priority: Number(recommendation.action_score ?? 0) >= 80 ? "urgent" : "high",
+    target_description: rationale.slice(0, 2000) || recommendation.action_label,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/commercial-health");
+  revalidatePath("/dashboard/agent");
+  revalidatePath(`/dashboard/pharmacies/${recommendation.brand_pharmacy_id}`);
+  return { success: "Action confirmée et ajoutée aux tâches." };
 }
 
 export async function updateCommercialHealthSettingsAction(
