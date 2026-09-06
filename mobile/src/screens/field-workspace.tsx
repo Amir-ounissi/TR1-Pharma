@@ -3,12 +3,13 @@ import { useState } from "react";
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import type { BrandContext } from "../../App";
+import { ManualOrderWorkflow } from "./manual-order";
 import { MissionAgendaWorkspace } from "./mission-agenda-workspace";
 import { OrderHistoryWorkspace } from "./order-history";
 import { OrderWorkflow } from "./order-workflow";
 import { PharmacyWorkspace } from "./pharmacy-workspace";
 
-type Route = "home" | "pharmacies" | "orders" | "orderHistory" | "missions" | "agenda";
+type Route = "home" | "pharmacies" | "orders" | "manualOrder" | "orderHistory" | "missions" | "agenda";
 
 type Props = {
   brand: BrandContext;
@@ -25,6 +26,9 @@ export function FieldWorkspace({ brand, canSwitchBrand, onSwitchBrand, onSignOut
   }
   if (route === "orders") {
     return <OrderWorkflow brand={brand} onBack={() => setRoute("home")} onDone={() => setRoute("home")} />;
+  }
+  if (route === "manualOrder") {
+    return <ManualOrderWorkflow brand={brand} onBack={() => setRoute("home")} onDone={() => setRoute("home")} />;
   }
   if (route === "orderHistory") {
     return <OrderHistoryWorkspace brand={brand} onBack={() => setRoute("home")} />;
@@ -64,6 +68,11 @@ export function FieldWorkspace({ brand, canSwitchBrand, onSwitchBrand, onSignOut
           <Text style={styles.actionTitle}>Scanner une commande</Text>
           <Text style={styles.actionText}>Photo → analyse → correction → validation</Text>
           <Text style={styles.openLabel}>OUVRIR LA CAMÉRA</Text>
+        </Pressable>
+        <Pressable onPress={() => setRoute("manualOrder")} style={styles.actionCard}>
+          <Text style={styles.actionTitle}>Saisir une commande</Text>
+          <Text style={styles.actionText}>Pharmacie → produits → revue → validation explicite</Text>
+          <Text style={styles.openLabel}>SAISIE MANUELLE</Text>
         </Pressable>
         <Pressable onPress={() => setRoute("orderHistory")} style={styles.actionCard}>
           <Text style={styles.actionTitle}>Historique commandes</Text>
