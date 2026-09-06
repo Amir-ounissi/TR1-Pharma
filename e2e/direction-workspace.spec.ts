@@ -23,6 +23,15 @@ test.beforeAll(async () => {
   directionUserId = created.user?.id ?? null;
   expect(directionUserId).toBeTruthy();
 
+  const { data: profile, error: profileError } = await admin
+    .from("user_profiles")
+    .update({ full_name: "Direction E2E", onboarding_completed_at: new Date().toISOString() })
+    .eq("user_id", directionUserId)
+    .select("user_id")
+    .single();
+  expect(profileError).toBeNull();
+  expect(profile).toBeTruthy();
+
   const { error: membershipError } = await admin.from("memberships").insert({
     user_id: directionUserId,
     organization_id: organizationId,
