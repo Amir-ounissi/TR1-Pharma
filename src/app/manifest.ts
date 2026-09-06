@@ -2,12 +2,12 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    id: "/dashboard",
+    id: "/dashboard/field",
     name: "TR1 Pharma",
     short_name: "TR1",
     description:
       "Pilotez vos pharmacies, commandes, missions et actions terrain avec TR1 Pharma.",
-    start_url: "/dashboard",
+    start_url: "/dashboard/field?source=pwa",
     scope: "/",
     display: "standalone",
     orientation: "portrait-primary",
