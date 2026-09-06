@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatSaasLimit, resolveSaasUsageProgress, saasUsageStateLabel } from "./commercial";
+import { formatSaasLimit, resolveSaasUsageProgress, saasQuotaPeriodLabel, saasUsageStateLabel } from "./commercial";
 
 describe("SaaS commercial usage helpers", () => {
   it("keeps an unlimited quota distinct from a finite quota", () => {
@@ -40,6 +40,12 @@ describe("SaaS commercial usage helpers", () => {
       percent: 100,
       state: "exceeded",
     });
+  });
+
+  it("labels quota periods from the configured accounting period", () => {
+    expect(saasQuotaPeriodLabel("month")).toBe("Période mensuelle");
+    expect(saasQuotaPeriodLabel("year")).toBe("Période annuelle");
+    expect(saasQuotaPeriodLabel("lifetime")).toBe("Période cumulée");
   });
 
   it("formats limits and labels without hiding unlimited status", () => {

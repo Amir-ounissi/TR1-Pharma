@@ -5,10 +5,11 @@ import { requireActiveBrandRole } from "@/lib/auth";
 import {
   formatSaasLimit,
   resolveSaasUsageProgress,
+  saasQuotaPeriodLabel,
   saasUsageStateLabel,
 } from "@/lib/saas/commercial";
 
- type SubscriptionRow = {
+type SubscriptionRow = {
   plan_key: string;
   plan_name: string;
   entitlement_status: "trialing" | "active" | "suspended";
@@ -25,7 +26,7 @@ type UsageRow = {
   quota_key: string;
   label: string;
   unit: string;
-  period: string;
+  period: "month" | "year" | "lifetime";
   period_start: string;
   period_end: string;
   limit_value: number | null;
@@ -168,7 +169,9 @@ export default async function SubscriptionPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="font-medium">{row.label}</p>
-                        <p className="mt-1 text-xs text-muted-foreground">{quotaSourceLabel(row.source)} · période mensuelle</p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {quotaSourceLabel(row.source)} · {saasQuotaPeriodLabel(row.period)}
+                        </p>
                       </div>
                       <Badge variant={progress.state === "exceeded" ? "destructive" : "secondary"}>
                         {saasUsageStateLabel(progress.state)}

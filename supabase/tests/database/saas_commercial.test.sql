@@ -10,7 +10,7 @@ insert into auth.users (
   ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-0000000000e1', 'authenticated', 'authenticated', 'saas.seat.one@test.local', '', now(), '{}', '{"full_name":"SaaS Seat One"}', now(), now(), '', '', '', ''),
   ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-0000000000e2', 'authenticated', 'authenticated', 'saas.seat.two@test.local', '', now(), '{}', '{"full_name":"SaaS Seat Two"}', now(), now(), '', '', '', '');
 
-select plan(46);
+select plan(52);
 
 select has_table('public','saas_quota_definitions','quota catalog exists');
 select has_table('public','saas_plan_quotas','plan quotas exist');
@@ -137,6 +137,21 @@ select throws_ok(
   'Platform administrator access is required',
   'agent cannot change a plan quota'
 );
+select is(
+  (select count(*) from public.saas_quota_definitions),
+  0::bigint,
+  'agent cannot bypass the RPC by reading the quota catalog directly'
+);
+select is(
+  (select count(*) from public.saas_plan_quotas),
+  0::bigint,
+  'agent cannot read commercial plan quota values directly'
+);
+select is(
+  (select count(*) from public.brand_saas_entitlements where brand_id='00000000-0000-0000-0000-000000000101'),
+  0::bigint,
+  'agent cannot read its brand plan and seat limit directly'
+);
 
 set local role service_role;
 select is(
@@ -148,6 +163,12 @@ select is(
   public.record_brand_saas_usage('00000000-0000-0000-0000-000000000101','pdf_orders_monthly',1,'pgtap-pdf-1'),
   1::bigint,
   'replayed idempotency key does not double count'
+);
+select throws_ok(
+  $$select public.record_brand_saas_usage('00000000-0000-0000-0000-000000000101','pdf_orders_monthly',2,'pgtap-pdf-1')$$,
+  '23514',
+  'SaaS usage idempotency key reused with a different quantity',
+  'an idempotency key cannot be replayed with a different metered quantity'
 );
 select is(
   public.record_brand_saas_usage('00000000-0000-0000-0000-000000000101','pdf_orders_monthly',1,'pgtap-pdf-2'),
@@ -218,6 +239,16 @@ select set_config('request.jwt.claims','{"sub":"00000000-0000-0000-0000-00000000
 select lives_ok(
   $$select * from public.get_brand_saas_subscription('00000000-0000-0000-0000-000000000101')$$,
   'brand admin can read its own commercial SaaS status'
+);
+select is(
+  (select count(*) from public.brand_saas_entitlements where brand_id='00000000-0000-0000-0000-000000000101'),
+  1::bigint,
+  'brand admin retains direct access to its own entitlement for administration'
+);
+select is(
+  (select count(*) from public.saas_quota_definitions),
+  0::bigint,
+  'brand admin reads effective usage through the RPC rather than the platform quota catalog'
 );
 select throws_ok(
   $$select public.set_brand_saas_quota_override('00000000-0000-0000-0000-000000000101','pdf_orders_monthly',10,null,null)$$,

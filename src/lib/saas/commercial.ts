@@ -34,6 +34,12 @@ export function saasUsageStateLabel(state: SaasUsageState) {
   return "Disponible";
 }
 
+export function saasQuotaPeriodLabel(period: string) {
+  if (period === "year") return "Période annuelle";
+  if (period === "lifetime") return "Période cumulée";
+  return "Période mensuelle";
+}
+
 export function formatSaasLimit(value: number | null, unitLabel?: string) {
   if (value == null) return "Illimité";
   return `${new Intl.NumberFormat("fr-FR").format(value)}${unitLabel ? ` ${unitLabel}` : ""}`;
