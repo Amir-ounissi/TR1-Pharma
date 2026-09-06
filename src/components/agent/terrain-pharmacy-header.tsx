@@ -490,7 +490,7 @@ export function TerrainPharmacyHeader(props: TerrainPharmacyHeaderProps) {
             <MapPinned className="size-4" /> Maps
           </TrackedLink>
           <Button asChild variant="ghost" className="min-h-11">
-            <Link href="?tab=activity">Plus <ChevronRight className="size-4" /></Link>
+            <Link href={`/dashboard/pharmacies/${props.brandPharmacyId}/notes`}>Historique <ChevronRight className="size-4" /></Link>
           </Button>
         </div>
 
