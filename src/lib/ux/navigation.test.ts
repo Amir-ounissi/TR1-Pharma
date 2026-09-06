@@ -7,7 +7,7 @@ describe("role navigation", () => {
     expect(links).toContain("/dashboard/agent");
     expect(links).toEqual(["/dashboard/agent", "/dashboard/pharmacies", "/dashboard/orders", "/dashboard/agenda", "/dashboard/agent/more"]);
     expect(links).not.toContain("/dashboard/missions");
-    expect(getAgentMoreItems().map((item) => item.href)).toEqual(["/dashboard/products", "/dashboard/missions", "/dashboard/tasks", "/dashboard/agent/performance", "/dashboard/reports", "/dashboard/agent/assistant"]);
+    expect(getAgentMoreItems().map((item) => item.href)).toEqual(["/dashboard/products", "/dashboard/missions", "/dashboard/tasks", "/dashboard/agent/performance", "/dashboard/sell-out", "/dashboard/reports", "/dashboard/agent/assistant"]);
     expect(links).not.toContain("/dashboard/users");
     expect(links).not.toContain("/dashboard/admin/onboarding");
   });
@@ -73,12 +73,14 @@ describe("role navigation", () => {
     expect(managerLinks).toContain("/dashboard/orders");
     expect(agentMoreLinks).toContain("/dashboard/missions");
     expect(agentMoreLinks).toContain("/dashboard/agent/performance");
+    expect(agentMoreLinks).not.toContain("/dashboard/sell-out");
     expect(agentMoreLinks).not.toContain("/dashboard/agent/assistant");
   });
 
   it("lets an explicit capability immediately expose its module", () => {
-    const capabilities = ["core_crm", "orders", "agent_day", "missions", "performance", "assistant_terrain", "next_best_action"] as const;
+    const capabilities = ["core_crm", "orders", "agent_day", "missions", "performance", "assistant_terrain", "next_best_action", "sell_out"] as const;
     expect(getAgentMoreItems(capabilities).map((item) => item.href)).toContain("/dashboard/agent/assistant");
+    expect(getAgentMoreItems(capabilities).map((item) => item.href)).toContain("/dashboard/sell-out");
     expect(getNavigationItems("tr1_manager", "tenant", capabilities).map((item) => item.href)).toContain("/dashboard/commercial-health");
   });
 
