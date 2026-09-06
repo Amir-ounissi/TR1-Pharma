@@ -1,6 +1,6 @@
 import type { SaasCapability } from "@/lib/saas/capabilities";
 
-export type RoleFamily = "agent" | "manager" | "admin" | "facilitator";
+export type RoleFamily = "agent" | "manager" | "admin" | "direction" | "facilitator";
 
 export type NavigationItem = {
   href: string;
@@ -49,6 +49,10 @@ const managerItems: NavigationItem[] = [
   { href: "/dashboard/network", label: "Performance", icon: "chart", capability: "performance" },
 ];
 
+const directionItems: NavigationItem[] = [
+  { href: "/dashboard/direction", label: "Vue Direction", shortLabel: "Direction", icon: "layout", capability: "direction_workspace" },
+];
+
 const tenantAdminItems: NavigationItem[] = [
   { href: "/dashboard/products", label: "Produits", icon: "boxes", capability: "core_crm" },
   { href: "/dashboard/groups", label: "Groupements", icon: "network", capability: "core_crm" },
@@ -88,6 +92,7 @@ function compactSections(sections: NavigationSection[], enabledCapabilities?: re
 export function getRoleFamily(role: string): RoleFamily {
   if (role === "agent") return "agent";
   if (role === "facilitator") return "facilitator";
+  if (role === "brand_direction") return "direction";
   if (role === "super_admin" || role === "brand_admin") return "admin";
   return "manager";
 }
@@ -96,6 +101,7 @@ export function getRoleLandingPath(role: string) {
   const family = getRoleFamily(role);
   if (family === "agent") return "/dashboard/agent";
   if (family === "facilitator") return "/dashboard/field";
+  if (family === "direction") return "/dashboard/direction";
   return "/dashboard";
 }
 
@@ -116,6 +122,10 @@ export function getNavigationSections(
 
   if (family === "facilitator") {
     return compactSections([{ label: "Intervenant terrain", items: facilitatorItems }], enabledCapabilities);
+  }
+
+  if (family === "direction") {
+    return compactSections([{ label: "Pilotage Direction", items: directionItems }], enabledCapabilities);
   }
 
   const sections: NavigationSection[] = [
