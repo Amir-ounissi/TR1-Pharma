@@ -24,6 +24,7 @@ import {
   quickPlanVisitAction,
   startVisitAction,
 } from "@/app/(protected)/dashboard/pharmacies/quick-actions";
+import { resolveVisitAction } from "@/app/(protected)/dashboard/pharmacies/visit-context-actions";
 import { TrackedLink } from "@/components/agent/tracked-link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -60,6 +61,7 @@ type TerrainPharmacyHeaderProps = {
   nextActionType?: string | null;
   nextActionAt?: string | null;
   objective?: string;
+  primaryAction?: { href: string; label: string };
   navigation: NavigablePharmacy;
   activeVisit?: ActiveVisit | null;
   canQuickVisit?: boolean;
@@ -173,13 +175,15 @@ export function TerrainPharmacyHeader(props: TerrainPharmacyHeaderProps) {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [noteFiles, setNoteFiles] = useState<File[]>([]);
   const [dictating, setDictating] = useState(false);
+  const [resolvedVisit, setResolvedVisit] = useState<ActiveVisit | null>(props.activeVisit ?? null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const masterPhotosRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const libraryRef = useRef<HTMLInputElement>(null);
 
-  const activeVisit = props.activeVisit ?? null;
-  const noteVisitId = activeVisit?.status === "in_progress" ? activeVisit.id : "";
+  const canQuickVisit = props.canQuickVisit ?? true;
+  const canCreateOrder = props.canCreateOrder ?? true;
+  const noteVisitId = resolvedVisit?.status === "in_progress" ? resolvedVisit.id : "";
 
   function applyResult(result: { success?: string; error?: string; warning?: string }) {
     if (result.error) setFeedback({ kind: "error", text: result.error });
@@ -196,33 +200,83 @@ export function TerrainPharmacyHeader(props: TerrainPharmacyHeaderProps) {
       );
       applyResult(result);
       if (result.success) {
+        if (result.visitId && result.scheduledAt) {
+          setResolvedVisit({
+            id: result.visitId,
+            status: "planned",
+            scheduledStartAt: result.scheduledAt,
+          });
+        }
         setPlanOpen(false);
         router.refresh();
       }
     });
   }
 
-  function startVisit() {
-    if (!activeVisit) return;
+  function startVisit(visit: ActiveVisit) {
     startTransition(async () => {
-      const result = await startVisitAction(props.brandPharmacyId, activeVisit.id);
+      const result = await startVisitAction(props.brandPharmacyId, visit.id);
       applyResult(result);
-      if (result.success) router.refresh();
+      if (result.success) {
+        setResolvedVisit({ ...visit, status: "in_progress" });
+        router.refresh();
+      }
+    });
+  }
+
+  function resolvePrimaryVisitAction() {
+    if (resolvedVisit) {
+      if (resolvedVisit.status === "in_progress") setFinishOpen(true);
+      else startVisit(resolvedVisit);
+      return;
+    }
+    startTransition(async () => {
+      const result = await resolveVisitAction(props.brandPharmacyId);
+      if (result.mode === "error") {
+        setFeedback({ kind: "error", text: result.message || "Impossible de charger la visite." });
+        return;
+      }
+      if (result.mode === "plan") {
+        setPlanOpen(true);
+        return;
+      }
+      if (result.visitId && result.scheduledAt) {
+        const visit: ActiveVisit = {
+          id: result.visitId,
+          status: "in_progress",
+          scheduledStartAt: result.scheduledAt,
+        };
+        setResolvedVisit(visit);
+        if (result.mode === "finish") setFinishOpen(true);
+      }
+      if (result.mode === "started") {
+        setFeedback({ kind: "success", text: result.message || "Visite démarrée." });
+        router.refresh();
+      }
     });
   }
 
   function completeVisit() {
-    if (!activeVisit) return;
+    if (!resolvedVisit) return;
     startTransition(async () => {
       const result = await completeVisitAction(
         props.brandPharmacyId,
-        activeVisit.id,
+        resolvedVisit.id,
         finishOutcome,
         nextVisit,
         nextVisit === "custom" ? customNextAt : undefined,
       );
       applyResult(result);
       if (result.success) {
+        if (result.visitId && result.scheduledAt) {
+          setResolvedVisit({
+            id: result.visitId,
+            status: "planned",
+            scheduledStartAt: result.scheduledAt,
+          });
+        } else {
+          setResolvedVisit(null);
+        }
         setFinishOpen(false);
         router.refresh();
       }
@@ -317,11 +371,11 @@ export function TerrainPharmacyHeader(props: TerrainPharmacyHeaderProps) {
     });
   }
 
-  const visitLabel = activeVisit
-    ? activeVisit.status === "in_progress"
+  const visitLabel = resolvedVisit
+    ? resolvedVisit.status === "in_progress"
       ? "Terminer"
       : "Démarrer"
-    : "Planifier";
+    : "Visite";
 
   return (
     <section className="tr1-da-panel overflow-hidden" data-testid="terrain-pharmacy-header">
@@ -340,12 +394,12 @@ export function TerrainPharmacyHeader(props: TerrainPharmacyHeaderProps) {
           </div>
         </div>
 
-        {activeVisit ? (
-          <div className={activeVisit.status === "in_progress" ? "rounded-xl border border-emerald-300 bg-emerald-50 p-3" : "rounded-xl border border-orange-200 bg-orange-50 p-3"}>
+        {resolvedVisit ? (
+          <div className={resolvedVisit.status === "in_progress" ? "rounded-xl border border-emerald-300 bg-emerald-50 p-3" : "rounded-xl border border-orange-200 bg-orange-50 p-3"}>
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{activeVisit.status === "in_progress" ? "Visite en cours" : "Visite prévue"}</p>
-                <p className="font-semibold text-[var(--tr1-navy)]">{dateTime(activeVisit.scheduledStartAt)}</p>
+                <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{resolvedVisit.status === "in_progress" ? "Visite en cours" : "Visite prévue"}</p>
+                <p className="font-semibold text-[var(--tr1-navy)]">{dateTime(resolvedVisit.scheduledStartAt)}</p>
               </div>
               <CheckCircle2 className="size-5 text-[var(--tr1-orange)]" />
             </div>
@@ -368,19 +422,15 @@ export function TerrainPharmacyHeader(props: TerrainPharmacyHeaderProps) {
         ) : null}
 
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {props.canQuickVisit ? (
+          {canQuickVisit ? (
             <Button
               type="button"
               size="lg"
               className="min-h-16 flex-col gap-1 text-sm"
               disabled={pending}
-              onClick={() => {
-                if (!activeVisit) setPlanOpen(true);
-                else if (activeVisit.status === "in_progress") setFinishOpen(true);
-                else startVisit();
-              }}
+              onClick={resolvePrimaryVisitAction}
             >
-              {activeVisit?.status === "in_progress" ? <Square className="size-5" /> : activeVisit ? <Play className="size-5" /> : <CalendarPlus className="size-5" />}
+              {resolvedVisit?.status === "in_progress" ? <Square className="size-5" /> : resolvedVisit ? <Play className="size-5" /> : <CalendarPlus className="size-5" />}
               {visitLabel}
             </Button>
           ) : (
@@ -394,9 +444,9 @@ export function TerrainPharmacyHeader(props: TerrainPharmacyHeaderProps) {
             Note
           </Button>
 
-          {props.canCreateOrder ? (
+          {canCreateOrder ? (
             <Button asChild size="lg" variant="secondary" className="min-h-16 flex-col gap-1 text-sm">
-              <Link href={`/dashboard/orders/new?pharmacy=${props.brandPharmacyId}&mode=document`}>
+              <Link href={`/dashboard/orders/scan?pharmacy=${props.brandPharmacyId}`}>
                 <ShoppingCart className="size-5" />
                 Commande
               </Link>
