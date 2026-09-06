@@ -5,13 +5,13 @@ test("PDF mocké : prévisualisation puis confirmation crée une commande, sans 
   const orderNumber = `E2E-PDF-${Date.now()}`;
   await signIn(page, "agent@dermavita.local", /Dermavita/i);
   await page.goto("/dashboard/orders/new");
-  await page.getByRole("button", { name: "Importer un PDF" }).click();
-  await page.getByLabel(/pdf/i).setInputFiles({
+  await page.getByRole("button", { name: "Importer ou photographier" }).click();
+  await page.getByLabel("PDF ou photo de commande").setInputFiles({
     name: "commande.pdf",
     mimeType: "application/pdf",
     buffer: Buffer.from("mock pdf"),
   });
-  await page.getByRole("button", { name: "Analyser le PDF" }).click();
+  await page.getByRole("button", { name: "Analyser la commande" }).click();
   await expect(page.getByRole("heading", { name: "Prévisualisation obligatoire" })).toBeVisible();
 
   await expect(page.getByLabel("Pharmacie")).toHaveValue("00000000-0000-0000-0000-000000000401");
@@ -41,4 +41,23 @@ test("PDF mocké : prévisualisation puis confirmation crée une commande, sans 
     source: "import",
     order_status: "pending",
   });
+});
+
+test("une photo de commande peut être importée et la caméra arrière est proposée sur mobile", async ({ page }) => {
+  await signIn(page, "agent@dermavita.local", /Dermavita/i);
+  await page.goto("/dashboard/orders/new");
+  await page.getByRole("button", { name: "Importer ou photographier" }).click();
+
+  const cameraInput = page.locator('input[name="camera"]');
+  await expect(cameraInput).toHaveAttribute("capture", "environment");
+  await expect(cameraInput).toHaveAttribute("accept", "image/jpeg,image/png,image/webp");
+
+  await page.getByLabel("PDF ou photo de commande").setInputFiles({
+    name: "commande.jpg",
+    mimeType: "image/jpeg",
+    buffer: Buffer.from("mock jpeg"),
+  });
+  await expect(page.getByText(/Document prêt :/)).toBeVisible();
+  await page.getByRole("button", { name: "Analyser la commande" }).click();
+  await expect(page.getByRole("heading", { name: "Prévisualisation obligatoire" })).toBeVisible();
 });
