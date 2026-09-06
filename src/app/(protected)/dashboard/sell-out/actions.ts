@@ -188,6 +188,7 @@ export async function submitSellOutCaptureFormAction(formData: FormData): Promis
   if (error) throw new Error(error.message);
   revalidatePath(`/dashboard/sell-out/${captureId}`);
   revalidatePath("/dashboard/sell-out");
+  redirect(`/dashboard/sell-out/${captureId}`);
 }
 
 export async function validateSellOutCaptureFormAction(formData: FormData): Promise<void> {
@@ -203,6 +204,7 @@ export async function validateSellOutCaptureFormAction(formData: FormData): Prom
   if (error) throw new Error(error.message);
   revalidatePath(`/dashboard/sell-out/${captureId}`);
   revalidatePath("/dashboard/sell-out");
+  redirect(`/dashboard/sell-out/${captureId}`);
 }
 
 export async function archiveSellOutCaptureFormAction(formData: FormData): Promise<void> {
