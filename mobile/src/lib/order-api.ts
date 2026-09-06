@@ -61,6 +61,30 @@ export type MobileOrderPreview = {
   warnings: string[];
 };
 
+export type ManualOrderType = "initial" | "reorder" | "complementary" | "replacement" | "sample" | "return" | "credit_note" | "other";
+export type ManualOrderStatus = "draft" | "pending" | "confirmed";
+
+export type ManualOrderLine = {
+  product: OrderProductSelection;
+  quantity: number;
+  freeQuantity: number;
+  unitPriceHt: number;
+  discountRate: number | null;
+};
+
+export type ManualOrderConfirmation = {
+  brandId: string;
+  pharmacy: OrderPharmacySelection;
+  orderNumber?: string;
+  externalOrderId?: string;
+  orderType: ManualOrderType;
+  orderStatus: ManualOrderStatus;
+  orderDate: string;
+  shippingAmountHt: number;
+  notes?: string;
+  lines: ManualOrderLine[];
+};
+
 const apiBaseUrl = (process.env.EXPO_PUBLIC_TR1_API_URL ?? "").replace(/\/$/, "");
 
 async function accessToken() {
@@ -186,6 +210,33 @@ export async function confirmOrderPreview(input: {
       orderNumber: input.orderNumber,
       orderDate: input.orderDate,
       items,
+    }),
+  });
+  return payload as { success?: string; orderId?: string | null };
+}
+
+export async function confirmManualOrder(input: ManualOrderConfirmation) {
+  const payload = await apiFetch("/api/mobile/orders/manual/confirm", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      brandId: input.brandId,
+      brandPharmacyId: input.pharmacy.brandPharmacyId,
+      pharmacyId: input.pharmacy.brandPharmacyId ? null : input.pharmacy.pharmacyId,
+      externalOrderId: input.externalOrderId?.trim() || undefined,
+      orderNumber: input.orderNumber?.trim() || undefined,
+      orderType: input.orderType,
+      orderStatus: input.orderStatus,
+      orderDate: input.orderDate,
+      shippingAmountHt: input.shippingAmountHt,
+      notes: input.notes?.trim() || undefined,
+      items: input.lines.map((line) => ({
+        productId: line.product.productId,
+        quantity: line.quantity,
+        freeQuantity: line.freeQuantity,
+        unitPriceHt: line.unitPriceHt,
+        discountRate: line.discountRate,
+      })),
     }),
   });
   return payload as { success?: string; orderId?: string | null };
