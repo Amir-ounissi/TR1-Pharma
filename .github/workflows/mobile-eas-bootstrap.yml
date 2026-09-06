@@ -15,6 +15,9 @@ concurrency:
   group: mobile-eas-bootstrap-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  EXPO_ACCOUNT: tr1pharma1
+
 jobs:
   bootstrap:
     name: Link EAS and build Android preview
@@ -50,10 +53,8 @@ jobs:
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
-          WHOAMI="$(npx --yes eas-cli@latest whoami)"
-          ACCOUNT="$(printf '%s\n' "$WHOAMI" | tail -n 1 | awk '{print $NF}')"
-          echo "Expo account: $ACCOUNT"
-          npx --yes eas-cli@latest init --account "$ACCOUNT" --non-interactive
+          echo "Expo account: $EXPO_ACCOUNT"
+          npx --yes eas-cli@latest init --account "$EXPO_ACCOUNT" --non-interactive
           npx --yes eas-cli@latest project:info
           npx --yes eas-cli@latest config --platform android --profile preview --non-interactive
 
