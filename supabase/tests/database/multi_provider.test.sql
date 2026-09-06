@@ -51,11 +51,14 @@ select lives_ok(
 );
 
 select is(
-  (select count(*) from public.brand_field_providers relation join public.field_providers provider on provider.id = relation.field_provider_id where relation.brand_id = '00000000-0000-0000-0000-000000000101' and provider.email = 'agence-e2e-sud@example.test'),
+  (select count(*) from public.get_brand_field_provider_portfolio('00000000-0000-0000-0000-000000000101') where email = 'agence-e2e-sud@example.test'),
   1::bigint,
   'one brand-provider relation is created'
 );
 
+-- Base provider tables intentionally expose less than the commercial portfolio RPC.
+-- Inspect tenant derivation as the database owner, then return to the authenticated actor.
+reset role;
 select is(
   (select relation.organization_id from public.brand_field_providers relation join public.field_providers provider on provider.id = relation.field_provider_id where provider.email = 'agence-e2e-sud@example.test'),
   '00000000-0000-0000-0000-000000000002'::uuid,
@@ -73,6 +76,7 @@ select is(
   'one canonical provider identity exists per organization and email'
 );
 
+set local role authenticated;
 select lives_ok(
   $$select * from public.get_brand_field_provider_portfolio('00000000-0000-0000-0000-000000000101')$$,
   'brand admin can read its provider portfolio'
@@ -171,14 +175,14 @@ select set_config(
 select lives_ok(
   $$select public.set_brand_field_provider_status(
     '00000000-0000-0000-0000-000000000101',
-    (select relation.id from public.brand_field_providers relation join public.field_providers provider on provider.id = relation.field_provider_id where provider.email = 'agence-e2e-sud@example.test'),
+    (select relation_id from public.get_brand_field_provider_portfolio('00000000-0000-0000-0000-000000000101') where email = 'agence-e2e-sud@example.test'),
     'paused'
   )$$,
   'brand admin can pause a provider relation'
 );
 
 select is(
-  (select relation.status from public.brand_field_providers relation join public.field_providers provider on provider.id = relation.field_provider_id where provider.email = 'agence-e2e-sud@example.test'),
+  (select relation_status from public.get_brand_field_provider_portfolio('00000000-0000-0000-0000-000000000101') where email = 'agence-e2e-sud@example.test'),
   'paused',
   'provider relation is paused without deleting its identity'
 );
@@ -186,14 +190,14 @@ select is(
 select lives_ok(
   $$select public.set_brand_field_provider_status(
     '00000000-0000-0000-0000-000000000101',
-    (select relation.id from public.brand_field_providers relation join public.field_providers provider on provider.id = relation.field_provider_id where provider.email = 'agence-e2e-sud@example.test'),
+    (select relation_id from public.get_brand_field_provider_portfolio('00000000-0000-0000-0000-000000000101') where email = 'agence-e2e-sud@example.test'),
     'active'
   )$$,
   'brand admin can reactivate a provider relation'
 );
 
 select is(
-  (select relation.status from public.brand_field_providers relation join public.field_providers provider on provider.id = relation.field_provider_id where provider.email = 'agence-e2e-sud@example.test'),
+  (select relation_status from public.get_brand_field_provider_portfolio('00000000-0000-0000-0000-000000000101') where email = 'agence-e2e-sud@example.test'),
   'active',
   'provider relation returns active'
 );
@@ -201,12 +205,13 @@ select is(
 select lives_ok(
   $$select public.set_brand_field_provider_status(
     '00000000-0000-0000-0000-000000000101',
-    (select relation.id from public.brand_field_providers relation join public.field_providers provider on provider.id = relation.field_provider_id where provider.email = 'agence-e2e-sud@example.test'),
+    (select relation_id from public.get_brand_field_provider_portfolio('00000000-0000-0000-0000-000000000101') where email = 'agence-e2e-sud@example.test'),
     'archived'
   )$$,
   'brand admin can remove a provider from its portfolio'
 );
 
+reset role;
 select is(
   (select relation.status from public.brand_field_providers relation join public.field_providers provider on provider.id = relation.field_provider_id where provider.email = 'agence-e2e-sud@example.test'),
   'archived',
@@ -218,6 +223,7 @@ select ok(
   'legacy brand authorization is removed when the relation is archived'
 );
 
+set local role authenticated;
 select is(
   (select count(*) from public.get_brand_field_provider_portfolio('00000000-0000-0000-0000-000000000101') where email = 'agence-e2e-sud@example.test'),
   0::bigint,
