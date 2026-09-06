@@ -2,6 +2,11 @@
   "build": {
     "preview": {
       "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://zhifmehctuflwfexlvkz.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_dFtfD60cflPn_IqSZriScQ_g0TRS66x",
+        "EXPO_PUBLIC_TR1_API_URL": "https://tr1-pharma-staging-git-f-7931b3-amir-ounissis-projects-723e961a.vercel.app"
+      },
       "android": {
         "buildType": "apk"
       }
