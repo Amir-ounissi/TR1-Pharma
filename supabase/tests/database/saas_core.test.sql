@@ -33,7 +33,7 @@ select set_config('request.jwt.claims','{"sub":"00000000-0000-0000-0000-00000000
 select ok(public.has_brand_capability('00000000-0000-0000-0000-000000000101','core_crm'),'agent receives a Core capability');
 select ok(not public.has_brand_capability('00000000-0000-0000-0000-000000000101','sell_out'),'Core does not include sell-out');
 select ok(not public.has_brand_capability('00000000-0000-0000-0000-000000000102','core_crm'),'cross-brand capability probing returns false');
-select is((select count(*) from public.brand_saas_entitlements),1::bigint,'agent reads only its own brand entitlement');
+select is((select count(*) from public.brand_saas_entitlements),0::bigint,'agent cannot read commercial entitlement details directly');
 
 select set_config('request.jwt.claims','{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}',true);
 select throws_ok(
