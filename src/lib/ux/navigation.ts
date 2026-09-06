@@ -43,6 +43,7 @@ const managerItems: NavigationItem[] = [
   { href: "/dashboard/trade", label: "Trade Marketing", shortLabel: "Trade", icon: "target", capability: "trade_marketing" },
   { href: "/dashboard/sell-out", label: "Sell-out", icon: "chart", capability: "sell_out" },
   { href: "/dashboard/commercial-health", label: "Priorités", shortLabel: "Priorités", icon: "target", capability: "next_best_action" },
+  { href: "/dashboard/providers", label: "Prestataires", shortLabel: "Prestataires", icon: "users", capability: "multi_provider" },
   { href: "/dashboard/pharmacies", label: "Pharmacies", icon: "building", capability: "core_crm" },
   { href: "/dashboard/orders", label: "Commandes", icon: "clipboard", capability: "orders" },
   { href: "/dashboard/missions", label: "Missions", icon: "calendar", capability: "missions" },
