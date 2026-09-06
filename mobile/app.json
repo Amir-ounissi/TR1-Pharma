@@ -13,7 +13,8 @@
           "cameraPermission": "Autoriser TR1 Pharma à photographier les commandes.",
           "photosPermission": "Autoriser TR1 Pharma à sélectionner une photo de commande."
         }
-      ]
+      ],
+      "expo-notifications"
     ],
     "ios": {
       "supportsTablet": false,
