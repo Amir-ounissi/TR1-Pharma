@@ -61,6 +61,7 @@ const tenantAdminItems: NavigationItem[] = [
   { href: "/dashboard/imports", label: "Imports", icon: "upload", capability: "core_crm" },
   { href: "/dashboard/connectors", label: "Intégrations", icon: "network", capability: "connectors" },
   { href: "/dashboard/users", label: "Utilisateurs", icon: "users", capability: "core_crm" },
+  { href: "/dashboard/subscription", label: "Abonnement & usage", icon: "badge" },
 ];
 
 const facilitatorItems: NavigationItem[] = [
@@ -75,6 +76,7 @@ const platformAdminItems: NavigationItem[] = [
   { href: "/dashboard/admin/access-requests", label: "Demandes d’accès", icon: "users" },
   { href: "/dashboard/admin/onboarding", label: "Marques & onboardings", icon: "badge" },
   { href: "/dashboard/admin/saas", label: "SaaS & capacités", icon: "boxes" },
+  { href: "/dashboard/admin/saas-commercial", label: "Quotas & billing", icon: "chart" },
   { href: "/dashboard/admin/users", label: "Utilisateurs & accès", icon: "users" },
   { href: "/dashboard/admin/leads", label: "Leads TR1", icon: "leads" },
 ];
