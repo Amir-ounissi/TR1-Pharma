@@ -11,10 +11,10 @@ export type CreateUserState = { error?: string; success?: string };
 const createUserSchema = z.object({
   email: z.email(),
   fullName: z.string().trim().min(2).max(120),
-  role: z.enum(["brand_admin", "brand_user", "agent", "facilitator"]),
+  role: z.enum(["brand_admin", "brand_direction", "brand_user", "agent", "facilitator"]),
 });
 
-const managedRoles = ["brand_admin", "brand_user", "agent", "facilitator"] as const;
+const managedRoles = ["brand_admin", "brand_direction", "brand_user", "agent", "facilitator"] as const;
 
 export async function createUserAction(
   _state: CreateUserState,
