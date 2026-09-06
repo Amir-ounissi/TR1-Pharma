@@ -3,10 +3,11 @@ import { useState } from "react";
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import type { BrandContext } from "../../App";
+import { MissionAgendaWorkspace } from "./mission-agenda-workspace";
 import { OrderWorkflow } from "./order-workflow";
 import { PharmacyWorkspace } from "./pharmacy-workspace";
 
-type Route = "home" | "pharmacies" | "orders";
+type Route = "home" | "pharmacies" | "orders" | "missions" | "agenda";
 
 type Props = {
   brand: BrandContext;
@@ -23,6 +24,12 @@ export function FieldWorkspace({ brand, canSwitchBrand, onSwitchBrand, onSignOut
   }
   if (route === "orders") {
     return <OrderWorkflow brand={brand} onBack={() => setRoute("home")} onDone={() => setRoute("home")} />;
+  }
+  if (route === "missions") {
+    return <MissionAgendaWorkspace brand={brand} mode="missions" onBack={() => setRoute("home")} />;
+  }
+  if (route === "agenda") {
+    return <MissionAgendaWorkspace brand={brand} mode="agenda" onBack={() => setRoute("home")} />;
   }
 
   return (
@@ -45,7 +52,7 @@ export function FieldWorkspace({ brand, canSwitchBrand, onSwitchBrand, onSignOut
         <View style={styles.hero}>
           <Text style={styles.heroKicker}>AUJOURD’HUI</Text>
           <Text style={styles.heroTitle}>Votre journée terrain commence ici.</Text>
-          <Text style={styles.heroText}>Pharmacies, commandes et prochaines actions sont accessibles en quelques gestes.</Text>
+          <Text style={styles.heroText}>Pharmacies, commandes, missions et agenda sont accessibles en quelques gestes.</Text>
         </View>
 
         <Text style={styles.sectionTitle}>Actions rapides</Text>
@@ -59,16 +66,16 @@ export function FieldWorkspace({ brand, canSwitchBrand, onSwitchBrand, onSignOut
           <Text style={styles.actionText}>Portefeuille, recherche et fiche compte</Text>
           <Text style={styles.openLabel}>OUVRIR</Text>
         </Pressable>
-        <View style={styles.actionCard}>
+        <Pressable onPress={() => setRoute("missions")} style={styles.actionCard}>
           <Text style={styles.actionTitle}>Missions</Text>
-          <Text style={styles.actionText}>Priorités terrain</Text>
-          <Text style={styles.soon}>À VENIR</Text>
-        </View>
-        <View style={styles.actionCard}>
+          <Text style={styles.actionText}>Animations et priorités qui vous sont affectées</Text>
+          <Text style={styles.openLabel}>OUVRIR</Text>
+        </Pressable>
+        <Pressable onPress={() => setRoute("agenda")} style={styles.actionCard}>
           <Text style={styles.actionTitle}>Agenda</Text>
-          <Text style={styles.actionText}>Visites et relances</Text>
-          <Text style={styles.soon}>À VENIR</Text>
-        </View>
+          <Text style={styles.actionText}>Planning du jour et éléments à planifier</Text>
+          <Text style={styles.openLabel}>OUVRIR</Text>
+        </Pressable>
 
         <Pressable onPress={onSignOut} style={styles.signOut}>
           <Text style={styles.signOutText}>Se déconnecter</Text>
@@ -97,7 +104,6 @@ const styles = StyleSheet.create({
   actionFeatured: { borderColor: "#C7D2FE", backgroundColor: "#EEF2FF" },
   actionTitle: { color: "#111827", fontSize: 17, fontWeight: "800" },
   actionText: { color: "#667085", fontSize: 14, marginTop: 4 },
-  soon: { color: "#667085", fontSize: 11, fontWeight: "700", marginTop: 13, letterSpacing: 0.5 },
   openLabel: { color: "#3B5BDB", fontSize: 11, fontWeight: "800", marginTop: 13, letterSpacing: 0.5 },
   signOut: { alignSelf: "center", marginTop: 16, padding: 12 },
   signOutText: { color: "#667085", fontWeight: "700" },
