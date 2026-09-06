@@ -23,10 +23,10 @@ test("un agent ne voit ni navigation ni termes commerciaux SaaS", async ({ page 
   await expect(page).not.toHaveURL(/\/dashboard\/subscription$/);
 });
 
-test("le superadmin dispose d’une console distincte pour quotas et billing", async ({ page }) => {
+test("le superadmin dispose d’une console plateforme distincte des réglages tenant", async ({ page }) => {
   await signIn(page, "superadmin@tr1.local", /Dermavita/i);
 
-  await expect(page.getByRole("link", { name: "Quotas & billing", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Quotas & billing", exact: true })).toHaveCount(0);
   await page.goto("/dashboard/admin/saas-commercial");
 
   await expect(page.getByRole("heading", { name: "Quotas & billing", exact: true })).toBeVisible();
