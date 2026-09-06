@@ -9,7 +9,7 @@ import type { PdfOrderExtraction } from "@/lib/orders/pdf-order-schema";
 import { activeBrandHasCapability } from "@/lib/saas/server";
 
 const uuid = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
-const pdfImportUnavailableMessage = "L’import PDF de commandes n’est pas activé pour cette marque.";
+const pdfImportUnavailableMessage = "L’import de documents de commande n’est pas activé pour cette marque.";
 
 type PreviewPharmacy = PharmacyCandidate;
 type PreviewProduct = Omit<ProductCandidate, "references">;
@@ -64,9 +64,17 @@ function readProduct(row: Record<string, unknown>): ProductCandidate {
   };
 }
 
+function readOrderDocument(formData: FormData): File | null {
+  for (const field of ["document", "camera", "pdf"]) {
+    const candidate = formData.get(field);
+    if (candidate instanceof File && candidate.size > 0) return candidate;
+  }
+  return null;
+}
+
 export async function analyzePdfOrderAction(_state: PdfOrderActionState, formData: FormData): Promise<PdfOrderActionState> {
-  const candidate = formData.get("pdf");
-  if (!(candidate instanceof File) || candidate.size === 0) return { error: "Ajoutez un PDF de commande." };
+  const candidate = readOrderDocument(formData);
+  if (!candidate) return { error: "Ajoutez un PDF ou une photo de la commande." };
   if (!(await activeBrandHasCapability("pdf_order_import"))) return { error: pdfImportUnavailableMessage };
   try {
     const { supabase, brand } = await requireActiveBrand();
@@ -117,7 +125,7 @@ export async function analyzePdfOrderAction(_state: PdfOrderActionState, formDat
       },
     };
   } catch (error) {
-    return { error: error instanceof PdfOrderImportError ? error.message : "Une erreur est survenue pendant l’analyse du PDF." };
+    return { error: error instanceof PdfOrderImportError ? error.message : "Une erreur est survenue pendant l’analyse du document." };
   }
 }
 
@@ -174,12 +182,12 @@ export async function confirmPdfOrderAction(_state: PdfOrderActionState, formDat
       city: parsed.data.newPharmacy.city || null,
       address_line_1: parsed.data.newPharmacy.address || null,
     } : null,
-    order_payload: { external_order_id: parsed.data.orderNumber, order_number: parsed.data.orderNumber, order_type: "other", order_status: isAgent ? "pending" : "confirmed", order_date: new Date(parsed.data.orderDate).toISOString(), shipping_amount_ht: 0, payment_status: "not_applicable", notes: "Commande créée depuis un PDF vérifié par l’utilisateur.", source: "import" },
+    order_payload: { external_order_id: parsed.data.orderNumber, order_number: parsed.data.orderNumber, order_type: "other", order_status: isAgent ? "pending" : "confirmed", order_date: new Date(parsed.data.orderDate).toISOString(), shipping_amount_ht: 0, payment_status: "not_applicable", notes: "Commande créée depuis un document (PDF/photo) vérifié par l’utilisateur.", source: "import" },
     item_payload: trustedItems,
   });
   if (error) return { error: error.code === "23505" ? "Cette commande existe déjà." : error.message };
   revalidatePath("/dashboard/orders");
   revalidatePath("/dashboard/pharmacies");
   const result = Array.isArray(data) ? data[0] : data;
-  return { success: isAgent ? "Commande envoyée à la marque." : "Commande PDF validée.", orderId: result?.order_id as string };
+  return { success: isAgent ? "Commande envoyée à la marque." : "Commande importée et validée.", orderId: result?.order_id as string };
 }
