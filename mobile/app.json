@@ -21,7 +21,16 @@
       "bundleIdentifier": "com.tr1pharma.mobile"
     },
     "android": {
-      "package": "com.tr1pharma.mobile"
-    }
+      "package": "com.tr1pharma.mobile",
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "extra": {
+      "eas": {
+        "projectId": "53e6c736-f161-4423-8622-5bfedf481c98"
+      }
+    },
+    "owner": "tr1pharma1"
   }
 }
