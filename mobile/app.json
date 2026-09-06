@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "TR1 Pharma",
+    "slug": "tr1-pharma-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "tr1pharma",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.tr1pharma.mobile"
+    },
+    "android": {
+      "package": "com.tr1pharma.mobile"
+    }
+  }
+}
