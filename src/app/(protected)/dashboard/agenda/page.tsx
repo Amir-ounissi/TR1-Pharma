@@ -28,16 +28,34 @@ export default async function AgendaPage({ searchParams }:{ searchParams:Promise
     grouped.get(relation.pharmacy_id)?.brands.push({ relationId: relation.id, brandId: relation.brand_id, brandName: brand?.name || "Marque" });
   }
 
-  const agendaEvents = ((agenda ?? []) as AgendaEvent[]).map((event) =>
-    facilitatorOnly && event.source_kind === "mission"
-      ? { ...event, detail_url: `/dashboard/field/missions/${event.source_id}` }
-      : event,
-  );
-  const backlogItems = ((backlog ?? []) as BacklogItem[]).map((item) =>
-    facilitatorOnly && item.source_kind === "mission"
-      ? { ...item, detail_url: `/dashboard/field/missions/${item.source_id}` }
-      : item,
-  );
+  const pharmacyUrl = (pharmacyId: string | null, eventBrandIds: string[], visitId?: string) => {
+    if (!pharmacyId) return null;
+    const option = grouped.get(pharmacyId);
+    if (!option) return null;
+    const relation = option.brands.find((item) => eventBrandIds.includes(item.brandId)) ?? option.brands[0];
+    if (!relation) return null;
+    return `/dashboard/pharmacies/open/${relation.relationId}${visitId ? `?visit=${visitId}` : ""}`;
+  };
+
+  const agendaEvents = ((agenda ?? []) as AgendaEvent[]).map((event) => {
+    if (facilitatorOnly && event.source_kind === "mission") {
+      return { ...event, detail_url: `/dashboard/field/missions/${event.source_id}` };
+    }
+    const direct = pharmacyUrl(
+      event.pharmacy_id,
+      event.brand_ids,
+      event.source_kind === "field_visit" ? event.source_id : undefined,
+    );
+    return direct ? { ...event, detail_url: direct } : event;
+  });
+
+  const backlogItems = ((backlog ?? []) as BacklogItem[]).map((item) => {
+    if (facilitatorOnly && item.source_kind === "mission") {
+      return { ...item, detail_url: `/dashboard/field/missions/${item.source_id}` };
+    }
+    const direct = pharmacyUrl(item.pharmacy_id, [item.brand_id]);
+    return direct ? { ...item, detail_url: direct } : item;
+  });
 
   return <AgendaPlanner date={date} view={view} events={agendaEvents} backlog={backlogItems} brands={contexts.map(({ id, name }) => ({ id, name }))} pharmacies={[...grouped.values()]} canCreateVisit={contexts.some((context) => context.role === "agent")} />;
 }

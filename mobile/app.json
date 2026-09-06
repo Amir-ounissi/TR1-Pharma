@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "TR1 Pharma",
+    "slug": "tr1-pharma-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "tr1pharma",
+    "userInterfaceStyle": "automatic",
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Autoriser TR1 Pharma à photographier les commandes.",
+          "photosPermission": "Autoriser TR1 Pharma à sélectionner une photo de commande."
+        }
+      ],
+      "expo-notifications"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.tr1pharma.mobile",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.tr1pharma.mobile",
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "extra": {
+      "eas": {
+        "projectId": "53e6c736-f161-4423-8622-5bfedf481c98"
+      }
+    },
+    "owner": "tr1pharma1"
+  }
+}

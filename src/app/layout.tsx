@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { PwaRuntime } from "@/components/pwa-runtime";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -43,7 +44,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr">
-      <body className="min-h-screen antialiased">{children}</body>
+      <body className="min-h-screen antialiased">
+        {children}
+        <PwaRuntime />
+      </body>
     </html>
   );
 }
