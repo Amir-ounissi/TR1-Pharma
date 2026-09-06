@@ -63,16 +63,20 @@ L’export Metro iOS + Android permet de détecter les erreurs de bundling en pl
 
 ## Build interne
 
-`eas.json` contient un profil `preview` pour distribution interne, avec APK directement installable côté Android.
+Le projet est lié à EAS sous `@tr1pharma1/tr1-pharma-mobile` avec le project ID `53e6c736-f161-4423-8622-5bfedf481c98`.
 
-Avant le premier build EAS, l’application doit être liée au compte/projet Expo de TR1 et les credentials natifs doivent être configurés. Aucun build store n’est déclenché automatiquement par ce repo.
+`eas.json` contient un profil `preview` pour distribution interne, avec APK directement installable côté Android. Le premier build Android interne a été généré avec succès le 6 septembre 2026 et le keystore Android est géré à distance par Expo.
 
-Exemple une fois le projet EAS lié :
+Les variables publiques du profil `preview` pointent vers Supabase staging et l’API TR1 staging. Aucun secret `service_role` n’est embarqué dans le build.
+
+Pour les builds suivants :
 
 ```bash
 eas build --platform android --profile preview
 eas build --platform ios --profile preview
 ```
+
+Le build iOS physique nécessite encore la configuration Apple Developer, la signature et l’enregistrement des appareils de test. Aucun build App Store / Play Store n’est déclenché automatiquement par ce repo.
 
 ## Sécurité
 
