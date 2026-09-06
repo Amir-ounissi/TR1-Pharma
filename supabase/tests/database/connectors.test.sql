@@ -2,7 +2,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(30);
+select plan(32);
 
 select has_table('public','connector_connections','connector connections table exists');
 select has_table('public','connector_entity_mappings','connector entity mappings table exists');
