@@ -6,6 +6,15 @@
     "orientation": "portrait",
     "scheme": "tr1pharma",
     "userInterfaceStyle": "automatic",
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Autoriser TR1 Pharma à photographier les commandes.",
+          "photosPermission": "Autoriser TR1 Pharma à sélectionner une photo de commande."
+        }
+      ]
+    ],
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.tr1pharma.mobile"
