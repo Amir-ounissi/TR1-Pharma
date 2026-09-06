@@ -13,12 +13,12 @@ insert into auth.users (
 select plan(22);
 
 select has_table('private','brand_seat_reservations','private seat reservation ledger exists');
-select has_function('public','reserve_brand_saas_seat',array['uuid','text','uuid','uuid'],'seat reservation RPC exists');
+select has_function('public','reserve_brand_saas_seat',array['uuid','text','smallint','uuid'],'seat reservation RPC exists');
 select has_function('public','consume_brand_saas_seat',array['uuid','uuid'],'seat reservation consumption RPC exists');
 select has_function('public','release_brand_saas_seat',array['uuid'],'seat reservation release RPC exists');
 
 select ok(
-  not has_function_privilege('authenticated','public.reserve_brand_saas_seat(uuid,text,uuid,uuid)','EXECUTE'),
+  not has_function_privilege('authenticated','public.reserve_brand_saas_seat(uuid,text,smallint,uuid)','EXECUTE'),
   'authenticated users cannot reserve seats directly'
 );
 select ok(
@@ -30,7 +30,7 @@ select ok(
   'authenticated users cannot release seat reservations directly'
 );
 select ok(
-  has_function_privilege('service_role','public.reserve_brand_saas_seat(uuid,text,uuid,uuid)','EXECUTE'),
+  has_function_privilege('service_role','public.reserve_brand_saas_seat(uuid,text,smallint,uuid)','EXECUTE'),
   'service role can reserve seats'
 );
 select ok(
