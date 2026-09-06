@@ -2,7 +2,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path=public,extensions;
 
-select plan(10);
+select plan(11);
 
 select ok(
   not has_function_privilege('anon','public.assign_mission(uuid,uuid,timestamp with time zone,timestamp with time zone)','EXECUTE'),
@@ -40,18 +40,25 @@ select ok(
   'service role retains the global overdue mission processor'
 );
 
-select diag(
-  coalesce(
-    (
-      select string_agg(p.oid::regprocedure::text, E'\n' order by p.oid::regprocedure::text)
-      from pg_proc p
-      join pg_namespace n on n.oid=p.pronamespace
-      where n.nspname='public'
-        and p.prosecdef
-        and has_function_privilege('anon',p.oid,'EXECUTE')
-    ),
-    'none'
-  )
+select is(
+  (
+    select count(*)
+    from pg_proc p
+    join pg_namespace n on n.oid=p.pronamespace
+    where n.nspname='public'
+      and p.proname in (
+        'save_sell_out_capture',
+        'save_sell_out_line',
+        'add_sell_out_evidence',
+        'submit_sell_out_capture',
+        'validate_sell_out_capture',
+        'archive_sell_out_capture',
+        'get_sell_out_overview'
+      )
+      and has_function_privilege('authenticated',p.oid,'EXECUTE')
+  ),
+  7::bigint,
+  'authenticated users retain all seven sell-out RPC entry points'
 );
 
 select is(
