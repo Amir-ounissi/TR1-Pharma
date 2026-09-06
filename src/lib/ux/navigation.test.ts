@@ -65,6 +65,12 @@ describe("role navigation", () => {
     ]);
   });
 
+  it("gives Direction one capability-gated read-only destination", () => {
+    expect(getNavigationItems("brand_direction").map((item) => item.href)).toEqual(["/dashboard/direction"]);
+    expect(getNavigationItems("brand_direction", "tenant", ["core_crm"])).toEqual([]);
+    expect(getNavigationItems("brand_direction", "tenant", ["direction_workspace"]).map((item) => item.href)).toEqual(["/dashboard/direction"]);
+  });
+
   it("filters tenant navigation using the active brand capabilities", () => {
     const coreCapabilities = ["core_crm", "orders", "agent_day", "missions", "performance", "distribution"] as const;
     const managerLinks = getNavigationItems("tr1_manager", "tenant", coreCapabilities).map((item) => item.href);
@@ -104,6 +110,7 @@ describe("role navigation", () => {
   it("classifies roles and nested active routes", () => {
     expect(getRoleFamily("super_admin")).toBe("admin");
     expect(getRoleFamily("facilitator")).toBe("facilitator");
+    expect(getRoleFamily("brand_direction")).toBe("direction");
     expect(isNavigationItemActive("/dashboard/pharmacies/123", "/dashboard/pharmacies")).toBe(true);
     expect(isNavigationItemActive("/dashboard/commercial-health", "/dashboard")).toBe(false);
   });
@@ -111,6 +118,7 @@ describe("role navigation", () => {
   it("sends each role family to its dedicated home", () => {
     expect(getRoleLandingPath("agent")).toBe("/dashboard/agent");
     expect(getRoleLandingPath("facilitator")).toBe("/dashboard/field");
+    expect(getRoleLandingPath("brand_direction")).toBe("/dashboard/direction");
     expect(getRoleLandingPath("tr1_manager")).toBe("/dashboard");
     expect(getRoleLandingPath("brand_admin")).toBe("/dashboard");
     expect(getRoleLandingPath("super_admin")).toBe("/dashboard");
