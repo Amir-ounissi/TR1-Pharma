@@ -6,7 +6,7 @@ test("un administrateur reçoit des Next Best Actions explicables sans écriture
   await page.goto("/dashboard/commercial-health");
 
   await expect(page.getByRole("heading", { name: "Priorités commerciales" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Next Best Action" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Next Best Action" })).toBeVisible();
   await expect(page.getByText("Aucune action n’est créée automatiquement.", { exact: true })).toBeVisible();
 
   const cards = page.getByTestId("next-best-action-card");
@@ -24,5 +24,5 @@ test("un administrateur reçoit des Next Best Actions explicables sans écriture
 test("un agent ne reçoit pas la couche de décision marque", async ({ page }) => {
   await signIn(page, "agent@dermavita.local", /Dermavita/i);
   await page.goto("/dashboard/commercial-health");
-  await expect(page.getByRole("heading", { name: "Next Best Action" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Next Best Action" })).toHaveCount(0);
 });
