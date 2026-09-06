@@ -40,6 +40,20 @@ select ok(
   'service role retains the global overdue mission processor'
 );
 
+select diag(
+  coalesce(
+    (
+      select string_agg(p.oid::regprocedure::text, E'\n' order by p.oid::regprocedure::text)
+      from pg_proc p
+      join pg_namespace n on n.oid=p.pronamespace
+      where n.nspname='public'
+        and p.prosecdef
+        and has_function_privilege('anon',p.oid,'EXECUTE')
+    ),
+    'none'
+  )
+);
+
 select is(
   (
     select count(*)
