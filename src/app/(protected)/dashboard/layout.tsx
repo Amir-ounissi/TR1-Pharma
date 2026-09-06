@@ -49,6 +49,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const { brand, profile, supabase } = session;
   const role = contexts.find((context) => context.id === brand.id)?.role ?? "brand_user";
+  const family = getRoleFamily(role);
   const { data: capabilityRows, error: capabilityError } = await supabase.rpc("get_my_brand_capabilities", {
     target_brand_id: brand.id,
   });
@@ -58,15 +59,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .filter((row) => row.enabled && isSaasCapability(row.capability_key))
     .map((row) => row.capability_key as SaasCapability);
   const enabled = new Set<SaasCapability>(enabledCapabilities);
+  const directionReadOnly = family === "direction";
 
   const [pharmaciesResult, missionsResult, tasksResult] = await Promise.all([
-    enabled.has("core_crm")
+    !directionReadOnly && enabled.has("core_crm")
       ? supabase.from("brand_pharmacies").select("id,pharmacies(trade_name,legal_name,city)").eq("brand_id", brand.id).is("archived_at", null).limit(12)
       : Promise.resolve({ data: [] }),
-    enabled.has("missions")
+    !directionReadOnly && enabled.has("missions")
       ? supabase.from("missions").select("id,title,status").eq("brand_id", brand.id).is("archived_at", null).limit(12)
       : Promise.resolve({ data: [] }),
-    enabled.has("core_crm")
+    !directionReadOnly && enabled.has("core_crm")
       ? supabase.from("tasks").select("id,title,status").eq("brand_id", brand.id).is("archived_at", null).limit(12)
       : Promise.resolve({ data: [] }),
   ]);
@@ -77,9 +79,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
     label: item.label,
     href: item.href,
   }));
-  const family = getRoleFamily(role);
-  const canOperate = !["brand_user", "facilitator"].includes(role);
-  const quickActions: SearchItem[] = !canOperate || family === "facilitator" ? [] : [
+  const canOperate = !["brand_user", "facilitator", "brand_direction"].includes(role);
+  const quickActions: SearchItem[] = !canOperate || family === "facilitator" || family === "direction" ? [] : [
     ...(enabled.has("orders") ? [{ id: "action-new-order", kind: "action" as const, label: "Créer une commande", href: "/dashboard/orders/new", keywords: ["nouvelle", "saisie"] }] : []),
     ...(enabled.has("core_crm") ? [{ id: "action-new-task", kind: "action" as const, label: "Planifier une relance", href: "/dashboard/tasks", keywords: ["tâche", "rappel"] }] : []),
   ];
