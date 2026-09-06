@@ -6,6 +6,8 @@ const optionalAmount = z.number().finite().nonnegative().nullable();
 export const pdfOrderExtractionSchema = z.object({
   orderNumber: optionalText,
   orderDate: optionalText,
+  orderDateSource: z.enum(["order_date", "header_date", "delivery_date", "other"]).nullable().optional(),
+  deliveryDate: optionalText.optional(),
   pharmacy: z.object({
     name: optionalText,
     siret: optionalText,
@@ -33,10 +35,12 @@ export type PdfOrderExtraction = z.infer<typeof pdfOrderExtractionSchema>;
 export const PDF_ORDER_JSON_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["orderNumber", "orderDate", "pharmacy", "lines", "totalHt", "totalTtc", "warnings"],
+  required: ["orderNumber", "orderDate", "orderDateSource", "deliveryDate", "pharmacy", "lines", "totalHt", "totalTtc", "warnings"],
   properties: {
     orderNumber: { type: ["string", "null"] },
     orderDate: { type: ["string", "null"] },
+    orderDateSource: { type: ["string", "null"], enum: ["order_date", "header_date", "delivery_date", "other", null] },
+    deliveryDate: { type: ["string", "null"] },
     pharmacy: {
       type: "object",
       additionalProperties: false,
