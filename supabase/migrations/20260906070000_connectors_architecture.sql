@@ -559,7 +559,7 @@ returns void
 language plpgsql
 security definer
 set search_path = ''
-as $$;
+as $$
 begin
   if not private.is_service_role_request() then
     raise exception 'Connector sync completion is reserved to the trusted backend' using errcode = '42501';
