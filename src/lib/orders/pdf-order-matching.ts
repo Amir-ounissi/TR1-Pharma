@@ -58,6 +58,21 @@ export function normalizePdfOrderDate(value: string | null | undefined) {
   return null;
 }
 
+export function resolvePdfOrderDate(extraction: Pick<PdfOrderExtraction, "orderDate" | "orderDateSource" | "deliveryDate">) {
+  const normalized = normalizePdfOrderDate(extraction.orderDate);
+  if (!normalized) return null;
+
+  // Backward compatibility for older mocked/test payloads that predate source tracking.
+  if (extraction.orderDateSource == null) return normalized;
+
+  if (extraction.orderDateSource === "delivery_date" || extraction.orderDateSource === "other") {
+    return null;
+  }
+
+  // Only a date explicitly identified as the order date or a genuine document header date is accepted.
+  return normalized;
+}
+
 function pdfLineIdentity(line: PdfOrderExtraction["lines"][number]) {
   const ean = normalizeIdentifier(line.ean);
   if (ean) return `ean:${ean}`;
@@ -69,35 +84,29 @@ function pdfLineIdentity(line: PdfOrderExtraction["lines"][number]) {
   return label ? `label:${label}` : "";
 }
 
-function compatibleLinePrice(
-  first: PdfOrderExtraction["lines"][number],
-  second: PdfOrderExtraction["lines"][number],
-) {
-  if (first.unitPriceHt == null || second.unitPriceHt == null) return true;
-  return Math.abs(first.unitPriceHt - second.unitPriceHt) < 0.0001;
-}
-
 export function consolidatePdfOrderLines(lines: PdfOrderExtraction["lines"]) {
-  const result = lines
-    .filter((line) => (line.quantity ?? 0) > 0 || (line.freeQuantity ?? 0) <= 0)
+  const meaningful = lines.filter(
+    (line) => (line.quantity ?? 0) > 0 || (line.freeQuantity ?? 0) > 0,
+  );
+
+  const result = meaningful
+    .filter((line) => (line.quantity ?? 0) > 0)
     .map((line) => ({
       ...line,
       freeQuantity: line.freeQuantity ?? 0,
     }));
 
-  const freeOnlyLines = lines.filter(
+  const freeOnlyLines = meaningful.filter(
     (line) => (line.quantity ?? 0) <= 0 && (line.freeQuantity ?? 0) > 0,
   );
 
   for (const freeLine of freeOnlyLines) {
     const identity = pdfLineIdentity(freeLine);
-
     const matches = result.filter(
       (candidate) =>
         (candidate.quantity ?? 0) > 0 &&
         identity &&
-        pdfLineIdentity(candidate) === identity &&
-        compatibleLinePrice(candidate, freeLine),
+        pdfLineIdentity(candidate) === identity,
     );
 
     if (matches.length === 1) {
