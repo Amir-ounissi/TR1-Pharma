@@ -60,7 +60,8 @@ select ok(
 create temp table _task_count_before as
 select count(*)::bigint as value from public.tasks;
 
-perform * from public.get_next_best_actions(
+create temp table _nba_second_read as
+select * from public.get_next_best_actions(
   '00000000-0000-0000-0000-000000000101',
   50,
   null
