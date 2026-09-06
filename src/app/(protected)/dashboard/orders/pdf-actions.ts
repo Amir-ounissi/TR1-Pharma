@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
 import { extractPdfOrder, PdfOrderImportError } from "@/lib/orders/pdf-order-extraction";
-import { calculateOrderTotal, consolidatePdfOrderLines, hasMeaningfulTotalDifference, matchPdfPharmacy, matchPdfProduct, normalizePdfOrderDate, resolvedLinePrice, type PharmacyCandidate, type ProductCandidate } from "@/lib/orders/pdf-order-matching";
+import { calculateOrderTotal, consolidatePdfOrderLines, hasMeaningfulTotalDifference, matchPdfPharmacy, matchPdfProduct, resolvePdfOrderDate, resolvedLinePrice, type PharmacyCandidate, type ProductCandidate } from "@/lib/orders/pdf-order-matching";
 import type { PdfOrderExtraction } from "@/lib/orders/pdf-order-schema";
 import { activeBrandHasCapability } from "@/lib/saas/server";
 
@@ -79,9 +79,13 @@ export async function analyzePdfOrderAction(_state: PdfOrderActionState, formDat
   try {
     const { supabase, brand } = await requireActiveBrand();
     const rawExtraction = await extractPdfOrder(candidate);
+    const resolvedOrderDate = resolvePdfOrderDate(rawExtraction);
+    const dateWarning = rawExtraction.orderDate && !resolvedOrderDate
+      ? "Date de livraison ou date non fiable ignorée : renseignez la date de commande."
+      : null;
     const extraction: PdfOrderExtraction = {
       ...rawExtraction,
-      orderDate: normalizePdfOrderDate(rawExtraction.orderDate),
+      orderDate: resolvedOrderDate,
       lines: consolidatePdfOrderLines(rawExtraction.lines),
     };
     const [{ data: directoryRows, error: pharmaciesError }, { data: productRows, error: productsError }] = await Promise.all([
@@ -113,7 +117,7 @@ export async function analyzePdfOrderAction(_state: PdfOrderActionState, formDat
       };
     });
     const totalTr1Ht = calculateOrderTotal(lines.map((line) => ({ quantity: line.quantity, unitPriceHt: line.suggestedPriceHt, discountRate: line.discountRate })));
-    const warnings = [...extraction.warnings, ...lines.flatMap((line) => line.priceWarning ? [line.priceWarning] : [])];
+    const warnings = [...extraction.warnings, ...(dateWarning ? [dateWarning] : []), ...lines.flatMap((line) => line.priceWarning ? [line.priceWarning] : [])];
     return {
       preview: {
         extraction,
