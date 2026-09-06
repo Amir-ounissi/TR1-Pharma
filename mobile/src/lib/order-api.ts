@@ -156,11 +156,24 @@ export async function confirmOrderPreview(input: {
   products: Record<number, OrderProductSelection>;
 }) {
   if (!input.pharmacy) throw new Error("La pharmacie doit être identifiée avant validation.");
-  const invalidLine = input.preview.lines.some((line) => {
+
+  const items = input.preview.lines.map((line) => {
     const selection = input.products[line.index];
-    return !selection || !line.quantity || (line.unitPriceHt ?? selection.unitPriceHt) == null;
+    if (!selection || !line.quantity) {
+      throw new Error("Toutes les lignes doivent être identifiées avant validation.");
+    }
+    const unitPriceHt = line.unitPriceHt ?? selection.unitPriceHt;
+    if (unitPriceHt == null) {
+      throw new Error("Toutes les lignes doivent avoir un prix avant validation.");
+    }
+    return {
+      productId: selection.productId,
+      quantity: line.quantity,
+      freeQuantity: line.freeQuantity,
+      unitPriceHt,
+      discountRate: line.discountRate,
+    };
   });
-  if (invalidLine) throw new Error("Toutes les lignes doivent être identifiées avant validation.");
 
   const payload = await apiFetch("/api/mobile/orders/document/confirm", {
     method: "POST",
@@ -172,16 +185,7 @@ export async function confirmOrderPreview(input: {
       newPharmacy: null,
       orderNumber: input.orderNumber,
       orderDate: input.orderDate,
-      items: input.preview.lines.map((line) => {
-        const selection = input.products[line.index];
-        return {
-          productId: selection.productId,
-          quantity: line.quantity,
-          freeQuantity: line.freeQuantity,
-          unitPriceHt: line.unitPriceHt ?? selection.unitPriceHt,
-          discountRate: line.discountRate,
-        };
-      }),
+      items,
     }),
   });
   return payload as { success?: string; orderId?: string | null };
