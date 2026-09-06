@@ -16,7 +16,7 @@ test("un administrateur construit et pilote un portefeuille multi-prestataires",
   await form.getByLabel("Nom").fill(providerName);
   await form.getByLabel("E-mail").fill(providerEmail);
   await form.getByLabel("Téléphone").fill("0600000099");
-  await form.getByLabel("Contrat").selectOption("active");
+  await form.getByLabel("Contrat", { exact: true }).selectOption("active");
   await form.getByLabel("Formation").check();
   await form.getByLabel("Tarif journée HT").fill("420");
   await form.getByLabel("Tarif demi-journée HT").fill("260");
