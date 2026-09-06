@@ -77,7 +77,7 @@ export default async function CommercialHealthPage({ searchParams }: { searchPar
       <CommercialEventTracker eventName="commercial_priority_opened" />
       <PageHeader eyebrow={`Console de décision · ${brand.name}`} title="Priorités commerciales" description="Les comptes à traiter maintenant, classés par urgence et accompagnés d’une recommandation explicable." tone="dark" />
 
-      {canUseNextBestAction ? <NextBestActionPanel rows={nextBestActions} /> : null}
+      {canUseNextBestAction ? <NextBestActionPanel rows={nextBestActions} canCreateTasks={canManageSettings} /> : null}
 
       <div className="flex flex-col gap-3 rounded-xl border bg-background p-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0">
