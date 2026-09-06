@@ -10,7 +10,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/ux/page-header";
 import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
 import { formatCompactCurrency, formatCompactNumber, formatCompactPercent, formatMissionType } from "@/lib/performance";
