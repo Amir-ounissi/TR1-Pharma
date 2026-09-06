@@ -31,7 +31,7 @@ function evidenceLabel(evidence: Record<string, unknown>) {
   return "Signal commercial observable";
 }
 
-export function NextBestActionPanel({ rows }: { rows: NextBestActionRow[] }) {
+export function NextBestActionPanel({ rows, canCreateTasks }: { rows: NextBestActionRow[]; canCreateTasks: boolean }) {
   const summary = summarizeNextBestActions(rows);
   const visibleRows = rows.slice(0, 5);
 
@@ -105,13 +105,17 @@ export function NextBestActionPanel({ rows }: { rows: NextBestActionRow[] }) {
                       <div className="grid h-full min-h-10 place-items-center rounded-md border bg-muted/30 px-3 text-center text-xs font-medium text-muted-foreground">
                         Une action est déjà ouverte — aucune duplication proposée.
                       </div>
-                    ) : (
+                    ) : canCreateTasks ? (
                       <NextBestActionForm
                         brandPharmacyId={row.brand_pharmacy_id}
                         actionType={row.action_type}
                         actionLabel={row.action_label}
                         suggestedDueAt={row.suggested_due_at}
                       />
+                    ) : (
+                      <div className="grid h-full min-h-10 place-items-center rounded-md border bg-muted/30 px-3 text-center text-xs font-medium text-muted-foreground">
+                        Lecture seule — la création d’action est réservée aux managers et administrateurs.
+                      </div>
                     )}
                   </div>
                 </div>
