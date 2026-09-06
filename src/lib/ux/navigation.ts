@@ -58,6 +58,7 @@ const tenantAdminItems: NavigationItem[] = [
   { href: "/dashboard/groups", label: "Groupements", icon: "network", capability: "core_crm" },
   { href: "/dashboard/territories", label: "Territoires", icon: "map", capability: "core_crm" },
   { href: "/dashboard/imports", label: "Imports", icon: "upload", capability: "core_crm" },
+  { href: "/dashboard/connectors", label: "Intégrations", icon: "network", capability: "connectors" },
   { href: "/dashboard/users", label: "Utilisateurs", icon: "users", capability: "core_crm" },
 ];
 
