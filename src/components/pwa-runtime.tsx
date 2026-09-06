@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
 
 type NavigatorWithStandalone = Navigator & { standalone?: boolean };
+
+const INSTALL_HINT_DISMISSED_KEY = "tr1-pwa-install-hint-dismissed";
+const INSTALL_HINT_CHANGE_EVENT = "tr1-pwa-install-hint-change";
 
 function isIosDevice() {
   if (typeof navigator === "undefined") return false;
@@ -22,9 +25,32 @@ function isSafariOnIos() {
   return /Safari/.test(navigator.userAgent) && !/(CriOS|FxiOS|EdgiOS|OPiOS)/.test(navigator.userAgent);
 }
 
+function subscribeInstallHint(onStoreChange: () => void) {
+  window.addEventListener("storage", onStoreChange);
+  window.addEventListener(INSTALL_HINT_CHANGE_EVENT, onStoreChange);
+  return () => {
+    window.removeEventListener("storage", onStoreChange);
+    window.removeEventListener(INSTALL_HINT_CHANGE_EVENT, onStoreChange);
+  };
+}
+
+function getInstallHintSnapshot() {
+  const dismissed = window.localStorage.getItem(INSTALL_HINT_DISMISSED_KEY) === "1";
+  return !dismissed && isIosDevice() && isSafariOnIos() && !isStandaloneMode();
+}
+
+function getInstallHintServerSnapshot() {
+  return false;
+}
+
 export function PwaRuntime() {
   const pathname = usePathname();
-  const [showInstallHint, setShowInstallHint] = useState(false);
+  const installHintEligible = useSyncExternalStore(
+    subscribeInstallHint,
+    getInstallHintSnapshot,
+    getInstallHintServerSnapshot,
+  );
+  const showInstallHint = pathname.startsWith("/dashboard") && installHintEligible;
 
   useEffect(() => {
     if ("serviceWorker" in navigator) {
@@ -33,14 +59,6 @@ export function PwaRuntime() {
       });
     }
   }, []);
-
-  useEffect(() => {
-    const dismissed = window.localStorage.getItem("tr1-pwa-install-hint-dismissed") === "1";
-    const eligibleRoute = pathname.startsWith("/dashboard");
-    setShowInstallHint(
-      !dismissed && eligibleRoute && isIosDevice() && isSafariOnIos() && !isStandaloneMode(),
-    );
-  }, [pathname]);
 
   if (!showInstallHint) return null;
 
@@ -64,8 +82,8 @@ export function PwaRuntime() {
           className="rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-muted"
           aria-label="Masquer ce conseil"
           onClick={() => {
-            window.localStorage.setItem("tr1-pwa-install-hint-dismissed", "1");
-            setShowInstallHint(false);
+            window.localStorage.setItem(INSTALL_HINT_DISMISSED_KEY, "1");
+            window.dispatchEvent(new Event(INSTALL_HINT_CHANGE_EVENT));
           }}
         >
           ×
