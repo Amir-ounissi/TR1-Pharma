@@ -30,6 +30,7 @@ type Mission = {
 
 type MissionDetailData = {
   id: string;
+  organizationId: string;
   title: string;
   status: string;
   missionType: string | null;
@@ -43,6 +44,16 @@ type MissionDetailData = {
   pharmacyName: string;
   city: string | null;
   postalCode: string | null;
+};
+
+type MissionReportData = {
+  id: string;
+  reportStatus: string;
+  summary: string;
+  pharmacyFeedback: string;
+  opportunities: string;
+  nextStep: string;
+  rejectionReason: string | null;
 };
 
 type AgendaEvent = {
@@ -91,6 +102,7 @@ function MissionList({ brand, onBack }: { brand: BrandContext; onBack: () => voi
       setLoading(false);
       return;
     }
+
     const { data, error: queryError } = await supabase
       .from("missions")
       .select("id,title,status,mission_type,scheduled_start_at,report_due_at,proposal_review_status,pharmacies(trade_name,legal_name,city)")
@@ -154,11 +166,43 @@ function MissionList({ brand, onBack }: { brand: BrandContext; onBack: () => voi
 
 function MissionDetail({ brand, missionId, onBack }: { brand: BrandContext; missionId: string; onBack: () => void }) {
   const [mission, setMission] = useState<MissionDetailData | null>(null);
+  const [report, setReport] = useState<MissionReportData | null>(null);
+  const [reportSummary, setReportSummary] = useState("");
+  const [pharmacyFeedback, setPharmacyFeedback] = useState("");
+  const [opportunities, setOpportunities] = useState("");
+  const [nextStep, setNextStep] = useState("");
   const [loading, setLoading] = useState(true);
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
+  const [reportSaving, setReportSaving] = useState<"draft" | "submitted" | null>(null);
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  function hydrateReport(data: Record<string, unknown> | null) {
+    if (!data) {
+      setReport(null);
+      setReportSummary("");
+      setPharmacyFeedback("");
+      setOpportunities("");
+      setNextStep("");
+      return;
+    }
+
+    const normalized: MissionReportData = {
+      id: String(data.id),
+      reportStatus: String(data.report_status),
+      summary: typeof data.summary === "string" ? data.summary : "",
+      pharmacyFeedback: typeof data.pharmacy_feedback === "string" ? data.pharmacy_feedback : "",
+      opportunities: typeof data.opportunities === "string" ? data.opportunities : "",
+      nextStep: typeof data.next_step === "string" ? data.next_step : "",
+      rejectionReason: typeof data.rejection_reason === "string" ? data.rejection_reason : null,
+    };
+    setReport(normalized);
+    setReportSummary(normalized.summary);
+    setPharmacyFeedback(normalized.pharmacyFeedback);
+    setOpportunities(normalized.opportunities);
+    setNextStep(normalized.nextStep);
+  }
 
   async function load() {
     setLoading(true);
@@ -173,7 +217,7 @@ function MissionDetail({ brand, missionId, onBack }: { brand: BrandContext; miss
 
     const { data, error: queryError } = await supabase
       .from("missions")
-      .select("id,title,status,mission_type,objective,briefing,scheduled_start_at,scheduled_end_at,report_due_at,priority,location_mode,pharmacies(trade_name,legal_name,city,postal_code)")
+      .select("id,organization_id,title,status,mission_type,objective,briefing,scheduled_start_at,scheduled_end_at,report_due_at,priority,location_mode,pharmacies(trade_name,legal_name,city,postal_code)")
       .eq("id", missionId)
       .eq("brand_id", brand.id)
       .eq("assigned_user_id", userId)
@@ -182,6 +226,7 @@ function MissionDetail({ brand, missionId, onBack }: { brand: BrandContext; miss
 
     if (queryError || !data) {
       setMission(null);
+      hydrateReport(null);
       setError("Cette mission n’est pas disponible dans votre périmètre terrain.");
       setLoading(false);
       return;
@@ -190,6 +235,7 @@ function MissionDetail({ brand, missionId, onBack }: { brand: BrandContext; miss
     const pharmacy = Array.isArray(data.pharmacies) ? data.pharmacies[0] : data.pharmacies;
     setMission({
       id: String(data.id),
+      organizationId: String(data.organization_id),
       title: String(data.title),
       status: String(data.status),
       missionType: typeof data.mission_type === "string" ? data.mission_type : null,
@@ -204,6 +250,19 @@ function MissionDetail({ brand, missionId, onBack }: { brand: BrandContext; miss
       city: pharmacy?.city ?? null,
       postalCode: pharmacy?.postal_code ?? null,
     });
+
+    const { data: reportData, error: reportError } = await supabase
+      .from("mission_reports")
+      .select("id,report_status,summary,pharmacy_feedback,opportunities,next_step,rejection_reason")
+      .eq("mission_id", missionId)
+      .maybeSingle();
+
+    if (reportError) {
+      hydrateReport(null);
+      setError("Mission chargée, mais son compte-rendu n’a pas pu être récupéré.");
+    } else {
+      hydrateReport((reportData as Record<string, unknown> | null) ?? null);
+    }
     setLoading(false);
   }
 
@@ -229,14 +288,68 @@ function MissionDetail({ brand, missionId, onBack }: { brand: BrandContext; miss
       setError(transitionError.message || "La transition de mission a été refusée.");
     } else {
       setReason("");
-      setSuccess("Statut mis à jour.");
+      setSuccess(targetStatus === "in_progress" ? "Mission démarrée. Vous pouvez saisir le compte-rendu terrain." : "Statut mis à jour.");
       await load();
     }
     setPendingStatus(null);
   }
 
+  async function saveReport(targetStatus: "draft" | "submitted") {
+    if (!mission) return;
+    if (mission.status !== "in_progress" && !(mission.status === "report_pending" && report?.reportStatus === "needs_correction")) {
+      setError("Le compte-rendu n’est modifiable que pendant la mission ou lorsqu’une correction est demandée.");
+      return;
+    }
+    if (targetStatus === "submitted" && !reportSummary.trim()) {
+      setError("Ajoutez au minimum un résumé avant l’envoi du compte-rendu.");
+      return;
+    }
+
+    const { data: userData } = await supabase.auth.getUser();
+    const userId = userData.user?.id;
+    if (!userId) {
+      setError("Votre session TR1 a expiré.");
+      return;
+    }
+
+    setReportSaving(targetStatus);
+    setError(null);
+    setSuccess(null);
+    const effectiveStatus = targetStatus === "draft" && report?.reportStatus === "needs_correction" ? "needs_correction" : targetStatus;
+    const reportFields = {
+      report_status: effectiveStatus,
+      summary: reportSummary.trim() || null,
+      pharmacy_feedback: pharmacyFeedback.trim() || null,
+      opportunities: opportunities.trim() || null,
+      next_step: nextStep.trim() || null,
+      ...(targetStatus === "submitted" ? { submitted_at: new Date().toISOString() } : {}),
+    };
+
+    const result = report
+      ? await supabase.from("mission_reports").update(reportFields).eq("id", report.id).eq("mission_id", missionId)
+      : await supabase.from("mission_reports").insert({
+          organization_id: mission.organizationId,
+          brand_id: brand.id,
+          mission_id: missionId,
+          submitted_by: userId,
+          content: { source: "mobile" },
+          visibility: "shared",
+          ...reportFields,
+        });
+
+    if (result.error) {
+      setError(result.error.message || "Le compte-rendu n’a pas pu être enregistré.");
+    } else {
+      setSuccess(targetStatus === "submitted" ? "Compte-rendu envoyé à TR1 pour validation." : "Brouillon enregistré.");
+      await load();
+    }
+    setReportSaving(null);
+  }
+
   const transitions = mission ? transitionsForStatus(mission.status) : [];
   const needsReason = transitions.some((status) => status === "rejected" || status === "no_show");
+  const reportEditable = Boolean(mission && (mission.status === "in_progress" || (mission.status === "report_pending" && report?.reportStatus === "needs_correction")));
+  const showReport = Boolean(mission && (mission.status === "in_progress" || mission.status === "report_pending" || mission.status === "completed" || report));
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -297,19 +410,46 @@ function MissionDetail({ brand, missionId, onBack }: { brand: BrandContext; miss
                         pendingStatus !== null && styles.disabled,
                       ]}
                     >
-                      {pendingStatus === targetStatus ? (
-                        <ActivityIndicator color="#FFF" />
-                      ) : (
-                        <Text style={styles.transitionButtonText}>{transitionLabel(targetStatus)}</Text>
-                      )}
+                      {pendingStatus === targetStatus ? <ActivityIndicator color="#FFF" /> : <Text style={styles.transitionButtonText}>{transitionLabel(targetStatus)}</Text>}
                     </Pressable>
                   ))}
                 </View>
                 <Text style={styles.transitionHelp}>TR1 revérifie vos droits et la transition côté serveur avant toute modification.</Text>
               </View>
-            ) : (
-              <View style={styles.noticeCard}><Text style={styles.noticeTitle}>Aucune action immédiate</Text><Text style={styles.noticeText}>Cette mission n’a pas de transition terrain disponible à ce stade.</Text></View>
-            )}
+            ) : null}
+
+            {showReport ? (
+              <View style={styles.reportBlock}>
+                <View style={styles.reportHeader}>
+                  <Text style={styles.sectionTitle}>Compte-rendu terrain</Text>
+                  {report ? <Badge label={label(report.reportStatus)} danger={report.reportStatus === "needs_correction" || report.reportStatus === "rejected"} /> : null}
+                </View>
+
+                {report?.reportStatus === "submitted" ? <View style={styles.noticeCard}><Text style={styles.noticeTitle}>Envoyé pour validation</Text><Text style={styles.noticeText}>Le compte-rendu est verrouillé pendant la revue TR1.</Text></View> : null}
+                {report?.reportStatus === "needs_correction" ? <View style={styles.correctionCard}><Text style={styles.correctionTitle}>Correction demandée</Text><Text style={styles.correctionText}>{report.rejectionReason || "TR1 demande une correction du compte-rendu."}</Text></View> : null}
+                {mission.status === "completed" && report?.reportStatus === "validated" ? <View style={styles.successCard}><Text style={styles.successText}>Compte-rendu validé. Mission terminée.</Text></View> : null}
+                {mission.status === "completed" && report?.reportStatus === "rejected" ? <View style={styles.errorCard}><Text style={styles.errorText}>Compte-rendu clôturé avec rejet{report.rejectionReason ? ` : ${report.rejectionReason}` : "."}</Text></View> : null}
+
+                <ReportField label="Résumé *" value={reportSummary} onChangeText={setReportSummary} editable={reportEditable} placeholder="Résultat de la visite, points clés, décision de la pharmacie…" />
+                <ReportField label="Retour pharmacie" value={pharmacyFeedback} onChangeText={setPharmacyFeedback} editable={reportEditable} placeholder="Réactions de l’équipe, objections, perception…" />
+                <ReportField label="Opportunités" value={opportunities} onChangeText={setOpportunities} editable={reportEditable} placeholder="Réassort, référencement, formation, sell-out…" />
+                <ReportField label="Prochaine étape" value={nextStep} onChangeText={setNextStep} editable={reportEditable} placeholder="Action concrète à réaliser ensuite" />
+
+                {reportEditable ? (
+                  <View style={styles.reportActions}>
+                    <Pressable disabled={reportSaving !== null} onPress={() => void saveReport("draft")} style={[styles.secondaryAction, reportSaving !== null && styles.disabled]}>
+                      {reportSaving === "draft" ? <ActivityIndicator color="#3B5BDB" /> : <Text style={styles.secondaryActionText}>{report?.reportStatus === "needs_correction" ? "Enregistrer les corrections" : "Enregistrer le brouillon"}</Text>}
+                    </Pressable>
+                    <Pressable disabled={reportSaving !== null} onPress={() => void saveReport("submitted")} style={[styles.transitionButton, styles.transitionButtonPrimary, reportSaving !== null && styles.disabled]}>
+                      {reportSaving === "submitted" ? <ActivityIndicator color="#FFF" /> : <Text style={styles.transitionButtonText}>{report?.reportStatus === "needs_correction" ? "Renvoyer pour validation" : "Envoyer pour validation"}</Text>}
+                    </Pressable>
+                    <Text style={styles.transitionHelp}>L’envoi déclenche automatiquement le statut « report pending » côté TR1. Aucun passage en terminé n’est fait sans revue.</Text>
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
+
+            {!transitions.length && !showReport ? <View style={styles.noticeCard}><Text style={styles.noticeTitle}>Aucune action immédiate</Text><Text style={styles.noticeText}>Cette mission n’a pas de transition terrain disponible à ce stade.</Text></View> : null}
           </>
         ) : null}
       </ScrollView>
@@ -410,6 +550,23 @@ function BacklogCard({ item }: { item: BacklogItem }) {
   );
 }
 
+function ReportField({ label: fieldLabel, value, onChangeText, editable, placeholder }: { label: string; value: string; onChangeText: (value: string) => void; editable: boolean; placeholder: string }) {
+  return (
+    <View style={styles.reportField}>
+      <Text style={styles.reportFieldLabel}>{fieldLabel}</Text>
+      <TextInput
+        value={value}
+        onChangeText={onChangeText}
+        editable={editable}
+        placeholder={placeholder}
+        placeholderTextColor="#98A2B3"
+        multiline
+        style={[styles.reportInput, !editable && styles.reportInputLocked]}
+      />
+    </View>
+  );
+}
+
 function DetailRow({ label: rowLabel, value }: { label: string; value: string }) {
   return <View style={styles.detailRow}><Text style={styles.detailLabel}>{rowLabel}</Text><Text style={styles.detailValue}>{value}</Text></View>;
 }
@@ -454,5 +611,7 @@ const styles = StyleSheet.create({
   detailSummary: { borderRadius: 18, backgroundColor: "#FFF", borderWidth: 1, borderColor: "#E4E7EC", paddingHorizontal: 16, marginBottom: 20 }, detailRow: { minHeight: 47, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "#E4E7EC" }, detailLabel: { color: "#667085", fontSize: 12 }, detailValue: { flex: 1, color: "#111827", fontSize: 12, fontWeight: "700", textAlign: "right" },
   textCard: { borderRadius: 16, backgroundColor: "#FFF", borderWidth: 1, borderColor: "#E4E7EC", padding: 16 }, bodyText: { color: "#344054", fontSize: 13, lineHeight: 20 },
   transitionBlock: { marginTop: 22 }, reasonInput: { minHeight: 76, borderRadius: 14, borderWidth: 1, borderColor: "#E4E7EC", backgroundColor: "#FFF", paddingHorizontal: 13, paddingVertical: 11, color: "#111827", fontSize: 13, textAlignVertical: "top", marginBottom: 10 }, transitionButtons: { gap: 9 }, transitionButton: { minHeight: 52, borderRadius: 14, alignItems: "center", justifyContent: "center", paddingHorizontal: 15 }, transitionButtonPrimary: { backgroundColor: "#3B5BDB" }, transitionButtonDanger: { backgroundColor: "#B42318" }, transitionButtonText: { color: "#FFF", fontSize: 14, fontWeight: "800" }, transitionHelp: { color: "#667085", fontSize: 11, lineHeight: 17, textAlign: "center", marginTop: 9 }, disabled: { opacity: 0.45 },
-  noticeCard: { marginTop: 20, borderRadius: 16, backgroundColor: "#FFF", borderWidth: 1, borderColor: "#E4E7EC", padding: 16 }, noticeTitle: { color: "#111827", fontSize: 14, fontWeight: "800" }, noticeText: { color: "#667085", fontSize: 12, lineHeight: 18, marginTop: 5 },
+  noticeCard: { marginTop: 12, borderRadius: 16, backgroundColor: "#FFF", borderWidth: 1, borderColor: "#E4E7EC", padding: 16 }, noticeTitle: { color: "#111827", fontSize: 14, fontWeight: "800" }, noticeText: { color: "#667085", fontSize: 12, lineHeight: 18, marginTop: 5 },
+  reportBlock: { marginTop: 24 }, reportHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }, reportField: { marginTop: 12 }, reportFieldLabel: { color: "#344054", fontSize: 12, fontWeight: "800", marginBottom: 7 }, reportInput: { minHeight: 88, borderRadius: 14, borderWidth: 1, borderColor: "#E4E7EC", backgroundColor: "#FFF", paddingHorizontal: 13, paddingVertical: 11, color: "#111827", fontSize: 13, textAlignVertical: "top" }, reportInputLocked: { backgroundColor: "#F2F4F7", color: "#667085" }, reportActions: { marginTop: 14, gap: 9 }, secondaryAction: { minHeight: 50, borderRadius: 14, borderWidth: 1, borderColor: "#C7D2FE", backgroundColor: "#FFF", alignItems: "center", justifyContent: "center", paddingHorizontal: 15 }, secondaryActionText: { color: "#3B5BDB", fontSize: 14, fontWeight: "800" },
+  correctionCard: { borderRadius: 16, backgroundColor: "#FFF7ED", borderWidth: 1, borderColor: "#FED7AA", padding: 14, marginBottom: 8 }, correctionTitle: { color: "#9A3412", fontSize: 13, fontWeight: "800" }, correctionText: { color: "#9A3412", fontSize: 12, lineHeight: 18, marginTop: 4 },
 });
