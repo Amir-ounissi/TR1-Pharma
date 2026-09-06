@@ -158,16 +158,16 @@ export async function confirmOrderPreview(input: {
   if (!input.pharmacy) throw new Error("La pharmacie doit être identifiée avant validation.");
 
   const items = input.preview.lines.map((line) => {
-    const selection = input.products[line.index];
-    if (!selection || !line.quantity) {
+    const selectedProduct = input.products[line.index];
+    if (selectedProduct === undefined || line.quantity == null || line.quantity <= 0) {
       throw new Error("Toutes les lignes doivent être identifiées avant validation.");
     }
-    const unitPriceHt = line.unitPriceHt ?? selection.unitPriceHt;
+    const unitPriceHt = line.unitPriceHt ?? selectedProduct.unitPriceHt;
     if (unitPriceHt == null) {
       throw new Error("Toutes les lignes doivent avoir un prix avant validation.");
     }
     return {
-      productId: selection.productId,
+      productId: selectedProduct.productId,
       quantity: line.quantity,
       freeQuantity: line.freeQuantity,
       unitPriceHt,
