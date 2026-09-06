@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateOrderTotal, consolidatePdfOrderLines, hasMeaningfulTotalDifference, matchPdfPharmacy, matchPdfProduct, normalizePdfOrderDate, resolvedLinePrice } from "./pdf-order-matching";
+import { calculateOrderTotal, consolidatePdfOrderLines, hasMeaningfulTotalDifference, matchPdfPharmacy, matchPdfProduct, normalizePdfOrderDate, resolvePdfOrderDate, resolvedLinePrice } from "./pdf-order-matching";
 
 const pharmacies = [
   { pharmacyId: "pharmacy-1", brandPharmacyId: "brand-pharmacy-1", relationStatus: "existing_brand_relation" as const, name: "Pharmacie du Centre", siret: "12345678901234", cip: "CIP-1", finess: "FIN-1", postalCode: "75001" },
@@ -64,7 +64,13 @@ describe("PDF order deterministic matching", () => {
     expect(normalizePdfOrderDate("2026-08-31")).toBe("2026-08-31");
   });
 
-  it("merges a free-unit PDF row into the paid line", () => {
+  it("never accepts a delivery date as the order date", () => {
+    expect(resolvePdfOrderDate({ orderDate: "09/09/2026", orderDateSource: "delivery_date", deliveryDate: "09/09/2026" })).toBeNull();
+    expect(resolvePdfOrderDate({ orderDate: "06/09/2026", orderDateSource: "order_date", deliveryDate: "09/09/2026" })).toBe("2026-09-06");
+    expect(resolvePdfOrderDate({ orderDate: "Le 06/09/2026", orderDateSource: "header_date", deliveryDate: "09/09/2026" })).toBe("2026-09-06");
+  });
+
+  it("merges a free-unit PDF row into the paid line even when the free row has price zero", () => {
     const lines = consolidatePdfOrderLines([
       {
         label: "VK SWISS ASHWAGANDHA BTE 30",
@@ -81,7 +87,7 @@ describe("PDF order deterministic matching", () => {
         ean: "7629999810969",
         quantity: null,
         freeQuantity: 2,
-        unitPriceHt: 17,
+        unitPriceHt: 0,
         discountRate: 100,
       },
     ]);
@@ -93,6 +99,34 @@ describe("PDF order deterministic matching", () => {
       unitPriceHt: 17,
       discountRate: 0,
     });
+  });
+
+  it("cleans a Valentine-style order: ignores empty references and merges the six UG rows", () => {
+    const paid = [
+      ["3770010539421", "NAALI CHEVEUX POUSSE ET FORCE 60", 12, 21.5, 2],
+      ["3770010539650", "NAALI GUMMIES ANTI STRESS FR ROUGES", 24, 18.42, 4],
+      ["3770010539445", "NAALI GUMMIES ANTI STRESS X60", 24, 19.84, 4],
+      ["3770010539391", "NAALI GUMMIES ANTI-STRESS 20 GOMMES", 36, 6.71, 6],
+      ["3770010539490", "NAALI GUMMIES DREAM SAFRAN MELAT", 24, 15.96, 4],
+      [null, "NAALI GUMMIES DREAM VOYAGE X20", 24, 6.1, 4],
+    ] as const;
+
+    const rows = paid.flatMap(([ean, label, quantity, price, freeQuantity]) => [
+      { label, sku: null, ean, quantity, freeQuantity: 0, unitPriceHt: price, discountRate: 35 },
+      { label, sku: null, ean, quantity: null, freeQuantity, unitPriceHt: 0, discountRate: 100 },
+    ]);
+
+    rows.splice(2, 0,
+      { label: "NAALI COLLAGENE CIT V.M. 186G", sku: null, ean: "3770010539278", quantity: null, freeQuantity: 0, unitPriceHt: 26.43, discountRate: 35 },
+      { label: "NAALI ECLAT GELU60", sku: null, ean: "3770010539438", quantity: null, freeQuantity: null, unitPriceHt: 21.5, discountRate: 35 },
+    );
+
+    const cleaned = consolidatePdfOrderLines(rows);
+    expect(cleaned).toHaveLength(6);
+    expect(cleaned.reduce((sum, line) => sum + (line.quantity ?? 0), 0)).toBe(144);
+    expect(cleaned.reduce((sum, line) => sum + (line.freeQuantity ?? 0), 0)).toBe(24);
+    expect(cleaned.find((line) => line.ean === "3770010539278")).toBeUndefined();
+    expect(cleaned.find((line) => line.label === "NAALI ECLAT GELU60")).toBeUndefined();
   });
 
   it("matches products by EAN, SKU, and a reference", () => {
