@@ -1,0 +1,1 @@
+Direction Workspace is intentionally read-only. Do not add operational mutations here. Cross-cutting write permissions must stay outside the `brand_direction` role; use dedicated, explicitly gated RPCs for executive aggregates.
