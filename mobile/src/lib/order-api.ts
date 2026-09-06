@@ -2,6 +2,21 @@ import * as ImageManipulator from "expo-image-manipulator";
 import type { ImagePickerAsset } from "expo-image-picker";
 import { supabase } from "./supabase";
 
+export type OrderPharmacySelection = {
+  brandPharmacyId: string | null;
+  pharmacyId: string | null;
+  name: string;
+  postalCode: string | null;
+};
+
+export type OrderProductSelection = {
+  productId: string;
+  name: string;
+  sku: string | null;
+  ean: string | null;
+  unitPriceHt: number | null;
+};
+
 export type OrderPreviewLine = {
   index: number;
   label: string | null;
@@ -86,17 +101,65 @@ export async function analyzeOrderPhoto(asset: ImagePickerAsset, brandId: string
   return payload.preview as MobileOrderPreview;
 }
 
+export async function searchOrderPharmacies(brandId: string, term: string): Promise<OrderPharmacySelection[]> {
+  const query = term.trim();
+  if (!query) return [];
+  const { data, error } = await supabase.rpc("search_pharmacy_directory_for_order", {
+    target_brand_id: brandId,
+    search_term: query,
+    candidate_siret: null,
+    candidate_cip: null,
+    candidate_finess: null,
+    candidate_name: null,
+    candidate_postal_code: null,
+    result_limit: 12,
+  });
+  if (error) throw new Error("La recherche de pharmacie est indisponible.");
+  return ((data ?? []) as Array<Record<string, unknown>>)
+    .filter((row) => typeof row.pharmacy_id === "string")
+    .map((row) => ({
+      pharmacyId: String(row.pharmacy_id),
+      brandPharmacyId: typeof row.brand_pharmacy_id === "string" ? row.brand_pharmacy_id : null,
+      name: String(row.trade_name || row.legal_name || "Pharmacie"),
+      postalCode: typeof row.postal_code === "string" ? row.postal_code : null,
+    }));
+}
+
+export async function searchOrderProducts(brandId: string, term: string): Promise<OrderProductSelection[]> {
+  const query = term.trim();
+  if (!query) return [];
+  const { data, error } = await supabase
+    .from("products")
+    .select("id,name,sku,ean,wholesale_price_ht")
+    .eq("brand_id", brandId)
+    .eq("is_active", true)
+    .is("discontinued_at", null)
+    .ilike("name", `%${query}%`)
+    .order("name", { ascending: true })
+    .limit(12);
+  if (error) throw new Error("La recherche produit est indisponible.");
+  return (data ?? []).map((row) => ({
+    productId: String(row.id),
+    name: String(row.name),
+    sku: typeof row.sku === "string" ? row.sku : null,
+    ean: typeof row.ean === "string" ? row.ean : null,
+    unitPriceHt: row.wholesale_price_ht == null ? null : Number(row.wholesale_price_ht),
+  }));
+}
+
 export async function confirmOrderPreview(input: {
   brandId: string;
   preview: MobileOrderPreview;
   orderNumber: string;
   orderDate: string;
+  pharmacy: OrderPharmacySelection | null;
+  products: Record<number, OrderProductSelection>;
 }) {
-  const { preview } = input;
-  if (!preview.pharmacy.selectedBrandPharmacyId && !preview.pharmacy.selectedPharmacyId) {
-    throw new Error("La pharmacie doit être identifiée avant validation.");
-  }
-  const invalidLine = preview.lines.some((line) => !line.product.selectedId || !line.quantity || line.suggestedPriceHt == null);
+  if (!input.pharmacy) throw new Error("La pharmacie doit être identifiée avant validation.");
+  const invalidLine = input.preview.lines.some((line) => {
+    const selection = input.products[line.index];
+    return !selection || !line.quantity || (line.unitPriceHt ?? selection.unitPriceHt) == null;
+  });
   if (invalidLine) throw new Error("Toutes les lignes doivent être identifiées avant validation.");
 
   const payload = await apiFetch("/api/mobile/orders/document/confirm", {
@@ -104,18 +167,21 @@ export async function confirmOrderPreview(input: {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       brandId: input.brandId,
-      brandPharmacyId: preview.pharmacy.selectedBrandPharmacyId,
-      pharmacyId: preview.pharmacy.selectedBrandPharmacyId ? null : preview.pharmacy.selectedPharmacyId,
+      brandPharmacyId: input.pharmacy.brandPharmacyId,
+      pharmacyId: input.pharmacy.brandPharmacyId ? null : input.pharmacy.pharmacyId,
       newPharmacy: null,
       orderNumber: input.orderNumber,
       orderDate: input.orderDate,
-      items: preview.lines.map((line) => ({
-        productId: line.product.selectedId,
-        quantity: line.quantity,
-        freeQuantity: line.freeQuantity,
-        unitPriceHt: line.suggestedPriceHt,
-        discountRate: line.discountRate,
-      })),
+      items: input.preview.lines.map((line) => {
+        const selection = input.products[line.index];
+        return {
+          productId: selection.productId,
+          quantity: line.quantity,
+          freeQuantity: line.freeQuantity,
+          unitPriceHt: line.unitPriceHt ?? selection.unitPriceHt,
+          discountRate: line.discountRate,
+        };
+      }),
     }),
   });
   return payload as { success?: string; orderId?: string | null };
