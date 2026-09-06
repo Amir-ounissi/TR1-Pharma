@@ -64,25 +64,43 @@ export async function createUserAction(
     return { error: "Vous ne pouvez inviter qu’un rôle strictement inférieur au vôtre." };
   }
 
+  const reservationResult = await admin.rpc("reserve_brand_saas_seat", {
+    target_brand_id: brand.id,
+    target_email: parsed.data.email,
+    target_role_id: role.id,
+    target_invited_by: userId,
+  });
+  if (reservationResult.error || typeof reservationResult.data !== "string") {
+    if (reservationResult.error?.code === "23514" && reservationResult.error.message.includes("SaaS seat limit reached")) {
+      return { error: seatLimitMessage };
+    }
+    return { error: "Impossible de réserver une place pour cette invitation." };
+  }
+  const reservationId = reservationResult.data;
+
+  const releaseReservation = async () => {
+    await admin.rpc("release_brand_saas_seat", { target_reservation_id: reservationId });
+  };
+
   const { data: invitation, error: invitationError } = await admin.auth.admin.inviteUserByEmail(
     parsed.data.email,
     { data: { full_name: parsed.data.fullName }, redirectTo: resolveOnboardingRedirectUrl() },
   );
-  if (invitationError || !invitation.user) return { error: invitationError?.message ?? "Invitation impossible." };
+  if (invitationError || !invitation.user) {
+    await releaseReservation();
+    return { error: invitationError?.message ?? "Invitation impossible." };
+  }
 
-  const { error: membershipError } = await admin.from("memberships").insert({
-    user_id: invitation.user.id,
-    organization_id: brandRecord.organization_id,
-    brand_id: brand.id,
-    role_id: role.id,
-    invited_by: userId,
-    status: "invited",
+  const { error: membershipError } = await admin.rpc("consume_brand_saas_seat", {
+    target_reservation_id: reservationId,
+    target_user_id: invitation.user.id,
   });
   if (membershipError) {
+    await releaseReservation();
     if (membershipError.code === "23514" && membershipError.message.includes("SaaS seat limit reached")) {
       return { error: seatLimitMessage };
     }
-    return { error: "L’utilisateur existe, mais son accès n’a pas pu être créé." };
+    return { error: "L’invitation a été envoyée, mais son accès n’a pas pu être créé." };
   }
 
   await admin.from("activity_logs").insert({
