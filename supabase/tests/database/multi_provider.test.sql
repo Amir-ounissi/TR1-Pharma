@@ -30,22 +30,22 @@ select set_config(
 
 select lives_ok(
   $$select public.save_brand_field_provider(
-    '00000000-0000-0000-0000-000000000101',
-    null,
-    'Agence E2E Sud',
-    'agence-e2e-sud@example.test',
-    '0600000012',
+    '00000000-0000-0000-0000-000000000101'::uuid,
+    null::uuid,
+    'Agence E2E Sud'::text,
+    'agence-e2e-sud@example.test'::text,
+    '0600000012'::text,
     'agency'::public.field_provider_type,
     array['animation','training']::text[],
     'active'::public.provider_contract_status,
-    420,
-    260,
-    'Forfait déplacement',
+    420::numeric,
+    260::numeric,
+    'Forfait déplacement'::text,
     true,
-    10,
-    '2026-01-01',
-    '2026-12-31',
-    'Prestataire de référence pour le Sud'
+    10::smallint,
+    '2026-01-01'::date,
+    '2026-12-31'::date,
+    'Prestataire de référence pour le Sud'::text
   )$$,
   'brand admin can add one provider to its brand portfolio'
 );
@@ -103,9 +103,22 @@ select set_config(
 
 select throws_ok(
   $$select public.save_brand_field_provider(
-    '00000000-0000-0000-0000-000000000101', null, 'Agent forbidden', 'agent-provider@example.test', null,
-    'freelancer'::public.field_provider_type, array['animation']::text[], 'pending'::public.provider_contract_status,
-    null, null, null, false, 100, null, null, null
+    '00000000-0000-0000-0000-000000000101'::uuid,
+    null::uuid,
+    'Agent forbidden'::text,
+    'agent-provider@example.test'::text,
+    null::text,
+    'freelancer'::public.field_provider_type,
+    array['animation']::text[],
+    'pending'::public.provider_contract_status,
+    null::numeric,
+    null::numeric,
+    null::text,
+    false,
+    100::smallint,
+    null::date,
+    null::date,
+    null::text
   )$$,
   '42501',
   'Brand provider administration access is required',
@@ -127,9 +140,22 @@ select set_config(
 
 select throws_ok(
   $$select public.save_brand_field_provider(
-    '00000000-0000-0000-0000-000000000101', null, 'Other brand forbidden', 'other-brand@example.test', null,
-    'agency'::public.field_provider_type, array['training']::text[], 'pending'::public.provider_contract_status,
-    null, null, null, false, 100, null, null, null
+    '00000000-0000-0000-0000-000000000101'::uuid,
+    null::uuid,
+    'Other brand forbidden'::text,
+    'other-brand@example.test'::text,
+    null::text,
+    'agency'::public.field_provider_type,
+    array['training']::text[],
+    'pending'::public.provider_contract_status,
+    null::numeric,
+    null::numeric,
+    null::text,
+    false,
+    100::smallint,
+    null::date,
+    null::date,
+    null::text
   )$$,
   '42501',
   'Brand provider administration access is required',
