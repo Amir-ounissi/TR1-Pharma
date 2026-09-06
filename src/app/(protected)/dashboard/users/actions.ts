@@ -15,6 +15,7 @@ const createUserSchema = z.object({
 });
 
 const managedRoles = ["brand_admin", "brand_direction", "brand_user", "agent", "facilitator"] as const;
+const seatLimitMessage = "Limite de sièges atteinte pour cette marque. Augmentez la capacité de l’abonnement avant une nouvelle invitation.";
 
 export async function createUserAction(
   _state: CreateUserState,
@@ -29,8 +30,17 @@ export async function createUserAction(
 
   const { supabase, userId, brand } = await requireActiveBrand();
   const platformAdmin = await isPlatformAdmin();
-  const { data: allowed } = await supabase.rpc("can_manage_brand_users", { target_brand_id: brand.id });
+  const [{ data: allowed }, subscriptionResult] = await Promise.all([
+    supabase.rpc("can_manage_brand_users", { target_brand_id: brand.id }),
+    supabase.rpc("get_brand_saas_subscription", { target_brand_id: brand.id }),
+  ]);
   if (!allowed) return { error: "Vous n’avez pas le droit de créer un utilisateur." };
+  if (subscriptionResult.error) return { error: "Impossible de vérifier la capacité de l’abonnement." };
+
+  const subscription = Array.isArray(subscriptionResult.data) ? subscriptionResult.data[0] : null;
+  if (subscription?.seat_limit != null && Number(subscription.seats_remaining ?? 0) <= 0) {
+    return { error: seatLimitMessage };
+  }
 
   const { data: authorMembership } = await supabase
     .from("memberships")
@@ -68,7 +78,12 @@ export async function createUserAction(
     invited_by: userId,
     status: "invited",
   });
-  if (membershipError) return { error: "L’utilisateur existe, mais son accès n’a pas pu être créé." };
+  if (membershipError) {
+    if (membershipError.code === "23514" && membershipError.message.includes("SaaS seat limit reached")) {
+      return { error: seatLimitMessage };
+    }
+    return { error: "L’utilisateur existe, mais son accès n’a pas pu être créé." };
+  }
 
   await admin.from("activity_logs").insert({
     organization_id: brandRecord.organization_id,
@@ -81,5 +96,6 @@ export async function createUserAction(
   });
 
   revalidatePath("/dashboard/users");
+  revalidatePath("/dashboard/subscription");
   return { success: "Invitation envoyée." };
 }
