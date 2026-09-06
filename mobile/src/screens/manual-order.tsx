@@ -1,5 +1,5 @@
 import { StatusBar } from "expo-status-bar";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -12,6 +12,11 @@ import {
 } from "react-native";
 
 import type { BrandContext } from "../../App";
+import {
+  clearManualOrderDraft,
+  loadManualOrderDraft,
+  saveManualOrderDraft,
+} from "../lib/offline-drafts";
 import {
   confirmManualOrder,
   searchOrderPharmacies,
@@ -70,12 +75,40 @@ export function ManualOrderWorkflow({
   const [searchingPharmacy, setSearchingPharmacy] = useState(false);
   const [searchingProduct, setSearchingProduct] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [draftBusy, setDraftBusy] = useState(false);
+  const [draftUpdatedAt, setDraftUpdatedAt] = useState<string | null>(null);
+  const [draftNotice, setDraftNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState("");
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
 
   const totals = useMemo(() => calculateTotals(lines, shippingAmountHt), [lines, shippingAmountHt]);
   const isAgent = brand.role === "agent";
+
+  useEffect(() => {
+    let cancelled = false;
+    loadManualOrderDraft(brand.id)
+      .then((draft) => {
+        if (cancelled || !draft) return;
+        setPharmacy(draft.pharmacy);
+        setPharmacySearch(draft.pharmacySearch);
+        setOrderType(draft.orderType);
+        setOrderDate(draft.orderDate);
+        setOrderNumber(draft.orderNumber);
+        setExternalOrderId(draft.externalOrderId);
+        setShippingAmountHt(draft.shippingAmountHt);
+        setNotes(draft.notes);
+        setLines(draft.lines.map((line) => ({ ...line, key: line.product.productId })));
+        setDraftUpdatedAt(draft.updatedAt);
+        setDraftNotice("Brouillon local restauré. Rien n’a été envoyé à TR1.");
+      })
+      .catch(() => {
+        if (!cancelled) setDraftNotice("Le brouillon local n’a pas pu être restauré.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [brand.id]);
 
   async function findPharmacies() {
     if (pharmacySearch.trim().length < 2) {
@@ -144,6 +177,45 @@ export function ManualOrderWorkflow({
     setLines((current) => current.filter((line) => line.key !== key));
   }
 
+  async function saveOfflineDraft() {
+    setDraftBusy(true);
+    setError(null);
+    try {
+      const saved = await saveManualOrderDraft({
+        brandId: brand.id,
+        pharmacy,
+        pharmacySearch,
+        orderType,
+        orderDate,
+        orderNumber,
+        externalOrderId,
+        shippingAmountHt,
+        notes,
+        lines: lines.map(({ key: _key, ...line }) => line),
+      });
+      setDraftUpdatedAt(saved.updatedAt);
+      setDraftNotice("Brouillon enregistré sur ce téléphone. Il ne sera jamais envoyé automatiquement.");
+    } catch (cause) {
+      setError(errorMessage(cause));
+    } finally {
+      setDraftBusy(false);
+    }
+  }
+
+  async function discardOfflineDraft() {
+    setDraftBusy(true);
+    setError(null);
+    try {
+      await clearManualOrderDraft(brand.id);
+      setDraftUpdatedAt(null);
+      setDraftNotice("Brouillon local supprimé.");
+    } catch (cause) {
+      setError(errorMessage(cause));
+    } finally {
+      setDraftBusy(false);
+    }
+  }
+
   function review() {
     const validation = buildConfirmation("draft");
     if (typeof validation === "string") {
@@ -168,21 +240,11 @@ export function ManualOrderWorkflow({
       const freeQuantity = Number(line.freeQuantity || 0);
       const unitPriceHt = parseDecimal(line.unitPriceHt);
       const discountRate = line.discountRate.trim() ? parseDecimal(line.discountRate) : null;
-
       if (!Number.isInteger(quantity) || quantity <= 0) return `Quantité invalide pour ${line.product.name}.`;
       if (!Number.isInteger(freeQuantity) || freeQuantity < 0) return `Unités gratuites invalides pour ${line.product.name}.`;
-      if (!Number.isFinite(unitPriceHt)) return `Prix HT invalide pour ${line.product.name}.`;
-      if (discountRate != null && (!Number.isFinite(discountRate) || discountRate < 0 || discountRate > 100)) {
-        return `Remise invalide pour ${line.product.name}.`;
-      }
-
-      normalizedLines.push({
-        product: line.product,
-        quantity,
-        freeQuantity,
-        unitPriceHt,
-        discountRate,
-      });
+      if (!Number.isFinite(unitPriceHt) || unitPriceHt < 0) return `Prix HT invalide pour ${line.product.name}.`;
+      if (discountRate != null && (!Number.isFinite(discountRate) || discountRate < 0 || discountRate > 100)) return `Remise invalide pour ${line.product.name}.`;
+      normalizedLines.push({ product: line.product, quantity, freeQuantity, unitPriceHt, discountRate });
     }
 
     return {
@@ -206,11 +268,12 @@ export function ManualOrderWorkflow({
       setStage("edit");
       return;
     }
-
     setSubmitting(true);
     setError(null);
     try {
       const result = await confirmManualOrder(payload);
+      await clearManualOrderDraft(brand.id).catch(() => undefined);
+      setDraftUpdatedAt(null);
       setSuccessMessage(result.success || "Commande créée.");
       setCreatedOrderId(result.orderId ?? null);
       setStage("success");
@@ -243,9 +306,7 @@ export function ManualOrderWorkflow({
         <StatusBar style="dark" />
         <ScrollView contentContainerStyle={styles.page}>
           <Header onBack={() => setStage("edit")} eyebrow="REVUE" title="Vérifier la commande" subtitle="Aucune commande n’est créée tant que vous n’utilisez pas un bouton de validation ci-dessous." />
-
           {error ? <ErrorCard message={error} /> : null}
-
           <View style={styles.summaryCard}>
             <Info label="Pharmacie" value={pharmacy?.name || "—"} />
             <Info label="Date" value={orderDate} />
@@ -253,7 +314,6 @@ export function ManualOrderWorkflow({
             <Info label="N° commande" value={orderNumber.trim() || "Non renseigné"} />
             <Info label="Réf. externe" value={externalOrderId.trim() || "Non renseignée"} />
           </View>
-
           <Text style={styles.sectionTitle}>Produits</Text>
           {lines.map((line) => {
             const quantity = Number(line.quantity) || 0;
@@ -271,7 +331,6 @@ export function ManualOrderWorkflow({
               </View>
             );
           })}
-
           <Text style={[styles.sectionTitle, styles.sectionSpacing]}>Montants estimés</Text>
           <View style={styles.summaryCard}>
             <Info label="Sous-total HT" value={currency(totals.subtotal)} />
@@ -280,16 +339,13 @@ export function ManualOrderWorkflow({
             <Info label="Livraison HT" value={currency(totals.shipping)} />
             <Info label="Total HT estimé" value={currency(totals.net + totals.shipping)} strong />
           </View>
-
           {notes.trim() ? <View style={styles.noteCard}><Text style={styles.noteLabel}>NOTE</Text><Text style={styles.noteText}>{notes.trim()}</Text></View> : null}
-
           <View style={styles.warningCard}>
             <Text style={styles.warningTitle}>Validation explicite requise</Text>
-            <Text style={styles.warningText}>{isAgent ? "Le brouillon reste modifiable. « Envoyer à la marque » crée la commande au statut En attente de validation." : "Le brouillon reste modifiable. « Valider la commande » crée directement une commande confirmée."}</Text>
+            <Text style={styles.warningText}>{isAgent ? "« Envoyer à la marque » crée la commande au statut En attente de validation. Aucune reprise offline ne déclenche cet envoi automatiquement." : "« Valider la commande » crée une commande confirmée. Aucune reprise offline ne déclenche cette validation automatiquement."}</Text>
           </View>
-
           <Pressable disabled={submitting} onPress={() => void submit("draft")} style={[styles.secondaryButton, submitting && styles.disabled]}>
-            <Text style={styles.secondaryButtonText}>Enregistrer en brouillon</Text>
+            <Text style={styles.secondaryButtonText}>Créer en brouillon TR1</Text>
           </Pressable>
           <Pressable disabled={submitting} onPress={() => void submit(isAgent ? "pending" : "confirmed")} style={[styles.primaryButton, submitting && styles.disabled]}>
             {submitting ? <ActivityIndicator color="#FFF" /> : <Text style={styles.primaryButtonText}>{isAgent ? "Envoyer à la marque" : "Valider la commande"}</Text>}
@@ -305,8 +361,14 @@ export function ManualOrderWorkflow({
       <StatusBar style="dark" />
       <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
         <Header onBack={onBack} eyebrow="COMMANDE MANUELLE" title="Saisir une commande" subtitle="Saisie terrain sans photo. La création n’intervient qu’après une revue complète." />
-
         {error ? <ErrorCard message={error} /> : null}
+        {draftNotice ? (
+          <View style={styles.offlineCard}>
+            <Text style={styles.offlineTitle}>MODE OFFLINE CONTRÔLÉ</Text>
+            <Text style={styles.offlineText}>{draftNotice}</Text>
+            {draftUpdatedAt ? <Text style={styles.offlineMeta}>Dernière sauvegarde locale · {formatLocalDateTime(draftUpdatedAt)}</Text> : null}
+          </View>
+        ) : null}
 
         <Text style={styles.sectionTitle}>1. Pharmacie</Text>
         {pharmacy ? (
@@ -331,7 +393,6 @@ export function ManualOrderWorkflow({
         <Text style={[styles.sectionTitle, styles.sectionSpacing]}>2. Informations</Text>
         <FieldLabel label="Date de commande" />
         <TextInput value={orderDate} onChangeText={setOrderDate} placeholder="AAAA-MM-JJ" placeholderTextColor="#98A2B3" style={styles.input} autoCapitalize="none" />
-
         <FieldLabel label="Type de commande" />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.typeRow}>
           {orderTypes.map((type) => {
@@ -339,7 +400,6 @@ export function ManualOrderWorkflow({
             return <Pressable key={type.value} onPress={() => setOrderType(type.value)} style={[styles.typeChip, active && styles.typeChipActive]}><Text style={[styles.typeChipText, active && styles.typeChipTextActive]}>{type.label}</Text></Pressable>;
           })}
         </ScrollView>
-
         <FieldLabel label="N° de commande (optionnel)" />
         <TextInput value={orderNumber} onChangeText={setOrderNumber} placeholder="Ex. BC-2026-0042" placeholderTextColor="#98A2B3" style={styles.input} maxLength={120} />
         <FieldLabel label="Référence externe (optionnelle)" />
@@ -355,7 +415,6 @@ export function ManualOrderWorkflow({
             <Text style={styles.resultTitle}>{product.name}</Text><Text style={styles.resultMeta}>{product.sku || product.ean || "Référence non renseignée"}{product.unitPriceHt != null ? ` · ${currency(product.unitPriceHt)} HT` : ""}</Text>
           </Pressable>
         ))}
-
         {lines.map((line, index) => (
           <View key={line.key} style={styles.lineCard}>
             <View style={styles.lineHeader}>
@@ -378,13 +437,17 @@ export function ManualOrderWorkflow({
         <TextInput value={shippingAmountHt} onChangeText={setShippingAmountHt} keyboardType="decimal-pad" style={styles.input} />
         <FieldLabel label="Note (optionnelle)" />
         <TextInput value={notes} onChangeText={setNotes} placeholder="Contexte utile pour la marque…" placeholderTextColor="#98A2B3" style={[styles.input, styles.multiline]} multiline maxLength={4000} textAlignVertical="top" />
-
         <View style={styles.totalPreview}>
           <Text style={styles.totalPreviewLabel}>TOTAL HT ESTIMÉ</Text>
           <Text style={styles.totalPreviewValue}>{currency(totals.net + totals.shipping)}</Text>
           <Text style={styles.totalPreviewMeta}>{lines.length} ligne(s) · hors calcul fiscal final TR1</Text>
         </View>
 
+        <Pressable disabled={draftBusy} onPress={() => void saveOfflineDraft()} style={[styles.secondaryButton, draftBusy && styles.disabled]}>
+          {draftBusy ? <ActivityIndicator color="#3B5BDB" /> : <Text style={styles.secondaryButtonText}>Enregistrer sur ce téléphone</Text>}
+        </Pressable>
+        {draftUpdatedAt ? <Pressable disabled={draftBusy} onPress={() => void discardOfflineDraft()} style={styles.editButton}><Text style={styles.dangerLink}>Supprimer le brouillon local</Text></Pressable> : null}
+        <View style={styles.offlineRule}><Text style={styles.offlineRuleText}>Un brouillon local n’est jamais synchronisé ni envoyé automatiquement. Une validation explicite reste obligatoire après retour du réseau.</Text></View>
         <Pressable onPress={review} style={styles.primaryButton}><Text style={styles.primaryButtonText}>Revoir avant validation</Text></Pressable>
       </ScrollView>
     </SafeAreaView>
@@ -392,27 +455,12 @@ export function ManualOrderWorkflow({
 }
 
 function Header({ onBack, eyebrow, title, subtitle }: { onBack: () => void; eyebrow: string; title: string; subtitle: string }) {
-  return (
-    <>
-      <Pressable onPress={onBack} style={styles.backButton}><Text style={styles.backText}>‹</Text></Pressable>
-      <Text style={styles.eyebrow}>{eyebrow}</Text>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.subtitle}>{subtitle}</Text>
-    </>
-  );
+  return <><Pressable onPress={onBack} style={styles.backButton}><Text style={styles.backText}>‹</Text></Pressable><Text style={styles.eyebrow}>{eyebrow}</Text><Text style={styles.title}>{title}</Text><Text style={styles.subtitle}>{subtitle}</Text></>;
 }
 
-function FieldLabel({ label }: { label: string }) {
-  return <Text style={styles.fieldLabel}>{label}</Text>;
-}
-
-function Info({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
-  return <View style={styles.infoRow}><Text style={styles.infoLabel}>{label}</Text><Text style={[styles.infoValue, strong && styles.infoStrong]}>{value}</Text></View>;
-}
-
-function ErrorCard({ message }: { message: string }) {
-  return <View style={styles.errorCard}><Text style={styles.errorText}>{message}</Text></View>;
-}
+function FieldLabel({ label }: { label: string }) { return <Text style={styles.fieldLabel}>{label}</Text>; }
+function Info({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) { return <View style={styles.infoRow}><Text style={styles.infoLabel}>{label}</Text><Text style={[styles.infoValue, strong && styles.infoStrong]}>{value}</Text></View>; }
+function ErrorCard({ message }: { message: string }) { return <View style={styles.errorCard}><Text style={styles.errorText}>{message}</Text></View>; }
 
 function calculateTotals(lines: EditableLine[], shippingValue: string) {
   let subtotal = 0;
@@ -430,29 +478,12 @@ function calculateTotals(lines: EditableLine[], shippingValue: string) {
   return { subtotal, discount, net: subtotal - discount, shipping: Number.isFinite(shipping) ? Math.max(shipping, 0) : 0 };
 }
 
-function parseDecimal(value: string) {
-  return Number(value.trim().replace(",", "."));
-}
-
-function localDateString() {
-  const date = new Date();
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function currency(value: number) {
-  return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 2 }).format(Number.isFinite(value) ? value : 0);
-}
-
-function orderTypeLabel(value: ManualOrderType) {
-  return orderTypes.find((type) => type.value === value)?.label || value;
-}
-
-function errorMessage(cause: unknown) {
-  return cause instanceof Error ? cause.message : "Une erreur TR1 est survenue.";
-}
+function parseDecimal(value: string) { return Number(value.trim().replace(",", ".")); }
+function localDateString() { const date = new Date(); return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`; }
+function currency(value: number) { return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 2 }).format(Number.isFinite(value) ? value : 0); }
+function orderTypeLabel(value: ManualOrderType) { return orderTypes.find((type) => type.value === value)?.label || value; }
+function errorMessage(cause: unknown) { return cause instanceof Error ? cause.message : "Une erreur TR1 est survenue."; }
+function formatLocalDateTime(value: string) { const date = new Date(value); return Number.isNaN(date.getTime()) ? value : date.toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" }); }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
@@ -502,6 +533,7 @@ const styles = StyleSheet.create({
   secondaryButtonText: { color: "#3B5BDB", fontSize: 13, fontWeight: "800" },
   editButton: { alignItems: "center", justifyContent: "center", padding: 14 },
   editButtonText: { color: "#667085", fontSize: 12, fontWeight: "700" },
+  dangerLink: { color: "#B42318", fontSize: 11, fontWeight: "700" },
   disabled: { opacity: 0.55 },
   errorCard: { borderRadius: 15, backgroundColor: "#FEF3F2", padding: 14, marginBottom: 14 },
   errorText: { color: "#B42318", fontSize: 12, lineHeight: 18 },
@@ -518,6 +550,12 @@ const styles = StyleSheet.create({
   warningCard: { borderRadius: 15, backgroundColor: "#FFFAEB", borderWidth: 1, borderColor: "#FEDF89", padding: 14, marginBottom: 4 },
   warningTitle: { color: "#93370D", fontSize: 12, fontWeight: "800" },
   warningText: { color: "#93370D", fontSize: 11, lineHeight: 17, marginTop: 4 },
+  offlineCard: { borderRadius: 15, backgroundColor: "#EFF8FF", borderWidth: 1, borderColor: "#B2DDFF", padding: 14, marginBottom: 18 },
+  offlineTitle: { color: "#175CD3", fontSize: 10, fontWeight: "800", letterSpacing: 0.7 },
+  offlineText: { color: "#1849A9", fontSize: 11, lineHeight: 17, marginTop: 4 },
+  offlineMeta: { color: "#667085", fontSize: 9, marginTop: 6 },
+  offlineRule: { borderRadius: 13, backgroundColor: "#F2F4F7", padding: 12, marginTop: 8 },
+  offlineRuleText: { color: "#475467", fontSize: 10, lineHeight: 15 },
   successCard: { borderRadius: 18, backgroundColor: "#ECFDF3", borderWidth: 1, borderColor: "#ABEFC6", padding: 18, marginBottom: 14 },
   successTitle: { color: "#067647", fontSize: 14, lineHeight: 21, fontWeight: "800" },
   successMeta: { color: "#067647", fontSize: 10, marginTop: 6 },
