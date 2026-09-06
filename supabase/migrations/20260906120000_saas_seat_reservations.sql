@@ -2,7 +2,7 @@ create table private.brand_seat_reservations (
   id uuid primary key default gen_random_uuid(),
   brand_id uuid not null references public.brands(id) on delete cascade,
   email text not null,
-  role_id uuid not null references public.roles(id) on delete restrict,
+  role_id smallint not null references public.roles(id) on delete restrict,
   invited_by uuid references public.users(id) on delete set null,
   expires_at timestamptz not null,
   created_at timestamptz not null default now(),
@@ -22,7 +22,7 @@ revoke all on private.brand_seat_reservations from public,anon,authenticated;
 create or replace function public.reserve_brand_saas_seat(
   target_brand_id uuid,
   target_email text,
-  target_role_id uuid,
+  target_role_id smallint,
   target_invited_by uuid
 )
 returns uuid
@@ -169,10 +169,10 @@ begin
 end;
 $$;
 
-revoke all on function public.reserve_brand_saas_seat(uuid,text,uuid,uuid) from public,anon,authenticated;
+revoke all on function public.reserve_brand_saas_seat(uuid,text,smallint,uuid) from public,anon,authenticated;
 revoke all on function public.release_brand_saas_seat(uuid) from public,anon,authenticated;
 revoke all on function public.consume_brand_saas_seat(uuid,uuid) from public,anon,authenticated;
-grant execute on function public.reserve_brand_saas_seat(uuid,text,uuid,uuid) to service_role;
+grant execute on function public.reserve_brand_saas_seat(uuid,text,smallint,uuid) to service_role;
 grant execute on function public.release_brand_saas_seat(uuid) to service_role;
 grant execute on function public.consume_brand_saas_seat(uuid,uuid) to service_role;
 
@@ -270,7 +270,7 @@ $$;
 revoke all on function private.validate_brand_saas_seat_limit() from public,anon,authenticated;
 
 comment on table private.brand_seat_reservations is 'Short-lived seat commitments created before external Auth invitations so concurrent invitations cannot oversubscribe a tenant.';
-comment on function public.reserve_brand_saas_seat(uuid,text,uuid,uuid) is 'Reserves one tenant seat under the entitlement lock before an external Auth invitation is sent.';
+comment on function public.reserve_brand_saas_seat(uuid,text,smallint,uuid) is 'Reserves one tenant seat under the entitlement lock before an external Auth invitation is sent.';
 comment on function public.consume_brand_saas_seat(uuid,uuid) is 'Atomically replaces one valid seat reservation with the invited user membership.';
 comment on function public.release_brand_saas_seat(uuid) is 'Releases only the reservation created by a failed invitation attempt.';
 comment on function private.validate_brand_saas_seat_limit() is 'Prevents configuring a seat limit below current distinct invited/active users plus live invitation reservations.';
