@@ -36,6 +36,7 @@ describe("role navigation", () => {
     expect(tenantLinks).toContain("/dashboard/users");
     expect(tenantLinks).toContain("/dashboard/imports");
     expect(tenantLinks).toContain("/dashboard/connectors");
+    expect(tenantLinks).toContain("/dashboard/providers");
     expect(tenantLinks).not.toContain("/dashboard/admin/leads");
     expect(tenantLinks).not.toContain("/dashboard/admin/saas");
   });
@@ -56,6 +57,7 @@ describe("role navigation", () => {
       expect.objectContaining({ href: "/dashboard/forecast", label: "Forecast" }),
       expect.objectContaining({ href: "/dashboard/pharma-360", label: "Pharma 360" }),
       expect.objectContaining({ href: "/dashboard/commercial-health", label: "Priorités" }),
+      expect.objectContaining({ href: "/dashboard/providers", label: "Prestataires" }),
       expect.objectContaining({ href: "/dashboard/pharmacies" }),
       expect.objectContaining({ href: "/dashboard/orders" }),
       expect.objectContaining({ href: "/dashboard/missions" }),
@@ -81,6 +83,7 @@ describe("role navigation", () => {
     expect(managerLinks).not.toContain("/dashboard/forecast");
     expect(managerLinks).not.toContain("/dashboard/pharma-360");
     expect(managerLinks).not.toContain("/dashboard/commercial-health");
+    expect(managerLinks).not.toContain("/dashboard/providers");
     expect(managerLinks).toContain("/dashboard/pharmacies");
     expect(managerLinks).toContain("/dashboard/orders");
     expect(adminLinks).not.toContain("/dashboard/connectors");
@@ -91,7 +94,7 @@ describe("role navigation", () => {
   });
 
   it("lets an explicit capability immediately expose its module", () => {
-    const capabilities = ["core_crm", "orders", "agent_day", "missions", "performance", "assistant_terrain", "next_best_action", "sell_out", "forecast", "pharma_360", "connectors"] as const;
+    const capabilities = ["core_crm", "orders", "agent_day", "missions", "performance", "assistant_terrain", "next_best_action", "sell_out", "forecast", "pharma_360", "connectors", "multi_provider"] as const;
     expect(getAgentMoreItems(capabilities).map((item) => item.href)).toContain("/dashboard/agent/assistant");
     expect(getAgentMoreItems(capabilities).map((item) => item.href)).toContain("/dashboard/sell-out");
     const managerLinks = getNavigationItems("tr1_manager", "tenant", capabilities).map((item) => item.href);
@@ -99,6 +102,7 @@ describe("role navigation", () => {
     expect(managerLinks).toContain("/dashboard/commercial-health");
     expect(managerLinks).toContain("/dashboard/forecast");
     expect(managerLinks).toContain("/dashboard/pharma-360");
+    expect(managerLinks).toContain("/dashboard/providers");
     expect(adminLinks).toContain("/dashboard/connectors");
   });
 
@@ -117,6 +121,7 @@ describe("role navigation", () => {
     expect(getRoleFamily("facilitator")).toBe("facilitator");
     expect(getRoleFamily("brand_direction")).toBe("direction");
     expect(isNavigationItemActive("/dashboard/pharmacies/123", "/dashboard/pharmacies")).toBe(true);
+    expect(isNavigationItemActive("/dashboard/providers/123", "/dashboard/providers")).toBe(true);
     expect(isNavigationItemActive("/dashboard/commercial-health", "/dashboard")).toBe(false);
   });
 
