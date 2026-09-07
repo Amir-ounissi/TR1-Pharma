@@ -14,7 +14,7 @@ export type ConnectorConnectionStatus = "draft" | "ready" | "active" | "paused" 
 export type ConnectorCredentialStatus = "missing" | "configured" | "expired";
 export type ConnectorSyncStatus = "queued" | "running" | "succeeded" | "partial" | "failed" | "cancelled";
 
-export const CONNECTOR_ENTITY_TYPES = ["pharmacies", "contacts", "products", "orders", "visits", "notes"] as const;
+export const CONNECTOR_ENTITY_TYPES = ["pharmacies", "contacts", "products", "orders", "visits", "notes", "users"] as const;
 export type ConnectorEntityType = (typeof CONNECTOR_ENTITY_TYPES)[number];
 
 export type ConnectorRecord = {
