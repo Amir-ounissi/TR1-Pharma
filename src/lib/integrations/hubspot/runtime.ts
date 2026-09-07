@@ -20,12 +20,31 @@ type HubSpotConnection = {
   id: string;
   base_url: string | null;
   credential_reference: string | null;
+  configuration: Record<string, unknown> | null;
 };
 
-function syncMode(): HubSpotClientMode {
+function configuredMode(connection: HubSpotConnection) {
+  const value = connection.configuration?.mode;
+  return typeof value === "string" ? value.trim().toLowerCase() : null;
+}
+
+function syncMode(connection: HubSpotConnection): HubSpotClientMode {
   const requested = process.env.TR1_HUBSPOT_MODE?.trim().toLowerCase();
+  const configured = configuredMode(connection);
+
   if (requested === "dry_run") return "dry_run";
-  if (requested === "write" && process.env.TR1_HUBSPOT_WRITE_ENABLED === "true") return "write";
+  if (!requested && configured === "dry_run") return "dry_run";
+
+  const connectionWriteEnabled = connection.configuration?.write_enabled === true;
+  if (
+    requested === "write"
+    && configured === "write"
+    && connectionWriteEnabled
+    && process.env.TR1_HUBSPOT_WRITE_ENABLED === "true"
+  ) {
+    return "write";
+  }
+
   return "disabled";
 }
 
@@ -45,7 +64,7 @@ function safeError(error: unknown) {
 async function findConnection(admin: ReturnType<typeof createAdminClient>, brandId: string, entityType: HubSpotRuntimeEntity) {
   const { data: connection, error: connectionError } = await admin
     .from("connector_connections")
-    .select("id,base_url,credential_reference")
+    .select("id,base_url,credential_reference,configuration")
     .eq("brand_id", brandId)
     .eq("provider", "hubspot")
     .eq("status", "active")
@@ -244,7 +263,7 @@ async function withRuntime(
   if (!connection) return;
 
   assertHubSpotBrandConfiguration(NAALI_HUBSPOT_CONFIGURATION);
-  const mode = syncMode();
+  const mode = syncMode(connection);
   const client = new HubSpotClient({
     mode,
     accessToken: accessToken(connection, mode),
