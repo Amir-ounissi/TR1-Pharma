@@ -186,7 +186,7 @@ test.describe.serial("Sprint 9 — Pilotage commercial et réassort", () => {
     await page.screenshot({ path: "artifacts/sprint9/priorities-mobile.png", fullPage: true });
   });
 
-  test("agent — cinq opportunités maximum et création explicite", async ({ page }) => {
+  test("agent — intelligence réassort conservée sans surcharger l’accueil", async ({ page }) => {
     const agent = await userClient("agent@dermavita.local");
     const { data: opportunities, error } = await agent.rpc("get_agent_reorder_opportunities", {
       target_brand_id: dermavitaBrandId,
@@ -197,32 +197,30 @@ test.describe.serial("Sprint 9 — Pilotage commercial et réassort", () => {
     expect(opportunities?.some((row) => row.brand_pharmacy_id === agentRelationId)).toBe(true);
     expect(opportunities?.some((row) => row.brand_pharmacy_id === conversionRelationId)).toBe(false);
 
-    await signIn(page, "agent@dermavita.local", /Dermavita/);
-    await page.goto("/dashboard/agent");
-    const section = page.locator("section").filter({ hasText: "Opportunités de réassort" });
-    const opportunityCard = section.locator('[data-slot="card"]').filter({ hasText: agentPharmacyName });
-    await expect(opportunityCard).toBeVisible();
-    await expect(section.getByText(conversionPharmacyName)).toHaveCount(0);
-    await opportunityCard.getByText("Créer la relance").click();
-    await opportunityCard.getByRole("button", { name: "Confirmer la création" }).click();
-
     const admin = adminClient();
-    await expect.poll(async () => {
-      const { count } = await admin
-        .from("tasks")
-        .select("*", { count: "exact", head: true })
-        .eq("brand_pharmacy_id", agentRelationId)
-        .eq("title", `Relance réassort — ${agentPharmacyName}`);
-      return count;
-    }).toBe(1);
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.screenshot({ path: "artifacts/sprint9/agent-opportunities-mobile.png", fullPage: true });
-    const { count } = await admin
+    const { count: beforeCount } = await admin
       .from("tasks")
       .select("*", { count: "exact", head: true })
       .eq("brand_pharmacy_id", agentRelationId)
       .eq("title", `Relance réassort — ${agentPharmacyName}`);
-    expect(count).toBe(1);
+    expect(beforeCount).toBe(0);
+
+    await signIn(page, "agent@dermavita.local", /Dermavita/);
+    await page.goto("/dashboard/agent");
+    const reorderSection = page.locator('section[aria-labelledby="reorder-opportunities-title"]');
+    await expect(reorderSection).not.toBeVisible();
+    await expect(reorderSection.getByText(agentPharmacyName)).not.toBeVisible();
+    await page.setViewportSize({ width: 390, height: 844 });
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(1);
+    await page.screenshot({ path: "artifacts/sprint9/agent-home-mobile.png", fullPage: true });
+
+    const { count: afterCount } = await admin
+      .from("tasks")
+      .select("*", { count: "exact", head: true })
+      .eq("brand_pharmacy_id", agentRelationId)
+      .eq("title", `Relance réassort — ${agentPharmacyName}`);
+    expect(afterCount).toBe(0);
   });
 
   test("sécurité — URL, marque, compte et réglages restent cloisonnés", async () => {

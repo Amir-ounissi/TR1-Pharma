@@ -3,13 +3,11 @@ import { AgentDayExperience, type AgentNextVisit, type AgentTodayData } from "@/
 import { DashboardTracker } from "@/components/agent/dashboard-tracker";
 import { TerrainActivityFeed, type TerrainImpact } from "@/components/agent/terrain-activity-feed";
 import { TerrainMomentum } from "@/components/agent/terrain-momentum";
-import { Button } from "@/components/ui/button";
 import { QuickActions } from "@/components/ux/quick-actions";
 import { buildGoogleMapsUrl, buildWazeUrl } from "@/lib/agent-experience";
 import type { AgentScheduledVisit } from "@/lib/agent-visits";
 import { requireActiveBrand } from "@/lib/auth";
 import { parisBusinessDate } from "@/lib/business-date";
-import type { CommercialHealthRow } from "@/lib/commercial-health";
 import { requireActiveBrandCapability } from "@/lib/saas/server";
 
 type FieldAgendaEvent = {
@@ -41,12 +39,9 @@ export default async function AgentPage() {
   const { supabase, brand, profile, userId } = session;
   const today = parisBusinessDate();
   const now = new Date();
-  const [{ data: agenda }, { data: nextVisit }, opportunitiesResult, recentImpactResult, fieldAgendaResult] = await Promise.all([
+  const [{ data: agenda }, { data: nextVisit }, recentImpactResult, fieldAgendaResult] = await Promise.all([
     supabase.rpc("get_agent_today", { target_brand_id: brand.id, target_date: today }),
     supabase.rpc("get_next_agent_visit", { target_brand_id: brand.id }),
-    saas.capabilities.has("next_best_action")
-      ? supabase.rpc("get_agent_reorder_opportunities", { target_brand_id: brand.id, result_limit: 5 })
-      : Promise.resolve({ data: [] }),
     saas.capabilities.has("missions")
       ? supabase.from("mission_impact").select("mission_id,mission_title,mission_date,mission_type,sell_out_units,first_order_after_at,days_to_first_order_after,observation_maturity").eq("brand_id", brand.id).eq("assigned_user_id", userId).order("mission_date", { ascending: false }).limit(3)
       : Promise.resolve({ data: [] }),
@@ -106,7 +101,7 @@ export default async function AgentPage() {
   });
 
   return (
-    <main className="mx-auto max-w-6xl space-y-5 pb-[calc(2rem+env(safe-area-inset-bottom))]">
+    <main className="mx-auto min-w-0 max-w-6xl space-y-5 overflow-x-hidden pb-[calc(2rem+env(safe-area-inset-bottom))]">
       <DashboardTracker />
       <TerrainMomentum
         firstName={firstName}
@@ -117,15 +112,30 @@ export default async function AgentPage() {
       />
       {quickActions.length ? <QuickActions className="hidden sm:grid" actions={quickActions} /> : null}
       {saas.capabilities.has("missions") ? <TerrainActivityFeed impacts={(recentImpactResult.data ?? []) as TerrainImpact[]} /> : null}
-      <AgentDayExperience
-        brandId={brand.id}
-        userId={userId}
-        day={day}
-        visit={visit}
-        opportunities={(opportunitiesResult.data ?? []) as CommercialHealthRow[]}
-        wazeUrl={navigation ? buildWazeUrl(navigation) : ""}
-        mapsUrl={navigation ? buildGoogleMapsUrl(navigation) : ""}
-      />
+      <div className="agent-home-focus min-w-0">
+        <AgentDayExperience
+          brandId={brand.id}
+          userId={userId}
+          day={day}
+          visit={visit}
+          opportunities={[]}
+          wazeUrl={navigation ? buildWazeUrl(navigation) : ""}
+          mapsUrl={navigation ? buildGoogleMapsUrl(navigation) : ""}
+        />
+      </div>
+      <style>{`
+        .agent-home-focus section[aria-labelledby="reorder-opportunities-title"] {
+          display: none;
+        }
+        .agent-home-focus section[aria-label="Aujourd’hui"] > :first-child {
+          display: none;
+        }
+        @media (min-width: 1280px) {
+          .agent-home-focus section[aria-label="Aujourd’hui"] {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+          }
+        }
+      `}</style>
     </main>
   );
 }
