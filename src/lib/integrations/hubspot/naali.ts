@@ -85,7 +85,7 @@ export const NAALI_HUBSPOT_CONFIGURATION: HubSpotBrandConfiguration = {
     confirmedStage: NAALI_HUBSPOT_ORDER_ROUTES.commercial.confirmedStage,
   },
   order: {
-    syncStatuses: ["confirmed", "invoiced", "partially_delivered", "delivered"],
+    syncStatuses: ["pending", "confirmed", "invoiced", "partially_delivered", "delivered"],
     linePricingMode: "unit_price_with_discount",
     freeUnitsMode: "separate_line",
     freeUnitNameSuffix: "UG",
