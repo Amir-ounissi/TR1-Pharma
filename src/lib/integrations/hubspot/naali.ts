@@ -63,7 +63,11 @@ export const NAALI_HUBSPOT_CONFIGURATION: HubSpotBrandConfiguration = {
     },
     lineItem: {
       name: "name",
+      description: "description",
       sku: "hs_sku",
+      productExternalId: "hs_product_id",
+      primaryProductExternalId: "primary_product_id",
+      productType: "type_de_produit_naali",
       quantity: "quantity",
       unitPriceHt: "price",
       discountPercent: "hs_discount_percentage",
@@ -88,6 +92,6 @@ export const NAALI_HUBSPOT_CONFIGURATION: HubSpotBrandConfiguration = {
     syncStatuses: ["pending", "confirmed", "invoiced", "partially_delivered", "delivered"],
     linePricingMode: "unit_price_with_discount",
     freeUnitsMode: "separate_line",
-    freeUnitNameSuffix: "UG",
+    freeUnitNamePrefix: "UG",
   },
 };
