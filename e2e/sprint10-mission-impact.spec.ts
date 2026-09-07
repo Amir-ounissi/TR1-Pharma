@@ -96,6 +96,36 @@ async function createCompletedMissionFixture({
   });
   expect(missionError).toBeNull();
 
+  if (missionType === "animation") {
+    const { error: evidenceError } = await admin.from("mission_attachments").insert([
+      {
+        mission_id: id,
+        brand_id: brandId,
+        object_path: `${brandId}/${id}/${randomUUID()}.jpg`,
+        original_name: "plan-merchandising.jpg",
+        mime_type: "image/jpeg",
+        size_bytes: 1024,
+        visibility: "shared",
+        uploaded_by: providerId,
+        evidence_kind: "merch_plan",
+        analysis_status: "confirmed",
+      },
+      {
+        mission_id: id,
+        brand_id: brandId,
+        object_path: `${brandId}/${id}/${randomUUID()}.jpg`,
+        original_name: "resultat-merchandising.jpg",
+        mime_type: "image/jpeg",
+        size_bytes: 1024,
+        visibility: "shared",
+        uploaded_by: providerId,
+        evidence_kind: "merch_after",
+        analysis_status: "confirmed",
+      },
+    ]);
+    expect(evidenceError).toBeNull();
+  }
+
   const provider = await userClient("animatrice@dermavita.local");
   const { data: reportId, error: reportError } = await provider.rpc("save_mission_report", {
     target_mission_id: id,
