@@ -43,6 +43,7 @@ export const NAALI_HUBSPOT_CONFIGURATION: HubSpotBrandConfiguration = {
       startAt: "hs_meeting_start_time",
       endAt: "hs_meeting_end_time",
       timestamp: "hs_timestamp",
+      outcome: "hs_meeting_outcome",
     },
     note: {
       body: "hs_note_body",
