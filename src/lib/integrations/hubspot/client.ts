@@ -95,6 +95,10 @@ export class HubSpotClient {
     }
   }
 
+  getMode() {
+    return this.mode;
+  }
+
   async read<T = unknown>(path: string): Promise<HubSpotRequestResult<T>> {
     if (this.mode === "disabled") return { mode: this.mode, data: null, status: null, correlationId: null };
     return this.request<T>("GET", path);
