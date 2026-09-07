@@ -100,7 +100,7 @@ export async function POST(request: Request) {
 
     const result = Array.isArray(data) ? data[0] : data;
     const orderId = result?.order_id ? String(result.order_id) : null;
-    if (orderId && input.orderStatus === "confirmed") {
+    if (orderId && input.orderStatus !== "draft") {
       await syncHubSpotOrderAfterPersistence(brand.id, orderId);
     }
 
