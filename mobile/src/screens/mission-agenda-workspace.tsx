@@ -11,6 +11,8 @@ import {
   View,
 } from "react-native";
 
+import { GuidedReportField } from "../components/guided-report-field";
+import { reportSuggestions } from "../lib/field-progress";
 import type { BrandContext } from "../../App";
 import { supabase } from "../lib/supabase";
 
@@ -82,13 +84,13 @@ type BacklogItem = {
   priority: string;
 };
 
-export function MissionAgendaWorkspace({ brand, mode, onBack }: { brand: BrandContext; mode: Mode; onBack: () => void }) {
-  return mode === "missions" ? <MissionList brand={brand} onBack={onBack} /> : <AgendaDay brand={brand} onBack={onBack} />;
+export function MissionAgendaWorkspace({ brand, mode, onBack, initialMissionId = null }: { brand: BrandContext; mode: Mode; onBack: () => void; initialMissionId?: string | null }) {
+  return mode === "missions" ? <MissionList brand={brand} onBack={onBack} initialMissionId={initialMissionId} /> : <AgendaDay brand={brand} onBack={onBack} />;
 }
 
-function MissionList({ brand, onBack }: { brand: BrandContext; onBack: () => void }) {
+function MissionList({ brand, onBack, initialMissionId }: { brand: BrandContext; onBack: () => void; initialMissionId: string | null }) {
   const [missions, setMissions] = useState<Mission[]>([]);
-  const [selectedMissionId, setSelectedMissionId] = useState<string | null>(null);
+  const [selectedMissionId, setSelectedMissionId] = useState<string | null>(initialMissionId);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -414,7 +416,7 @@ function MissionDetail({ brand, missionId, onBack }: { brand: BrandContext; miss
                     </Pressable>
                   ))}
                 </View>
-                <Text style={styles.transitionHelp}>TR1 revérifie vos droits et la transition côté serveur avant toute modification.</Text>
+                <Text style={styles.transitionHelp}>Le changement sera confirmé après enregistrement.</Text>
               </View>
             ) : null}
 
@@ -430,10 +432,11 @@ function MissionDetail({ brand, missionId, onBack }: { brand: BrandContext; miss
                 {mission.status === "completed" && report?.reportStatus === "validated" ? <View style={styles.successCard}><Text style={styles.successText}>Compte-rendu validé. Mission terminée.</Text></View> : null}
                 {mission.status === "completed" && report?.reportStatus === "rejected" ? <View style={styles.errorCard}><Text style={styles.errorText}>Compte-rendu clôturé avec rejet{report.rejectionReason ? ` : ${report.rejectionReason}` : "."}</Text></View> : null}
 
-                <ReportField label="Résumé *" value={reportSummary} onChangeText={setReportSummary} editable={reportEditable} placeholder="Résultat de la visite, points clés, décision de la pharmacie…" />
-                <ReportField label="Retour pharmacie" value={pharmacyFeedback} onChangeText={setPharmacyFeedback} editable={reportEditable} placeholder="Réactions de l’équipe, objections, perception…" />
-                <ReportField label="Opportunités" value={opportunities} onChangeText={setOpportunities} editable={reportEditable} placeholder="Réassort, référencement, formation, sell-out…" />
-                <ReportField label="Prochaine étape" value={nextStep} onChangeText={setNextStep} editable={reportEditable} placeholder="Action concrète à réaliser ensuite" />
+                <GuidedReportField label="Résultat de la mission *" value={reportSummary} onChange={setReportSummary} disabled={!reportEditable || reportSaving !== null} options={reportSuggestions(mission.missionType)} />
+                <GuidedReportField label="Retour pharmacie" value={pharmacyFeedback} onChange={setPharmacyFeedback} disabled={!reportEditable || reportSaving !== null} options={["Accueil favorable", "Stock suffisant", "Prix à revoir", "Gamme inadaptée", "Interlocuteur indisponible"]} />
+                <GuidedReportField label="Opportunité identifiée" value={opportunities} onChange={setOpportunities} disabled={!reportEditable || reportSaving !== null} options={["Réassort", "Nouvelle référence", "Formation", "Animation", "Aucune opportunité identifiée"]} />
+                <GuidedReportField label="Suite à donner" value={nextStep} onChange={setNextStep} disabled={!reportEditable || reportSaving !== null} options={["Recontacter la pharmacie", "Préparer une offre", "Proposer une formation", "Vérifier l’implantation", "Aucune suite nécessaire"]} />
+                <Text style={styles.transitionHelp}>Ces réponses renseignent le rapport. Une commande ou une tâche doit être créée séparément.</Text>
 
                 {reportEditable ? (
                   <View style={styles.reportActions}>
@@ -443,7 +446,7 @@ function MissionDetail({ brand, missionId, onBack }: { brand: BrandContext; miss
                     <Pressable disabled={reportSaving !== null} onPress={() => void saveReport("submitted")} style={[styles.transitionButton, styles.transitionButtonPrimary, reportSaving !== null && styles.disabled]}>
                       {reportSaving === "submitted" ? <ActivityIndicator color="#FFF" /> : <Text style={styles.transitionButtonText}>{report?.reportStatus === "needs_correction" ? "Renvoyer pour validation" : "Envoyer pour validation"}</Text>}
                     </Pressable>
-                    <Text style={styles.transitionHelp}>L’envoi déclenche automatiquement le statut « report pending » côté TR1. Aucun passage en terminé n’est fait sans revue.</Text>
+                    <Text style={styles.transitionHelp}>Votre rapport sera envoyé pour validation. La mission sera comptée comme réussie après validation.</Text>
                   </View>
                 ) : null}
               </View>
@@ -546,23 +549,6 @@ function BacklogCard({ item }: { item: BacklogItem }) {
     <View style={styles.backlogCard}>
       <View style={styles.flex}><Text style={styles.cardTitle}>{item.title}</Text><Text style={styles.meta}>{item.pharmacy_name || "Terrain"}</Text><Text style={styles.smallMeta}>{item.due_at ? `Échéance ${formatDateTime(item.due_at)}` : "Sans horaire"}</Text></View>
       <Badge label={label(item.priority)} />
-    </View>
-  );
-}
-
-function ReportField({ label: fieldLabel, value, onChangeText, editable, placeholder }: { label: string; value: string; onChangeText: (value: string) => void; editable: boolean; placeholder: string }) {
-  return (
-    <View style={styles.reportField}>
-      <Text style={styles.reportFieldLabel}>{fieldLabel}</Text>
-      <TextInput
-        value={value}
-        onChangeText={onChangeText}
-        editable={editable}
-        placeholder={placeholder}
-        placeholderTextColor="#98A2B3"
-        multiline
-        style={[styles.reportInput, !editable && styles.reportInputLocked]}
-      />
     </View>
   );
 }
