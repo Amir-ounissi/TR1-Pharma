@@ -22,6 +22,7 @@ const config: HubSpotBrandConfiguration = {
       orderDate: "closedate",
       amountHt: "amount",
       currency: "deal_currency_code",
+      ownerId: "hubspot_owner_id",
       pipeline: "pipeline",
       stage: "dealstage",
     },
@@ -62,6 +63,7 @@ const confirmedOrder = {
   taxAmount: 21.6,
   amountTtc: 129.6,
   currency: "EUR",
+  ownerExternalId: "owner-123",
   lines: [{
     id: "line-1",
     productId: "product-1",
@@ -85,10 +87,11 @@ describe("HubSpot brand mapping", () => {
     });
   });
 
-  it("maps confirmed order amount from TR1 without recomputing VAT and separates free units", () => {
+  it("maps confirmed order amount and owner from TR1 without recomputing VAT and separates free units", () => {
     const mapped = mapOrderToHubSpot(confirmedOrder, config);
 
     expect(mapped.deal.properties.amount).toBe("108");
+    expect(mapped.deal.properties.hubspot_owner_id).toBe("owner-123");
     expect(mapped.lineItems).toHaveLength(2);
     expect(mapped.lineItems[0].properties).toMatchObject({ quantity: "12", price: "10", hs_discount_percentage: "10", tr1_is_free_unit: "false" });
     expect(mapped.lineItems[1].tr1RecordId).toBe("line-1:free");
@@ -195,6 +198,8 @@ describe("HubSpot order sync idempotence", () => {
       const url = String(input);
       const method = init?.method ?? "GET";
       if (method === "POST" && url.endsWith("/crm/v3/objects/deals")) {
+        const payload = JSON.parse(String(init?.body ?? "{}")) as { properties?: Record<string, string> };
+        expect(payload.properties?.hubspot_owner_id).toBe("owner-123");
         return new Response(JSON.stringify({ id: "deal-1" }), { status: 201 });
       }
       if (method === "POST" && url.endsWith("/crm/v3/objects/line_items")) {
@@ -203,6 +208,10 @@ describe("HubSpot order sync idempotence", () => {
         return new Response(JSON.stringify({ id }), { status: 201 });
       }
       if (method === "PATCH") {
+        if (url.endsWith("/crm/v3/objects/deals/deal-1")) {
+          const payload = JSON.parse(String(init?.body ?? "{}")) as { properties?: Record<string, string> };
+          expect(payload.properties?.hubspot_owner_id).toBe("owner-123");
+        }
         return new Response(JSON.stringify({ id: url.split("/").pop() }), { status: 200 });
       }
       if (method === "PUT") {
