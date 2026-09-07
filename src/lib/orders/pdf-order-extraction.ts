@@ -24,7 +24,7 @@ export async function extractPdfOrder(file: File, fetcher: Fetcher = fetch): Pro
   if (process.env.APP_ENV === "test" && process.env.PDF_ORDER_E2E_MOCK) {
     return parsePdfOrderExtraction(JSON.parse(process.env.PDF_ORDER_E2E_MOCK));
   }
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY ?? process.env.OPEN_API_PREVIEW_KEY;
   if (!apiKey) throw new PdfOrderImportError("openai_unavailable", "L’extraction du document est indisponible pour le moment.");
 
   let fileId: string | null = null;
