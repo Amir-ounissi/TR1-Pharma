@@ -29,7 +29,7 @@ async function runAgentDay(browser: Browser, viewport: { width: number; height: 
   await page.getByRole("link", { name: "Fiche", exact: true }).click();
   await expect(page.getByTestId("terrain-pharmacy-header")).toContainText("Pharmacie République");
   await expect(page.getByTestId("terrain-pharmacy-header")).toContainText("Dernière commande");
-  await expect(page.getByTestId("terrain-pharmacy-header").getByRole("link", { name: "Waze", exact: true })).toBeVisible();
+  await expect(page.getByTestId("terrain-pharmacy-header").getByRole("link", { name: "Itinéraire", exact: true })).toBeVisible();
 
   await page.goto("/dashboard/agent");
   await page.getByRole("button", { name: "Démarrer", exact: true }).click();
