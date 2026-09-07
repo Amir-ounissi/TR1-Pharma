@@ -99,7 +99,8 @@ function mapFreeLine(line: HubSpotOrderLineSyncInput, freeQuantity: number, conf
   const freeProductExternalId = requiredFreeProductExternalId(line);
   const prefix = config.order.freeUnitNamePrefix?.trim();
   const suffix = config.order.freeUnitNameSuffix?.trim() || "UG";
-  const name = prefix ? `${prefix} ${line.name}` : `${line.name} · ${suffix}`;
+  const fallbackName = prefix ? `${prefix} ${line.name}` : `${line.name} · ${suffix}`;
+  const name = line.freeProductName?.trim() || fallbackName;
 
   set(properties, map.name, name);
   set(properties, map.productExternalId, freeProductExternalId);
