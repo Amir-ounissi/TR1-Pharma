@@ -10,8 +10,8 @@ import { Label } from "@/components/ui/label";
 import { translateMatchMethod, translateUiMessage } from "@/lib/ui-copy";
 
 const MAX_ORDER_DOCUMENT_SIZE = 3 * 1024 * 1024;
-const ORDER_DOCUMENT_ACCEPT = "application/pdf,image/jpeg,image/png,image/webp";
-const ORDER_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const ORDER_DOCUMENT_ACCEPT = "application/pdf,image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif";
+const ORDER_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]);
 
 type DraftLine = { productId: string; quantity: string; freeQuantity: string; unitPriceHt: string; discountRate: string };
 
@@ -33,8 +33,13 @@ function replaceInputFile(input: HTMLInputElement, file: File) {
   input.files = transfer.files;
 }
 
+function isHeicPhoto(file: File) {
+  const name = file.name.toLowerCase();
+  return file.type === "image/heic" || file.type === "image/heif" || name.endsWith(".heic") || name.endsWith(".heif");
+}
+
 async function compressOrderPhoto(file: File): Promise<File> {
-  if (file.size <= MAX_ORDER_DOCUMENT_SIZE) return file;
+  if (file.size <= MAX_ORDER_DOCUMENT_SIZE && !isHeicPhoto(file)) return file;
   const objectUrl = URL.createObjectURL(file);
   try {
     const image = new Image();
@@ -82,10 +87,11 @@ export function PdfOrderImport({ isAgent = false }: { isAgent?: boolean }) {
 
   async function prepareFile(file: File | undefined, input: HTMLInputElement | null, otherInput: HTMLInputElement | null) {
     if (!file || !input) return;
-    if (file.type !== "application/pdf" && !ORDER_IMAGE_TYPES.has(file.type)) {
+    const supportedImage = ORDER_IMAGE_TYPES.has(file.type) || isHeicPhoto(file);
+    if (file.type !== "application/pdf" && !supportedImage) {
       input.value = "";
       setFileName("");
-      setFileError("Ajoutez un PDF ou une photo JPG, PNG ou WebP.");
+      setFileError("Ajoutez un PDF ou une photo JPG, PNG, WebP ou HEIC.");
       return;
     }
     if (file.type === "application/pdf" && file.size > MAX_ORDER_DOCUMENT_SIZE) {
@@ -95,7 +101,7 @@ export function PdfOrderImport({ isAgent = false }: { isAgent?: boolean }) {
       return;
     }
     try {
-      const prepared = ORDER_IMAGE_TYPES.has(file.type) ? await compressOrderPhoto(file) : file;
+      const prepared = supportedImage ? await compressOrderPhoto(file) : file;
       if (prepared.size > MAX_ORDER_DOCUMENT_SIZE) throw new Error("file_too_large");
       if (prepared !== file) replaceInputFile(input, prepared);
       if (otherInput) otherInput.value = "";
@@ -112,8 +118,8 @@ export function PdfOrderImport({ isAgent = false }: { isAgent?: boolean }) {
     <form action={analyzeAction} className="space-y-4 rounded-lg border border-dashed p-5" onDrop={(event) => { event.preventDefault(); const file = event.dataTransfer.files[0]; if (!file || !inputRef.current) return; replaceInputFile(inputRef.current, file); void prepareFile(file, inputRef.current, cameraRef.current); }} onDragOver={(event) => event.preventDefault()}>
       <div><h2 className="font-medium">Ajouter la commande</h2><p className="text-sm text-muted-foreground">Importez un PDF ou une photo, ou photographiez directement la commande. Rien n’est créé avant votre confirmation.</p></div>
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="space-y-2"><Label htmlFor="order-document-file">PDF ou photo de commande</Label><Input ref={inputRef} id="order-document-file" name="document" type="file" accept={ORDER_DOCUMENT_ACCEPT} onChange={(event) => void prepareFile(event.target.files?.[0], event.currentTarget, cameraRef.current)} /><p className="text-xs text-muted-foreground">PDF, JPG, PNG ou WebP · 3 Mo max après optimisation.</p></div>
-        <div className="space-y-2"><Label htmlFor="order-camera-file">Photo avec l’appareil</Label><input ref={cameraRef} id="order-camera-file" name="camera" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="sr-only" onChange={(event) => void prepareFile(event.target.files?.[0], event.currentTarget, inputRef.current)} /><Button type="button" variant="outline" className="w-full" onClick={() => cameraRef.current?.click()}>Prendre une photo</Button><p className="text-xs text-muted-foreground">Sur mobile, ouvre directement l’appareil photo arrière.</p></div>
+        <div className="space-y-2"><Label htmlFor="order-document-file">PDF ou photo de commande</Label><Input ref={inputRef} id="order-document-file" name="document" type="file" accept={ORDER_DOCUMENT_ACCEPT} onChange={(event) => void prepareFile(event.target.files?.[0], event.currentTarget, cameraRef.current)} /><p className="text-xs text-muted-foreground">PDF, JPG, PNG, WebP ou HEIC · 3 Mo max après optimisation.</p></div>
+        <div className="space-y-2"><Label htmlFor="order-camera-file">Photo avec l’appareil</Label><input ref={cameraRef} id="order-camera-file" name="camera" type="file" accept="image/*" capture="environment" className="sr-only" onChange={(event) => void prepareFile(event.target.files?.[0], event.currentTarget, inputRef.current)} /><Button type="button" variant="outline" className="w-full" onClick={() => cameraRef.current?.click()}>Prendre une photo</Button><p className="text-xs text-muted-foreground">Sur mobile, ouvre directement l’appareil photo arrière.</p></div>
       </div>
       {fileName ? <p className="text-sm font-medium">Document prêt : <span className="font-normal text-muted-foreground">{fileName}</span></p> : null}{fileError ? <p className="text-sm text-destructive">{fileError}</p> : null}
       <ActionFeedback {...analysis} />
