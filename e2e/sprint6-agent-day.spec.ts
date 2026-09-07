@@ -24,6 +24,7 @@ async function runAgentDay(browser: Browser, viewport: { width: number; height: 
   await expect(page.getByRole("link", { name: "Waze", exact: true }).first()).toBeVisible();
   await expect(page.getByRole("link", { name: "Maps", exact: true }).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Démarrer", exact: true })).toBeVisible();
+  await expect(page.getByText("En retard", { exact: true }).first()).not.toBeVisible();
 
   await openNavigation(page, "Maps");
   await page.getByRole("link", { name: "Fiche", exact: true }).click();
@@ -44,7 +45,7 @@ async function runAgentDay(browser: Browser, viewport: { width: number; height: 
   await page.getByLabel("Quand").fill(dueAt);
   await page.getByRole("button", { name: "Enregistrer et revenir à ma journée" }).click();
   await expect(page.getByRole("status")).toContainText("Interaction et prochaine action enregistrées", { timeout: 60_000 });
-  await expect(page.getByText("En retard", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("En retard", { exact: true }).first()).not.toBeVisible();
 
   const admin = adminClient();
   const interactionResult = await admin.from("interactions").select("id,brand_id,brand_pharmacy_id,created_by,notes,related_task_id").eq("notes", note).single();
@@ -84,6 +85,7 @@ test("Sprint 6 Agent Day mobile et largeurs terrain", async ({ browser }) => {
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow, `no horizontal overflow at ${width}px`).toBeLessThanOrEqual(1);
     await expect(page.getByRole("button", { name: "Démarrer", exact: true })).toBeVisible();
+    await expect(page.getByText("En retard", { exact: true }).first()).not.toBeVisible();
   }
   await context.close();
 });
