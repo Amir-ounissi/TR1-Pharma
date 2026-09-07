@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { CalendarCheck2, CheckCircle2, Clock3, Route } from "lucide-react";
 import { buildAgentVisitDay, type AgentScheduledVisit } from "@/lib/agent-visits";
 
@@ -139,7 +140,7 @@ function TerrainFact({
   positive = false,
   attention = false,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   text: string;
   positive?: boolean;
   attention?: boolean;
