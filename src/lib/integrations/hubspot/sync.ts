@@ -90,6 +90,14 @@ async function resolveNewDealName(
   return name;
 }
 
+function withoutCreateOnlyProductReference(mapped: HubSpotMappedRecord, config: HubSpotBrandConfiguration) {
+  const productReference = config.properties.lineItem.productExternalId;
+  if (productReference !== "hs_product_id" || !(productReference in mapped.properties)) return mapped;
+  const properties = { ...mapped.properties };
+  delete properties[productReference];
+  return { ...mapped, properties };
+}
+
 async function journalFailure(journal: HubSpotSyncJournal, tr1RecordId: string, childKey: string | undefined, error: unknown) {
   if (error instanceof HubSpotApiError) {
     await journal.record({
@@ -301,7 +309,8 @@ export async function syncHubSpotOrder(options: {
   for (const line of mapped.lineItems) {
     const childKey = line.tr1RecordId;
     const child = await links.getChild(order.id, childKey);
-    const synced = await upsertRecord(client, journal, order.id, childKey, config.objects.lineItems, line, child?.externalId ?? null);
+    const lineForSync = child ? withoutCreateOnlyProductReference(line, config) : line;
+    const synced = await upsertRecord(client, journal, order.id, childKey, config.objects.lineItems, lineForSync, child?.externalId ?? null);
     if (synced.mode === "write") writes += 1;
     else planned += 1;
 
