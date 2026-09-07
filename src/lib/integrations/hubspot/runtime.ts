@@ -4,7 +4,7 @@ import type { ConnectorEntityType } from "@/lib/connectors";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { HubSpotClient, type HubSpotClientMode } from "./client";
 import { assertHubSpotBrandConfiguration, type HubSpotMeetingSyncInput, type HubSpotNoteSyncInput, type HubSpotOrderSyncInput } from "./model";
-import { NAALI_HUBSPOT_CONFIGURATION } from "./naali";
+import { NAALI_HUBSPOT_CONFIGURATION, resolveNaaliHubSpotOrderRoute } from "./naali";
 import {
   syncHubSpotNote,
   syncHubSpotOrder,
@@ -85,6 +85,33 @@ async function externalIdFor(
     .maybeSingle();
   if (error) throw error;
   return data?.external_id ? String(data.external_id) : null;
+}
+
+async function roleKeyForOrderUser(
+  admin: ReturnType<typeof createAdminClient>,
+  brandId: string,
+  userId: string,
+) {
+  const { data: membership, error: membershipError } = await admin
+    .from("memberships")
+    .select("role_id")
+    .eq("brand_id", brandId)
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (membershipError) throw membershipError;
+  if (!membership?.role_id) throw new Error(`Active TR1 brand membership missing for order user ${userId}`);
+
+  const { data: role, error: roleError } = await admin
+    .from("roles")
+    .select("key")
+    .eq("id", membership.role_id)
+    .maybeSingle();
+  if (roleError) throw roleError;
+  if (!role?.key) throw new Error(`TR1 role missing for order user ${userId}`);
+  return String(role.key);
 }
 
 function createLinkStore(
@@ -270,12 +297,15 @@ export async function syncHubSpotOrderAfterPersistence(brandId: string, orderId:
       if (itemsError) throw itemsError;
 
       const ownerTr1UserId = order.source_user_id || order.created_by ? String(order.source_user_id || order.created_by) : null;
-      const ownerExternalId = ownerTr1UserId
-        ? await externalIdFor(admin, connection.id, "users", ownerTr1UserId)
-        : null;
-      if (ownerTr1UserId && !ownerExternalId) {
+      if (!ownerTr1UserId) throw new Error(`TR1 order ${orderId} has no source user for HubSpot ownership and routing`);
+
+      const ownerExternalId = await externalIdFor(admin, connection.id, "users", ownerTr1UserId);
+      if (!ownerExternalId) {
         throw new Error(`HubSpot owner mapping missing for TR1 user ${ownerTr1UserId}`);
       }
+
+      const roleKey = await roleKeyForOrderUser(admin, brandId, ownerTr1UserId);
+      const route = resolveNaaliHubSpotOrderRoute(roleKey);
 
       const payload: HubSpotOrderSyncInput = {
         id: String(order.id),
@@ -287,6 +317,9 @@ export async function syncHubSpotOrderAfterPersistence(brandId: string, orderId:
         amountTtc: Number(order.total_ttc),
         currency: String(order.currency_code || "EUR"),
         ownerExternalId,
+        pipelineExternalId: route.pipeline,
+        stageExternalId: route.confirmedStage,
+        originValue: route.origin,
         lines: (items ?? []).map((item) => ({
           id: String(item.id),
           productId: String(item.product_id),
