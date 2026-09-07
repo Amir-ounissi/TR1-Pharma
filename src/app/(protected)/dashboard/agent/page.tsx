@@ -6,11 +6,32 @@ import { TerrainMomentum } from "@/components/agent/terrain-momentum";
 import { Button } from "@/components/ui/button";
 import { QuickActions } from "@/components/ux/quick-actions";
 import { buildGoogleMapsUrl, buildWazeUrl } from "@/lib/agent-experience";
+import type { AgentScheduledVisit } from "@/lib/agent-visits";
 import { requireActiveBrand } from "@/lib/auth";
 import { parisBusinessDate } from "@/lib/business-date";
 import type { CommercialHealthRow } from "@/lib/commercial-health";
 import { requireActiveBrandCapability } from "@/lib/saas/server";
-import { buildTerrainPulse } from "@/lib/terrain-engagement";
+
+type FieldAgendaEvent = {
+  event_key: string;
+  source_kind: string;
+  source_id: string;
+  title: string;
+  start_at: string;
+  end_at: string;
+  pharmacy_id: string | null;
+  pharmacy_name: string | null;
+  city: string | null;
+  brand_ids: string[];
+  ownership: string;
+  status: string;
+};
+
+type RelationRow = {
+  id: string;
+  brand_id: string;
+  pharmacy_id: string;
+};
 
 export default async function AgentPage() {
   const [saas, session] = await Promise.all([
@@ -19,7 +40,8 @@ export default async function AgentPage() {
   ]);
   const { supabase, brand, profile, userId } = session;
   const today = parisBusinessDate();
-  const [{ data: agenda }, { data: nextVisit }, opportunitiesResult, recentImpactResult] = await Promise.all([
+  const now = new Date();
+  const [{ data: agenda }, { data: nextVisit }, opportunitiesResult, recentImpactResult, fieldAgendaResult] = await Promise.all([
     supabase.rpc("get_agent_today", { target_brand_id: brand.id, target_date: today }),
     supabase.rpc("get_next_agent_visit", { target_brand_id: brand.id }),
     saas.capabilities.has("next_best_action")
@@ -28,13 +50,20 @@ export default async function AgentPage() {
     saas.capabilities.has("missions")
       ? supabase.from("mission_impact").select("mission_id,mission_title,mission_date,mission_type,sell_out_units,first_order_after_at,days_to_first_order_after,observation_maturity").eq("brand_id", brand.id).eq("assigned_user_id", userId).order("mission_date", { ascending: false }).limit(3)
       : Promise.resolve({ data: [] }),
+    supabase.rpc("get_my_field_agenda", {
+      start_date: today,
+      end_date: today,
+      brand_filter: brand.id,
+    }),
   ]);
+
+  if (fieldAgendaResult.error) throw new Error(fieldAgendaResult.error.message);
+
   const day = (agenda ?? { tasks: [], missions: [], reports: [], follow_ups: [] }) as AgentTodayData;
   const visit = nextVisit as AgentNextVisit | null;
   const navigation = visit ? { latitude: visit.latitude, longitude: visit.longitude, address_line_1: visit.address } : null;
   const firstName = profile.full_name.split(" ")[0];
-  const dayLabel = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Paris" }).format(new Date());
-  const pulse = buildTerrainPulse(day);
+  const dayLabel = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Paris" }).format(now);
   const quickActions = [
     saas.capabilities.has("orders")
       ? { href: "/dashboard/orders/new", label: "Créer une commande", description: "Saisir une commande terrain", icon: ShoppingCart }
@@ -50,10 +79,42 @@ export default async function AgentPage() {
       : null,
   ].filter((action): action is NonNullable<typeof action> => action !== null);
 
+  const fieldVisits = ((fieldAgendaResult.data ?? []) as FieldAgendaEvent[]).filter(
+    (event) => event.ownership === "mine" && event.source_kind === "field_visit" && Boolean(event.pharmacy_id),
+  );
+  const pharmacyIds = [...new Set(fieldVisits.flatMap((event) => event.pharmacy_id ? [event.pharmacy_id] : []))];
+  const { data: relations } = pharmacyIds.length
+    ? await supabase
+        .from("brand_pharmacies")
+        .select("id,brand_id,pharmacy_id")
+        .eq("brand_id", brand.id)
+        .in("pharmacy_id", pharmacyIds)
+        .is("archived_at", null)
+    : { data: [] as RelationRow[] };
+
+  const scheduledVisits: AgentScheduledVisit[] = fieldVisits.map((event) => {
+    const relation = (relations ?? []).find((item) => item.pharmacy_id === event.pharmacy_id);
+    return {
+      id: event.source_id,
+      pharmacyName: event.pharmacy_name || event.title,
+      city: event.city,
+      startAt: event.start_at,
+      endAt: event.end_at || null,
+      status: event.status,
+      href: relation ? `/dashboard/pharmacies/open/${relation.id}?visit=${event.source_id}` : "/dashboard/agenda",
+    };
+  });
+
   return (
     <main className="mx-auto max-w-6xl space-y-5 pb-[calc(2rem+env(safe-area-inset-bottom))]">
       <DashboardTracker />
-      <TerrainMomentum firstName={firstName} dayLabel={dayLabel} brandName={brand.name} pulse={pulse} hasNextVisit={Boolean(visit)} action={visit ? <Button asChild className="bg-[var(--tr1-orange)] text-white hover:bg-[#d65d05]"><a href="#next-visit-card">Voir ma prochaine visite</a></Button> : undefined} />
+      <TerrainMomentum
+        firstName={firstName}
+        dayLabel={dayLabel}
+        brandName={brand.name}
+        visits={scheduledVisits}
+        nowIso={now.toISOString()}
+      />
       {quickActions.length ? <QuickActions className="hidden sm:grid" actions={quickActions} /> : null}
       {saas.capabilities.has("missions") ? <TerrainActivityFeed impacts={(recentImpactResult.data ?? []) as TerrainImpact[]} /> : null}
       <AgentDayExperience
