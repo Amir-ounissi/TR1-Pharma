@@ -122,11 +122,6 @@ export function TerrainMomentum({
         <Route className="mt-0.5 size-3.5 shrink-0 text-[#f28a3c]" />
         <span className="min-w-0 break-words">Après l’heure du rendez-vous, la visite passe à « À clôturer ».</span>
       </div>
-
-      <style>{`
-        [aria-labelledby="reorder-opportunities-title"] { display: none !important; }
-        [aria-label="Aujourd’hui"] > :first-child { display: none !important; }
-      `}</style>
     </header>
   );
 }
