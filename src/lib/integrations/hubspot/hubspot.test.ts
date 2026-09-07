@@ -35,7 +35,13 @@ const config: HubSpotBrandConfiguration = {
       vatRate: "tr1_vat_rate",
       isFreeUnit: "tr1_is_free_unit",
     },
-    meeting: { name: "hs_meeting_title", startAt: "hs_timestamp", endAt: "hs_meeting_end_time", outcome: "hs_meeting_outcome" },
+    meeting: {
+      name: "hs_meeting_title",
+      startAt: "hs_meeting_start_time",
+      endAt: "hs_meeting_end_time",
+      timestamp: "hs_timestamp",
+      outcome: "hs_meeting_outcome",
+    },
     note: { body: "hs_note_body", timestamp: "hs_timestamp" },
   },
   deal: { pipeline: "pipeline-id", confirmedStage: "confirmed-stage-id" },
@@ -101,10 +107,16 @@ describe("HubSpot brand mapping", () => {
   });
 
   it("maps visits and notes as provider-neutral activities", () => {
-    expect(mapMeetingToHubSpot({ id: "visit-1", title: "Visite", startAt: "2026-09-07T09:00:00Z", outcome: "good" }, config).properties).toMatchObject({
+    expect(mapMeetingToHubSpot({
+      id: "visit-1",
+      title: "Visite",
+      startAt: "2026-09-07T09:00:00Z",
+      outcome: "COMPLETED",
+    }, config).properties).toMatchObject({
       hs_meeting_title: "Visite",
+      hs_meeting_start_time: "2026-09-07T09:00:00Z",
       hs_timestamp: "2026-09-07T09:00:00Z",
-      hs_meeting_outcome: "good",
+      hs_meeting_outcome: "COMPLETED",
     });
     expect(mapNoteToHubSpot({ id: "note-1", body: "Compte rendu", timestamp: "2026-09-07T10:00:00Z" }, config).properties).toMatchObject({
       hs_note_body: "Compte rendu",
