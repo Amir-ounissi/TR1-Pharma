@@ -28,6 +28,7 @@ export const NAALI_HUBSPOT_CONFIGURATION: HubSpotBrandConfiguration = {
       name: "dealname",
       amountHt: "amount",
       currency: "deal_currency_code",
+      ownerId: "hubspot_owner_id",
       pipeline: "pipeline",
       stage: "dealstage",
     },
