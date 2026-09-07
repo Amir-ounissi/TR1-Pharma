@@ -26,7 +26,7 @@ select '00000000-0000-0000-0000-0000000000a1',b.organization_id,b.id,(select id 
 from public.brands b
 on conflict do nothing;
 
-select plan(7);
+select plan(8);
 set local role authenticated;
 
 select set_config('request.jwt.claims','{"sub":"00000000-0000-0000-0000-0000000000a1","role":"authenticated"}',true);
