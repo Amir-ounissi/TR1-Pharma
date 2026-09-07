@@ -1,6 +1,12 @@
 import { HubSpotApiError, type HubSpotClient, type HubSpotClientMode } from "./client";
-import { mapOrderToHubSpot } from "./mappers";
-import type { HubSpotBrandConfiguration, HubSpotMappedRecord, HubSpotOrderSyncInput } from "./model";
+import { mapMeetingToHubSpot, mapNoteToHubSpot, mapOrderToHubSpot } from "./mappers";
+import type {
+  HubSpotBrandConfiguration,
+  HubSpotMappedRecord,
+  HubSpotMeetingSyncInput,
+  HubSpotNoteSyncInput,
+  HubSpotOrderSyncInput,
+} from "./model";
 
 export type HubSpotParentLink = {
   externalId: string;
@@ -37,6 +43,13 @@ export type HubSpotOrderSyncResult = {
   mode: HubSpotClientMode;
   dealExternalId: string | null;
   lineItemExternalIds: Record<string, string>;
+  writes: number;
+  planned: number;
+};
+
+export type HubSpotActivitySyncResult = {
+  mode: HubSpotClientMode;
+  externalId: string | null;
   writes: number;
   planned: number;
 };
@@ -104,6 +117,115 @@ async function upsertRecord(
   }
 }
 
+async function associateWithPharmacy(options: {
+  client: HubSpotClient;
+  journal: HubSpotSyncJournal;
+  tr1RecordId: string;
+  objectType: string;
+  externalId: string;
+  companyObjectType: string;
+  pharmacyExternalId: string;
+}) {
+  const { client, journal, tr1RecordId, objectType, externalId, companyObjectType, pharmacyExternalId } = options;
+  try {
+    const association = await client.associateDefault(objectType, externalId, companyObjectType, pharmacyExternalId);
+    await journal.record({
+      tr1RecordId,
+      eventType: "associate",
+      status: association.mode === "write" ? "succeeded" : "planned",
+      externalId,
+      providerStatus: association.status ?? undefined,
+      providerRequestId: association.correlationId ?? undefined,
+    });
+    return association.mode;
+  } catch (error) {
+    await journalFailure(journal, tr1RecordId, undefined, error);
+    throw error;
+  }
+}
+
+async function syncHubSpotActivity(options: {
+  client: HubSpotClient;
+  config: HubSpotBrandConfiguration;
+  tr1RecordId: string;
+  objectType: string;
+  mapped: HubSpotMappedRecord;
+  pharmacyExternalId?: string | null;
+  links: HubSpotExternalLinkStore;
+  journal: HubSpotSyncJournal;
+}): Promise<HubSpotActivitySyncResult> {
+  const { client, config, tr1RecordId, objectType, mapped, pharmacyExternalId, links, journal } = options;
+  const parent = await links.getParent(tr1RecordId);
+  const synced = await upsertRecord(client, journal, tr1RecordId, undefined, objectType, mapped, parent?.externalId ?? null);
+
+  let writes = synced.mode === "write" ? 1 : 0;
+  let planned = synced.mode === "write" ? 0 : 1;
+  if (synced.mode === "write" && synced.externalId && !parent) {
+    await links.saveParent(tr1RecordId, synced.externalId);
+  }
+
+  if (synced.externalId && pharmacyExternalId) {
+    const associationMode = await associateWithPharmacy({
+      client,
+      journal,
+      tr1RecordId,
+      objectType,
+      externalId: synced.externalId,
+      companyObjectType: config.objects.companies,
+      pharmacyExternalId,
+    });
+    if (associationMode === "write") writes += 1;
+    else planned += 1;
+  }
+
+  return {
+    mode: synced.mode,
+    externalId: synced.externalId,
+    writes,
+    planned,
+  };
+}
+
+export async function syncHubSpotVisit(options: {
+  client: HubSpotClient;
+  config: HubSpotBrandConfiguration;
+  visit: HubSpotMeetingSyncInput;
+  pharmacyExternalId?: string | null;
+  links: HubSpotExternalLinkStore;
+  journal: HubSpotSyncJournal;
+}): Promise<HubSpotActivitySyncResult> {
+  return syncHubSpotActivity({
+    client: options.client,
+    config: options.config,
+    tr1RecordId: options.visit.id,
+    objectType: options.config.objects.meetings,
+    mapped: mapMeetingToHubSpot(options.visit, options.config),
+    pharmacyExternalId: options.pharmacyExternalId,
+    links: options.links,
+    journal: options.journal,
+  });
+}
+
+export async function syncHubSpotNote(options: {
+  client: HubSpotClient;
+  config: HubSpotBrandConfiguration;
+  note: HubSpotNoteSyncInput;
+  pharmacyExternalId?: string | null;
+  links: HubSpotExternalLinkStore;
+  journal: HubSpotSyncJournal;
+}): Promise<HubSpotActivitySyncResult> {
+  return syncHubSpotActivity({
+    client: options.client,
+    config: options.config,
+    tr1RecordId: options.note.id,
+    objectType: options.config.objects.notes,
+    mapped: mapNoteToHubSpot(options.note, options.config),
+    pharmacyExternalId: options.pharmacyExternalId,
+    links: options.links,
+    journal: options.journal,
+  });
+}
+
 export async function syncHubSpotOrder(options: {
   client: HubSpotClient;
   config: HubSpotBrandConfiguration;
@@ -124,22 +246,17 @@ export async function syncHubSpotOrder(options: {
   }
 
   if (deal.externalId && pharmacyExternalId) {
-    try {
-      const association = await client.associateDefault(config.objects.deals, deal.externalId, config.objects.companies, pharmacyExternalId);
-      await journal.record({
-        tr1RecordId: order.id,
-        eventType: "associate",
-        status: association.mode === "write" ? "succeeded" : "planned",
-        externalId: deal.externalId,
-        providerStatus: association.status ?? undefined,
-        providerRequestId: association.correlationId ?? undefined,
-      });
-      if (association.mode === "write") writes += 1;
-      else planned += 1;
-    } catch (error) {
-      await journalFailure(journal, order.id, undefined, error);
-      throw error;
-    }
+    const associationMode = await associateWithPharmacy({
+      client,
+      journal,
+      tr1RecordId: order.id,
+      objectType: config.objects.deals,
+      externalId: deal.externalId,
+      companyObjectType: config.objects.companies,
+      pharmacyExternalId,
+    });
+    if (associationMode === "write") writes += 1;
+    else planned += 1;
   }
 
   const lineItemExternalIds: Record<string, string> = {};

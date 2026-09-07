@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { syncHubSpotOrderAfterPersistence } from "@/lib/integrations/hubspot/runtime";
 import { MobileApiError, mobileApiError, requireMobileBrand } from "@/lib/mobile-api";
 
 export const runtime = "nodejs";
@@ -98,6 +99,11 @@ export async function POST(request: Request) {
     }
 
     const result = Array.isArray(data) ? data[0] : data;
+    const orderId = result?.order_id ? String(result.order_id) : null;
+    if (orderId && input.orderStatus === "confirmed") {
+      await syncHubSpotOrderAfterPersistence(brand.id, orderId);
+    }
+
     return Response.json({
       success:
         input.orderStatus === "draft"
@@ -105,7 +111,7 @@ export async function POST(request: Request) {
           : input.orderStatus === "pending"
             ? "Commande envoyée à la marque."
             : "Commande créée et validée.",
-      orderId: result?.order_id ?? null,
+      orderId,
     });
   } catch (error) {
     return mobileApiError(error);
