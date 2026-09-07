@@ -254,7 +254,7 @@ export async function syncHubSpotOrderAfterPersistence(brandId: string, orderId:
     await withRuntime(brandId, "orders", async ({ admin, client, connection, links, journal }) => {
       const { data: order, error: orderError } = await admin
         .from("orders")
-        .select("id,brand_id,pharmacy_id,order_number,external_order_id,order_status,order_date,net_amount_ht,tax_amount,total_ttc,currency_code")
+        .select("id,brand_id,pharmacy_id,order_number,external_order_id,order_status,order_date,net_amount_ht,tax_amount,total_ttc,currency_code,source_user_id,created_by")
         .eq("id", orderId)
         .eq("brand_id", brandId)
         .is("archived_at", null)
@@ -269,6 +269,14 @@ export async function syncHubSpotOrderAfterPersistence(brandId: string, orderId:
         .eq("brand_id", brandId);
       if (itemsError) throw itemsError;
 
+      const ownerTr1UserId = order.source_user_id || order.created_by ? String(order.source_user_id || order.created_by) : null;
+      const ownerExternalId = ownerTr1UserId
+        ? await externalIdFor(admin, connection.id, "users", ownerTr1UserId)
+        : null;
+      if (ownerTr1UserId && !ownerExternalId) {
+        throw new Error(`HubSpot owner mapping missing for TR1 user ${ownerTr1UserId}`);
+      }
+
       const payload: HubSpotOrderSyncInput = {
         id: String(order.id),
         orderNumber: String(order.order_number || order.external_order_id || order.id),
@@ -278,6 +286,7 @@ export async function syncHubSpotOrderAfterPersistence(brandId: string, orderId:
         taxAmount: Number(order.tax_amount),
         amountTtc: Number(order.total_ttc),
         currency: String(order.currency_code || "EUR"),
+        ownerExternalId,
         lines: (items ?? []).map((item) => ({
           id: String(item.id),
           productId: String(item.product_id),
