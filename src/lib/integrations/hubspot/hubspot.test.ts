@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { HubSpotClient } from "./client";
 import { mapMeetingToHubSpot, mapNoteToHubSpot, mapOrderToHubSpot, mapPharmacyToHubSpot } from "./mappers";
 import { assertHubSpotBrandConfiguration, type HubSpotBrandConfiguration } from "./model";
+import { syncHubSpotOrder, type HubSpotExternalLinkStore, type HubSpotSyncEvent, type HubSpotSyncJournal } from "./sync";
 
 const config: HubSpotBrandConfiguration = {
   objects: {
@@ -46,6 +47,28 @@ const config: HubSpotBrandConfiguration = {
   },
 };
 
+const confirmedOrder = {
+  id: "order-1",
+  orderNumber: "CMD-001",
+  status: "confirmed",
+  orderDate: "2026-09-07T08:00:00.000Z",
+  netAmountHt: 108,
+  taxAmount: 21.6,
+  amountTtc: 129.6,
+  currency: "EUR",
+  lines: [{
+    id: "line-1",
+    productId: "product-1",
+    name: "Produit A",
+    sku: "SKU-A",
+    quantity: 12,
+    freeQuantity: 2,
+    unitPriceHt: 10,
+    discountPercent: 10,
+    vatRate: 20,
+  }],
+};
+
 describe("HubSpot brand mapping", () => {
   it("keeps provider IDs outside payloads when the brand has no TR1 custom property", () => {
     expect(() => assertHubSpotBrandConfiguration(config)).not.toThrow();
@@ -57,27 +80,7 @@ describe("HubSpot brand mapping", () => {
   });
 
   it("maps confirmed order amount from TR1 without recomputing VAT and separates free units", () => {
-    const mapped = mapOrderToHubSpot({
-      id: "order-1",
-      orderNumber: "CMD-001",
-      status: "confirmed",
-      orderDate: "2026-09-07T08:00:00.000Z",
-      netAmountHt: 108,
-      taxAmount: 21.6,
-      amountTtc: 129.6,
-      currency: "EUR",
-      lines: [{
-        id: "line-1",
-        productId: "product-1",
-        name: "Produit A",
-        sku: "SKU-A",
-        quantity: 12,
-        freeQuantity: 2,
-        unitPriceHt: 10,
-        discountPercent: 10,
-        vatRate: 20,
-      }],
-    }, config);
+    const mapped = mapOrderToHubSpot(confirmedOrder, config);
 
     expect(mapped.deal.properties.amount).toBe("108");
     expect(mapped.lineItems).toHaveLength(2);
@@ -145,5 +148,97 @@ describe("HubSpot client write safety", () => {
       correlationId: "corr-1",
       retryable: true,
     });
+  });
+});
+
+describe("HubSpot order sync idempotence", () => {
+  it("updates the same deal, paid line and UG line on a second sync", async () => {
+    const parents = new Map<string, string>();
+    const children = new Map<string, string>();
+    const events: HubSpotSyncEvent[] = [];
+
+    const links: HubSpotExternalLinkStore = {
+      async getParent(tr1RecordId) {
+        const externalId = parents.get(tr1RecordId);
+        return externalId ? { externalId } : null;
+      },
+      async saveParent(tr1RecordId, externalId) {
+        parents.set(tr1RecordId, externalId);
+      },
+      async getChild(parentTr1RecordId, childKey) {
+        const externalId = children.get(`${parentTr1RecordId}:${childKey}`);
+        return externalId ? { externalId } : null;
+      },
+      async saveChild(parentTr1RecordId, childKey, externalId) {
+        children.set(`${parentTr1RecordId}:${childKey}`, externalId);
+      },
+    };
+    const journal: HubSpotSyncJournal = {
+      async record(event) {
+        events.push(event);
+      },
+    };
+
+    const fetchImpl = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+      if (method === "POST" && url.endsWith("/crm/v3/objects/deals")) {
+        return new Response(JSON.stringify({ id: "deal-1" }), { status: 201 });
+      }
+      if (method === "POST" && url.endsWith("/crm/v3/objects/line_items")) {
+        const payload = JSON.parse(String(init?.body ?? "{}")) as { properties?: Record<string, string> };
+        const id = payload.properties?.tr1_is_free_unit === "true" ? "line-free-1" : "line-paid-1";
+        return new Response(JSON.stringify({ id }), { status: 201 });
+      }
+      if (method === "PATCH") {
+        return new Response(JSON.stringify({ id: url.split("/").pop() }), { status: 200 });
+      }
+      if (method === "PUT") {
+        return new Response(JSON.stringify({ status: "COMPLETE" }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ message: "unexpected request" }), { status: 400 });
+    });
+
+    const client = new HubSpotClient({ mode: "write", accessToken: "server-token", fetchImpl, maxRetries: 0 });
+    const first = await syncHubSpotOrder({
+      client,
+      config,
+      order: confirmedOrder,
+      pharmacyExternalId: "company-1",
+      links,
+      journal,
+    });
+
+    expect(first.dealExternalId).toBe("deal-1");
+    expect(first.lineItemExternalIds).toEqual({ "line-1": "line-paid-1", "line-1:free": "line-free-1" });
+    expect(parents.get("order-1")).toBe("deal-1");
+    expect(children.get("order-1:line-1")).toBe("line-paid-1");
+    expect(children.get("order-1:line-1:free")).toBe("line-free-1");
+
+    const firstCallCount = fetchImpl.mock.calls.length;
+    expect(firstCallCount).toBe(6);
+
+    const second = await syncHubSpotOrder({
+      client,
+      config,
+      order: { ...confirmedOrder, netAmountHt: 117 },
+      pharmacyExternalId: "company-1",
+      links,
+      journal,
+    });
+
+    expect(second.dealExternalId).toBe("deal-1");
+    expect(second.lineItemExternalIds).toEqual({ "line-1": "line-paid-1", "line-1:free": "line-free-1" });
+
+    const secondCalls = fetchImpl.mock.calls.slice(firstCallCount);
+    expect(secondCalls).toHaveLength(6);
+    expect(secondCalls.map(([, init]) => init?.method)).toEqual(["PATCH", "PUT", "PATCH", "PUT", "PATCH", "PUT"]);
+    expect(secondCalls.some(([input]) => String(input).endsWith("/crm/v3/objects/deals/deal-1"))).toBe(true);
+    expect(secondCalls.some(([input]) => String(input).endsWith("/crm/v3/objects/line_items/line-paid-1"))).toBe(true);
+    expect(secondCalls.some(([input]) => String(input).endsWith("/crm/v3/objects/line_items/line-free-1"))).toBe(true);
+    expect(secondCalls.some(([, init]) => init?.method === "POST")).toBe(false);
+
+    const secondPassObjectEvents = events.slice(6).filter((event) => event.eventType === "update");
+    expect(secondPassObjectEvents.map((event) => event.childKey ?? "deal")).toEqual(["deal", "line-1", "line-1:free"]);
   });
 });
