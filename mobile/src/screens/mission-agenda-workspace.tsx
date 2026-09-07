@@ -11,9 +11,9 @@ import {
   View,
 } from "react-native";
 
+import type { BrandContext } from "../../App";
 import { GuidedReportField } from "../components/guided-report-field";
 import { reportSuggestions } from "../lib/field-progress";
-import type { BrandContext } from "../../App";
 import { supabase } from "../lib/supabase";
 
 type Mode = "missions" | "agenda";
@@ -51,11 +51,38 @@ type MissionDetailData = {
 type MissionReportData = {
   id: string;
   reportStatus: string;
+  dataQualityStatus: string;
   summary: string;
   pharmacyFeedback: string;
   opportunities: string;
   nextStep: string;
+  unitsSold: number | null;
+  durationMinutes: number | null;
+  customerContacts: number | null;
+  participantCount: number | null;
   rejectionReason: string | null;
+};
+
+type MissionEvidence = {
+  id: string;
+  kind: string | null;
+  analysisStatus: string | null;
+  uploadedBy: string;
+};
+
+type MissionSellOut = {
+  status: string;
+  sourceAttachmentId: string | null;
+};
+
+type Closeout = {
+  ready: boolean;
+  missing: string[];
+  warnings: string[];
+  hasPlan: boolean;
+  hasMerchResult: boolean;
+  cashCount: number;
+  reviewedCashCount: number;
 };
 
 type AgendaEvent = {
@@ -173,7 +200,15 @@ function MissionDetail({ brand, missionId, onBack }: { brand: BrandContext; miss
   const [pharmacyFeedback, setPharmacyFeedback] = useState("");
   const [opportunities, setOpportunities] = useState("");
   const [nextStep, setNextStep] = useState("");
+  const [unitsSold, setUnitsSold] = useState("");
+  const [durationMinutes, setDurationMinutes] = useState("");
+  const [customerContacts, setCustomerContacts] = useState("");
+  const [participantCount, setParticipantCount] = useState("");
+  const [evidence, setEvidence] = useState<MissionEvidence[]>([]);
+  const [sellOut, setSellOut] = useState<MissionSellOut[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [closeoutLoading, setCloseoutLoading] = useState(true);
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
   const [reportSaving, setReportSaving] = useState<"draft" | "submitted" | null>(null);
   const [reason, setReason] = useState("");
@@ -187,16 +222,25 @@ function MissionDetail({ brand, missionId, onBack }: { brand: BrandContext; miss
       setPharmacyFeedback("");
       setOpportunities("");
       setNextStep("");
+      setUnitsSold("");
+      setDurationMinutes("");
+      setCustomerContacts("");
+      setParticipantCount("");
       return;
     }
 
     const normalized: MissionReportData = {
       id: String(data.id),
       reportStatus: String(data.report_status),
+      dataQualityStatus: typeof data.data_quality_status === "string" ? data.data_quality_status : "pending",
       summary: typeof data.summary === "string" ? data.summary : "",
       pharmacyFeedback: typeof data.pharmacy_feedback === "string" ? data.pharmacy_feedback : "",
       opportunities: typeof data.opportunities === "string" ? data.opportunities : "",
       nextStep: typeof data.next_step === "string" ? data.next_step : "",
+      unitsSold: numericOrNull(data.units_sold),
+      durationMinutes: numericOrNull(data.duration_minutes),
+      customerContacts: numericOrNull(data.customer_contacts),
+      participantCount: numericOrNull(data.participant_count),
       rejectionReason: typeof data.rejection_reason === "string" ? data.rejection_reason : null,
     };
     setReport(normalized);
@@ -204,6 +248,47 @@ function MissionDetail({ brand, missionId, onBack }: { brand: BrandContext; miss
     setPharmacyFeedback(normalized.pharmacyFeedback);
     setOpportunities(normalized.opportunities);
     setNextStep(normalized.nextStep);
+    setUnitsSold(normalized.unitsSold === null ? "" : String(normalized.unitsSold));
+    setDurationMinutes(normalized.durationMinutes === null ? "" : String(normalized.durationMinutes));
+    setCustomerContacts(normalized.customerContacts === null ? "" : String(normalized.customerContacts));
+    setParticipantCount(normalized.participantCount === null ? "" : String(normalized.participantCount));
+  }
+
+  async function loadCloseout(userId: string) {
+    setCloseoutLoading(true);
+    const [evidenceResult, sellOutResult] = await Promise.all([
+      supabase
+        .from("mission_attachments")
+        .select("id,evidence_kind,analysis_status,uploaded_by")
+        .eq("mission_id", missionId)
+        .is("archived_at", null),
+      supabase
+        .from("sell_out_captures")
+        .select("status,source_mission_attachment_id")
+        .eq("source_mission_id", missionId)
+        .is("archived_at", null),
+    ]);
+
+    if (evidenceResult.error) {
+      setEvidence([]);
+    } else {
+      setEvidence((evidenceResult.data ?? []).map((row) => ({
+        id: String(row.id),
+        kind: typeof row.evidence_kind === "string" ? row.evidence_kind : null,
+        analysisStatus: typeof row.analysis_status === "string" ? row.analysis_status : null,
+        uploadedBy: String(row.uploaded_by),
+      })).filter((item) => item.uploadedBy === userId));
+    }
+
+    if (sellOutResult.error) {
+      setSellOut([]);
+    } else {
+      setSellOut((sellOutResult.data ?? []).map((row) => ({
+        status: String(row.status),
+        sourceAttachmentId: typeof row.source_mission_attachment_id === "string" ? row.source_mission_attachment_id : null,
+      })));
+    }
+    setCloseoutLoading(false);
   }
 
   async function load() {
@@ -211,9 +296,11 @@ function MissionDetail({ brand, missionId, onBack }: { brand: BrandContext; miss
     setError(null);
     const { data: userData } = await supabase.auth.getUser();
     const userId = userData.user?.id;
+    setCurrentUserId(userId ?? null);
     if (!userId) {
       setError("Votre session TR1 a expiré.");
       setLoading(false);
+      setCloseoutLoading(false);
       return;
     }
 
@@ -231,6 +318,7 @@ function MissionDetail({ brand, missionId, onBack }: { brand: BrandContext; miss
       hydrateReport(null);
       setError("Cette mission n’est pas disponible dans votre périmètre terrain.");
       setLoading(false);
+      setCloseoutLoading(false);
       return;
     }
 
@@ -255,7 +343,7 @@ function MissionDetail({ brand, missionId, onBack }: { brand: BrandContext; miss
 
     const { data: reportData, error: reportError } = await supabase
       .from("mission_reports")
-      .select("id,report_status,summary,pharmacy_feedback,opportunities,next_step,rejection_reason")
+      .select("id,report_status,data_quality_status,summary,pharmacy_feedback,opportunities,next_step,units_sold,duration_minutes,customer_contacts,participant_count,rejection_reason")
       .eq("mission_id", missionId)
       .maybeSingle();
 
@@ -265,10 +353,17 @@ function MissionDetail({ brand, missionId, onBack }: { brand: BrandContext; miss
     } else {
       hydrateReport((reportData as Record<string, unknown> | null) ?? null);
     }
+
+    await loadCloseout(userId);
     setLoading(false);
   }
 
   useEffect(() => { void load(); }, [brand.id, missionId]);
+
+  const closeout = useMemo(
+    () => buildCloseout(mission, evidence, sellOut, reportSummary, unitsSold, durationMinutes, customerContacts, participantCount),
+    [mission, evidence, sellOut, reportSummary, unitsSold, durationMinutes, customerContacts, participantCount],
+  );
 
   async function changeStatus(targetStatus: string) {
     const requiresReason = targetStatus === "rejected" || targetStatus === "no_show";
@@ -302,15 +397,8 @@ function MissionDetail({ brand, missionId, onBack }: { brand: BrandContext; miss
       setError("Le compte-rendu n’est modifiable que pendant la mission ou lorsqu’une correction est demandée.");
       return;
     }
-    if (targetStatus === "submitted" && !reportSummary.trim()) {
-      setError("Ajoutez au minimum un résumé avant l’envoi du compte-rendu.");
-      return;
-    }
-
-    const { data: userData } = await supabase.auth.getUser();
-    const userId = userData.user?.id;
-    if (!userId) {
-      setError("Votre session TR1 a expiré.");
+    if (targetStatus === "submitted" && !closeout.ready) {
+      setError(`Fin de mission à compléter : ${closeout.missing.join(" · ")}`);
       return;
     }
 
@@ -318,31 +406,27 @@ function MissionDetail({ brand, missionId, onBack }: { brand: BrandContext; miss
     setError(null);
     setSuccess(null);
     const effectiveStatus = targetStatus === "draft" && report?.reportStatus === "needs_correction" ? "needs_correction" : targetStatus;
-    const reportFields = {
+    const payload = {
       report_status: effectiveStatus,
       summary: reportSummary.trim() || null,
       pharmacy_feedback: pharmacyFeedback.trim() || null,
       opportunities: opportunities.trim() || null,
       next_step: nextStep.trim() || null,
-      ...(targetStatus === "submitted" ? { submitted_at: new Date().toISOString() } : {}),
+      units_sold: countOrNull(unitsSold),
+      duration_minutes: countOrNull(durationMinutes),
+      customer_contacts: countOrNull(customerContacts),
+      participant_count: countOrNull(participantCount),
     };
 
-    const result = report
-      ? await supabase.from("mission_reports").update(reportFields).eq("id", report.id).eq("mission_id", missionId)
-      : await supabase.from("mission_reports").insert({
-          organization_id: mission.organizationId,
-          brand_id: brand.id,
-          mission_id: missionId,
-          submitted_by: userId,
-          content: { source: "mobile" },
-          visibility: "shared",
-          ...reportFields,
-        });
+    const { error: reportError } = await supabase.rpc("save_mission_report", {
+      target_mission_id: missionId,
+      report_payload: payload,
+    });
 
-    if (result.error) {
-      setError(result.error.message || "Le compte-rendu n’a pas pu être enregistré.");
+    if (reportError) {
+      setError(reportError.message || "Le compte-rendu n’a pas pu être enregistré.");
     } else {
-      setSuccess(targetStatus === "submitted" ? "Compte-rendu envoyé à TR1 pour validation." : "Brouillon enregistré.");
+      setSuccess(targetStatus === "submitted" ? "Compte-rendu complet envoyé à TR1 pour validation." : "Brouillon enregistré.");
       await load();
     }
     setReportSaving(null);
@@ -352,6 +436,7 @@ function MissionDetail({ brand, missionId, onBack }: { brand: BrandContext; miss
   const needsReason = transitions.some((status) => status === "rejected" || status === "no_show");
   const reportEditable = Boolean(mission && (mission.status === "in_progress" || (mission.status === "report_pending" && report?.reportStatus === "needs_correction")));
   const showReport = Boolean(mission && (mission.status === "in_progress" || mission.status === "report_pending" || mission.status === "completed" || report));
+  const generatedSummary = mission ? buildTerrainSummary(mission, evidence, sellOut, currentUserId, unitsSold, customerContacts, participantCount) : "";
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -423,14 +508,59 @@ function MissionDetail({ brand, missionId, onBack }: { brand: BrandContext; miss
             {showReport ? (
               <View style={styles.reportBlock}>
                 <View style={styles.reportHeader}>
+                  <Text style={styles.sectionTitle}>Fin de mission</Text>
+                  <Badge label={closeout.ready ? "prêt" : "à compléter"} danger={!closeout.ready} />
+                </View>
+
+                <View style={styles.closeoutCard}>
+                  {closeoutLoading ? <Loading label="Vérification des preuves…" /> : (
+                    <>
+                      {(mission.missionType === "animation" || mission.missionType === "merchandising") ? (
+                        <>
+                          <ChecklistRow ok={closeout.hasPlan} label="Photo du plan merch" value={closeout.hasPlan ? "Ajoutée" : "Manquante"} />
+                          <ChecklistRow ok={closeout.hasMerchResult} label="Résultat merchandising" value={closeout.hasMerchResult ? "Documenté" : "Manquant"} />
+                        </>
+                      ) : null}
+                      <ChecklistRow ok={Boolean(reportSummary.trim())} label="Résumé de mission" value={reportSummary.trim() ? "Renseigné" : "Manquant"} />
+                      {mission.missionType === "animation" ? (
+                        <>
+                          <ChecklistRow ok={countOrNull(unitsSold) !== null} label="Unités vendues" value={countOrNull(unitsSold) === null ? "À renseigner" : unitsSold} />
+                          <ChecklistRow ok={countOrNull(customerContacts) !== null} label="Contacts clients" value={countOrNull(customerContacts) === null ? "À renseigner" : customerContacts} />
+                          <ChecklistRow ok={countOrNull(durationMinutes) !== null} label="Durée" value={countOrNull(durationMinutes) === null ? "À renseigner" : `${durationMinutes} min`} />
+                        </>
+                      ) : null}
+                      {mission.missionType === "training" ? <ChecklistRow ok={(countOrNull(participantCount) ?? 0) > 0} label="Participants formés" value={(countOrNull(participantCount) ?? 0) > 0 ? participantCount : "À renseigner"} /> : null}
+                      <ChecklistRow ok={closeout.cashCount === 0 || closeout.reviewedCashCount === closeout.cashCount} label="Sortie de caisse" value={cashCloseoutLabel(closeout)} neutral={closeout.cashCount === 0} />
+                      {closeout.warnings.map((warning) => <Text key={warning} style={styles.closeoutWarning}>{warning}</Text>)}
+                    </>
+                  )}
+                </View>
+
+                <View style={[styles.reportHeader, styles.sectionSpacing]}>
                   <Text style={styles.sectionTitle}>Compte-rendu terrain</Text>
-                  {report ? <Badge label={label(report.reportStatus)} danger={report.reportStatus === "needs_correction" || report.reportStatus === "rejected"} /> : null}
+                  {report ? <Badge label={report.dataQualityStatus === "complete" ? "complet" : label(report.reportStatus)} danger={report.dataQualityStatus === "incomplete" || report.reportStatus === "needs_correction" || report.reportStatus === "rejected"} /> : null}
                 </View>
 
                 {report?.reportStatus === "submitted" ? <View style={styles.noticeCard}><Text style={styles.noticeTitle}>Envoyé pour validation</Text><Text style={styles.noticeText}>Le compte-rendu est verrouillé pendant la revue TR1.</Text></View> : null}
                 {report?.reportStatus === "needs_correction" ? <View style={styles.correctionCard}><Text style={styles.correctionTitle}>Correction demandée</Text><Text style={styles.correctionText}>{report.rejectionReason || "TR1 demande une correction du compte-rendu."}</Text></View> : null}
                 {mission.status === "completed" && report?.reportStatus === "validated" ? <View style={styles.successCard}><Text style={styles.successText}>Compte-rendu validé. Mission terminée.</Text></View> : null}
                 {mission.status === "completed" && report?.reportStatus === "rejected" ? <View style={styles.errorCard}><Text style={styles.errorText}>Compte-rendu clôturé avec rejet{report.rejectionReason ? ` : ${report.rejectionReason}` : "."}</Text></View> : null}
+
+                {mission.missionType === "animation" ? (
+                  <View style={styles.metricsBlock}>
+                    <MetricField label="Unités vendues *" value={unitsSold} onChange={setUnitsSold} disabled={!reportEditable || reportSaving !== null} />
+                    <MetricField label="Contacts clients *" value={customerContacts} onChange={setCustomerContacts} disabled={!reportEditable || reportSaving !== null} />
+                    <MetricField label="Durée (minutes) *" value={durationMinutes} onChange={setDurationMinutes} disabled={!reportEditable || reportSaving !== null} />
+                  </View>
+                ) : null}
+                {mission.missionType === "training" ? <MetricField label="Participants formés *" value={participantCount} onChange={setParticipantCount} disabled={!reportEditable || reportSaving !== null} /> : null}
+
+                {reportEditable && !reportSummary.trim() && generatedSummary ? (
+                  <Pressable onPress={() => setReportSummary(generatedSummary)} style={styles.summaryAssist}>
+                    <Text style={styles.summaryAssistTitle}>Préremplir depuis les preuves terrain</Text>
+                    <Text style={styles.summaryAssistText}>TR1 utilise uniquement les éléments réellement saisis ou joints, sans inventer de résultat.</Text>
+                  </Pressable>
+                ) : null}
 
                 <GuidedReportField label="Résultat de la mission *" value={reportSummary} onChange={setReportSummary} disabled={!reportEditable || reportSaving !== null} options={reportSuggestions(mission.missionType)} />
                 <GuidedReportField label="Retour pharmacie" value={pharmacyFeedback} onChange={setPharmacyFeedback} disabled={!reportEditable || reportSaving !== null} options={["Accueil favorable", "Stock suffisant", "Prix à revoir", "Gamme inadaptée", "Interlocuteur indisponible"]} />
@@ -443,10 +573,10 @@ function MissionDetail({ brand, missionId, onBack }: { brand: BrandContext; miss
                     <Pressable disabled={reportSaving !== null} onPress={() => void saveReport("draft")} style={[styles.secondaryAction, reportSaving !== null && styles.disabled]}>
                       {reportSaving === "draft" ? <ActivityIndicator color="#3B5BDB" /> : <Text style={styles.secondaryActionText}>{report?.reportStatus === "needs_correction" ? "Enregistrer les corrections" : "Enregistrer le brouillon"}</Text>}
                     </Pressable>
-                    <Pressable disabled={reportSaving !== null} onPress={() => void saveReport("submitted")} style={[styles.transitionButton, styles.transitionButtonPrimary, reportSaving !== null && styles.disabled]}>
+                    <Pressable disabled={reportSaving !== null || !closeout.ready} onPress={() => void saveReport("submitted")} style={[styles.transitionButton, styles.transitionButtonPrimary, (reportSaving !== null || !closeout.ready) && styles.disabled]}>
                       {reportSaving === "submitted" ? <ActivityIndicator color="#FFF" /> : <Text style={styles.transitionButtonText}>{report?.reportStatus === "needs_correction" ? "Renvoyer pour validation" : "Envoyer pour validation"}</Text>}
                     </Pressable>
-                    <Text style={styles.transitionHelp}>Votre rapport sera envoyé pour validation. La mission sera comptée comme réussie après validation.</Text>
+                    <Text style={styles.transitionHelp}>{closeout.ready ? "Le rapport est complet et peut être envoyé pour validation." : "Complétez les éléments signalés avant l’envoi. Le brouillon reste disponible."}</Text>
                   </View>
                 ) : null}
               </View>
@@ -557,6 +687,129 @@ function DetailRow({ label: rowLabel, value }: { label: string; value: string })
   return <View style={styles.detailRow}><Text style={styles.detailLabel}>{rowLabel}</Text><Text style={styles.detailValue}>{value}</Text></View>;
 }
 
+function ChecklistRow({ ok, label: rowLabel, value, neutral = false }: { ok: boolean; label: string; value: string; neutral?: boolean }) {
+  return (
+    <View style={styles.checklistRow}>
+      <Text style={[styles.checklistIcon, neutral && styles.checklistNeutral, !neutral && !ok && styles.checklistMissing]}>{neutral ? "•" : ok ? "✓" : "!"}</Text>
+      <Text style={styles.checklistLabel}>{rowLabel}</Text>
+      <Text style={[styles.checklistValue, !neutral && !ok && styles.checklistMissing]}>{value}</Text>
+    </View>
+  );
+}
+
+function MetricField({ label: fieldLabel, value, onChange, disabled }: { label: string; value: string; onChange: (value: string) => void; disabled: boolean }) {
+  return (
+    <View style={styles.metricField}>
+      <Text style={styles.metricLabel}>{fieldLabel}</Text>
+      <TextInput
+        value={value}
+        onChangeText={onChange}
+        editable={!disabled}
+        keyboardType="number-pad"
+        placeholder="0"
+        placeholderTextColor="#98A2B3"
+        style={[styles.metricInput, disabled && styles.reportInputLocked]}
+      />
+    </View>
+  );
+}
+
+function buildCloseout(
+  mission: MissionDetailData | null,
+  evidence: MissionEvidence[],
+  sellOut: MissionSellOut[],
+  summary: string,
+  units: string,
+  duration: string,
+  contacts: string,
+  participants: string,
+): Closeout {
+  if (!mission) return { ready: false, missing: ["Mission indisponible"], warnings: [], hasPlan: false, hasMerchResult: false, cashCount: 0, reviewedCashCount: 0 };
+
+  const evidenceKinds = new Set(evidence.map((item) => item.kind).filter(Boolean));
+  const hasPlan = evidenceKinds.has("merch_plan");
+  const hasMerchResult = ["merch_after", "merch_detail", "merch_plv"].some((kind) => evidenceKinds.has(kind));
+  const cashEvidence = evidence.filter((item) => item.kind === "cash_register");
+  const reviewedSourceIds = new Set(
+    sellOut
+      .filter((capture) => capture.sourceAttachmentId && ["review_required", "validated"].includes(capture.status))
+      .map((capture) => capture.sourceAttachmentId as string),
+  );
+  const reviewedCashCount = cashEvidence.filter((item) => reviewedSourceIds.has(item.id)).length;
+  const missing: string[] = [];
+  const warnings: string[] = [];
+
+  if (!summary.trim()) missing.push("résumé de mission");
+  if (mission.missionType === "animation" || mission.missionType === "merchandising") {
+    if (!hasPlan) missing.push("photo du plan merch");
+    if (!hasMerchResult) missing.push("photo du résultat merchandising");
+  }
+  if (mission.missionType === "animation") {
+    if (countOrNull(units) === null) missing.push("unités vendues");
+    if (countOrNull(contacts) === null) missing.push("contacts clients");
+    if (countOrNull(duration) === null) missing.push("durée de mission");
+  }
+  if (mission.missionType === "training" && (countOrNull(participants) ?? 0) <= 0) missing.push("participants formés");
+  if (cashEvidence.length > reviewedCashCount) missing.push("relecture sell-out de la sortie de caisse");
+  if (cashEvidence.length === 0) warnings.push("Sortie de caisse non jointe : elle reste facultative si la pharmacie ne la fournit pas.");
+
+  return { ready: missing.length === 0, missing, warnings, hasPlan, hasMerchResult, cashCount: cashEvidence.length, reviewedCashCount };
+}
+
+function buildTerrainSummary(
+  mission: MissionDetailData,
+  evidence: MissionEvidence[],
+  sellOut: MissionSellOut[],
+  currentUserId: string | null,
+  units: string,
+  contacts: string,
+  participants: string,
+) {
+  const ownEvidence = currentUserId ? evidence.filter((item) => item.uploadedBy === currentUserId) : evidence;
+  const kinds = new Set(ownEvidence.map((item) => item.kind).filter(Boolean));
+  const cash = ownEvidence.filter((item) => item.kind === "cash_register");
+  const reviewedSourceIds = new Set(sellOut.filter((capture) => capture.sourceAttachmentId && ["review_required", "validated"].includes(capture.status)).map((capture) => capture.sourceAttachmentId as string));
+  const parts = [`${missionTypeLabel(mission.missionType)} réalisée à ${mission.pharmacyName}.`];
+  if (kinds.has("merch_plan")) parts.push("Plan merch photographié le jour de la mission.");
+  if (["merch_after", "merch_detail", "merch_plv"].some((kind) => kinds.has(kind))) parts.push("Résultat merchandising documenté en photo.");
+  const unitsValue = countOrNull(units);
+  if (unitsValue !== null) parts.push(`${unitsValue} unité${unitsValue > 1 ? "s" : ""} vendue${unitsValue > 1 ? "s" : ""} déclarée${unitsValue > 1 ? "s" : ""}.`);
+  const contactsValue = countOrNull(contacts);
+  if (contactsValue !== null) parts.push(`${contactsValue} contact${contactsValue > 1 ? "s" : ""} client renseigné${contactsValue > 1 ? "s" : ""}.`);
+  const participantValue = countOrNull(participants);
+  if (participantValue !== null && participantValue > 0) parts.push(`${participantValue} participant${participantValue > 1 ? "s" : ""} formé${participantValue > 1 ? "s" : ""}.`);
+  if (cash.length > 0) {
+    const reviewed = cash.filter((item) => reviewedSourceIds.has(item.id)).length;
+    parts.push(reviewed === cash.length ? "Sortie de caisse jointe et sell-out transmis pour revue." : "Sortie de caisse jointe, sell-out restant à relire.");
+  }
+  return parts.join(" ");
+}
+
+function cashCloseoutLabel(closeout: Closeout) {
+  if (closeout.cashCount === 0) return "Non fournie · facultatif";
+  if (closeout.reviewedCashCount === closeout.cashCount) return `${closeout.cashCount} preuve${closeout.cashCount > 1 ? "s" : ""} relue${closeout.cashCount > 1 ? "s" : ""}`;
+  return `${closeout.reviewedCashCount}/${closeout.cashCount} relue${closeout.reviewedCashCount > 1 ? "s" : ""}`;
+}
+
+function countOrNull(value: string) {
+  if (!value.trim()) return null;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
+function numericOrNull(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function missionTypeLabel(value: string | null) {
+  return ({ animation: "Animation", training: "Formation", merchandising: "Merchandising" } as Record<string, string>)[value || ""] || "Mission terrain";
+}
+
 function transitionsForStatus(status: string) {
   if (status === "assigned") return ["accepted", "rejected"];
   if (status === "scheduled") return ["in_progress", "no_show"];
@@ -598,6 +851,9 @@ const styles = StyleSheet.create({
   textCard: { borderRadius: 16, backgroundColor: "#FFF", borderWidth: 1, borderColor: "#E4E7EC", padding: 16 }, bodyText: { color: "#344054", fontSize: 13, lineHeight: 20 },
   transitionBlock: { marginTop: 22 }, reasonInput: { minHeight: 76, borderRadius: 14, borderWidth: 1, borderColor: "#E4E7EC", backgroundColor: "#FFF", paddingHorizontal: 13, paddingVertical: 11, color: "#111827", fontSize: 13, textAlignVertical: "top", marginBottom: 10 }, transitionButtons: { gap: 9 }, transitionButton: { minHeight: 52, borderRadius: 14, alignItems: "center", justifyContent: "center", paddingHorizontal: 15 }, transitionButtonPrimary: { backgroundColor: "#3B5BDB" }, transitionButtonDanger: { backgroundColor: "#B42318" }, transitionButtonText: { color: "#FFF", fontSize: 14, fontWeight: "800" }, transitionHelp: { color: "#667085", fontSize: 11, lineHeight: 17, textAlign: "center", marginTop: 9 }, disabled: { opacity: 0.45 },
   noticeCard: { marginTop: 12, borderRadius: 16, backgroundColor: "#FFF", borderWidth: 1, borderColor: "#E4E7EC", padding: 16 }, noticeTitle: { color: "#111827", fontSize: 14, fontWeight: "800" }, noticeText: { color: "#667085", fontSize: 12, lineHeight: 18, marginTop: 5 },
-  reportBlock: { marginTop: 24 }, reportHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }, reportField: { marginTop: 12 }, reportFieldLabel: { color: "#344054", fontSize: 12, fontWeight: "800", marginBottom: 7 }, reportInput: { minHeight: 88, borderRadius: 14, borderWidth: 1, borderColor: "#E4E7EC", backgroundColor: "#FFF", paddingHorizontal: 13, paddingVertical: 11, color: "#111827", fontSize: 13, textAlignVertical: "top" }, reportInputLocked: { backgroundColor: "#F2F4F7", color: "#667085" }, reportActions: { marginTop: 14, gap: 9 }, secondaryAction: { minHeight: 50, borderRadius: 14, borderWidth: 1, borderColor: "#C7D2FE", backgroundColor: "#FFF", alignItems: "center", justifyContent: "center", paddingHorizontal: 15 }, secondaryActionText: { color: "#3B5BDB", fontSize: 14, fontWeight: "800" },
+  reportBlock: { marginTop: 24 }, reportHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }, reportActions: { marginTop: 14, gap: 9 }, secondaryAction: { minHeight: 50, borderRadius: 14, borderWidth: 1, borderColor: "#C7D2FE", backgroundColor: "#FFF", alignItems: "center", justifyContent: "center", paddingHorizontal: 15 }, secondaryActionText: { color: "#3B5BDB", fontSize: 14, fontWeight: "800" },
+  closeoutCard: { borderRadius: 16, backgroundColor: "#FFF", borderWidth: 1, borderColor: "#E4E7EC", paddingHorizontal: 14, paddingVertical: 7 }, checklistRow: { minHeight: 43, flexDirection: "row", alignItems: "center", gap: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "#EAECF0" }, checklistIcon: { width: 18, color: "#067647", fontSize: 13, fontWeight: "900" }, checklistNeutral: { color: "#667085" }, checklistMissing: { color: "#B42318" }, checklistLabel: { flex: 1, color: "#344054", fontSize: 12, fontWeight: "700" }, checklistValue: { color: "#067647", fontSize: 11, fontWeight: "800", textAlign: "right" }, closeoutWarning: { color: "#667085", fontSize: 11, lineHeight: 16, paddingVertical: 9 },
+  metricsBlock: { gap: 8, marginBottom: 5 }, metricField: { marginTop: 8 }, metricLabel: { color: "#344054", fontSize: 12, fontWeight: "800", marginBottom: 6 }, metricInput: { minHeight: 46, borderRadius: 12, borderWidth: 1, borderColor: "#D0D5DD", backgroundColor: "#FFF", paddingHorizontal: 12, color: "#111827", fontSize: 17, fontWeight: "800" }, reportInputLocked: { backgroundColor: "#F2F4F7", color: "#667085" },
+  summaryAssist: { marginTop: 12, marginBottom: 2, borderRadius: 14, borderWidth: 1, borderColor: "#C7D2FE", backgroundColor: "#EEF2FF", padding: 13 }, summaryAssistTitle: { color: "#3B5BDB", fontSize: 12, fontWeight: "800" }, summaryAssistText: { color: "#667085", fontSize: 11, lineHeight: 16, marginTop: 3 },
   correctionCard: { borderRadius: 16, backgroundColor: "#FFF7ED", borderWidth: 1, borderColor: "#FED7AA", padding: 14, marginBottom: 8 }, correctionTitle: { color: "#9A3412", fontSize: 13, fontWeight: "800" }, correctionText: { color: "#9A3412", fontSize: 12, lineHeight: 18, marginTop: 4 },
 });
