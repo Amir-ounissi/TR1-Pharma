@@ -62,6 +62,34 @@ function providerId(data: unknown) {
   return null;
 }
 
+function companyName(data: unknown) {
+  if (!data || typeof data !== "object" || Array.isArray(data)) return null;
+  const properties = (data as Record<string, unknown>).properties;
+  if (!properties || typeof properties !== "object" || Array.isArray(properties)) return null;
+  const value = (properties as Record<string, unknown>).name;
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+async function resolveNewDealName(
+  client: HubSpotClient,
+  config: HubSpotBrandConfiguration,
+  pharmacyExternalId: string | null | undefined,
+) {
+  if (client.getMode() !== "write") return null;
+  if (!pharmacyExternalId) {
+    throw new Error("HubSpot company mapping is required before creating an order deal");
+  }
+
+  const company = await client.read<{ properties?: Record<string, unknown> }>(
+    `/crm/v3/objects/${encodeURIComponent(config.objects.companies)}/${encodeURIComponent(pharmacyExternalId)}?properties=name`,
+  );
+  const name = companyName(company.data);
+  if (!name) {
+    throw new Error(`HubSpot company ${pharmacyExternalId} has no usable name for deal naming`);
+  }
+  return name;
+}
+
 async function journalFailure(journal: HubSpotSyncJournal, tr1RecordId: string, childKey: string | undefined, error: unknown) {
   if (error instanceof HubSpotApiError) {
     await journal.record({
@@ -237,6 +265,16 @@ export async function syncHubSpotOrder(options: {
   const { client, config, order, pharmacyExternalId, links, journal } = options;
   const mapped = mapOrderToHubSpot(order, config);
   const parent = await links.getParent(order.id);
+
+  if (!parent) {
+    const dealName = await resolveNewDealName(client, config, pharmacyExternalId);
+    if (dealName) {
+      const nameProperty = config.properties.order.name;
+      if (!nameProperty) throw new Error("HubSpot deal name property is not configured");
+      mapped.deal.properties[nameProperty] = dealName;
+    }
+  }
+
   const deal = await upsertRecord(client, journal, order.id, undefined, config.objects.deals, mapped.deal, parent?.externalId ?? null);
 
   let writes = deal.mode === "write" ? 1 : 0;
