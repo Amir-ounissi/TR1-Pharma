@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { syncHubSpotOrderAfterPersistence } from "@/lib/integrations/hubspot/runtime";
 import { mobileApiError, requireMobileBrand, requireMobileCapability } from "@/lib/mobile-api";
 
 export const runtime = "nodejs";
@@ -107,10 +108,16 @@ export async function POST(request: Request) {
     if (error) {
       return Response.json({ error: error.code === "23505" ? "Cette commande existe déjà." : error.message }, { status: 409 });
     }
+
     const result = Array.isArray(data) ? data[0] : data;
+    const orderId = result?.order_id ? String(result.order_id) : null;
+    if (orderId) {
+      await syncHubSpotOrderAfterPersistence(brand.id, orderId);
+    }
+
     return Response.json({
       success: isAgent ? "Commande envoyée à la marque." : "Commande importée et validée.",
-      orderId: result?.order_id ?? null,
+      orderId,
     });
   } catch (error) {
     return mobileApiError(error);
