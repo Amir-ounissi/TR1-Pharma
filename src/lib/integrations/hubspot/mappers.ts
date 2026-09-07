@@ -29,8 +29,8 @@ function percentage(value: number | null | undefined) {
 
 function externalRecord(id: string, map: HubSpotPropertyMap, properties: Record<string, string>): HubSpotMappedRecord {
   if (!id.trim()) throw new Error("TR1 record ID is required for HubSpot sync");
-  properties[map.externalId] = id;
-  return { idProperty: map.externalId, id, properties };
+  if (map.externalId) properties[map.externalId] = id;
+  return { tr1RecordId: id, idProperty: map.externalId, properties };
 }
 
 export function mapPharmacyToHubSpot(input: HubSpotPharmacySyncInput, config: HubSpotBrandConfiguration): HubSpotMappedRecord {
