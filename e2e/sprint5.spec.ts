@@ -99,21 +99,45 @@ test("parcours complet animation Sprint 5 avec vérification en base", async ({ 
   await waitForMissionStatus(admin, missionId, "in_progress");
 
   await animatorPage.goto(missionUrl);
+  await expect(animatorPage.getByText("Plan merch requis")).toBeVisible();
   await animatorPage.locator('input[type="file"]').setInputFiles({
-    name: "preuve-animation.png",
+    name: "plan-merchandising.png",
     mimeType: "image/png",
     buffer: Buffer.from("89504e470d0a1a0a", "hex"),
   });
+  await animatorPage.getByLabel("Type de preuve").click();
+  await animatorPage.getByRole("option", { name: "Plan merchandising" }).click();
   await animatorPage.getByRole("button", { name: "Ajouter" }).click();
   await expect.poll(async () => {
     const { count } = await admin
       .from("mission_attachments")
       .select("*", { count: "exact", head: true })
-      .eq("mission_id", missionId);
+      .eq("mission_id", missionId)
+      .eq("evidence_kind", "merch_plan");
     return count;
   }).toBe(1);
 
   await animatorPage.goto(missionUrl);
+  await expect(animatorPage.getByText("Plan merch ajouté")).toBeVisible();
+  await animatorPage.locator('input[type="file"]').setInputFiles({
+    name: "resultat-merchandising.png",
+    mimeType: "image/png",
+    buffer: Buffer.from("89504e470d0a1a0a", "hex"),
+  });
+  await animatorPage.getByLabel("Type de preuve").click();
+  await animatorPage.getByRole("option", { name: "Photo après" }).click();
+  await animatorPage.getByRole("button", { name: "Ajouter" }).click();
+  await expect.poll(async () => {
+    const { count } = await admin
+      .from("mission_attachments")
+      .select("*", { count: "exact", head: true })
+      .eq("mission_id", missionId)
+      .eq("evidence_kind", "merch_after");
+    return count;
+  }).toBe(1);
+
+  await animatorPage.goto(missionUrl);
+  await expect(animatorPage.getByText("Résultat ajouté")).toBeVisible();
   await animatorPage.locator('textarea[name="summary"]').fill("Animation réalisée, premiers résultats disponibles.");
   await animatorPage.locator('input[name="unitsSold"]').fill("12");
   await animatorPage.locator('input[name="durationMinutes"]').fill("360");
@@ -186,7 +210,7 @@ test("parcours complet animation Sprint 5 avec vérification en base", async ({ 
   const [missionResult, reportResult, attachmentsResult, interactionsResult, performanceResult] = await Promise.all([
     admin.from("missions").select("status,brand_id,assigned_user_id").eq("id", missionId).single(),
     admin.from("mission_reports").select("id,report_status,summary").eq("mission_id", missionId).single(),
-    admin.from("mission_attachments").select("id,object_path,mime_type,archived_at").eq("mission_id", missionId),
+    admin.from("mission_attachments").select("id,object_path,mime_type,evidence_kind,archived_at").eq("mission_id", missionId),
     admin.from("interactions").select("id").eq("brand_pharmacy_id", relationId).eq("subject", "Mission terrain validée"),
     admin.from("mission_performance").select("order_revenue_30d_ht,first_order_after_mission_at").eq("mission_id", missionId).single(),
   ]);
@@ -206,10 +230,16 @@ test("parcours complet animation Sprint 5 avec vérification en base", async ({ 
   });
   expect(reportResult.data?.report_status).toBe("validated");
   expect(reportResult.data?.summary).toContain("objection principale");
-  expect(attachmentsResult.data).toHaveLength(1);
-  expect(attachmentsResult.data?.[0].object_path).toMatch(
-    new RegExp(`^00000000-0000-0000-0000-000000000101/${missionId}/`),
-  );
+  expect(attachmentsResult.data).toHaveLength(2);
+  expect(attachmentsResult.data?.map((attachment) => attachment.evidence_kind).sort()).toEqual([
+    "merch_after",
+    "merch_plan",
+  ]);
+  expect(
+    attachmentsResult.data?.every((attachment) =>
+      new RegExp(`^00000000-0000-0000-0000-000000000101/${missionId}/`).test(attachment.object_path),
+    ),
+  ).toBe(true);
   expect(interactionsResult.data?.length).toBeGreaterThan(0);
   expect(Number(performanceResult.data?.order_revenue_30d_ht)).toBe(37);
   expect(performanceResult.data?.first_order_after_mission_at).toBeTruthy();
