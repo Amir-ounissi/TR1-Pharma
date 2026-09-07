@@ -46,12 +46,12 @@ export async function uploadQualifiedMissionAttachmentAction(formData: FormData)
     throw new Error("Fichier refusé : JPG, PNG, WebP ou PDF, 10 Mo maximum.");
   }
 
-  if (imageEvidenceKinds.has(parsed.data.evidenceKind) && file.type === "application/pdf") {
+  if (imageEvidenceKinds.has(parsed.evidenceKind) && file.type === "application/pdf") {
     throw new Error("Une preuve merchandising doit être une photo JPG, PNG ou WebP.");
   }
 
   const { supabase, userId, brand } = await requireActiveBrand();
-  const objectPath = safeObjectName(brand.id, parsed.data.missionId, file.name);
+  const objectPath = safeObjectName(brand.id, parsed.missionId, file.name);
 
   const { error: storageError } = await supabase.storage
     .from("mission-evidence")
@@ -63,16 +63,15 @@ export async function uploadQualifiedMissionAttachmentAction(formData: FormData)
   if (storageError) throw new Error(storageError.message);
 
   const { error } = await supabase.from("mission_attachments").insert({
-    mission_id: parsed.data.missionId,
+    mission_id: parsed.missionId,
     brand_id: brand.id,
     object_path: objectPath,
     original_name: file.name.slice(0, 255),
     mime_type: file.type,
     size_bytes: file.size,
     uploaded_by: userId,
-    visibility: parsed.data.visibility,
-    evidence_kind:
-      parsed.data.evidenceKind === "general" ? null : parsed.data.evidenceKind,
+    visibility: parsed.visibility,
+    evidence_kind: parsed.evidenceKind === "general" ? null : parsed.evidenceKind,
   });
 
   if (error) {
@@ -80,5 +79,5 @@ export async function uploadQualifiedMissionAttachmentAction(formData: FormData)
     throw new Error(error.message);
   }
 
-  revalidatePath(`/dashboard/missions/${parsed.data.missionId}`);
+  revalidatePath(`/dashboard/missions/${parsed.missionId}`);
 }
