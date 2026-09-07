@@ -68,9 +68,14 @@ export function FacilitatorSellOutWorkspace({ brand, onBack }: { brand: BrandCon
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  useEffect(() => {
+    void loadMissions();
+  }, [brand.id]);
+
   async function loadMissions() {
     setLoading(true);
     setError(null);
+
     const { data: userData } = await supabase.auth.getUser();
     const userId = userData.user?.id;
     if (!userId) {
@@ -91,26 +96,26 @@ export function FacilitatorSellOutWorkspace({ brand, onBack }: { brand: BrandCon
       .limit(50);
 
     if (queryError) {
-      setError("Impossible de charger vos missions éligibles au sell-out.");
       setMissions([]);
-    } else {
-      setMissions((data ?? []).map((row) => {
-        const pharmacy = Array.isArray(row.pharmacies) ? row.pharmacies[0] : row.pharmacies;
-        return {
-          id: String(row.id),
-          title: String(row.title),
-          status: String(row.status),
-          missionType: String(row.mission_type),
-          scheduledStartAt: typeof row.scheduled_start_at === "string" ? row.scheduled_start_at : null,
-          pharmacyName: pharmacy?.trade_name || pharmacy?.legal_name || "Pharmacie",
-          city: pharmacy?.city ?? null,
-        };
-      }));
+      setError("Impossible de charger vos missions éligibles au sell-out.");
+      setLoading(false);
+      return;
     }
+
+    setMissions((data ?? []).map((row) => {
+      const pharmacy = Array.isArray(row.pharmacies) ? row.pharmacies[0] : row.pharmacies;
+      return {
+        id: String(row.id),
+        title: String(row.title),
+        status: String(row.status),
+        missionType: String(row.mission_type),
+        scheduledStartAt: typeof row.scheduled_start_at === "string" ? row.scheduled_start_at : null,
+        pharmacyName: pharmacy?.trade_name || pharmacy?.legal_name || "Pharmacie",
+        city: pharmacy?.city ?? null,
+      };
+    }));
     setLoading(false);
   }
-
-  useEffect(() => { void loadMissions(); }, [brand.id]);
 
   async function persistMissionEvidence(mission: MissionChoice, file: FacilitatorEvidenceFile) {
     const { data: userData } = await supabase.auth.getUser();
@@ -120,7 +125,9 @@ export function FacilitatorSellOutWorkspace({ brand, onBack }: { brand: BrandCon
     const response = await fetch(file.uri);
     if (!response.ok) throw new Error("Le document sélectionné n’est plus accessible.");
     const bytes = await response.arrayBuffer();
-    if (bytes.byteLength <= 0 || bytes.byteLength > 10485760) throw new Error("La sortie de caisse doit faire moins de 10 Mo.");
+    if (bytes.byteLength <= 0 || bytes.byteLength > 10485760) {
+      throw new Error("La sortie de caisse doit faire moins de 10 Mo.");
+    }
     if (!["image/jpeg", "image/png", "image/webp", "application/pdf"].includes(file.mimeType)) {
       throw new Error("Utilisez une photo JPG/PNG/WebP ou un PDF.");
     }
@@ -154,6 +161,7 @@ export function FacilitatorSellOutWorkspace({ brand, onBack }: { brand: BrandCon
       await supabase.storage.from("mission-evidence").remove([objectPath]);
       throw new Error(insertError?.message || "La preuve n’a pas pu être rattachée à la mission.");
     }
+
     return String(attachment.id);
   }
 
@@ -162,6 +170,7 @@ export function FacilitatorSellOutWorkspace({ brand, onBack }: { brand: BrandCon
     setError(null);
     setSuccess(null);
     let attachmentId: string | null = null;
+
     try {
       attachmentId = await persistMissionEvidence(mission, file);
       const preview = await analyzeFacilitatorSellOut(file, brand.id, mission.id);
@@ -209,7 +218,10 @@ export function FacilitatorSellOutWorkspace({ brand, onBack }: { brand: BrandCon
       });
     } catch (analysisError) {
       if (attachmentId) {
-        await supabase.from("mission_attachments").update({ analysis_status: "failed" }).eq("id", attachmentId).catch(() => undefined);
+        await supabase
+          .from("mission_attachments")
+          .update({ analysis_status: "failed" })
+          .eq("id", attachmentId);
       }
       setError(analysisError instanceof Error ? analysisError.message : "La sortie de caisse n’a pas pu être analysée.");
     } finally {
@@ -218,21 +230,25 @@ export function FacilitatorSellOutWorkspace({ brand, onBack }: { brand: BrandCon
   }
 
   async function takePhoto() {
-    if (!selectedMission) return;
+    const mission = selectedMission;
+    if (!mission) return;
+
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
       setError("Autorisez l’accès à la caméra pour photographier la sortie de caisse.");
       return;
     }
+
     const result = await ImagePicker.launchCameraAsync({
       mediaTypes: ["images"],
       cameraType: ImagePicker.CameraType.back,
       allowsEditing: false,
       quality: 0.9,
     });
-    const asset = result.canceled ? null : result.assets[0];
+    const asset = result.canceled ? undefined : result.assets?.[0];
     if (!asset) return;
-    await analyzeFile(selectedMission, {
+
+    await analyzeFile(mission, {
       uri: asset.uri,
       name: asset.fileName || `sortie-caisse-${Date.now()}.jpg`,
       mimeType: asset.mimeType || "image/jpeg",
@@ -241,15 +257,18 @@ export function FacilitatorSellOutWorkspace({ brand, onBack }: { brand: BrandCon
   }
 
   async function pickPdf() {
-    if (!selectedMission) return;
+    const mission = selectedMission;
+    if (!mission) return;
+
     const result = await DocumentPicker.getDocumentAsync({
       type: "application/pdf",
       multiple: false,
       copyToCacheDirectory: true,
     });
-    if (result.canceled) return;
-    const asset = result.assets[0];
-    await analyzeFile(selectedMission, {
+    const asset = result.canceled ? undefined : result.assets?.[0];
+    if (!asset) return;
+
+    await analyzeFile(mission, {
       uri: asset.uri,
       name: asset.name || `sortie-caisse-${Date.now()}.pdf`,
       mimeType: asset.mimeType || "application/pdf",
@@ -279,6 +298,7 @@ export function FacilitatorSellOutWorkspace({ brand, onBack }: { brand: BrandCon
       setError("La recherche produit est indisponible.");
       return;
     }
+
     updateReviewLine(lineIndex, {
       searchResults: (data ?? []).map((item) => ({
         id: String(item.id),
@@ -305,7 +325,11 @@ export function FacilitatorSellOutWorkspace({ brand, onBack }: { brand: BrandCon
     }
     if (review.lines.some((line) => !line.product)) values.push("Produit(s) à identifier");
     if (review.lines.some((line) => !/^\d+$/.test(line.units) || Number(line.units) < 0)) values.push("Unités à corriger");
-    if (review.lines.some((line) => line.revenueHt.trim() && (!Number.isFinite(Number(line.revenueHt.replace(",", "."))) || Number(line.revenueHt.replace(",", ".")) < 0))) {
+    if (review.lines.some((line) => {
+      if (!line.revenueHt.trim()) return false;
+      const value = Number(line.revenueHt.replace(",", "."));
+      return !Number.isFinite(value) || value < 0;
+    })) {
       values.push("CA HT à corriger");
     }
     return values;
@@ -316,6 +340,7 @@ export function FacilitatorSellOutWorkspace({ brand, onBack }: { brand: BrandCon
     setBusy(true);
     setError(null);
     setSuccess(null);
+
     try {
       const captureId = await createFacilitatorSellOutDraft({
         brandId: brand.id,
@@ -356,12 +381,21 @@ export function FacilitatorSellOutWorkspace({ brand, onBack }: { brand: BrandCon
       <SafeAreaView style={styles.safeArea}>
         <StatusBar style="dark" />
         <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
-          <Header onBack={() => setReview(null)} eyebrow="SELL-OUT · RELECTURE" title="Vérifier la sortie de caisse" subtitle={`${review.mission.pharmacyName} · ${brand.name}`} />
+          <Header
+            onBack={() => setReview(null)}
+            eyebrow="SELL-OUT · RELECTURE"
+            title="Vérifier la sortie de caisse"
+            subtitle={`${review.mission.pharmacyName} · ${brand.name}`}
+          />
+
           <View style={styles.guardCard}>
             <Text style={styles.guardTitle}>Validation en 2 niveaux</Text>
             <Text style={styles.guardText}>Vous vérifiez la lecture du document. Le relevé reste ensuite « À valider » jusqu’à la revue TR1 / marque.</Text>
           </View>
-          {review.preview.warnings.map((warning) => <View key={warning} style={styles.warningCard}><Text style={styles.warningText}>{warning}</Text></View>)}
+
+          {review.preview.warnings.map((warning, index) => (
+            <View key={`${warning}-${index}`} style={styles.warningCard}><Text style={styles.warningText}>{warning}</Text></View>
+          ))}
           {error ? <ErrorCard message={error} /> : null}
 
           <View style={styles.twoColumns}>
@@ -377,15 +411,36 @@ export function FacilitatorSellOutWorkspace({ brand, onBack }: { brand: BrandCon
               {line.warning ? <Text style={styles.lineWarning}>{line.warning}</Text> : null}
 
               <Text style={styles.fieldLabel}>Produit TR1 *</Text>
-              {line.product ? <View style={styles.selectedProduct}><Text style={styles.selectedProductName}>{line.product.name}</Text><Pressable onPress={() => updateReviewLine(line.index, { product: null })}><Text style={styles.changeText}>Changer</Text></Pressable></View> : null}
-              {!line.product && line.candidates.length ? <View style={styles.chips}>{line.candidates.map((product) => <Chip key={product.id} label={product.name} active={false} onPress={() => updateReviewLine(line.index, { product })} />)}</View> : null}
+              {line.product ? (
+                <View style={styles.selectedProduct}>
+                  <Text style={styles.selectedProductName}>{line.product.name}</Text>
+                  <Pressable onPress={() => updateReviewLine(line.index, { product: null })}><Text style={styles.changeText}>Changer</Text></Pressable>
+                </View>
+              ) : null}
+
+              {!line.product && line.candidates.length ? (
+                <View style={styles.chips}>
+                  {line.candidates.map((product) => <Chip key={product.id} label={product.name} onPress={() => updateReviewLine(line.index, { product })} />)}
+                </View>
+              ) : null}
+
               {!line.product ? (
                 <>
                   <View style={styles.searchRow}>
-                    <TextInput value={line.query} onChangeText={(value) => updateReviewLine(line.index, { query: value })} placeholder="Rechercher le produit" placeholderTextColor="#98A2B3" style={[styles.input, styles.searchInput]} />
+                    <TextInput
+                      value={line.query}
+                      onChangeText={(value) => updateReviewLine(line.index, { query: value })}
+                      placeholder="Rechercher le produit"
+                      placeholderTextColor="#98A2B3"
+                      style={[styles.input, styles.searchInput]}
+                    />
                     <Pressable disabled={busy} onPress={() => void searchProduct(line.index)} style={styles.searchButton}><Text style={styles.searchButtonText}>Chercher</Text></Pressable>
                   </View>
-                  {line.searchResults.length ? <View style={styles.chips}>{line.searchResults.map((product) => <Chip key={product.id} label={product.name} active={false} onPress={() => updateReviewLine(line.index, { product })} />)}</View> : null}
+                  {line.searchResults.length ? (
+                    <View style={styles.chips}>
+                      {line.searchResults.map((product) => <Chip key={product.id} label={product.name} onPress={() => updateReviewLine(line.index, { product })} />)}
+                    </View>
+                  ) : null}
                 </>
               ) : null}
 
@@ -396,7 +451,13 @@ export function FacilitatorSellOutWorkspace({ brand, onBack }: { brand: BrandCon
             </View>
           ))}
 
-          {blockers.length ? <View style={styles.warningCard}><Text style={styles.warningTitle}>À corriger avant envoi</Text>{blockers.map((item) => <Text key={item} style={styles.warningText}>• {item}</Text>)}</View> : null}
+          {blockers.length ? (
+            <View style={styles.warningCard}>
+              <Text style={styles.warningTitle}>À corriger avant envoi</Text>
+              {blockers.map((item) => <Text key={item} style={styles.warningText}>• {item}</Text>)}
+            </View>
+          ) : null}
+
           <Pressable disabled={busy || blockers.length > 0} onPress={() => void submitReview()} style={[styles.primaryButton, (busy || blockers.length > 0) && styles.disabled]}>
             {busy ? <ActivityIndicator color="#FFF" /> : <Text style={styles.primaryButtonText}>Valider ma lecture et envoyer</Text>}
           </Pressable>
@@ -410,10 +471,12 @@ export function FacilitatorSellOutWorkspace({ brand, onBack }: { brand: BrandCon
       <StatusBar style="dark" />
       <ScrollView contentContainerStyle={styles.page}>
         <Header onBack={onBack} eyebrow="ANIMATEUR · SELL-OUT" title="Sortie de caisse" subtitle="Photo ou PDF → extraction → correction → validation humaine." />
+
         <View style={styles.guardCard}>
           <Text style={styles.guardTitle}>Aucune vente confirmée automatiquement</Text>
           <Text style={styles.guardText}>TR1 propose une lecture. Vous contrôlez chaque ligne, puis un responsable valide le relevé avant qu’il ne devienne « Confirmé ».</Text>
         </View>
+
         {error ? <ErrorCard message={error} /> : null}
         {success ? <View style={styles.successCard}><Text style={styles.successText}>{success}</Text></View> : null}
         {loading ? <Loading label="Chargement de vos missions…" /> : null}
@@ -422,7 +485,15 @@ export function FacilitatorSellOutWorkspace({ brand, onBack }: { brand: BrandCon
           <>
             <Text style={styles.sectionTitle}>1. Choisir la mission TR1</Text>
             {missions.length ? missions.map((mission) => (
-              <Pressable key={mission.id} onPress={() => { setSelectedMission(mission); setSuccess(null); setError(null); }} style={[styles.missionCard, selectedMission?.id === mission.id && styles.missionCardSelected]}>
+              <Pressable
+                key={mission.id}
+                onPress={() => {
+                  setSelectedMission(mission);
+                  setSuccess(null);
+                  setError(null);
+                }}
+                style={[styles.missionCard, selectedMission?.id === mission.id && styles.missionCardSelected]}
+              >
                 <Text style={styles.missionDate}>{mission.scheduledStartAt ? formatDateTime(mission.scheduledStartAt) : "Date non planifiée"}</Text>
                 <Text style={styles.missionTitle}>{mission.pharmacyName}{mission.city ? ` · ${mission.city}` : ""}</Text>
                 <Text style={styles.missionMeta}>{missionTypeLabel(mission.missionType)} · {statusLabel(mission.status)}</Text>
@@ -444,25 +515,56 @@ export function FacilitatorSellOutWorkspace({ brand, onBack }: { brand: BrandCon
 }
 
 function Header({ onBack, eyebrow, title, subtitle }: { onBack: () => void; eyebrow: string; title: string; subtitle: string }) {
-  return <><Pressable onPress={onBack} style={styles.backButton}><Text style={styles.backText}>← Retour</Text></Pressable><Text style={styles.eyebrow}>{eyebrow}</Text><Text style={styles.title}>{title}</Text><Text style={styles.subtitle}>{subtitle}</Text></>;
+  return (
+    <>
+      <Pressable onPress={onBack} style={styles.backButton}><Text style={styles.backText}>← Retour</Text></Pressable>
+      <Text style={styles.eyebrow}>{eyebrow}</Text>
+      <Text style={styles.title}>{title}</Text>
+      <Text style={styles.subtitle}>{subtitle}</Text>
+    </>
+  );
 }
 
 function Field({ label, value, onChangeText, placeholder, keyboardType }: { label: string; value: string; onChangeText: (value: string) => void; placeholder: string; keyboardType?: "default" | "number-pad" | "decimal-pad" }) {
-  return <View style={styles.field}><Text style={styles.fieldLabel}>{label}</Text><TextInput value={value} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor="#98A2B3" keyboardType={keyboardType} style={styles.input} /></View>;
+  return (
+    <View style={styles.field}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <TextInput value={value} onChangeText={onChangeText} placeholder={placeholder} placeholderTextColor="#98A2B3" keyboardType={keyboardType} style={styles.input} />
+    </View>
+  );
 }
 
-function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
-  return <Pressable onPress={onPress} style={[styles.chip, active && styles.chipActive]}><Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text></Pressable>;
+function Chip({ label, onPress }: { label: string; onPress: () => void }) {
+  return <Pressable onPress={onPress} style={styles.chip}><Text style={styles.chipText}>{label}</Text></Pressable>;
 }
 
-function Loading({ label }: { label: string }) { return <View style={styles.loading}><ActivityIndicator /><Text style={styles.loadingText}>{label}</Text></View>; }
-function EmptyCard({ text }: { text: string }) { return <View style={styles.noticeCard}><Text style={styles.noticeText}>{text}</Text></View>; }
-function ErrorCard({ message }: { message: string }) { return <View style={styles.errorCard}><Text style={styles.errorText}>{message}</Text></View>; }
+function Loading({ label }: { label: string }) {
+  return <View style={styles.loading}><ActivityIndicator /><Text style={styles.loadingText}>{label}</Text></View>;
+}
 
-function safeFileName(name: string) { return name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/-+/g, "-").slice(-160) || "preuve"; }
-function formatDateTime(value: string) { return new Intl.DateTimeFormat("fr-FR", { weekday: "short", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(value)); }
-function missionTypeLabel(value: string) { return ({ animation: "Animation", training: "Formation", merchandising: "Merchandising", pharmacy_audit: "Audit pharmacie", product_launch: "Lancement", stock_check: "Stock", other: "Autre" } as Record<string, string>)[value] || value.replaceAll("_", " "); }
-function statusLabel(value: string) { return ({ requested: "Demandée", to_assign: "À affecter", assigned: "Affectée", accepted: "Acceptée", scheduled: "Planifiée", in_progress: "En cours", report_pending: "Rapport attendu", completed: "Terminée" } as Record<string, string>)[value] || value; }
+function EmptyCard({ text }: { text: string }) {
+  return <View style={styles.noticeCard}><Text style={styles.noticeText}>{text}</Text></View>;
+}
+
+function ErrorCard({ message }: { message: string }) {
+  return <View style={styles.errorCard}><Text style={styles.errorText}>{message}</Text></View>;
+}
+
+function safeFileName(name: string) {
+  return name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/-+/g, "-").slice(-160) || "preuve";
+}
+
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat("fr-FR", { weekday: "short", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
+}
+
+function missionTypeLabel(value: string) {
+  return ({ animation: "Animation", training: "Formation", merchandising: "Merchandising", pharmacy_audit: "Audit pharmacie", product_launch: "Lancement", stock_check: "Stock", other: "Autre" } as Record<string, string>)[value] || value.replaceAll("_", " ");
+}
+
+function statusLabel(value: string) {
+  return ({ requested: "Demandée", to_assign: "À affecter", assigned: "Affectée", accepted: "Acceptée", scheduled: "Planifiée", in_progress: "En cours", report_pending: "Rapport attendu", completed: "Terminée" } as Record<string, string>)[value] || value;
+}
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: "#F7F8FA" },
@@ -504,9 +606,7 @@ const styles = StyleSheet.create({
   changeText: { color: "#3B5BDB", fontSize: 12, fontWeight: "800" },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 7, marginBottom: 10 },
   chip: { borderRadius: 999, borderWidth: 1, borderColor: "#D0D5DD", backgroundColor: "#FFF", paddingHorizontal: 10, paddingVertical: 7 },
-  chipActive: { borderColor: "#A5B4FC", backgroundColor: "#EEF2FF" },
   chipText: { color: "#475467", fontSize: 11, fontWeight: "700" },
-  chipTextActive: { color: "#3B5BDB" },
   searchRow: { flexDirection: "row", gap: 8, alignItems: "center", marginBottom: 8 },
   searchInput: { flex: 1, marginBottom: 0 },
   searchButton: { minHeight: 46, paddingHorizontal: 12, borderRadius: 12, backgroundColor: "#EEF2FF", alignItems: "center", justifyContent: "center" },
