@@ -133,6 +133,23 @@ async function saveExternalIdFor(
   if (error) throw error;
 }
 
+function searchedExternalId(search: HubSpotSearchResponse, label: string) {
+  const results = search.results ?? [];
+  const total = search.total ?? results.length;
+  if (total !== 1 || results.length !== 1) {
+    throw new Error(`Expected exactly one HubSpot product for ${label}; found ${total}`);
+  }
+
+  const rawExternalId = results[0]?.id;
+  const externalId = typeof rawExternalId === "number" && Number.isFinite(rawExternalId)
+    ? String(rawExternalId)
+    : typeof rawExternalId === "string" && rawExternalId.trim()
+      ? rawExternalId.trim()
+      : null;
+  if (!externalId) throw new Error(`HubSpot product search for ${label} returned no usable product ID`);
+  return externalId;
+}
+
 async function resolveHubSpotProductExternalId(options: {
   admin: ReturnType<typeof createAdminClient>;
   client: HubSpotClient;
@@ -152,32 +169,56 @@ async function resolveHubSpotProductExternalId(options: {
     throw new Error(`HubSpot product mapping missing for TR1 product ${tr1ProductId} (${sku}); dry-run will not query the provider`);
   }
 
-  const skuProperty = NAALI_HUBSPOT_CONFIGURATION.properties.product.sku;
-  if (!skuProperty) throw new Error("HubSpot product SKU property is not configured");
+  const productMap = NAALI_HUBSPOT_CONFIGURATION.properties.product;
+  const skuProperty = productMap.sku;
+  const productTypeProperty = productMap.productType;
+  if (!skuProperty || !productTypeProperty) throw new Error("HubSpot product catalog properties are not configured");
 
   const searched = await client.searchObjects<HubSpotSearchResponse>(NAALI_HUBSPOT_CONFIGURATION.objects.products, {
     filterGroups: [{
-      filters: [{ propertyName: skuProperty, operator: "EQ", value: sku }],
+      filters: [
+        { propertyName: skuProperty, operator: "EQ", value: sku },
+        { propertyName: productTypeProperty, operator: "EQ", value: "Normal" },
+      ],
     }],
-    properties: [skuProperty],
+    properties: [skuProperty, productTypeProperty],
     limit: 2,
   });
-  const results = searched.data?.results ?? [];
-  const total = searched.data?.total ?? results.length;
-  if (total !== 1 || results.length !== 1) {
-    throw new Error(`Expected exactly one HubSpot product for SKU ${sku}; found ${total}`);
-  }
-
-  const rawExternalId = results[0]?.id;
-  const externalId = typeof rawExternalId === "number" && Number.isFinite(rawExternalId)
-    ? String(rawExternalId)
-    : typeof rawExternalId === "string" && rawExternalId.trim()
-      ? rawExternalId.trim()
-      : null;
-  if (!externalId) throw new Error(`HubSpot product search for SKU ${sku} returned no usable product ID`);
+  const externalId = searchedExternalId(searched.data ?? {}, `normal SKU ${sku}`);
 
   await saveExternalIdFor(admin, connectionId, "products", tr1ProductId, externalId);
   return externalId;
+}
+
+async function resolveHubSpotFreeProductExternalId(options: {
+  client: HubSpotClient;
+  normalProductExternalId: string;
+  productLabel: string;
+}) {
+  const { client, normalProductExternalId, productLabel } = options;
+  if (client.getMode() !== "write") {
+    throw new Error(`HubSpot UG catalog mapping missing for ${productLabel}; dry-run will not query the provider`);
+  }
+
+  const productMap = NAALI_HUBSPOT_CONFIGURATION.properties.product;
+  const productTypeProperty = productMap.productType;
+  const primaryProductProperty = productMap.primaryProductExternalId;
+  if (!productTypeProperty || !primaryProductProperty) {
+    throw new Error("HubSpot UG catalog properties are not configured");
+  }
+
+  const searched = await client.searchObjects<HubSpotSearchResponse>(NAALI_HUBSPOT_CONFIGURATION.objects.products, {
+    filterGroups: [{
+      filters: [
+        { propertyName: productTypeProperty, operator: "EQ", value: "UG" },
+        { propertyName: primaryProductProperty, operator: "EQ", value: normalProductExternalId },
+      ],
+    }],
+    properties: [productTypeProperty, primaryProductProperty, "name"],
+    limit: 2,
+  });
+
+  return searchedExternalId(searched.data ?? {}, `UG linked to ${productLabel} (${normalProductExternalId})`);
 }
 
 async function roleKeyForOrderUser(
@@ -392,18 +433,30 @@ export async function syncHubSpotOrderAfterPersistence(brandId: string, orderId:
       const route = resolveNaaliHubSpotOrderRoute(roleKey);
 
       const productMappings = new Map<string, string>();
+      const freeProductMappings = new Map<string, string>();
       for (const item of items ?? []) {
         if (!item.product_id) throw new Error(`TR1 order item ${item.id} has no product_id for HubSpot catalog linkage`);
         const tr1ProductId = String(item.product_id);
-        if (productMappings.has(tr1ProductId)) continue;
-        const productExternalId = await resolveHubSpotProductExternalId({
-          admin,
-          client,
-          connectionId: connection.id,
-          tr1ProductId,
-          sku: item.sku_snapshot ? String(item.sku_snapshot) : null,
-        });
-        productMappings.set(tr1ProductId, productExternalId);
+        let productExternalId = productMappings.get(tr1ProductId);
+        if (!productExternalId) {
+          productExternalId = await resolveHubSpotProductExternalId({
+            admin,
+            client,
+            connectionId: connection.id,
+            tr1ProductId,
+            sku: item.sku_snapshot ? String(item.sku_snapshot) : null,
+          });
+          productMappings.set(tr1ProductId, productExternalId);
+        }
+
+        if (Number(item.free_quantity ?? 0) > 0 && !freeProductMappings.has(tr1ProductId)) {
+          const freeProductExternalId = await resolveHubSpotFreeProductExternalId({
+            client,
+            normalProductExternalId: productExternalId,
+            productLabel: String(item.product_name_snapshot || item.sku_snapshot || tr1ProductId),
+          });
+          freeProductMappings.set(tr1ProductId, freeProductExternalId);
+        }
       }
 
       const payload: HubSpotOrderSyncInput = {
@@ -423,14 +476,20 @@ export async function syncHubSpotOrderAfterPersistence(brandId: string, orderId:
           const tr1ProductId = String(item.product_id);
           const productExternalId = productMappings.get(tr1ProductId);
           if (!productExternalId) throw new Error(`HubSpot product mapping missing for TR1 product ${tr1ProductId}`);
+          const freeQuantity = Number(item.free_quantity ?? 0);
+          const freeProductExternalId = freeQuantity > 0 ? freeProductMappings.get(tr1ProductId) : null;
+          if (freeQuantity > 0 && !freeProductExternalId) {
+            throw new Error(`HubSpot UG product mapping missing for TR1 product ${tr1ProductId}`);
+          }
           return {
             id: String(item.id),
             productId: tr1ProductId,
             productExternalId,
+            freeProductExternalId,
             name: String(item.product_name_snapshot),
             sku: item.sku_snapshot ? String(item.sku_snapshot) : null,
             quantity: Number(item.quantity),
-            freeQuantity: Number(item.free_quantity ?? 0),
+            freeQuantity,
             unitPriceHt: Number(item.unit_price_ht),
             discountPercent: item.discount_rate === null ? null : Number(item.discount_rate),
             vatRate: item.tax_rate === null ? null : Number(item.tax_rate),
