@@ -18,7 +18,7 @@ import { supabase } from "../lib/supabase";
 
 type MissionSource = "tr1" | "private";
 type MissionType = "animation" | "training" | "merchandising" | "other";
-type EvidenceKind = "merch_before" | "merch_after" | "merch_detail" | "merch_plv" | "cash_register";
+type EvidenceKind = "merch_plan" | "merch_before" | "merch_after" | "merch_detail" | "merch_plv" | "cash_register";
 
 type WorkspaceMission = {
   source: MissionSource;
@@ -370,6 +370,7 @@ function MissionDetail({ mission, currentBrand, onBack, onOpenTr1Mission }: { mi
         </> : <><Text style={styles.sectionTitle}>Mission TR1</Text>{mission.brandId === currentBrand.id ? <Pressable onPress={() => onOpenTr1Mission(mission.id)} style={styles.secondaryButton}><Text style={styles.secondaryButtonText}>Ouvrir le brief et le rapport TR1</Text></Pressable> : <EmptyCard text={`Mission ${mission.brandName} : changez de marque pour ouvrir le brief complet.`} />}</>}
 
         <Text style={[styles.sectionTitle, styles.sectionSpacing]}>Merchandising</Text>
+        <EvidenceAction title="Photo du plan merch" subtitle="Plan merch constaté le jour de l’animation" busy={busy === "merch_plan"} onPress={() => void takePhoto("merch_plan")} />
         <EvidenceAction title="Photo avant" subtitle="Implantation avant animation" busy={busy === "merch_before"} onPress={() => void takePhoto("merch_before")} />
         <EvidenceAction title="Photo après" subtitle="Implantation finale" busy={busy === "merch_after"} onPress={() => void takePhoto("merch_after")} />
         <EvidenceAction title="Détail / PLV" subtitle="Facing, meuble ou PLV" busy={busy === "merch_detail"} onPress={() => void takePhoto("merch_detail")} />
@@ -401,7 +402,7 @@ function localDateKey(date: Date) { return `${date.getFullYear()}-${String(date.
 function formatDateTime(value: string) { return new Intl.DateTimeFormat("fr-FR", { weekday: "short", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(value)); }
 function missionTypeLabel(value: string) { return ({ animation: "Animation", training: "Formation", merchandising: "Merchandising", other: "Autre" } as Record<string, string>)[value] || value.replaceAll("_", " "); }
 function statusLabel(value: string) { return ({ planned: "Planifiée", requested: "Demandée", assigned: "Affectée", accepted: "Acceptée", scheduled: "Planifiée", in_progress: "En cours", report_pending: "Rapport attendu", completed: "Terminée", cancelled: "Annulée", rejected: "Refusée", no_show: "Absence" } as Record<string, string>)[value] || value; }
-function evidenceLabel(value: EvidenceKind) { return ({ merch_before: "Merch avant", merch_after: "Merch après", merch_detail: "Détail merch", merch_plv: "PLV", cash_register: "Sortie de caisse" } as Record<EvidenceKind, string>)[value]; }
+function evidenceLabel(value: EvidenceKind) { return ({ merch_plan: "Plan merch", merch_before: "Merch avant", merch_after: "Merch après", merch_detail: "Détail merch", merch_plv: "PLV", cash_register: "Sortie de caisse" } as Record<EvidenceKind, string>)[value]; }
 function analysisLabel(value: string | null) { return ({ pending: "En attente", needs_review: "À vérifier", partial: "Partiel", confirmed: "Lecture validée", failed: "Échec" } as Record<string, string>)[value || ""] || "Ajoutée"; }
 
 const styles = StyleSheet.create({
