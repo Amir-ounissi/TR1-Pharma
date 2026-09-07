@@ -246,6 +246,21 @@ select lives_ok(
   'provider can save a draft report while mission is in progress'
 );
 
+-- Facilitator animations now require the merchandising plan and result evidence before submission.
+insert into public.mission_attachments(
+  mission_id,brand_id,object_path,original_name,mime_type,size_bytes,visibility,uploaded_by,evidence_kind,analysis_status
+)
+select id,brand_id,brand_id::text || '/' || id::text || '/workflow-merch-plan.jpg','workflow-merch-plan.jpg','image/jpeg',1024,'shared',
+  '00000000-0000-0000-0000-0000000000c1','merch_plan','confirmed'
+from public.missions where title='Animation été';
+
+insert into public.mission_attachments(
+  mission_id,brand_id,object_path,original_name,mime_type,size_bytes,visibility,uploaded_by,evidence_kind,analysis_status
+)
+select id,brand_id,brand_id::text || '/' || id::text || '/workflow-merch-after.jpg','workflow-merch-after.jpg','image/jpeg',1024,'shared',
+  '00000000-0000-0000-0000-0000000000c1','merch_after','confirmed'
+from public.missions where title='Animation été';
+
 select throws_ok(
   $$select public.save_mission_report(
     (select id from missions where title='Animation été'),
