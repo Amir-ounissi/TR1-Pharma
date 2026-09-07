@@ -2,6 +2,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
 
+import { DayProgress } from "../components/day-progress";
 import type { BrandContext } from "../../App";
 import { refreshFieldReminders } from "../lib/field-notifications";
 import { ManualOrderWorkflow } from "./manual-order";
@@ -21,6 +22,8 @@ type Props = {
 };
 
 export function FieldWorkspace({ brand, canSwitchBrand, onSwitchBrand, onSignOut }: Props) {
+  const [selectedMissionId, setSelectedMissionId] = useState<string | null>(null);
+  const canOrder = ["agent", "tr1_manager", "brand_admin", "super_admin"].includes(brand.role);
   const [route, setRoute] = useState<Route>("home");
 
   useEffect(() => {
@@ -31,7 +34,7 @@ export function FieldWorkspace({ brand, canSwitchBrand, onSwitchBrand, onSignOut
   if (route === "orders") return <OrderWorkflow brand={brand} onBack={() => setRoute("home")} onDone={() => setRoute("home")} />;
   if (route === "manualOrder") return <ManualOrderWorkflow brand={brand} onBack={() => setRoute("home")} onDone={() => setRoute("home")} />;
   if (route === "orderHistory") return <OrderHistoryWorkspace brand={brand} onBack={() => setRoute("home")} />;
-  if (route === "missions") return <MissionAgendaWorkspace brand={brand} mode="missions" onBack={() => setRoute("home")} />;
+  if (route === "missions") return <MissionAgendaWorkspace brand={brand} mode="missions" initialMissionId={selectedMissionId} onBack={() => setRoute("home")} />;
   if (route === "agenda") return <MissionAgendaWorkspace brand={brand} mode="agenda" onBack={() => setRoute("home")} />;
   if (route === "notifications") return <NotificationSettings brand={brand} onBack={() => setRoute("home")} />;
 
@@ -43,23 +46,24 @@ export function FieldWorkspace({ brand, canSwitchBrand, onSwitchBrand, onSignOut
           <View style={styles.flex}>
             <Text style={styles.eyebrow}>TR1 TERRAIN</Text>
             <Text style={styles.title}>{brand.name}</Text>
-            <Text style={styles.meta}>{brand.role}</Text>
+            <Text style={styles.meta}>{brand.role === "facilitator" ? "Intervenant terrain" : brand.role === "agent" ? "Commercial" : "Espace terrain"}</Text>
           </View>
           {canSwitchBrand ? <Pressable onPress={onSwitchBrand} style={styles.smallButton}><Text style={styles.smallButtonText}>Changer</Text></Pressable> : null}
         </View>
 
-        <View style={styles.hero}>
-          <Text style={styles.heroKicker}>AUJOURD’HUI</Text>
-          <Text style={styles.heroTitle}>Votre journée terrain commence ici.</Text>
-          <Text style={styles.heroText}>Pharmacies, commandes, missions, agenda et rappels sont accessibles en quelques gestes.</Text>
-        </View>
+        <DayProgress brandId={brand.id} onOpen={(event) => {
+          if (event.source_kind === "mission") { setSelectedMissionId(event.source_id); setRoute("missions"); }
+          else setRoute("agenda");
+        }} />
 
         <Text style={styles.sectionTitle}>Actions rapides</Text>
+        {canOrder ? <>
         <Action title="Scanner une commande" text="Photo → analyse → correction → validation" label="OUVRIR LA CAMÉRA" featured onPress={() => setRoute("orders")} />
         <Action title="Saisir une commande" text="Pharmacie → produits → revue → validation explicite" label="SAISIE MANUELLE" onPress={() => setRoute("manualOrder")} />
         <Action title="Historique commandes" text="Statuts, corrections, montants et détail produits" label="CONSULTER" onPress={() => setRoute("orderHistory")} />
+        </> : null}
         <Action title="Pharmacies" text="Portefeuille, recherche et fiche compte" label="OUVRIR" onPress={() => setRoute("pharmacies")} />
-        <Action title="Missions" text="Animations et priorités qui vous sont affectées" label="OUVRIR" onPress={() => setRoute("missions")} />
+        <Action title="Missions" text="Animations et priorités qui vous sont affectées" label="OUVRIR" onPress={() => { setSelectedMissionId(null); setRoute("missions"); }} />
         <Action title="Agenda" text="Planning du jour et éléments à planifier" label="OUVRIR" onPress={() => setRoute("agenda")} />
         <Action title="Rappels terrain" text="Notifications locales synchronisées avec votre agenda" label="RÉGLER" onPress={() => setRoute("notifications")} />
 
@@ -71,7 +75,7 @@ export function FieldWorkspace({ brand, canSwitchBrand, onSwitchBrand, onSignOut
 
 function Action({ title, text, label, onPress, featured = false }: { title: string; text: string; label: string; onPress: () => void; featured?: boolean }) {
   return (
-    <Pressable onPress={onPress} style={[styles.actionCard, featured && styles.actionFeatured]}>
+    <Pressable accessibilityRole="button" onPress={onPress} style={[styles.actionCard, featured && styles.actionFeatured]}>
       <Text style={styles.actionTitle}>{title}</Text>
       <Text style={styles.actionText}>{text}</Text>
       <Text style={styles.openLabel}>{label}</Text>
