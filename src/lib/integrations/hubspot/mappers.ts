@@ -135,6 +135,9 @@ export function mapMeetingToHubSpot(input: HubSpotMeetingSyncInput, config: HubS
   const properties: Record<string, string> = {};
   set(properties, map.name, input.title);
   set(properties, map.startAt ?? map.timestamp, input.startAt);
+  if (map.startAt && map.timestamp && map.startAt !== map.timestamp) {
+    set(properties, map.timestamp, input.startAt);
+  }
   set(properties, map.endAt, input.endAt);
   set(properties, map.outcome, input.outcome);
   return externalRecord(input.id, map, properties);
