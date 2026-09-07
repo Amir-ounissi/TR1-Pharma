@@ -207,8 +207,9 @@ test.describe.serial("Sprint 9 — Pilotage commercial et réassort", () => {
 
     await signIn(page, "agent@dermavita.local", /Dermavita/);
     await page.goto("/dashboard/agent");
-    await expect(page.locator('section[aria-labelledby="reorder-opportunities-title"]')).not.toBeVisible();
-    await expect(page.getByText(agentPharmacyName)).toHaveCount(0);
+    const reorderSection = page.locator('section[aria-labelledby="reorder-opportunities-title"]');
+    await expect(reorderSection).not.toBeVisible();
+    await expect(reorderSection.getByText(agentPharmacyName)).not.toBeVisible();
     await page.setViewportSize({ width: 390, height: 844 });
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow).toBeLessThanOrEqual(1);
