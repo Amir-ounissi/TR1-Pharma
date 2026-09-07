@@ -51,6 +51,8 @@ export const NAALI_HUBSPOT_CONFIGURATION: HubSpotBrandConfiguration = {
     product: {
       name: "name",
       sku: "hs_sku",
+      primaryProductExternalId: "primary_product_id",
+      productType: "type_de_produit_naali",
     },
     order: {
       name: "dealname",
