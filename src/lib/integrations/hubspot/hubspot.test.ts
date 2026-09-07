@@ -167,7 +167,7 @@ describe("HubSpot client write safety", () => {
 });
 
 describe("HubSpot order sync idempotence", () => {
-  it("updates the same deal, paid line and UG line on a second sync", async () => {
+  it("creates a deal with the exact HubSpot company name, then updates the same deal and line items", async () => {
     const parents = new Map<string, string>();
     const children = new Map<string, string>();
     const events: HubSpotSyncEvent[] = [];
@@ -197,9 +197,14 @@ describe("HubSpot order sync idempotence", () => {
     const fetchImpl = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
       const url = String(input);
       const method = init?.method ?? "GET";
+      if (method === "GET" && url.endsWith("/crm/v3/objects/companies/company-1?properties=name")) {
+        return new Response(JSON.stringify({ id: "company-1", properties: { name: "PHARMACIE TEST - 1234567 - 30000" } }), { status: 200 });
+      }
       if (method === "POST" && url.endsWith("/crm/v3/objects/deals")) {
         const payload = JSON.parse(String(init?.body ?? "{}")) as { properties?: Record<string, string> };
         expect(payload.properties?.hubspot_owner_id).toBe("owner-123");
+        expect(payload.properties?.dealname).toBe("PHARMACIE TEST - 1234567 - 30000");
+        expect(payload.properties?.tr1_order_number).toBe("CMD-001");
         return new Response(JSON.stringify({ id: "deal-1" }), { status: 201 });
       }
       if (method === "POST" && url.endsWith("/crm/v3/objects/line_items")) {
@@ -237,7 +242,7 @@ describe("HubSpot order sync idempotence", () => {
     expect(children.get("order-1:line-1:free")).toBe("line-free-1");
 
     const firstCallCount = fetchImpl.mock.calls.length;
-    expect(firstCallCount).toBe(6);
+    expect(firstCallCount).toBe(7);
 
     const second = await syncHubSpotOrder({
       client,
