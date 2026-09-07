@@ -84,6 +84,7 @@ export type HubSpotOrderLineSyncInput = {
   productId: string;
   productExternalId: string;
   freeProductExternalId?: string | null;
+  freeProductName?: string | null;
   name: string;
   sku?: string | null;
   quantity: number;
