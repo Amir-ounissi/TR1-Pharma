@@ -194,6 +194,7 @@ export default function App() {
 
   return (
     <FieldWorkspace
+      key={`${session.user.id}:${activeBrand.id}`}
       brand={activeBrand}
       canSwitchBrand={contexts.length > 1}
       onSwitchBrand={() => setActiveBrandId(null)}
