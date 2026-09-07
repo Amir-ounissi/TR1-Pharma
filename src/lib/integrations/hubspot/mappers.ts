@@ -107,6 +107,7 @@ export function mapOrderToHubSpot(input: HubSpotOrderSyncInput, config: HubSpotB
   if (input.taxAmount !== null && input.taxAmount !== undefined) set(dealProperties, orderMap.taxAmount, decimal(input.taxAmount));
   if (input.amountTtc !== null && input.amountTtc !== undefined) set(dealProperties, orderMap.amountTtc, decimal(input.amountTtc));
   set(dealProperties, orderMap.currency, input.currency);
+  set(dealProperties, orderMap.ownerId, input.ownerExternalId);
   set(dealProperties, orderMap.pipeline, config.deal.pipeline);
   set(dealProperties, orderMap.stage, config.deal.confirmedStage);
 
