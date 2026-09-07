@@ -29,7 +29,9 @@ const config: HubSpotBrandConfiguration = {
     lineItem: {
       name: "name",
       sku: "hs_sku",
-      productExternalId: "tr1_product_id",
+      productExternalId: "hs_product_id",
+      primaryProductExternalId: "primary_product_id",
+      productType: "type_de_produit_naali",
       quantity: "quantity",
       unitPriceHt: "price",
       discountPercent: "hs_discount_percentage",
@@ -67,6 +69,8 @@ const confirmedOrder = {
   lines: [{
     id: "line-1",
     productId: "product-1",
+    productExternalId: "catalog-product-1",
+    freeProductExternalId: "catalog-ug-product-1",
     name: "Produit A",
     sku: "SKU-A",
     quantity: 12,
@@ -87,15 +91,35 @@ describe("HubSpot brand mapping", () => {
     });
   });
 
-  it("maps confirmed order amount and owner from TR1 without recomputing VAT and separates free units", () => {
+  it("maps paid and free quantities to their distinct HubSpot catalog products", () => {
     const mapped = mapOrderToHubSpot(confirmedOrder, config);
 
     expect(mapped.deal.properties.amount).toBe("108");
     expect(mapped.deal.properties.hubspot_owner_id).toBe("owner-123");
     expect(mapped.lineItems).toHaveLength(2);
-    expect(mapped.lineItems[0].properties).toMatchObject({ quantity: "12", price: "10", hs_discount_percentage: "10", tr1_is_free_unit: "false" });
+    expect(mapped.lineItems[0].properties).toMatchObject({
+      hs_product_id: "catalog-product-1",
+      quantity: "12",
+      price: "10",
+      hs_discount_percentage: "10",
+      tr1_is_free_unit: "false",
+    });
     expect(mapped.lineItems[1].tr1RecordId).toBe("line-1:free");
-    expect(mapped.lineItems[1].properties).toMatchObject({ quantity: "2", price: "0", tr1_is_free_unit: "true" });
+    expect(mapped.lineItems[1].properties).toMatchObject({
+      hs_product_id: "catalog-ug-product-1",
+      primary_product_id: "catalog-product-1",
+      type_de_produit_naali: "UG",
+      quantity: "2",
+      price: "0",
+      tr1_is_free_unit: "true",
+    });
+  });
+
+  it("refuses free units when the matching HubSpot UG catalog product is unresolved", () => {
+    expect(() => mapOrderToHubSpot({
+      ...confirmedOrder,
+      lines: [{ ...confirmedOrder.lines[0], freeProductExternalId: null }],
+    }, config)).toThrow(/UG product mapping missing/);
   });
 
   it("never exports an unvalidated order status", () => {
@@ -167,7 +191,7 @@ describe("HubSpot client write safety", () => {
 });
 
 describe("HubSpot order sync idempotence", () => {
-  it("creates a deal with the exact HubSpot company name, then updates the same deal and line items", async () => {
+  it("creates a catalog-backed deal once and keeps hs_product_id create-only on resync", async () => {
     const parents = new Map<string, string>();
     const children = new Map<string, string>();
     const events: HubSpotSyncEvent[] = [];
@@ -209,13 +233,17 @@ describe("HubSpot order sync idempotence", () => {
       }
       if (method === "POST" && url.endsWith("/crm/v3/objects/line_items")) {
         const payload = JSON.parse(String(init?.body ?? "{}")) as { properties?: Record<string, string> };
-        const id = payload.properties?.tr1_is_free_unit === "true" ? "line-free-1" : "line-paid-1";
-        return new Response(JSON.stringify({ id }), { status: 201 });
+        const isFree = payload.properties?.tr1_is_free_unit === "true";
+        expect(payload.properties?.hs_product_id).toBe(isFree ? "catalog-ug-product-1" : "catalog-product-1");
+        return new Response(JSON.stringify({ id: isFree ? "line-free-1" : "line-paid-1" }), { status: 201 });
       }
       if (method === "PATCH") {
+        const payload = JSON.parse(String(init?.body ?? "{}")) as { properties?: Record<string, string> };
         if (url.endsWith("/crm/v3/objects/deals/deal-1")) {
-          const payload = JSON.parse(String(init?.body ?? "{}")) as { properties?: Record<string, string> };
           expect(payload.properties?.hubspot_owner_id).toBe("owner-123");
+        }
+        if (url.includes("/crm/v3/objects/line_items/")) {
+          expect(payload.properties?.hs_product_id).toBeUndefined();
         }
         return new Response(JSON.stringify({ id: url.split("/").pop() }), { status: 200 });
       }
