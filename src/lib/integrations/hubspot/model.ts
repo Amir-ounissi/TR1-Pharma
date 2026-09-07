@@ -4,7 +4,7 @@ export type HubSpotFreeUnitsMode = "separate_line" | "included_in_quantity";
 export type HubSpotLinePricingMode = "unit_price_with_discount" | "net_unit_price";
 
 export type HubSpotPropertyMap = {
-  externalId: string;
+  externalId?: string;
   name?: string;
   address?: string;
   postalCode?: string;
@@ -112,8 +112,8 @@ export type HubSpotNoteSyncInput = {
 };
 
 export type HubSpotMappedRecord = {
-  idProperty: string;
-  id: string;
+  tr1RecordId: string;
+  idProperty?: string;
   properties: Record<string, string>;
 };
 
@@ -132,7 +132,6 @@ export function assertHubSpotBrandConfiguration(config: HubSpotBrandConfiguratio
 
   const maps = Object.values(config.properties);
   for (const map of maps) {
-    if (!SAFE_NAME.test(map.externalId)) throw new Error("Every HubSpot entity requires a safe external ID property");
     for (const value of Object.values(map)) {
       if (value && !SAFE_NAME.test(value)) throw new Error("Invalid HubSpot property configuration");
     }
