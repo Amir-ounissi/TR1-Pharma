@@ -43,16 +43,19 @@ test("PDF mocké : prévisualisation puis confirmation crée une commande, sans 
   });
 });
 
-test("une photo de commande peut être importée et la caméra arrière est proposée sur mobile", async ({ page }) => {
+test("une photo de commande peut être importée et la caméra arrière accepte les formats iPhone", async ({ page }) => {
   await signIn(page, "agent@dermavita.local", /Dermavita/i);
   await page.goto("/dashboard/orders/new");
   await page.getByRole("button", { name: "Importer ou photographier" }).click();
 
   const cameraInput = page.locator('input[name="camera"]');
+  const documentInput = page.getByLabel("PDF ou photo de commande");
   await expect(cameraInput).toHaveAttribute("capture", "environment");
-  await expect(cameraInput).toHaveAttribute("accept", "image/jpeg,image/png,image/webp");
+  await expect(cameraInput).toHaveAttribute("accept", "image/*");
+  await expect(documentInput).toHaveAttribute("accept", /image\/heic/);
+  await expect(documentInput).toHaveAttribute("accept", /image\/heif/);
 
-  await page.getByLabel("PDF ou photo de commande").setInputFiles({
+  await documentInput.setInputFiles({
     name: "commande.jpg",
     mimeType: "image/jpeg",
     buffer: Buffer.from("mock jpeg"),

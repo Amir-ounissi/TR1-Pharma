@@ -24,8 +24,10 @@ export const pdfOrderExtractionSchema = z.object({
     freeQuantity: z.number().int().nonnegative().nullable().optional(),
     unitPriceHt: optionalAmount,
     discountRate: z.number().finite().min(0).max(100).nullable(),
+    taxRate: z.number().finite().min(0).max(100).nullable().optional(),
   })).max(100),
   totalHt: optionalAmount,
+  totalVat: optionalAmount.optional(),
   totalTtc: optionalAmount,
   warnings: z.array(z.string().trim().min(1).max(500)).max(20),
 });
@@ -35,7 +37,7 @@ export type PdfOrderExtraction = z.infer<typeof pdfOrderExtractionSchema>;
 export const PDF_ORDER_JSON_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["orderNumber", "orderDate", "orderDateSource", "deliveryDate", "pharmacy", "lines", "totalHt", "totalTtc", "warnings"],
+  required: ["orderNumber", "orderDate", "orderDateSource", "deliveryDate", "pharmacy", "lines", "totalHt", "totalVat", "totalTtc", "warnings"],
   properties: {
     orderNumber: { type: ["string", "null"] },
     orderDate: { type: ["string", "null"] },
@@ -59,7 +61,7 @@ export const PDF_ORDER_JSON_SCHEMA = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["label", "sku", "ean", "quantity", "freeQuantity", "unitPriceHt", "discountRate"],
+        required: ["label", "sku", "ean", "quantity", "freeQuantity", "unitPriceHt", "discountRate", "taxRate"],
         properties: {
           label: { type: ["string", "null"] },
           sku: { type: ["string", "null"] },
@@ -68,10 +70,12 @@ export const PDF_ORDER_JSON_SCHEMA = {
           freeQuantity: { type: ["number", "null"] },
           unitPriceHt: { type: ["number", "null"] },
           discountRate: { type: ["number", "null"] },
+          taxRate: { type: ["number", "null"] },
         },
       },
     },
     totalHt: { type: ["number", "null"] },
+    totalVat: { type: ["number", "null"] },
     totalTtc: { type: ["number", "null"] },
     warnings: { type: "array", items: { type: "string" } },
   },

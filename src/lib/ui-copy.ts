@@ -237,14 +237,19 @@ const matchMethodLabels: Record<string, string> = {
   siret: "SIRET",
   cip: "CIP",
   finess: "FINESS",
+  name: "nom",
+  name_contains: "nom proche",
   name_postal_code: "nom + code postal",
   name_contains_postal_code: "nom proche + code postal",
   postal_code: "code postal",
   ean: "EAN",
+  barcode: "code-barres",
   sku: "référence interne",
   reference_ean: "EAN de référence",
+  reference_barcode: "code-barres associé",
   reference_sku: "référence interne associée",
   exact_name: "nom exact",
+  label_tokens: "libellé produit",
 };
 
 export function translateMatchMethod(value: string | null | undefined) {

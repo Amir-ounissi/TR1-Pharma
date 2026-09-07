@@ -4,6 +4,47 @@ export const MAX_ORDER_DOCUMENT_SIZE = 3 * 1024 * 1024;
 export const ORDER_DOCUMENT_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 const orderDocumentImageTypes = new Set<string>(ORDER_DOCUMENT_IMAGE_TYPES);
 
+const ORDER_EXTRACTION_INSTRUCTIONS = `
+Tu extrais fidèlement un bon de commande pharmacie depuis un PDF ou une photo. N'invente aucune donnée et ne réalise aucun matching avec TR1.
+
+PHARMACIE ACHETEUSE
+- pharmacy décrit TOUJOURS la pharmacie cliente/acheteuse/destinataire, généralement dans le bloc d'identité du document.
+- Un bloc libellé Fournisseur, Laboratoire, Marque ou Fabricant n'est JAMAIS la pharmacie. Ne mets donc jamais le nom du fournisseur dans pharmacy.
+- Conserve le nom de la pharmacie tel qu'imprimé, même s'il contient des noms de titulaires.
+- Extrais l'adresse et le code postal imprimés. Ne corrige pas un code postal en fonction de tes connaissances.
+- Ne déduis jamais CIP, SIRET ou FINESS depuis un numéro non libellé. Renseigne ces identifiants uniquement lorsqu'ils sont explicitement identifiés ou non ambigus.
+
+DATES
+- orderDate est uniquement une vraie date de commande au format YYYY-MM-DD.
+- Une Date de Livraison, Date d'Expédition, échéance ou autre date logistique ne doit jamais devenir orderDate.
+- Renseigne deliveryDate séparément.
+- orderDateSource = order_date pour un champ explicitement Date de Commande ; header_date pour une date d'en-tête clairement non logistique quand Date de Commande est vide ; delivery_date si la seule date candidate est une date de livraison ; other si la source est incertaine ; null si aucune date n'est lisible.
+- Si Date de Commande est vide et que seule Date de Livraison est renseignée, mets orderDate=null, orderDateSource=delivery_date et renseigne deliveryDate.
+
+LIGNES PRODUITS
+- Lis le tableau ligne par ligne et respecte les colonnes imprimées.
+- Une colonne Code contenant 8 à 14 chiffres, en particulier 13 chiffres, correspond à un code-barres/EAN : copie tous les chiffres exactement dans ean. Ne le mets pas dans sku.
+- quantity = quantité commandée/payante, par exemple Qté Cmde.
+- freeQuantity = unités gratuites, par exemple Qté UG, UG, Gratuité.
+- Ignore une référence uniquement si quantity ET freeQuantity sont toutes deux absentes ou nulles. Une ligne avec 0 ou tiret n'est pas une quantité positive.
+- Lorsqu'une ligne payante est immédiatement suivie d'une ligne du même produit avec une remise de 100 % et des UG, conserve les deux lectures du même EAN/libellé : la ligne UG doit avoir quantity=null et freeQuantity égal au nombre d'UG. Ne transforme jamais les UG en quantité payante.
+- unitPriceHt doit représenter le prix unitaire HT AVANT remise lorsque le tableau fournit à la fois un prix d'achat/brut/tarif, une remise et un prix net. Exemple de colonnes : Prix Achat + Remise % + Prix Net => unitPriceHt=Prix Achat et discountRate=Remise %. Cela permet de recalculer le total de ligne.
+- Si seul un prix net est visible et qu'aucun prix avant remise n'est disponible, utilise ce prix net comme unitPriceHt et mets discountRate=null afin de ne pas appliquer deux fois la remise.
+- discountRate décrit uniquement la remise des unités payantes.
+- taxRate = taux de TVA imprimé sur la ligne, par exemple 5,5 devient 5.5. Ne l'invente pas si la colonne n'est pas lisible.
+
+TOTAUX ET TVA
+- totalHt = total HT net du document.
+- totalVat = montant total de TVA du récapitulatif fiscal s'il est visible.
+- totalTtc = total TTC du document.
+- Si un tableau récapitulatif TVA indique plusieurs taux, conserve taxRate par ligne lorsqu'il est lisible et totalVat comme somme totale affichée.
+
+QUALITÉ
+- Préserve les EAN, quantités, UG, remises, prix et taux de TVA avec une attention prioritaire : ce sont les champs utilisés pour le rapprochement automatique.
+- Utilise null lorsqu'une valeur est absente ou illisible plutôt que de deviner.
+- Tous les warnings doivent être courts, en français et compréhensibles par un commercial.
+`;
+
 export class PdfOrderImportError extends Error {
   constructor(readonly code: "invalid_file" | "openai_unavailable" | "extraction_failed", message: string) {
     super(message);
@@ -24,7 +65,7 @@ export async function extractPdfOrder(file: File, fetcher: Fetcher = fetch): Pro
   if (process.env.APP_ENV === "test" && process.env.PDF_ORDER_E2E_MOCK) {
     return parsePdfOrderExtraction(JSON.parse(process.env.PDF_ORDER_E2E_MOCK));
   }
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY ?? process.env.OPEN_API_PREVIEW_KEY;
   if (!apiKey) throw new PdfOrderImportError("openai_unavailable", "L’extraction du document est indisponible pour le moment.");
 
   let fileId: string | null = null;
@@ -46,8 +87,8 @@ export async function extractPdfOrder(file: File, fetcher: Fetcher = fetch): Pro
       body: JSON.stringify({
         model: process.env.OPENAI_PDF_ORDER_MODEL ?? "gpt-5",
         store: false,
-        instructions: "Extrais uniquement les champs demandés depuis ce document de commande. L’objet pharmacy DOIT décrire la pharmacie acheteuse, cliente ou destinataire qui passe ou reçoit la commande, jamais le fournisseur, le fabricant ou la marque. Les libellés comme Fournisseur désignent le fournisseur et ne doivent pas être utilisés comme pharmacie. Ne déduis jamais un CIP, un SIRET ou un FINESS à partir d’un numéro non identifié : renseigne ces identifiants uniquement lorsqu’ils sont explicitement libellés ou non ambigus. Pour orderDate, retourne uniquement une vraie date de commande au format YYYY-MM-DD. Une Date de Livraison, Date d’Expédition, échéance ou toute autre date logistique NE DOIT JAMAIS être utilisée comme orderDate. Renseigne deliveryDate séparément lorsqu’une Date de Livraison est visible. orderDateSource doit valoir order_date si la date vient d’un champ explicitement libellé Date de Commande, header_date si le champ Date de Commande est vide mais qu’une date d’en-tête du document est clairement imprimée et non logistique, delivery_date si la seule date candidate trouvée est une date de livraison, other pour toute autre source incertaine, et null si aucune date n’est lisible. Si Date de Commande est vide et que la seule date visible est Date de Livraison, mets orderDate à null, orderDateSource à delivery_date et renseigne deliveryDate. Pour chaque ligne produit, quantity correspond à la quantité commandée et payante, par exemple Qté Cmde, et freeQuantity correspond aux unités gratuites, par exemple Qté UG, UG ou gratuité. Ignore entièrement les références dont quantity ET freeQuantity sont toutes deux absentes ou nulles. Ne transforme jamais les unités gratuites en remise commerciale de 100 % : si une ligne contient uniquement des unités gratuites, mets quantity à null et freeQuantity au nombre correspondant. Une ligne d’UG à 100 % de remise appartient au même produit que sa ligne payante lorsqu’EAN, SKU ou libellé l’identifient clairement. discountRate décrit uniquement une remise appliquée aux unités payantes. Ne déduis jamais un identifiant TR1, ne réalise aucun matching, conserve le nom de la pharmacie tel qu’imprimé et utilise null lorsqu’une valeur est absente ou illisible. Tous les éléments du tableau warnings DOIVENT être rédigés en français, de façon courte et compréhensible par un commercial.",
-        input: [{ role: "user", content: [{ type: "input_text", text: "Extrais la commande sous forme de données structurées." }, documentInput] }],
+        instructions: ORDER_EXTRACTION_INSTRUCTIONS,
+        input: [{ role: "user", content: [{ type: "input_text", text: "Extrais cette commande sous forme de données structurées." }, documentInput] }],
         text: { format: { type: "json_schema", name: "pdf_order", strict: true, schema: PDF_ORDER_JSON_SCHEMA } },
       }),
     });

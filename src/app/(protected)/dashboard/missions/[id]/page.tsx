@@ -32,7 +32,7 @@ import {
 import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
 import { formatMissionType } from "@/lib/performance";
 import { presentationLabel } from "@/lib/presentation";
-import { uploadMissionAttachmentAction } from "../actions";
+import { uploadQualifiedMissionAttachmentAction } from "../attachment-actions";
 
 const commercialMissionTypes = [
   "commercial_visit",
@@ -40,6 +40,15 @@ const commercialMissionTypes = [
   "reactivation",
   "relationship_visit",
 ];
+
+const evidenceKindLabels: Record<string, string> = {
+  merch_plan: "Plan merchandising",
+  merch_before: "Photo avant",
+  merch_after: "Photo après",
+  merch_detail: "Détail merchandising",
+  merch_plv: "PLV / visibilité",
+  cash_register: "Sortie de caisse",
+};
 
 export default async function MissionPage({
   params,
@@ -176,6 +185,21 @@ export default async function MissionPage({
     );
 
   const canUpload = isAssigned || isTr1;
+  const ownAttachments = (attachments ?? []).filter(
+    (attachment) => attachment.uploaded_by === userId,
+  );
+  const requiresFacilitatorMerchEvidence =
+    isAssigned &&
+    role === "facilitator" &&
+    ["animation", "merchandising"].includes(mission.mission_type);
+  const hasMerchPlan = ownAttachments.some(
+    (attachment) => attachment.evidence_kind === "merch_plan",
+  );
+  const hasMerchResult = ownAttachments.some((attachment) =>
+    ["merch_after", "merch_detail", "merch_plv"].includes(
+      attachment.evidence_kind ?? "",
+    ),
+  );
 
   return (
     <div className="space-y-6">
@@ -250,6 +274,23 @@ export default async function MissionPage({
               <CardTitle>Compte rendu</CardTitle>
             </CardHeader>
             <CardContent>
+              {requiresFacilitatorMerchEvidence ? (
+                <div className="mb-4 rounded-md border bg-muted/30 p-3 text-sm">
+                  <p className="font-medium">Preuves de clôture</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Badge variant={hasMerchPlan ? "secondary" : "outline"}>
+                      {hasMerchPlan ? "Plan merch ajouté" : "Plan merch requis"}
+                    </Badge>
+                    <Badge variant={hasMerchResult ? "secondary" : "outline"}>
+                      {hasMerchResult ? "Résultat ajouté" : "Résultat merch requis"}
+                    </Badge>
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Ajoutez ces deux preuves dans « Pièces de mission » avant de soumettre le rapport.
+                  </p>
+                </div>
+              ) : null}
+
               {reportEditable ? (
                 <MissionReportForm
                   missionId={id}
@@ -303,8 +344,8 @@ export default async function MissionPage({
             <CardContent>
               {canUpload ? (
                 <form
-                  action={uploadMissionAttachmentAction}
-                  className="grid gap-3 sm:grid-cols-[1fr_180px_auto]"
+                  action={uploadQualifiedMissionAttachmentAction}
+                  className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px_180px_auto]"
                 >
                   <input type="hidden" name="missionId" value={id} />
 
@@ -315,8 +356,23 @@ export default async function MissionPage({
                     required
                   />
 
+                  <Select name="evidenceKind" defaultValue="general">
+                    <SelectTrigger aria-label="Type de preuve">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="general">Document général</SelectItem>
+                      <SelectItem value="merch_plan">Plan merchandising</SelectItem>
+                      <SelectItem value="merch_before">Photo avant</SelectItem>
+                      <SelectItem value="merch_after">Photo après</SelectItem>
+                      <SelectItem value="merch_detail">Détail merchandising</SelectItem>
+                      <SelectItem value="merch_plv">PLV / visibilité</SelectItem>
+                      <SelectItem value="cash_register">Sortie de caisse</SelectItem>
+                    </SelectContent>
+                  </Select>
+
                   <Select name="visibility" defaultValue="shared">
-                    <SelectTrigger>
+                    <SelectTrigger aria-label="Visibilité">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -343,13 +399,20 @@ export default async function MissionPage({
               <div className={canUpload ? "mt-4 space-y-2" : "space-y-2"}>
                 {(attachments ?? []).map((file) => (
                   <div
-                    className="flex justify-between rounded border p-2 text-sm"
+                    className="flex flex-wrap items-center justify-between gap-2 rounded border p-2 text-sm"
                     key={file.id}
                   >
                     <span>{file.original_name}</span>
-                    <Badge variant="outline">
-                      {presentationLabel(file.visibility)}
-                    </Badge>
+                    <div className="flex flex-wrap gap-2">
+                      {file.evidence_kind ? (
+                        <Badge variant="secondary">
+                          {evidenceKindLabels[file.evidence_kind] ?? presentationLabel(file.evidence_kind)}
+                        </Badge>
+                      ) : null}
+                      <Badge variant="outline">
+                        {presentationLabel(file.visibility)}
+                      </Badge>
+                    </div>
                   </div>
                 ))}
 

@@ -1,15 +1,15 @@
 import { expect, test } from "@playwright/test";
 
-test("PWA manifest exposes installable TR1 metadata", async ({ request }) => {
+test("PWA manifest exposes installable TR1 field metadata", async ({ request }) => {
   const response = await request.get("/manifest.webmanifest");
   expect(response.ok()).toBe(true);
 
   const manifest = await response.json();
   expect(manifest).toMatchObject({
-    id: "/dashboard",
+    id: "/dashboard/field",
     name: "TR1 Pharma",
     short_name: "TR1",
-    start_url: "/dashboard",
+    start_url: "/dashboard/field?source=pwa",
     scope: "/",
     display: "standalone",
     theme_color: "#0b1e32",
@@ -32,12 +32,19 @@ test("PWA manifest exposes installable TR1 metadata", async ({ request }) => {
   );
 });
 
-test("PWA icons and Apple install metadata are served", async ({ page, request }) => {
+test("PWA icons, service worker and Apple install metadata are served", async ({ page, request }) => {
   for (const size of [180, 192, 512]) {
     const response = await request.get(`/pwa/icon/${size}`);
     expect(response.ok()).toBe(true);
     expect(response.headers()["content-type"]).toContain("image/png");
   }
+
+  const serviceWorker = await request.get("/sw.js");
+  expect(serviceWorker.ok()).toBe(true);
+  expect(await serviceWorker.text()).toContain("tr1-pwa-static-v1");
+
+  const offline = await request.get("/offline");
+  expect(offline.ok()).toBe(true);
 
   await page.goto("/login");
   await expect(page.locator('link[rel="manifest"]')).toHaveAttribute(

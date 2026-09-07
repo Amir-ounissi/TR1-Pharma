@@ -37,13 +37,14 @@ test("scénario 2 — Manager desktop", async ({ page }) => {
   const priorityRow = page.getByTestId("commercial-priority-row").first();
   if (await priorityRow.count()) await priorityRow.getByRole("link").first().click();
   else await page.goto("/dashboard/pharmacies/00000000-0000-0000-0000-000000000411");
-  await expect(page.getByTestId("terrain-pharmacy-header")).toBeVisible();
-  const followUpLink = page.getByRole("link", { name: "Interaction", exact: true });
-  await expect(followUpLink).toBeVisible();
-  await expect(followUpLink).toHaveAttribute("href", "?tab=activity");
+  const terrainHeader = page.getByTestId("terrain-pharmacy-header");
+  await expect(terrainHeader).toBeVisible();
+  const historyLink = terrainHeader.getByRole("link", { name: "Historique", exact: true });
+  await expect(historyLink).toBeVisible();
+  await expect(historyLink).toHaveAttribute("href", /\/dashboard\/pharmacies\/.+\/notes$/);
   await page.screenshot({ path: `${artifacts}/pharmacy-detail-desktop.png`, fullPage: true });
-  await page.goto(new URL((await followUpLink.getAttribute("href"))!, page.url()).toString());
-  await expect(page).toHaveURL(/tab=activity/);
+  await historyLink.click();
+  await expect(page).toHaveURL(/\/dashboard\/pharmacies\/.+\/notes$/);
 });
 
 test("scénario 3 — Commande globale", async ({ page }) => {

@@ -16,6 +16,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // React Native / Expo is validated by the dedicated Mobile CI workflow.
+    "mobile/**",
   ]),
 ]);
 
