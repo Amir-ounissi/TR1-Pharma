@@ -23,6 +23,14 @@ type HubSpotConnection = {
   configuration: Record<string, unknown> | null;
 };
 
+type HubSpotSearchResponse = {
+  total?: number;
+  results?: Array<{
+    id?: string | number;
+    properties?: Record<string, unknown>;
+  }>;
+};
+
 function configuredMode(connection: HubSpotConnection) {
   const value = connection.configuration?.mode;
   return typeof value === "string" ? value.trim().toLowerCase() : null;
@@ -106,6 +114,72 @@ async function externalIdFor(
   return data?.external_id ? String(data.external_id) : null;
 }
 
+async function saveExternalIdFor(
+  admin: ReturnType<typeof createAdminClient>,
+  connectionId: string,
+  entityType: ConnectorEntityType,
+  tr1RecordId: string,
+  externalId: string,
+) {
+  const { error } = await admin.rpc("upsert_connector_external_link", {
+    target_connection_id: connectionId,
+    target_entity_type: entityType,
+    target_external_id: externalId,
+    target_tr1_record_id: tr1RecordId,
+    target_external_updated_at: null,
+    target_tr1_updated_at: null,
+    target_sync_hash: null,
+  });
+  if (error) throw error;
+}
+
+async function resolveHubSpotProductExternalId(options: {
+  admin: ReturnType<typeof createAdminClient>;
+  client: HubSpotClient;
+  connectionId: string;
+  tr1ProductId: string;
+  sku: string | null;
+}) {
+  const { admin, client, connectionId, tr1ProductId } = options;
+  const existing = await externalIdFor(admin, connectionId, "products", tr1ProductId);
+  if (existing) return existing;
+
+  const sku = options.sku?.trim();
+  if (!sku) {
+    throw new Error(`HubSpot product mapping missing for TR1 product ${tr1ProductId}, and no SKU is available for exact lookup`);
+  }
+  if (client.getMode() !== "write") {
+    throw new Error(`HubSpot product mapping missing for TR1 product ${tr1ProductId} (${sku}); dry-run will not query the provider`);
+  }
+
+  const skuProperty = NAALI_HUBSPOT_CONFIGURATION.properties.product.sku;
+  if (!skuProperty) throw new Error("HubSpot product SKU property is not configured");
+
+  const searched = await client.searchObjects<HubSpotSearchResponse>(NAALI_HUBSPOT_CONFIGURATION.objects.products, {
+    filterGroups: [{
+      filters: [{ propertyName: skuProperty, operator: "EQ", value: sku }],
+    }],
+    properties: [skuProperty],
+    limit: 2,
+  });
+  const results = searched.data?.results ?? [];
+  const total = searched.data?.total ?? results.length;
+  if (total !== 1 || results.length !== 1) {
+    throw new Error(`Expected exactly one HubSpot product for SKU ${sku}; found ${total}`);
+  }
+
+  const rawExternalId = results[0]?.id;
+  const externalId = typeof rawExternalId === "number" && Number.isFinite(rawExternalId)
+    ? String(rawExternalId)
+    : typeof rawExternalId === "string" && rawExternalId.trim()
+      ? rawExternalId.trim()
+      : null;
+  if (!externalId) throw new Error(`HubSpot product search for SKU ${sku} returned no usable product ID`);
+
+  await saveExternalIdFor(admin, connectionId, "products", tr1ProductId, externalId);
+  return externalId;
+}
+
 async function roleKeyForOrderUser(
   admin: ReturnType<typeof createAdminClient>,
   brandId: string,
@@ -144,16 +218,7 @@ function createLinkStore(
       return externalId ? { externalId } : null;
     },
     async saveParent(tr1RecordId, externalId) {
-      const { error } = await admin.rpc("upsert_connector_external_link", {
-        target_connection_id: connectionId,
-        target_entity_type: entityType,
-        target_external_id: externalId,
-        target_tr1_record_id: tr1RecordId,
-        target_external_updated_at: null,
-        target_tr1_updated_at: null,
-        target_sync_hash: null,
-      });
-      if (error) throw error;
+      await saveExternalIdFor(admin, connectionId, entityType, tr1RecordId, externalId);
     },
     async getChild(parentTr1RecordId, childKey) {
       const { data, error } = await admin
@@ -326,6 +391,21 @@ export async function syncHubSpotOrderAfterPersistence(brandId: string, orderId:
       const roleKey = await roleKeyForOrderUser(admin, brandId, ownerTr1UserId);
       const route = resolveNaaliHubSpotOrderRoute(roleKey);
 
+      const productMappings = new Map<string, string>();
+      for (const item of items ?? []) {
+        if (!item.product_id) throw new Error(`TR1 order item ${item.id} has no product_id for HubSpot catalog linkage`);
+        const tr1ProductId = String(item.product_id);
+        if (productMappings.has(tr1ProductId)) continue;
+        const productExternalId = await resolveHubSpotProductExternalId({
+          admin,
+          client,
+          connectionId: connection.id,
+          tr1ProductId,
+          sku: item.sku_snapshot ? String(item.sku_snapshot) : null,
+        });
+        productMappings.set(tr1ProductId, productExternalId);
+      }
+
       const payload: HubSpotOrderSyncInput = {
         id: String(order.id),
         orderNumber: String(order.order_number || order.external_order_id || order.id),
@@ -339,17 +419,23 @@ export async function syncHubSpotOrderAfterPersistence(brandId: string, orderId:
         pipelineExternalId: route.pipeline,
         stageExternalId: route.confirmedStage,
         originValue: route.origin,
-        lines: (items ?? []).map((item) => ({
-          id: String(item.id),
-          productId: String(item.product_id),
-          name: String(item.product_name_snapshot),
-          sku: item.sku_snapshot ? String(item.sku_snapshot) : null,
-          quantity: Number(item.quantity),
-          freeQuantity: Number(item.free_quantity ?? 0),
-          unitPriceHt: Number(item.unit_price_ht),
-          discountPercent: item.discount_rate === null ? null : Number(item.discount_rate),
-          vatRate: item.tax_rate === null ? null : Number(item.tax_rate),
-        })),
+        lines: (items ?? []).map((item) => {
+          const tr1ProductId = String(item.product_id);
+          const productExternalId = productMappings.get(tr1ProductId);
+          if (!productExternalId) throw new Error(`HubSpot product mapping missing for TR1 product ${tr1ProductId}`);
+          return {
+            id: String(item.id),
+            productId: tr1ProductId,
+            productExternalId,
+            name: String(item.product_name_snapshot),
+            sku: item.sku_snapshot ? String(item.sku_snapshot) : null,
+            quantity: Number(item.quantity),
+            freeQuantity: Number(item.free_quantity ?? 0),
+            unitPriceHt: Number(item.unit_price_ht),
+            discountPercent: item.discount_rate === null ? null : Number(item.discount_rate),
+            vatRate: item.tax_rate === null ? null : Number(item.tax_rate),
+          };
+        }),
       };
       const pharmacyExternalId = order.pharmacy_id
         ? await externalIdFor(admin, connection.id, "pharmacies", String(order.pharmacy_id))
