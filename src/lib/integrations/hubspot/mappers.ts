@@ -33,6 +33,18 @@ function externalRecord(id: string, map: HubSpotPropertyMap, properties: Record<
   return { tr1RecordId: id, idProperty: map.externalId, properties };
 }
 
+function requiredProductExternalId(line: HubSpotOrderLineSyncInput) {
+  const value = line.productExternalId?.trim();
+  if (!value) throw new Error(`HubSpot product mapping missing for TR1 product ${line.productId}`);
+  return value;
+}
+
+function requiredFreeProductExternalId(line: HubSpotOrderLineSyncInput) {
+  const value = line.freeProductExternalId?.trim();
+  if (!value) throw new Error(`HubSpot UG product mapping missing for TR1 product ${line.productId}`);
+  return value;
+}
+
 export function mapPharmacyToHubSpot(input: HubSpotPharmacySyncInput, config: HubSpotBrandConfiguration): HubSpotMappedRecord {
   const map = config.properties.pharmacy;
   const properties: Record<string, string> = {};
@@ -59,6 +71,7 @@ function mapPaidLine(line: HubSpotOrderLineSyncInput, config: HubSpotBrandConfig
   const map = config.properties.lineItem;
   const properties: Record<string, string> = {};
   const discount = percentage(line.discountPercent);
+  const productExternalId = requiredProductExternalId(line);
   let unitPrice = line.unitPriceHt;
 
   if (config.order.linePricingMode === "net_unit_price" && discount !== null) {
@@ -67,7 +80,7 @@ function mapPaidLine(line: HubSpotOrderLineSyncInput, config: HubSpotBrandConfig
 
   set(properties, map.name, line.name);
   set(properties, map.sku, line.sku);
-  set(properties, map.productExternalId, line.productId);
+  set(properties, map.productExternalId, productExternalId);
   set(properties, map.quantity, line.quantity);
   set(properties, map.unitPriceHt, decimal(unitPrice));
   set(properties, map.vatRate, line.vatRate === null || line.vatRate === undefined ? null : decimal(line.vatRate));
@@ -82,10 +95,18 @@ function mapPaidLine(line: HubSpotOrderLineSyncInput, config: HubSpotBrandConfig
 function mapFreeLine(line: HubSpotOrderLineSyncInput, freeQuantity: number, config: HubSpotBrandConfiguration): HubSpotMappedRecord {
   const map = config.properties.lineItem;
   const properties: Record<string, string> = {};
+  const productExternalId = requiredProductExternalId(line);
+  const freeProductExternalId = requiredFreeProductExternalId(line);
+  const prefix = config.order.freeUnitNamePrefix?.trim();
   const suffix = config.order.freeUnitNameSuffix?.trim() || "UG";
-  set(properties, map.name, `${line.name} · ${suffix}`);
-  set(properties, map.sku, line.sku);
-  set(properties, map.productExternalId, line.productId);
+  const fallbackName = prefix ? `${prefix} ${line.name}` : `${line.name} · ${suffix}`;
+  const name = line.freeProductName?.trim() || fallbackName;
+
+  set(properties, map.name, name);
+  set(properties, map.productExternalId, freeProductExternalId);
+  set(properties, map.primaryProductExternalId, productExternalId);
+  set(properties, map.productType, "UG");
+  set(properties, map.description, "UG");
   set(properties, map.quantity, freeQuantity);
   set(properties, map.unitPriceHt, "0");
   set(properties, map.vatRate, line.vatRate === null || line.vatRate === undefined ? null : decimal(line.vatRate));

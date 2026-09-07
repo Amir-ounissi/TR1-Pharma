@@ -8,6 +8,7 @@ export type HubSpotPropertyMap = {
   ownerId?: string;
   origin?: string;
   name?: string;
+  description?: string;
   address?: string;
   postalCode?: string;
   city?: string;
@@ -27,6 +28,8 @@ export type HubSpotPropertyMap = {
   quantity?: string;
   discountPercent?: string;
   productExternalId?: string;
+  primaryProductExternalId?: string;
+  productType?: string;
   isFreeUnit?: string;
   body?: string;
   timestamp?: string;
@@ -54,6 +57,7 @@ export type HubSpotBrandConfiguration = {
     linePricingMode: HubSpotLinePricingMode;
     freeUnitsMode: HubSpotFreeUnitsMode;
     freeUnitNameSuffix?: string;
+    freeUnitNamePrefix?: string;
   };
 };
 
@@ -78,6 +82,9 @@ export type HubSpotProductSyncInput = {
 export type HubSpotOrderLineSyncInput = {
   id: string;
   productId: string;
+  productExternalId: string;
+  freeProductExternalId?: string | null;
+  freeProductName?: string | null;
   name: string;
   sku?: string | null;
   quantity: number;
