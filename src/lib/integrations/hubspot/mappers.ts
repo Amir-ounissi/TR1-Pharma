@@ -39,6 +39,12 @@ function requiredProductExternalId(line: HubSpotOrderLineSyncInput) {
   return value;
 }
 
+function requiredFreeProductExternalId(line: HubSpotOrderLineSyncInput) {
+  const value = line.freeProductExternalId?.trim();
+  if (!value) throw new Error(`HubSpot UG product mapping missing for TR1 product ${line.productId}`);
+  return value;
+}
+
 export function mapPharmacyToHubSpot(input: HubSpotPharmacySyncInput, config: HubSpotBrandConfiguration): HubSpotMappedRecord {
   const map = config.properties.pharmacy;
   const properties: Record<string, string> = {};
@@ -90,11 +96,13 @@ function mapFreeLine(line: HubSpotOrderLineSyncInput, freeQuantity: number, conf
   const map = config.properties.lineItem;
   const properties: Record<string, string> = {};
   const productExternalId = requiredProductExternalId(line);
+  const freeProductExternalId = requiredFreeProductExternalId(line);
   const prefix = config.order.freeUnitNamePrefix?.trim();
   const suffix = config.order.freeUnitNameSuffix?.trim() || "UG";
   const name = prefix ? `${prefix} ${line.name}` : `${line.name} · ${suffix}`;
 
   set(properties, map.name, name);
+  set(properties, map.productExternalId, freeProductExternalId);
   set(properties, map.primaryProductExternalId, productExternalId);
   set(properties, map.productType, "UG");
   set(properties, map.description, "UG");
