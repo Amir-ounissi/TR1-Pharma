@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { HubSpotApiError, HubSpotClient } from "./client";
+import { HubSpotClient } from "./client";
 import { mapMeetingToHubSpot, mapNoteToHubSpot, mapOrderToHubSpot, mapPharmacyToHubSpot } from "./mappers";
 import { assertHubSpotBrandConfiguration, type HubSpotBrandConfiguration } from "./model";
 
@@ -13,10 +13,9 @@ const config: HubSpotBrandConfiguration = {
     notes: "notes",
   },
   properties: {
-    pharmacy: { externalId: "tr1_pharmacy_id", name: "name", address: "address", postalCode: "zip", city: "city", phone: "phone" },
-    product: { externalId: "tr1_product_id", name: "name", sku: "hs_sku", unitPriceHt: "price" },
+    pharmacy: { name: "name", address: "address", postalCode: "zip", city: "city", phone: "phone" },
+    product: { name: "name", sku: "hs_sku", unitPriceHt: "price" },
     order: {
-      externalId: "tr1_order_id",
       name: "dealname",
       orderNumber: "tr1_order_number",
       orderDate: "closedate",
@@ -26,7 +25,6 @@ const config: HubSpotBrandConfiguration = {
       stage: "dealstage",
     },
     lineItem: {
-      externalId: "tr1_order_line_id",
       name: "name",
       sku: "hs_sku",
       productExternalId: "tr1_product_id",
@@ -36,8 +34,8 @@ const config: HubSpotBrandConfiguration = {
       vatRate: "tr1_vat_rate",
       isFreeUnit: "tr1_is_free_unit",
     },
-    meeting: { externalId: "tr1_visit_id", name: "hs_meeting_title", startAt: "hs_timestamp", endAt: "hs_meeting_end_time", outcome: "hs_meeting_outcome" },
-    note: { externalId: "tr1_note_id", body: "hs_note_body", timestamp: "hs_timestamp" },
+    meeting: { name: "hs_meeting_title", startAt: "hs_timestamp", endAt: "hs_meeting_end_time", outcome: "hs_meeting_outcome" },
+    note: { body: "hs_note_body", timestamp: "hs_timestamp" },
   },
   deal: { pipeline: "pipeline-id", confirmedStage: "confirmed-stage-id" },
   order: {
@@ -49,12 +47,12 @@ const config: HubSpotBrandConfiguration = {
 };
 
 describe("HubSpot brand mapping", () => {
-  it("keeps brand-specific HubSpot schema in configuration", () => {
+  it("keeps provider IDs outside payloads when the brand has no TR1 custom property", () => {
     expect(() => assertHubSpotBrandConfiguration(config)).not.toThrow();
     expect(mapPharmacyToHubSpot({ id: "pharmacy-1", name: "Pharmacie Test", city: "Nîmes" }, config)).toEqual({
-      idProperty: "tr1_pharmacy_id",
-      id: "pharmacy-1",
-      properties: { tr1_pharmacy_id: "pharmacy-1", name: "Pharmacie Test", city: "Nîmes" },
+      tr1RecordId: "pharmacy-1",
+      idProperty: undefined,
+      properties: { name: "Pharmacie Test", city: "Nîmes" },
     });
   });
 
@@ -84,7 +82,7 @@ describe("HubSpot brand mapping", () => {
     expect(mapped.deal.properties.amount).toBe("108");
     expect(mapped.lineItems).toHaveLength(2);
     expect(mapped.lineItems[0].properties).toMatchObject({ quantity: "12", price: "10", hs_discount_percentage: "10", tr1_is_free_unit: "false" });
-    expect(mapped.lineItems[1]).toMatchObject({ id: "line-1:free" });
+    expect(mapped.lineItems[1].tr1RecordId).toBe("line-1:free");
     expect(mapped.lineItems[1].properties).toMatchObject({ quantity: "2", price: "0", tr1_is_free_unit: "true" });
   });
 
@@ -101,13 +99,11 @@ describe("HubSpot brand mapping", () => {
 
   it("maps visits and notes as provider-neutral activities", () => {
     expect(mapMeetingToHubSpot({ id: "visit-1", title: "Visite", startAt: "2026-09-07T09:00:00Z", outcome: "good" }, config).properties).toMatchObject({
-      tr1_visit_id: "visit-1",
       hs_meeting_title: "Visite",
       hs_timestamp: "2026-09-07T09:00:00Z",
       hs_meeting_outcome: "good",
     });
     expect(mapNoteToHubSpot({ id: "note-1", body: "Compte rendu", timestamp: "2026-09-07T10:00:00Z" }, config).properties).toMatchObject({
-      tr1_note_id: "note-1",
       hs_note_body: "Compte rendu",
     });
   });
@@ -126,7 +122,7 @@ describe("HubSpot client write safety", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  it("retries 429 and 5xx, respecting bounded retry behavior", async () => {
+  it("retries 429 and 5xx with bounded retry behavior", async () => {
     const fetchImpl = vi.fn()
       .mockResolvedValueOnce(new Response(JSON.stringify({ message: "rate limited" }), { status: 429, headers: { "retry-after": "0" } }))
       .mockResolvedValueOnce(new Response(JSON.stringify({ message: "temporary" }), { status: 503 }))
@@ -144,7 +140,7 @@ describe("HubSpot client write safety", () => {
     const fetchImpl = vi.fn().mockResolvedValue(new Response(JSON.stringify({ message: "Service unavailable", correlationId: "corr-1" }), { status: 503 }));
     const client = new HubSpotClient({ mode: "write", accessToken: "server-token", fetchImpl, sleep: async () => undefined, maxRetries: 0 });
 
-    await expect(client.createObject("deals", { dealname: "Test" })).rejects.toMatchObject<Partial<HubSpotApiError>>({
+    await expect(client.createObject("deals", { dealname: "Test" })).rejects.toMatchObject({
       status: 503,
       correlationId: "corr-1",
       retryable: true,
