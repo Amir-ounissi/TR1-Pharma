@@ -33,10 +33,11 @@ describe("Naali HubSpot order routing", () => {
     });
   });
 
-  it("routes partner agents to the agent pipeline and equivalent ADV stage", () => {
+  it("routes submitted partner-agent orders to the agent pipeline and equivalent ADV stage", () => {
     const route = resolveNaaliHubSpotOrderRoute("agent");
     const mapped = mapOrderToHubSpot({
       ...order,
+      status: "pending",
       pipelineExternalId: route.pipeline,
       stageExternalId: route.confirmedStage,
       originValue: route.origin,
@@ -47,6 +48,17 @@ describe("Naali HubSpot order routing", () => {
       dealstage: "5787550915",
       origine_de_la_commande: "Agent",
     });
+  });
+
+  it("keeps draft orders out of HubSpot", () => {
+    const route = resolveNaaliHubSpotOrderRoute("brand_admin");
+    expect(() => mapOrderToHubSpot({
+      ...order,
+      status: "draft",
+      pipelineExternalId: route.pipeline,
+      stageExternalId: route.confirmedStage,
+      originValue: route.origin,
+    }, NAALI_HUBSPOT_CONFIGURATION)).toThrow(/not configured/);
   });
 
   it("refuses to guess a HubSpot route for unsupported TR1 roles", () => {
