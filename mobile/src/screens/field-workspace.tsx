@@ -5,6 +5,7 @@ import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "rea
 import { DayProgress } from "../components/day-progress";
 import type { BrandContext } from "../../App";
 import { refreshFieldReminders } from "../lib/field-notifications";
+import { FacilitatorWorkspace } from "./facilitator-workspace";
 import { ManualOrderWorkflow } from "./manual-order";
 import { MissionAgendaWorkspace } from "./mission-agenda-workspace";
 import { NotificationSettings } from "./notification-settings";
@@ -12,7 +13,7 @@ import { OrderHistoryWorkspace } from "./order-history";
 import { OrderWorkflow } from "./order-workflow";
 import { PharmacyWorkspace } from "./pharmacy-workspace";
 
-type Route = "home" | "pharmacies" | "orders" | "manualOrder" | "orderHistory" | "missions" | "agenda" | "notifications";
+type Route = "home" | "facilitator" | "pharmacies" | "orders" | "manualOrder" | "orderHistory" | "missions" | "agenda" | "notifications";
 
 type Props = {
   brand: BrandContext;
@@ -34,6 +35,16 @@ export function FieldWorkspace({ brand, canSwitchBrand, onSwitchBrand, onSignOut
   if (route === "orders") return <OrderWorkflow brand={brand} onBack={() => setRoute("home")} onDone={() => setRoute("home")} />;
   if (route === "manualOrder") return <ManualOrderWorkflow brand={brand} onBack={() => setRoute("home")} onDone={() => setRoute("home")} />;
   if (route === "orderHistory") return <OrderHistoryWorkspace brand={brand} onBack={() => setRoute("home")} />;
+  if (route === "facilitator") return (
+    <FacilitatorWorkspace
+      brand={brand}
+      onBack={() => setRoute("home")}
+      onOpenTr1Mission={(missionId) => {
+        setSelectedMissionId(missionId);
+        setRoute("missions");
+      }}
+    />
+  );
   if (route === "missions") return <MissionAgendaWorkspace brand={brand} mode="missions" initialMissionId={selectedMissionId} onBack={() => setRoute("home")} />;
   if (route === "agenda") return <MissionAgendaWorkspace brand={brand} mode="agenda" onBack={() => setRoute("home")} />;
   if (route === "notifications") return <NotificationSettings brand={brand} onBack={() => setRoute("home")} />;
@@ -57,6 +68,15 @@ export function FieldWorkspace({ brand, canSwitchBrand, onSwitchBrand, onSignOut
         }} />
 
         <Text style={styles.sectionTitle}>Actions rapides</Text>
+        {brand.role === "facilitator" ? (
+          <Action
+            title="Mon activité animateur"
+            text="Missions TR1 et privées, preuves merchandising et sorties de caisse"
+            label="OUVRIR MON ESPACE"
+            featured
+            onPress={() => setRoute("facilitator")}
+          />
+        ) : null}
         {canOrder ? <>
         <Action title="Scanner une commande" text="Photo → analyse → correction → validation" label="OUVRIR LA CAMÉRA" featured onPress={() => setRoute("orders")} />
         <Action title="Saisir une commande" text="Pharmacie → produits → revue → validation explicite" label="SAISIE MANUELLE" onPress={() => setRoute("manualOrder")} />
