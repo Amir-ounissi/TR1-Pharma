@@ -55,9 +55,9 @@ export default async function NewAgendaVisitPage() {
     grouped.set(relation.pharmacy_id, current);
   }
 
-  const defaultStart = isoToParisLocal(
-    new Date(Date.now() + 60 * 60_000).toISOString(),
-  ).slice(0, 16);
+  const currentTime = new Date();
+  const defaultStartDate = new Date(currentTime.getTime() + 60 * 60_000);
+  const defaultStart = isoToParisLocal(defaultStartDate.toISOString()).slice(0, 16);
 
   return (
     <main className="mx-auto max-w-2xl space-y-5 pb-[calc(2rem+env(safe-area-inset-bottom))]">
