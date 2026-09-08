@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { ChevronRight, MapPin } from "lucide-react";
 import { useState, useTransition } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,6 +19,7 @@ export type PharmacyListRow = {
   city: string | null;
   postal_code: string | null;
   commercial_status: string;
+  activity_status: string | null;
   priority_level: string;
   potential_level: string;
   agent_name: string | null;
@@ -38,7 +41,6 @@ export function PharmacyListWithPanel({ rows, loadSummaryAction }: PharmacyListW
   const currentSummary = selectedId ? (summaryById[selectedId] ?? null) : null;
   const currentError = selectedId ? (errorById[selectedId] ?? null) : null;
 
-
   function openPanel(brandPharmacyId: string) {
     setSelectedId(brandPharmacyId);
     setOpen(true);
@@ -54,7 +56,69 @@ export function PharmacyListWithPanel({ rows, loadSummaryAction }: PharmacyListW
 
   return (
     <>
-      <div className="overflow-hidden rounded-[0.8rem] border border-[var(--tr1-line)] bg-white/78">
+      <div className="space-y-2 md:hidden">
+        {rows.map((row) => {
+          const pharmacyName = row.trade_name || row.legal_name || "Pharmacie";
+          const needsAttention = row.activity_status === "at_risk" || row.activity_status === "dormant";
+          const strategic = row.priority_level === "strategic";
+
+          return (
+            <Link
+              key={row.id}
+              href={`/dashboard/pharmacies/${row.id}`}
+              className={cn(
+                "block rounded-xl border bg-white/90 px-4 py-3.5 shadow-sm transition active:scale-[0.99]",
+                strategic || needsAttention
+                  ? "border-[var(--tr1-orange)]/45"
+                  : "border-[var(--tr1-line)]",
+              )}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <h2 className="line-clamp-2 text-[0.95rem] font-semibold leading-5 text-[var(--tr1-navy)]">
+                    {pharmacyName}
+                  </h2>
+                  <p className="mt-1 flex min-w-0 items-center gap-1.5 text-[0.76rem] text-muted-foreground">
+                    <MapPin className="size-3.5 shrink-0" />
+                    <span className="truncate">
+                      {[row.postal_code, row.city].filter(Boolean).join(" ") || "Localisation non renseignée"}
+                      {row.pharmacy_group_name ? ` · ${row.pharmacy_group_name}` : " · Indépendante"}
+                    </span>
+                  </p>
+                </div>
+                <ChevronRight className="mt-1 size-4 shrink-0 text-muted-foreground" />
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                <Badge
+                  variant="outline"
+                  className="h-6 rounded-full border-[var(--tr1-line-strong)] bg-transparent px-2 text-[0.62rem] font-medium"
+                >
+                  {labels.commercialStatus[row.commercial_status as keyof typeof labels.commercialStatus]}
+                </Badge>
+                <Badge
+                  variant="outline"
+                  className="h-6 rounded-full border-[var(--tr1-line)] bg-transparent px-2 text-[0.62rem] font-medium"
+                >
+                  {labels.potentialLevel[row.potential_level as keyof typeof labels.potentialLevel]}
+                </Badge>
+                {strategic ? (
+                  <Badge className="h-6 rounded-full bg-[var(--tr1-orange)] px-2 text-[0.62rem] font-semibold text-white hover:bg-[var(--tr1-orange)]">
+                    Prioritaire
+                  </Badge>
+                ) : null}
+                {needsAttention ? (
+                  <Badge className="h-6 rounded-full bg-[var(--tr1-navy)] px-2 text-[0.62rem] font-semibold text-white hover:bg-[var(--tr1-navy)]">
+                    À relancer
+                  </Badge>
+                ) : null}
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+
+      <div className="hidden overflow-hidden rounded-[0.8rem] border border-[var(--tr1-line)] bg-white/78 md:block">
         <Table className="text-[0.75rem]">
           <TableHeader className="bg-[var(--tr1-navy)] text-white">
             <TableRow className="border-white/10 hover:bg-[var(--tr1-navy)]">
