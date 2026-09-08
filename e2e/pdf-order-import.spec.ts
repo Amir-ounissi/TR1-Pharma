@@ -16,7 +16,7 @@ test("PDF mocké : prévisualisation puis confirmation crée une commande, sans 
 
   await expect(page.getByLabel("Pharmacie")).toHaveValue("00000000-0000-0000-0000-000000000401");
   await expect(page.locator('input[name="brandPharmacyId"]')).toHaveValue("00000000-0000-0000-0000-000000000411");
-  await expect(page.getByLabel("Produit 1")).toHaveValue("00000000-0000-0000-0000-000000000601");
+  await expect(page.getByLabel("Produit 1").first()).toHaveValue("00000000-0000-0000-0000-000000000601");
 
   const service = adminClient();
   const { count: beforeConfirmation } = await service
