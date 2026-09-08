@@ -3,6 +3,7 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
 import { clearOfflineDaySnapshot } from "@/lib/offline-day-snapshot";
+import { clearOfflineActions } from "@/lib/offline-queue";
 
 type NavigatorWithStandalone = Navigator & { standalone?: boolean };
 
@@ -56,6 +57,7 @@ export function PwaRuntime() {
   useEffect(() => {
     if ((pathname === "/login" || pathname.startsWith("/connexion")) && window.navigator.onLine) {
       clearOfflineDaySnapshot(window.localStorage);
+      clearOfflineActions(window.localStorage);
     }
   }, [pathname]);
 
