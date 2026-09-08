@@ -1,4 +1,4 @@
-import { extractPdfOrder, PdfOrderImportError } from "@/lib/orders/pdf-order-extraction";
+import { extractOrderDocuments, PdfOrderImportError } from "@/lib/orders/pdf-order-extraction";
 import {
   calculateOrderTotal,
   consolidatePdfOrderLines,
@@ -53,15 +53,17 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const brandId = String(formData.get("brandId") ?? "");
-    const document = formData.get("document");
-    if (!(document instanceof File) || document.size === 0) {
-      return Response.json({ error: "Ajoutez une photo de la commande." }, { status: 400 });
+    const documents = formData
+      .getAll("document")
+      .filter((value): value is File => value instanceof File && value.size > 0);
+    if (documents.length === 0) {
+      return Response.json({ error: "Scannez la commande ou importez un PDF." }, { status: 400 });
     }
 
     const { supabase, brand } = await requireMobileBrand(request, brandId);
     await requireMobileCapability(supabase, brand.id, "pdf_order_import");
 
-    const rawExtraction = await extractPdfOrder(document);
+    const rawExtraction = await extractOrderDocuments(documents);
     const resolvedOrderDate = resolvePdfOrderDate(rawExtraction);
     const dateWarning = rawExtraction.orderDate && !resolvedOrderDate
       ? "Date de livraison ou date non fiable ignorée : renseignez la date de commande."
