@@ -57,9 +57,9 @@ export function PharmacyMapPanel({ pharmacy }: { pharmacy: NetworkMapPharmacy | 
             {pharmacy.commercialStatusLabel}
           </Badge>
         </div>
-        <div className="flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50/80 px-2.5 py-2 text-[0.68rem] leading-4 text-amber-800">
+        <div className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-[0.68rem] leading-4 ${pharmacy.locationPrecision === "exact" ? "border-emerald-200 bg-emerald-50/80 text-emerald-800" : "border-amber-200 bg-amber-50/80 text-amber-800"}`}>
           <MapPin className="size-3.5 shrink-0" />
-          Position cartographique approximative au niveau du département.
+          {pharmacy.locationPrecision === "exact" ? "Position pharmacie géocodée précisément." : "Position cartographique approximative au niveau du département."}
         </div>
         {pharmacy.priorityLevel === "strategic" ? (
           <div className="font-mono text-[0.62rem] font-bold uppercase tracking-[0.1em] text-[var(--tr1-orange)]">★ Compte stratégique</div>
