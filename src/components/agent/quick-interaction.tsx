@@ -95,13 +95,16 @@ export function QuickInteraction({
       setIsOnline(online);
       if (online) void syncPending();
     };
-    updateConnection();
-    refreshOfflineCount();
+    const initializeTimer = window.setTimeout(() => {
+      updateConnection();
+      refreshOfflineCount();
+    }, 0);
     window.addEventListener("online", updateConnection);
     window.addEventListener("offline", updateConnection);
     window.addEventListener("storage", refreshOfflineCount);
     window.addEventListener("tr1:offline-queue-updated", refreshOfflineCount);
     return () => {
+      window.clearTimeout(initializeTimer);
       window.removeEventListener("online", updateConnection);
       window.removeEventListener("offline", updateConnection);
       window.removeEventListener("storage", refreshOfflineCount);
