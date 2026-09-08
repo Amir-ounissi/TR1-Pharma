@@ -1,9 +1,10 @@
-import * as ImagePicker from "expo-image-picker";
+import * as DocumentPicker from "expo-document-picker";
 import { StatusBar } from "expo-status-bar";
 import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  Platform,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -15,29 +16,34 @@ import {
 
 import type { BrandContext } from "../../App";
 import {
-  analyzeOrderPhoto,
+  analyzeOrderDocuments,
   confirmOrderPreview,
   searchOrderPharmacies,
   searchOrderProducts,
+  type MobileOrderDocument,
   type MobileOrderPreview,
   type OrderPharmacySelection,
   type OrderProductSelection,
   type OrderPreviewLine,
 } from "../lib/order-api";
+import { scanOrderDocumentPages } from "../lib/order-document-scanner";
 
 type Step = "capture" | "review";
+type OrderSourcePreview =
+  | { kind: "scan"; uri: string; label: string; pageCount: number }
+  | { kind: "pdf"; uri: null; label: string; pageCount: 1 };
 
 export function OrderWorkflow({ brand, onBack, onDone }: { brand: BrandContext; onBack: () => void; onDone: () => void }) {
   const [step, setStep] = useState<Step>("capture");
   const [preview, setPreview] = useState<MobileOrderPreview | null>(null);
-  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [sourcePreview, setSourcePreview] = useState<OrderSourcePreview | null>(null);
 
   if (step === "review" && preview) {
     return (
       <OrderReview
         brand={brand}
         preview={preview}
-        photoUri={photoUri}
+        sourcePreview={sourcePreview}
         onBack={() => setStep("capture")}
         onDone={onDone}
       />
@@ -48,8 +54,8 @@ export function OrderWorkflow({ brand, onBack, onDone }: { brand: BrandContext; 
     <OrderCapture
       brand={brand}
       onBack={onBack}
-      onAnalyzed={(uri, nextPreview) => {
-        setPhotoUri(uri);
+      onAnalyzed={(source, nextPreview) => {
+        setSourcePreview(source);
         setPreview(nextPreview);
         setStep("review");
       }}
@@ -57,16 +63,17 @@ export function OrderWorkflow({ brand, onBack, onDone }: { brand: BrandContext; 
   );
 }
 
-function OrderCapture({ brand, onBack, onAnalyzed }: { brand: BrandContext; onBack: () => void; onAnalyzed: (photoUri: string, preview: MobileOrderPreview) => void }) {
+function OrderCapture({ brand, onBack, onAnalyzed }: { brand: BrandContext; onBack: () => void; onAnalyzed: (source: OrderSourcePreview, preview: MobileOrderPreview) => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const scanUnavailable = Platform.OS === "web";
 
-  async function analyzeAsset(asset: ImagePicker.ImagePickerAsset) {
+  async function analyzeDocuments(documents: MobileOrderDocument[], source: OrderSourcePreview) {
     try {
       setBusy(true);
       setError(null);
-      const nextPreview = await analyzeOrderPhoto(asset, brand.id);
-      onAnalyzed(asset.uri, nextPreview);
+      const nextPreview = await analyzeOrderDocuments(documents, brand.id);
+      onAnalyzed(source, nextPreview);
     } catch (captureError) {
       setError(captureError instanceof Error ? captureError.message : "La commande n’a pas pu être analysée.");
     } finally {
@@ -74,26 +81,55 @@ function OrderCapture({ brand, onBack, onAnalyzed }: { brand: BrandContext; onBa
     }
   }
 
-  async function takePhoto() {
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      setError("Autorisez l’accès à la caméra pour photographier la commande.");
-      return;
+  async function scanDocument() {
+    try {
+      setError(null);
+      const pageUris = await scanOrderDocumentPages();
+      if (pageUris.length === 0) return;
+      const documents: MobileOrderDocument[] = pageUris.map((uri, index) => ({
+        uri,
+        name: `commande-scan-page-${index + 1}.jpg`,
+        type: "image/jpeg",
+      }));
+      await analyzeDocuments(documents, {
+        kind: "scan",
+        uri: pageUris[0],
+        label: pageUris.length === 1 ? "Commande scannée" : `Commande scannée · ${pageUris.length} pages`,
+        pageCount: pageUris.length,
+      });
+    } catch (scanError) {
+      setError(scanError instanceof Error ? scanError.message : "Le scanner de documents n’a pas pu démarrer.");
     }
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ["images"],
-      cameraType: ImagePicker.CameraType.back,
-      allowsEditing: false,
-      quality: 1,
-    });
-    const asset = result.canceled ? null : result.assets[0];
-    if (asset) await analyzeAsset(asset);
   }
 
-  async function choosePhoto() {
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsEditing: false, quality: 1 });
-    const asset = result.canceled ? null : result.assets[0];
-    if (asset) await analyzeAsset(asset);
+  async function importPdf() {
+    try {
+      setError(null);
+      const result = await DocumentPicker.getDocumentAsync({
+        type: "application/pdf",
+        multiple: false,
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled) return;
+      const asset = result.assets[0];
+      const isPdf = asset.mimeType === "application/pdf" || asset.name.toLowerCase().endsWith(".pdf");
+      if (!isPdf) {
+        setError("Seuls les fichiers PDF sont acceptés à l’import.");
+        return;
+      }
+      await analyzeDocuments([{
+        uri: asset.uri,
+        name: asset.name || "commande.pdf",
+        type: "application/pdf",
+      }], {
+        kind: "pdf",
+        uri: null,
+        label: asset.name || "Commande PDF",
+        pageCount: 1,
+      });
+    } catch (pickerError) {
+      setError(pickerError instanceof Error ? pickerError.message : "Le PDF n’a pas pu être importé.");
+    }
   }
 
   return (
@@ -102,21 +138,22 @@ function OrderCapture({ brand, onBack, onAnalyzed }: { brand: BrandContext; onBa
       <ScrollView contentContainerStyle={styles.page}>
         <HeaderBack label="COMMANDE" onBack={onBack} />
         <Text style={styles.title}>Scanner une commande</Text>
-        <Text style={styles.subtitle}>Cadrez le bon entier, à plat et avec une lumière homogène. TR1 réduit la photo avant analyse.</Text>
+        <Text style={styles.subtitle}>Le scan de document est le mode standard. TR1 détecte les bords, redresse les pages et les analyse comme un seul bon de commande.</Text>
 
         <View style={styles.captureHero}>
           <Text style={styles.captureIcon}>▣</Text>
-          <Text style={styles.captureTitle}>Photo du bon de commande</Text>
-          <Text style={styles.captureText}>Aucune commande n’est créée automatiquement. Vous contrôlez les données avant validation.</Text>
+          <Text style={styles.captureTitle}>Scan du bon de commande</Text>
+          <Text style={styles.captureText}>Scannez une ou plusieurs pages. Vous vérifiez toujours la pharmacie, les produits, quantités, UG, prix et remises avant validation.</Text>
         </View>
 
         {error ? <ErrorCard message={error} /> : null}
-        <Pressable disabled={busy} onPress={() => void takePhoto()} style={[styles.primaryButton, busy && styles.disabled]}>
-          {busy ? <ActivityIndicator color="#FFF" /> : <Text style={styles.primaryButtonText}>Prendre une photo</Text>}
+        <Pressable disabled={busy || scanUnavailable} onPress={() => void scanDocument()} style={[styles.primaryButton, (busy || scanUnavailable) && styles.disabled]}>
+          {busy ? <ActivityIndicator color="#FFF" /> : <Text style={styles.primaryButtonText}>{scanUnavailable ? "Scanner dans l’app TR1" : "Scanner la commande"}</Text>}
         </Pressable>
-        <Pressable disabled={busy} onPress={() => void choosePhoto()} style={[styles.secondaryButton, busy && styles.disabled]}>
-          <Text style={styles.secondaryButtonText}>Choisir une photo existante</Text>
+        <Pressable disabled={busy} onPress={() => void importPdf()} style={[styles.secondaryButton, busy && styles.disabled]}>
+          <Text style={styles.secondaryButtonText}>Importer un PDF</Text>
         </Pressable>
+        <Text style={styles.captureHint}>{scanUnavailable ? "Le scanner natif nécessite l’application TR1 installée. L’import PDF reste disponible ici." : "Pas de photo libre ni de galerie : scan de document ou PDF uniquement."}</Text>
         {busy ? <Text style={styles.analysisText}>Analyse TR1 en cours… pharmacie, produits, quantités et UG.</Text> : null}
       </ScrollView>
     </SafeAreaView>
@@ -149,7 +186,7 @@ function initialProducts(preview: MobileOrderPreview): Record<number, OrderProdu
   return result;
 }
 
-function OrderReview({ brand, preview, photoUri, onBack, onDone }: { brand: BrandContext; preview: MobileOrderPreview; photoUri: string | null; onBack: () => void; onDone: () => void }) {
+function OrderReview({ brand, preview, sourcePreview, onBack, onDone }: { brand: BrandContext; preview: MobileOrderPreview; sourcePreview: OrderSourcePreview | null; onBack: () => void; onDone: () => void }) {
   const [orderNumber, setOrderNumber] = useState(preview.extraction.orderNumber ?? "");
   const [orderDate, setOrderDate] = useState(preview.extraction.orderDate ?? "");
   const [pharmacy, setPharmacy] = useState<OrderPharmacySelection | null>(() => initialPharmacy(preview));
@@ -266,7 +303,8 @@ function OrderReview({ brand, preview, photoUri, onBack, onDone }: { brand: Bran
         <Text style={styles.title}>Contrôler avant validation</Text>
         <Text style={styles.subtitle}>TR1 ne crée la commande qu’après votre validation explicite.</Text>
 
-        {photoUri ? <Image source={{ uri: photoUri }} style={styles.photo} resizeMode="cover" /> : null}
+        {sourcePreview?.kind === "scan" ? <Image source={{ uri: sourcePreview.uri }} style={styles.photo} resizeMode="cover" /> : null}
+        {sourcePreview ? <View style={styles.sourceBadge}><Text style={styles.sourceBadgeText}>{sourcePreview.kind === "scan" ? "SCAN" : "PDF"} · {sourcePreview.label}</Text></View> : null}
 
         <View style={styles.summaryCard}>
           <Info label="Pharmacie" value={pharmacy?.name || preview.extraction.pharmacy.name || "À confirmer"} />
@@ -372,6 +410,7 @@ const styles = StyleSheet.create({
   captureIcon: { color: "#A5B4FC", fontSize: 40, marginBottom: 10 },
   captureTitle: { color: "#FFF", fontSize: 20, fontWeight: "800" },
   captureText: { color: "#D0D5DD", fontSize: 13, lineHeight: 20, textAlign: "center", marginTop: 7 },
+  captureHint: { color: "#667085", fontSize: 11, lineHeight: 17, textAlign: "center", marginTop: 10 },
   primaryButton: { minHeight: 54, borderRadius: 15, backgroundColor: "#3B5BDB", alignItems: "center", justifyContent: "center", paddingHorizontal: 18 },
   primaryButtonText: { color: "#FFF", fontSize: 15, fontWeight: "800" },
   secondaryButton: { minHeight: 52, borderRadius: 15, backgroundColor: "#FFF", borderWidth: 1, borderColor: "#E4E7EC", alignItems: "center", justifyContent: "center", marginTop: 10 },
@@ -380,7 +419,9 @@ const styles = StyleSheet.create({
   analysisText: { color: "#667085", fontSize: 13, lineHeight: 19, textAlign: "center", marginTop: 14 },
   errorCard: { marginBottom: 14, padding: 14, borderRadius: 14, backgroundColor: "#FEF3F2" },
   errorText: { color: "#B42318", fontSize: 13, lineHeight: 19 },
-  photo: { width: "100%", height: 190, borderRadius: 18, backgroundColor: "#E4E7EC", marginBottom: 16 },
+  photo: { width: "100%", height: 190, borderRadius: 18, backgroundColor: "#E4E7EC", marginBottom: 10 },
+  sourceBadge: { alignSelf: "flex-start", backgroundColor: "#EEF2FF", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6, marginBottom: 16 },
+  sourceBadgeText: { color: "#3B5BDB", fontSize: 10, fontWeight: "800" },
   summaryCard: { borderWidth: 1, borderColor: "#E4E7EC", borderRadius: 18, backgroundColor: "#FFF", paddingHorizontal: 16, marginBottom: 18 },
   infoRow: { minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "#E4E7EC" },
   infoLabel: { color: "#667085", fontSize: 13 },
