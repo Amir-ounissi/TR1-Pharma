@@ -2,6 +2,7 @@ import { PDF_ORDER_JSON_SCHEMA, parsePdfOrderExtraction, type PdfOrderExtraction
 
 export const MAX_ORDER_DOCUMENT_SIZE = 3 * 1024 * 1024;
 export const ORDER_DOCUMENT_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+export const DEFAULT_ORDER_EXTRACTION_MODEL = "gpt-5-mini";
 const orderDocumentImageTypes = new Set<string>(ORDER_DOCUMENT_IMAGE_TYPES);
 
 const ORDER_EXTRACTION_INSTRUCTIONS = `
@@ -53,7 +54,89 @@ export class PdfOrderImportError extends Error {
 
 type Fetcher = typeof fetch;
 
-export async function extractPdfOrder(file: File, fetcher: Fetcher = fetch): Promise<PdfOrderExtraction> {
+type OpenAIUsage = {
+  input_tokens?: number;
+  input_tokens_details?: {
+    cached_tokens?: number;
+  };
+  output_tokens?: number;
+  output_tokens_details?: {
+    reasoning_tokens?: number;
+  };
+  total_tokens?: number;
+};
+
+export type OrderScanUsage = {
+  model: string;
+  inputTokens: number | null;
+  cachedInputTokens: number | null;
+  outputTokens: number | null;
+  reasoningTokens: number | null;
+  totalTokens: number | null;
+  estimatedCostUsd: number | null;
+  latencyMs: number;
+  mimeType: string;
+  fileSizeBytes: number;
+};
+
+type OrderScanUsageSink = (usage: OrderScanUsage) => void;
+
+type ModelPricing = {
+  input: number;
+  cachedInput: number;
+  output: number;
+};
+
+const MODEL_PRICING_PER_MILLION: Record<string, ModelPricing> = {
+  "gpt-5": { input: 1.25, cachedInput: 0.125, output: 10 },
+  "gpt-5-mini": { input: 0.25, cachedInput: 0.025, output: 2 },
+  "gpt-5.6-luna": { input: 0.2, cachedInput: 0.02, output: 1.2 },
+};
+
+function getModelPricing(model: string): ModelPricing | null {
+  const exact = MODEL_PRICING_PER_MILLION[model];
+  if (exact) return exact;
+  if (model.startsWith("gpt-5-mini-")) return MODEL_PRICING_PER_MILLION["gpt-5-mini"];
+  return null;
+}
+
+function validTokenCount(value: number | undefined): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
+}
+
+export function estimateOrderScanCostUsd(model: string, usage: OpenAIUsage | undefined): number | null {
+  const pricing = getModelPricing(model);
+  const inputTokens = validTokenCount(usage?.input_tokens);
+  const outputTokens = validTokenCount(usage?.output_tokens);
+  if (!pricing || inputTokens === null || outputTokens === null) return null;
+
+  const cachedInputTokens = Math.min(validTokenCount(usage?.input_tokens_details?.cached_tokens) ?? 0, inputTokens);
+  const uncachedInputTokens = inputTokens - cachedInputTokens;
+  const cost = (
+    uncachedInputTokens * pricing.input
+    + cachedInputTokens * pricing.cachedInput
+    + outputTokens * pricing.output
+  ) / 1_000_000;
+  return Math.round(cost * 1_000_000_000) / 1_000_000_000;
+}
+
+function getReasoningConfig(model: string): { effort: "minimal" | "none" } | undefined {
+  if (model === "gpt-5" || model === "gpt-5-mini" || model.startsWith("gpt-5-mini-")) {
+    return { effort: "minimal" };
+  }
+  if (model.startsWith("gpt-5.6-")) return { effort: "none" };
+  return undefined;
+}
+
+function logOrderScanUsage(usage: OrderScanUsage) {
+  console.info("[order_scan_usage]", usage);
+}
+
+export async function extractPdfOrder(
+  file: File,
+  fetcher: Fetcher = fetch,
+  usageSink: OrderScanUsageSink = logOrderScanUsage,
+): Promise<PdfOrderExtraction> {
   const isPdf = file.type === "application/pdf";
   const isImage = orderDocumentImageTypes.has(file.type);
   if (!isPdf && !isImage) {
@@ -68,6 +151,10 @@ export async function extractPdfOrder(file: File, fetcher: Fetcher = fetch): Pro
   const apiKey = process.env.OPENAI_API_KEY ?? process.env.OPEN_API_PREVIEW_KEY;
   if (!apiKey) throw new PdfOrderImportError("openai_unavailable", "L’extraction du document est indisponible pour le moment.");
 
+  const model = process.env.OPENAI_PDF_ORDER_MODEL ?? DEFAULT_ORDER_EXTRACTION_MODEL;
+  const reasoning = getReasoningConfig(model);
+  const startedAt = Date.now();
+
   try {
     const base64 = Buffer.from(await file.arrayBuffer()).toString("base64");
     const documentInput = isPdf
@@ -78,7 +165,8 @@ export async function extractPdfOrder(file: File, fetcher: Fetcher = fetch): Pro
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: process.env.OPENAI_PDF_ORDER_MODEL ?? "gpt-5",
+        model,
+        ...(reasoning ? { reasoning } : {}),
         store: false,
         instructions: ORDER_EXTRACTION_INSTRUCTIONS,
         input: [{ role: "user", content: [{ type: "input_text", text: "Extrais cette commande sous forme de données structurées." }, documentInput] }],
@@ -86,7 +174,25 @@ export async function extractPdfOrder(file: File, fetcher: Fetcher = fetch): Pro
       }),
     });
     if (!response.ok) throw new PdfOrderImportError("openai_unavailable", "L’extraction du document est indisponible pour le moment.");
-    const payload = await response.json() as { output_text?: string; output?: Array<{ content?: Array<{ type?: string; text?: string }> }> };
+    const payload = await response.json() as {
+      output_text?: string;
+      output?: Array<{ content?: Array<{ type?: string; text?: string }> }>;
+      usage?: OpenAIUsage;
+    };
+
+    usageSink({
+      model,
+      inputTokens: validTokenCount(payload.usage?.input_tokens),
+      cachedInputTokens: validTokenCount(payload.usage?.input_tokens_details?.cached_tokens),
+      outputTokens: validTokenCount(payload.usage?.output_tokens),
+      reasoningTokens: validTokenCount(payload.usage?.output_tokens_details?.reasoning_tokens),
+      totalTokens: validTokenCount(payload.usage?.total_tokens),
+      estimatedCostUsd: estimateOrderScanCostUsd(model, payload.usage),
+      latencyMs: Math.max(0, Date.now() - startedAt),
+      mimeType: file.type,
+      fileSizeBytes: file.size,
+    });
+
     const outputText = payload.output_text ?? payload.output?.flatMap((item) => item.content ?? []).find((item) => item.type === "output_text")?.text;
     if (!outputText) throw new PdfOrderImportError("extraction_failed", "Le document ne contient pas de commande exploitable.");
     return parsePdfOrderExtraction(JSON.parse(outputText));
