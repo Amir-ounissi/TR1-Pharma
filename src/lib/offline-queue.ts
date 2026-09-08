@@ -13,6 +13,7 @@ export type OfflineAction = {
 
 const storageKey = "tr1:offline-actions:v1";
 const legacyStorageKey = "tr1:offline-actions";
+const activeScopeKey = "tr1:pwa:active-scope:v1";
 
 function normalize(value: unknown): OfflineAction[] {
   if (!Array.isArray(value)) return [];
@@ -57,6 +58,20 @@ function read(storage: Storage): OfflineAction[] {
   }
 }
 
+function activeOfflineScope(storage: Storage) {
+  try {
+    const value = JSON.parse(storage.getItem(activeScopeKey) ?? "null") as { userId?: unknown; brandId?: unknown } | null;
+    if (!value || typeof value.userId !== "string" || typeof value.brandId !== "string") return undefined;
+    return `${value.brandId}:${value.userId}`;
+  } catch {
+    return undefined;
+  }
+}
+
+function resolveScope(storage: Storage, scope?: string | null) {
+  return scope ?? activeOfflineScope(storage);
+}
+
 function belongsToScope(action: OfflineAction, scope?: string) {
   if (!scope) return true;
   // Les actions créées avant l'introduction du scope sont adoptées une seule fois
@@ -70,7 +85,7 @@ export function enqueueOfflineAction(
 ) {
   const item: OfflineAction = {
     ...action,
-    scope: action.scope ?? null,
+    scope: resolveScope(storage, action.scope) ?? null,
     id: crypto.randomUUID(),
     createdAt: new Date().toISOString(),
     attempts: 0,
@@ -82,7 +97,8 @@ export function enqueueOfflineAction(
 }
 
 export function listOfflineActions(storage: Storage, scope?: string) {
-  return read(storage).filter((action) => belongsToScope(action, scope));
+  const resolvedScope = resolveScope(storage, scope);
+  return read(storage).filter((action) => belongsToScope(action, resolvedScope));
 }
 
 export function removeOfflineAction(storage: Storage, id: string) {
@@ -99,9 +115,10 @@ export async function flushOfflineActions(
   handler: (action: OfflineAction) => Promise<{ ok: boolean; error?: string }>,
   scope?: string,
 ) {
+  const resolvedScope = resolveScope(storage, scope);
   const all = read(storage);
-  const pending = all.filter((action) => belongsToScope(action, scope));
-  const untouched = all.filter((action) => !belongsToScope(action, scope));
+  const pending = all.filter((action) => belongsToScope(action, resolvedScope));
+  const untouched = all.filter((action) => !belongsToScope(action, resolvedScope));
   const failed: OfflineAction[] = [];
   let completed = 0;
 
@@ -115,7 +132,7 @@ export async function flushOfflineActions(
       }
       failed.push({
         ...action,
-        scope: action.scope ?? scope ?? null,
+        scope: action.scope ?? resolvedScope ?? null,
         attempts: action.attempts + 1,
         lastAttemptAt: attemptedAt,
         lastError: result.error || "Synchronisation refusée",
@@ -123,7 +140,7 @@ export async function flushOfflineActions(
     } catch (error) {
       failed.push({
         ...action,
-        scope: action.scope ?? scope ?? null,
+        scope: action.scope ?? resolvedScope ?? null,
         attempts: action.attempts + 1,
         lastAttemptAt: attemptedAt,
         lastError: error instanceof Error ? error.message : "Erreur de synchronisation",
