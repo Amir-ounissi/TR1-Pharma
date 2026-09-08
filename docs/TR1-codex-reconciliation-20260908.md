@@ -22,7 +22,7 @@ Non restaurée. Le `main` récent possède déjà le démarrage et la clôture d
 
 ### Ancien cockpit pharmacie
 
-Non restauré. Le cockpit récent de `main` reste la base. Les alertes stock et les raccourcis doivent s'y greffer sans remplacer son modèle actuel.
+Non restauré. Le cockpit récent de `main` reste la base. Les alertes stock utiles remontent dans Ma journée plutôt que de surcharger immédiatement la fiche pharmacie.
 
 ### Ancien formulaire de commande
 
@@ -44,6 +44,8 @@ Une file locale persistante est ajoutée pour les comptes rendus d'interaction. 
 
 Important : une visite saisie hors connexion n'est pas considérée comme reçue par TR1 avant synchronisation serveur. Le compteur de progression ne doit donc jamais progresser sur un simple enregistrement local.
 
+L'horodatage et la durée sont figés au moment de la saisie hors ligne. Avant un retry, le serveur vérifie si la même interaction a déjà été reçue afin d'éviter un doublon lorsqu'une écriture serveur a réussi mais que la réponse réseau s'est perdue.
+
 La première version Codex déclarait aussi `sell_out`, `mission_report` et `attachment` comme types de queue alors que leurs handlers serveur complets n'étaient pas câblés. Ils ne sont pas annoncés comme supportés dans cette réconciliation.
 
 ### Sell-out et couverture de stock
@@ -52,17 +54,19 @@ Le calcul de couverture est repris avec une règle de fraîcheur centralisée : 
 
 Les alertes utilisent uniquement des relevés sell-out validés et sont calculées référence par référence sur les dernières périodes disponibles.
 
+Dans le détail sell-out, les références sont classées par sorties puis stock disponible. Le stock actuel reste visible et une référence rapprochée présentant un stock faible peut alimenter directement une nouvelle commande.
+
 ### Commandes et réassort
 
-Depuis une pharmacie, la dernière commande exploitable peut précharger les références et quantités. Les lignes restent entièrement modifiables avant envoi.
+Depuis une pharmacie, la dernière commande validée ou opérationnelle peut précharger les références et quantités. Une commande encore simplement `pending` n'est pas utilisée comme modèle de réassort afin d'éviter les doublons de commande.
 
-Le lien sell-out `Ajouter à la commande` peut maintenant précharger la référence ciblée grâce au paramètre `product` déjà émis par la fiche sell-out récente.
+Les lignes restent entièrement modifiables avant envoi. Le lien sell-out `Ajouter à la commande` précharge la pharmacie et la référence ciblée avec le paramètre `product`.
 
 Le workflow récent de validation marque, correction, révision et import PDF reste inchangé.
 
 ### Agenda
 
-L'action serveur accepte une durée de visite de 15 à 480 minutes et calcule l'heure de fin lorsque celle-ci n'est pas fournie. L'ancien fonctionnement avec une heure de fin explicite reste compatible.
+L'utilisateur saisit une heure de début et une durée de 15 à 480 minutes ; l'heure de fin est calculée côté serveur. Les blocs d'indisponibilité conservent un début et une fin explicites.
 
 ## Principes produit retenus
 
@@ -71,12 +75,11 @@ L'action serveur accepte une durée de visite de 15 à 480 minutes et calcule l'
 3. La pharmacie reste le point d'ancrage commercial.
 4. Les écrans récents du `main` sont conservés ; on porte les fonctionnalités Codex, pas leurs anciennes implémentations.
 5. Les concepts ne doivent pas se dupliquer : visite, mission, prochaine action, interaction, preuve et sell-out gardent chacun un rôle précis.
-6. Les alertes prédictives doivent toujours afficher la fraîcheur de leur donnée source et disparaître lorsqu'elle n'est plus suffisamment fiable.
+6. Les alertes prédictives doivent toujours respecter la fraîcheur de leur donnée source et disparaître lorsqu'elle n'est plus suffisamment fiable.
 
 ## Suites hors de ce lot
 
 - synchronisation offline sell-out / rapports de mission / pièces jointes avec contrats idempotents dédiés ;
-- intégration des alertes stock dans la fiche pharmacie et la vue manager si les vues existantes ne couvrent pas déjà le besoin ;
-- éventuelle dictée vocale / transcription ;
+- éventuelle extension des alertes stock à une vue manager dédiée si le besoin terrain le justifie ;
 - revue séparée de l'onboarding ;
 - décision produit ultérieure sur la profondeur du natif Expo versus PWA.
