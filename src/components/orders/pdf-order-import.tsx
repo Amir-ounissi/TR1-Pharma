@@ -124,7 +124,7 @@ export function PdfOrderImport({ isAgent = false }: { isAgent?: boolean }) {
     if (file.type !== "application/pdf" && !supportedImage) {
       input.value = "";
       setFileName("");
-      setFileError("Ajoutez un PDF ou une photo JPG, PNG, WebP ou HEIC.");
+      setFileError("Ajoutez un PDF ou un scan JPG, PNG, WebP ou HEIC.");
       return;
     }
     if (file.type === "application/pdf" && file.size > MAX_ORDER_DOCUMENT_SIZE) {
@@ -143,7 +143,7 @@ export function PdfOrderImport({ isAgent = false }: { isAgent?: boolean }) {
     } catch {
       input.value = "";
       setFileName("");
-      setFileError("La photo est trop lourde ou illisible. Reprenez une photo nette de la commande.");
+      setFileError("Le scan est trop lourd ou illisible. Reprenez une capture nette de la commande.");
     }
   }
 
@@ -191,7 +191,7 @@ export function PdfOrderImport({ isAgent = false }: { isAgent?: boolean }) {
         <div className="grid grid-cols-2 gap-2 sm:gap-3">
           <Button type="button" variant="outline" className="h-11 rounded-xl" onClick={() => cameraRef.current?.click()}>
             <Camera className="size-4" />
-            Photo
+            Scanner
           </Button>
           <Button type="button" variant="outline" className="h-11 rounded-xl" onClick={() => inputRef.current?.click()}>
             <FileUp className="size-4" />
