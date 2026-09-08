@@ -10,9 +10,31 @@ const dateTime = z.string().min(16).transform(parisLocalToIso);
 
 export async function createFieldVisitAction(_: unknown, formData: FormData) {
   try {
-    const parsed = z.object({ pharmacyId: uuid, brandPharmacyId: z.array(uuid).min(1), visitKind: z.enum(["client_visit","prospecting","relationship","training","other"]), title: z.string().trim().min(1), objective: z.string().optional(), notes: z.string().optional(), startAt: dateTime, endAt: dateTime }).parse({ ...Object.fromEntries(formData), brandPharmacyId: formData.getAll("brandPharmacyId") });
+    const parsed = z.object({
+      pharmacyId: uuid,
+      brandPharmacyId: z.array(uuid).min(1),
+      visitKind: z.enum(["client_visit","prospecting","relationship","training","other"]),
+      title: z.string().trim().min(1),
+      objective: z.string().optional(),
+      notes: z.string().optional(),
+      startAt: dateTime,
+      endAt: dateTime.optional(),
+      duration: z.coerce.number().int().min(15).max(480).default(60),
+    }).parse({ ...Object.fromEntries(formData), brandPharmacyId: formData.getAll("brandPharmacyId") });
+    const scheduledEndAt = parsed.endAt ?? new Date(Date.parse(parsed.startAt) + parsed.duration * 60_000).toISOString();
     const { supabase } = await requireCompletedOnboarding();
-    const { error } = await supabase.rpc("create_field_visit", { target_pharmacy_id: parsed.pharmacyId, target_brand_pharmacy_ids: parsed.brandPharmacyId, visit_payload: { visit_kind: parsed.visitKind, title: parsed.title, objective: parsed.objective, notes: parsed.notes, scheduled_start_at: parsed.startAt, scheduled_end_at: parsed.endAt } });
+    const { error } = await supabase.rpc("create_field_visit", {
+      target_pharmacy_id: parsed.pharmacyId,
+      target_brand_pharmacy_ids: parsed.brandPharmacyId,
+      visit_payload: {
+        visit_kind: parsed.visitKind,
+        title: parsed.title,
+        objective: parsed.objective,
+        notes: parsed.notes,
+        scheduled_start_at: parsed.startAt,
+        scheduled_end_at: scheduledEndAt,
+      },
+    });
     if (error) throw error;
     revalidatePath("/dashboard/agenda");
     return { success: "Visite ajoutée à votre Agenda." };

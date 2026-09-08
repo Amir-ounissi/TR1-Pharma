@@ -490,8 +490,21 @@ function VisitSheet({ pharmacies }: { pharmacies: PharmacyOption[] }) {
             <Field label="Début">
               <Input type="datetime-local" name="startAt" required />
             </Field>
-            <Field label="Fin">
-              <Input type="datetime-local" name="endAt" required />
+            <Field label="Durée">
+              <select
+                className="h-10 w-full rounded-md border bg-background px-3"
+                name="duration"
+                defaultValue="60"
+              >
+                <option value="15">15 min</option>
+                <option value="30">30 min</option>
+                <option value="45">45 min</option>
+                <option value="60">1 h</option>
+                <option value="90">1 h 30</option>
+                <option value="120">2 h</option>
+                <option value="240">4 h</option>
+                <option value="480">8 h</option>
+              </select>
             </Field>
           </div>
           <Field label="Objectif">

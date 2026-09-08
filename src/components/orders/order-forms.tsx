@@ -37,28 +37,81 @@ function PharmacyAutocomplete({ initialPharmacy }: { initialPharmacy?: OrderPhar
   </div>;
 }
 
-export function OrderForm({ products, initialPharmacy, isAgent = false }: { products: Option[]; initialPharmacy?: OrderPharmacySearchResult; isAgent?: boolean }) {
+type InitialOrderItem = {
+  productId: string;
+  quantity: number;
+  freeQuantity: number;
+  unitPriceHt: number | string;
+  discountRate?: number | string | null;
+};
+
+function localDateTimeNow() {
+  const now = new Date();
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 16);
+}
+
+export function OrderForm({
+  products,
+  initialPharmacy,
+  initialItems = [],
+  initialOrderType = "other",
+  isAgent = false,
+}: {
+  products: Option[];
+  initialPharmacy?: OrderPharmacySearchResult;
+  initialItems?: InitialOrderItem[];
+  initialOrderType?: string;
+  isAgent?: boolean;
+}) {
   const [state, action, pending] = useActionState(createOrderAction, {});
-  const [lines, setLines] = useState(["line-1"]);
-  const [selectedProducts, setSelectedProducts] = useState<Record<number, string>>({});
-  const [unitPrices, setUnitPrices] = useState<Record<number, string>>({});
-  const orderStatuses = isAgent ? ["draft", "pending"] : ["draft", "pending", "needs_correction", "confirmed", "invoiced", "partially_delivered", "delivered", "rejected"];
+  const [lines, setLines] = useState(() =>
+    initialItems.length
+      ? initialItems.map((_, index) => `prefill-${index}`)
+      : ["line-1"],
+  );
+  const [selectedProducts, setSelectedProducts] = useState<Record<string, string>>(() =>
+    Object.fromEntries(initialItems.map((item, index) => [`prefill-${index}`, item.productId])),
+  );
+  const [unitPrices, setUnitPrices] = useState<Record<string, string>>(() =>
+    Object.fromEntries(initialItems.map((item, index) => [`prefill-${index}`, String(item.unitPriceHt)])),
+  );
+  const orderStatuses = isAgent
+    ? ["draft", "pending"]
+    : ["draft", "pending", "needs_correction", "confirmed", "invoiced", "partially_delivered", "delivered", "rejected"];
+
   return <form action={action} className="space-y-6"><ActionFeedback {...state} />
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <PharmacyAutocomplete initialPharmacy={initialPharmacy} />
-      <div className="space-y-2"><Label htmlFor="orderDate">Date de commande</Label><Input id="orderDate" name="orderDate" type="datetime-local" required /></div>
+      <div className="space-y-2"><Label htmlFor="orderDate">Date de commande</Label><Input id="orderDate" name="orderDate" type="datetime-local" defaultValue={localDateTimeNow()} required /></div>
       <div className="space-y-2"><Label htmlFor="orderStatus">{isAgent ? "Envoi" : "Statut"}</Label><Select name="orderStatus" defaultValue={isAgent ? "pending" : "draft"}><SelectTrigger id="orderStatus" className="w-full"><SelectValue /></SelectTrigger><SelectContent>{orderStatuses.map((value) => <SelectItem key={value} value={value}>{orderStatusLabel(value)}</SelectItem>)}</SelectContent></Select></div>
-      <div className="space-y-2"><Label htmlFor="orderType">Type demandé</Label><Select name="orderType" defaultValue="other"><SelectTrigger id="orderType" className="w-full"><SelectValue /></SelectTrigger><SelectContent>{["initial","reorder","complementary","replacement","sample","return","credit_note","other"].map((value) => <SelectItem key={value} value={value}>{uiLabel(value)}</SelectItem>)}</SelectContent></Select></div>
+      <div className="space-y-2"><Label htmlFor="orderType">Type demandé</Label><Select name="orderType" defaultValue={initialOrderType}><SelectTrigger id="orderType" className="w-full"><SelectValue /></SelectTrigger><SelectContent>{["initial","reorder","complementary","replacement","sample","return","credit_note","other"].map((value) => <SelectItem key={value} value={value}>{uiLabel(value)}</SelectItem>)}</SelectContent></Select></div>
       <div className="space-y-2"><Label htmlFor="externalOrderId">Référence externe</Label><Input id="externalOrderId" name="externalOrderId" /></div>
       <div className="space-y-2"><Label htmlFor="orderNumber">Numéro de commande</Label><Input id="orderNumber" name="orderNumber" /></div>
       <div className="space-y-2"><Label htmlFor="shippingAmountHt">Port HT</Label><Input id="shippingAmountHt" name="shippingAmountHt" type="number" min="0" step="0.01" defaultValue="0" required /></div>
       <div className="space-y-2 sm:col-span-2 lg:col-span-3"><Label htmlFor="orderNotes">Notes</Label><Textarea id="orderNotes" name="notes" /></div>
     </div>
-    <div className="space-y-3"><div className="flex items-center justify-between"><h2 className="font-medium">Lignes</h2><Button type="button" variant="outline" onClick={() => setLines((current) => [...current, crypto.randomUUID()])}>Ajouter une ligne</Button></div>{lines.map((lineId, index) => { const product = products.find((item) => item.id === selectedProducts[index]); return <div key={lineId} className="grid gap-3 rounded-md border p-3 sm:grid-cols-2 lg:grid-cols-6"><div className="space-y-2 lg:col-span-2"><Label htmlFor={`productId-${index}`}>Produit</Label><Select name="productId" required onValueChange={(value) => { const selected = products.find((item) => item.id === value); setSelectedProducts((current) => ({ ...current, [index]: value })); setUnitPrices((current) => ({ ...current, [index]: selected?.price == null ? current[index] ?? "" : String(selected.price) })); }}><SelectTrigger id={`productId-${index}`} className="w-full"><SelectValue placeholder="Produit" /></SelectTrigger><SelectContent>{products.map((item) => <SelectItem key={item.id} value={item.id}>{item.name} · {item.detail}</SelectItem>)}</SelectContent></Select>{product ? <p className="text-xs text-muted-foreground">TVA {product.taxRate ?? 0}% · Colisage {product.unitsPerCase ?? "—"} · Minimum {product.minimumOrderQuantity ?? "—"}</p> : null}</div><div><Label htmlFor={`quantity-${index}`}>Quantité</Label><Input id={`quantity-${index}`} name="quantity" type="number" min="1" defaultValue="1" required /></div><div><Label htmlFor={`freeQuantity-${index}`}>Gratuits</Label><Input id={`freeQuantity-${index}`} name="freeQuantity" type="number" min="0" defaultValue="0" /></div><div><Label htmlFor={`unitPriceHt-${index}`}>Prix unitaire HT</Label><Input id={`unitPriceHt-${index}`} name="unitPriceHt" type="number" step="0.01" value={unitPrices[index] ?? ""} onChange={(event) => setUnitPrices((current) => ({ ...current, [index]: event.target.value }))} required /></div><div><Label htmlFor={`discountRate-${index}`}>Remise %</Label><Input id={`discountRate-${index}`} name="discountRate" type="number" min="0" max="100" step="0.01" /></div>{lines.length > 1 ? <Button type="button" variant="ghost" className="sm:col-span-2 lg:col-span-6" onClick={() => setLines((current) => current.filter((_, currentIndex) => currentIndex !== index))}>Retirer la ligne</Button> : null}</div>; })}</div>
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <div><h2 className="font-medium">Lignes</h2>{initialItems.length ? <p className="text-xs text-muted-foreground">Références préchargées · quantités modifiables avant envoi</p> : null}</div>
+        <Button type="button" variant="outline" onClick={() => setLines((current) => [...current, crypto.randomUUID()])}>Ajouter une référence</Button>
+      </div>
+      {lines.map((lineId, index) => {
+        const product = products.find((item) => item.id === selectedProducts[lineId]);
+        const initial = lineId.startsWith("prefill-") ? initialItems[Number(lineId.slice("prefill-".length))] : undefined;
+        return <div key={lineId} className="grid gap-3 rounded-md border p-3 sm:grid-cols-2 lg:grid-cols-6">
+          <div className="space-y-2 lg:col-span-2"><Label htmlFor={`productId-${index}`}>Produit</Label><Select name="productId" required value={selectedProducts[lineId] ?? ""} onValueChange={(value) => { const selected = products.find((item) => item.id === value); setSelectedProducts((current) => ({ ...current, [lineId]: value })); setUnitPrices((current) => ({ ...current, [lineId]: selected?.price == null ? current[lineId] ?? "" : String(selected.price) })); }}><SelectTrigger id={`productId-${index}`} className="w-full"><SelectValue placeholder="Produit" /></SelectTrigger><SelectContent>{products.map((item) => <SelectItem key={item.id} value={item.id}>{item.name} · {item.detail}</SelectItem>)}</SelectContent></Select>{product ? <p className="text-xs text-muted-foreground">TVA {product.taxRate ?? 0}% · Colisage {product.unitsPerCase ?? "—"} · Minimum {product.minimumOrderQuantity ?? "—"}</p> : null}</div>
+          <div><Label htmlFor={`quantity-${index}`}>Quantité</Label><Input id={`quantity-${index}`} name="quantity" type="number" min="1" defaultValue={initial?.quantity ?? 1} required /></div>
+          <div><Label htmlFor={`freeQuantity-${index}`}>Gratuits</Label><Input id={`freeQuantity-${index}`} name="freeQuantity" type="number" min="0" defaultValue={initial?.freeQuantity ?? 0} /></div>
+          <div><Label htmlFor={`unitPriceHt-${index}`}>Prix unitaire HT</Label><Input id={`unitPriceHt-${index}`} name="unitPriceHt" type="number" step="0.01" value={unitPrices[lineId] ?? ""} onChange={(event) => setUnitPrices((current) => ({ ...current, [lineId]: event.target.value }))} required /></div>
+          <div><Label htmlFor={`discountRate-${index}`}>Remise %</Label><Input id={`discountRate-${index}`} name="discountRate" type="number" min="0" max="100" step="0.01" defaultValue={initial?.discountRate ?? ""} /></div>
+          {lines.length > 1 ? <Button type="button" variant="ghost" className="sm:col-span-2 lg:col-span-6" onClick={() => setLines((current) => current.filter((id) => id !== lineId))}>Retirer la ligne</Button> : null}
+        </div>;
+      })}
+    </div>
     <Button disabled={pending}>{pending ? "Enregistrement…" : isAgent ? "Envoyer à la marque" : "Créer la commande"}</Button>
   </form>;
 }
-
 
 type OrderRevisionItem = {
   id?: string;

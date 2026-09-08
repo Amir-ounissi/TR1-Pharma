@@ -6,9 +6,9 @@ import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
 import type { OrderPharmacySearchResult } from "@/app/(protected)/dashboard/orders/actions";
 import { activeBrandHasCapability } from "@/lib/saas/server";
 
-type SearchParams = Promise<{ pharmacy?: string }>;
+type SearchParams = Promise<{ pharmacy?: string; product?: string }>;
 export default async function NewOrderPage({ searchParams }: { searchParams: SearchParams }) {
-  const { pharmacy } = await searchParams;
+  const { pharmacy, product } = await searchParams;
   const { supabase, brand } = await requireActiveBrand();
   const contexts = await getBrandContexts();
   const role =
@@ -34,6 +34,55 @@ export default async function NewOrderPage({ searchParams }: { searchParams: Sea
     detail: [pharmacyItem?.city, pharmacyItem?.cip_code ? `CIP ${pharmacyItem.cip_code}` : null, pharmacyItem?.siret ? `SIRET ${pharmacyItem.siret}` : null].filter(Boolean).join(" · "),
   } : undefined;
   const productOptions = (products ?? []).map((product) => ({ id: product.id, name: product.name, detail: product.sku, price: product.wholesale_price_ht, taxRate: product.tax_rate, unitsPerCase: product.units_per_case, minimumOrderQuantity: product.minimum_order_quantity }));
-  const manualOrderForm = <OrderForm products={productOptions} initialPharmacy={initialPharmacy} isAgent={isAgent} />;
+
+  const { data: lastOrder } = initialRelation
+    ? await supabase
+        .from("orders")
+        .select("id")
+        .eq("brand_pharmacy_id", initialRelation.id)
+        .eq("brand_id", brand.id)
+        .in("order_status", ["confirmed", "invoiced", "partially_delivered", "delivered"])
+        .is("archived_at", null)
+        .order("order_date", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    : { data: null };
+
+  const { data: lastItems } = lastOrder
+    ? await supabase
+        .from("order_items")
+        .select("product_id,quantity,free_quantity,unit_price_ht,discount_rate")
+        .eq("order_id", lastOrder.id)
+        .order("created_at")
+    : { data: [] };
+
+  const lastOrderItems = (lastItems ?? [])
+    .filter((item) => Number(item.quantity ?? 0) > 0 && productOptions.some((option) => option.id === item.product_id))
+    .map((item) => ({
+      productId: item.product_id,
+      quantity: Number(item.quantity),
+      freeQuantity: Number(item.free_quantity ?? 0),
+      unitPriceHt: item.unit_price_ht,
+      discountRate: item.discount_rate,
+    }));
+
+  const prioritizedProduct = product ? productOptions.find((option) => option.id === product) : undefined;
+  const initialItems = prioritizedProduct && !lastOrderItems.some((item) => item.productId === prioritizedProduct.id)
+    ? [{
+        productId: prioritizedProduct.id,
+        quantity: prioritizedProduct.minimumOrderQuantity ?? 1,
+        freeQuantity: 0,
+        unitPriceHt: prioritizedProduct.price ?? "",
+        discountRate: 0,
+      }, ...lastOrderItems]
+    : lastOrderItems;
+
+  const manualOrderForm = <OrderForm
+    products={productOptions}
+    initialPharmacy={initialPharmacy}
+    initialItems={initialItems}
+    initialOrderType={lastOrderItems.length ? "reorder" : "other"}
+    isAgent={isAgent}
+  />;
   return <div className="space-y-6"><div><h1 className="text-2xl font-semibold">Nouvelle commande</h1><p className="text-muted-foreground">Les snapshots et totaux sont figés et recalculés côté serveur.</p></div><Card><CardHeader><CardTitle>Commande</CardTitle></CardHeader><CardContent>{pdfImportEnabled ? <OrderEntryModes isAgent={isAgent} manual={manualOrderForm} /> : manualOrderForm}</CardContent></Card></div>;
 }
