@@ -117,6 +117,11 @@ export default async function SellOutCapturePage({ params }: { params: Promise<{
   const products = (productsResult.data ?? []) as Product[];
   const pharmacy = (pharmacyResult.data ?? null) as Pharmacy | null;
   const productById = new Map(products.map((product) => [product.id, product]));
+  const prioritizedLines = [...lines].sort((left, right) => {
+    const salesDifference = Number(right.units_sold ?? right.theoretical_units ?? 0) - Number(left.units_sold ?? left.theoretical_units ?? 0);
+    if (salesDifference !== 0) return salesDifference;
+    return Number(left.stock_current ?? Number.MAX_SAFE_INTEGER) - Number(right.stock_current ?? Number.MAX_SAFE_INTEGER);
+  });
   const evidenceLinks = new Map<string, string>();
   await Promise.all(evidence.map(async (item) => {
     const { data } = await supabase.storage.from("sell-out-evidence").createSignedUrl(item.storage_path, 600);
@@ -201,17 +206,22 @@ export default async function SellOutCapturePage({ params }: { params: Promise<{
       ) : null}
 
       <Card>
-        <CardHeader><CardTitle>Lignes sell-out</CardTitle><CardDescription>{capture.method === "stock_inference" ? "Les unités théoriques restent identifiées comme estimées." : "Quantités et valeur conservées au niveau du relevé."}</CardDescription></CardHeader>
+        <CardHeader><CardTitle>Lignes sell-out</CardTitle><CardDescription>{capture.method === "stock_inference" ? "Références classées par sorties puis stock disponible. Les unités théoriques restent identifiées comme estimées." : "Références classées par sorties puis stock disponible."}</CardDescription></CardHeader>
         <CardContent className="p-0">
-          {lines.length === 0 ? <p className="p-8 text-center text-muted-foreground">Aucune ligne pour le moment.</p> : <Table>
-            <TableHeader><TableRow><TableHead>Produit</TableHead><TableHead>EAN / code</TableHead><TableHead>Unités</TableHead>{capture.method === "stock_inference" ? <><TableHead>Stock précédent</TableHead><TableHead>Livraisons</TableHead><TableHead>Stock actuel</TableHead></> : null}<TableHead>CA HT</TableHead><TableHead>Confiance</TableHead></TableRow></TableHeader>
-            <TableBody>{lines.map((line) => {
+          {prioritizedLines.length === 0 ? <p className="p-8 text-center text-muted-foreground">Aucune ligne pour le moment.</p> : <Table>
+            <TableHeader><TableRow><TableHead>Produit</TableHead><TableHead>EAN / code</TableHead><TableHead>Unités</TableHead>{capture.method === "stock_inference" ? <><TableHead>Stock précédent</TableHead><TableHead>Livraisons</TableHead><TableHead>Stock actuel</TableHead></> : <TableHead>Stock actuel</TableHead>}<TableHead>CA HT</TableHead><TableHead>Confiance</TableHead></TableRow></TableHeader>
+            <TableBody>{prioritizedLines.map((line) => {
               const product = line.product_id ? productById.get(line.product_id) : null;
+              const lowStock = product && line.stock_current !== null && line.stock_current < 15;
               return <TableRow key={line.id}>
-                <TableCell><span className="font-medium">{product?.name || line.label || "Produit non rapproché"}</span><p className="text-xs text-muted-foreground">{product?.sku || line.source_product_code || "—"}</p></TableCell>
+                <TableCell>
+                  <span className="font-medium">{product?.name || line.label || "Produit non rapproché"}</span>
+                  <p className="text-xs text-muted-foreground">{product?.sku || line.source_product_code || "—"}</p>
+                  {lowStock ? <Button asChild size="sm" variant="outline" className="mt-2"><Link href={`/dashboard/orders/new?pharmacy=${capture.brand_pharmacy_id}&product=${product.id}`}>Ajouter à la commande</Link></Button> : null}
+                </TableCell>
                 <TableCell>{line.ean || product?.ean || "—"}</TableCell>
                 <TableCell>{formatCompactNumber(Number(line.units_sold ?? line.theoretical_units ?? 0))}{line.theoretical_units !== null ? <p className="text-xs text-muted-foreground">théorique</p> : null}</TableCell>
-                {capture.method === "stock_inference" ? <><TableCell>{line.stock_before ?? "—"}</TableCell><TableCell>{line.delivered_units ?? "—"}</TableCell><TableCell>{line.stock_current ?? "—"}</TableCell></> : null}
+                {capture.method === "stock_inference" ? <><TableCell>{line.stock_before ?? "—"}</TableCell><TableCell>{line.delivered_units ?? "—"}</TableCell><TableCell>{line.stock_current ?? "—"}</TableCell></> : <TableCell>{line.stock_current ?? "—"}</TableCell>}
                 <TableCell>{line.revenue_ht === null ? "—" : formatCompactCurrency(Number(line.revenue_ht))}</TableCell>
                 <TableCell>{line.confidence === null ? "—" : `${Math.round(Number(line.confidence) * 100)} %`}</TableCell>
               </TableRow>;
