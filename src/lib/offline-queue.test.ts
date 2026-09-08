@@ -62,4 +62,24 @@ describe("offline interaction queue", () => {
     expect(listOfflineActions(target)).toHaveLength(1);
     expect(listOfflineActions(target)[0].payload.note).toBe("B");
   });
+
+  it("only exposes and flushes actions from the active user and brand scope", async () => {
+    const target = storage();
+    target.setItem("tr1:pwa:active-scope:v1", JSON.stringify({ userId: "user-1", brandId: "brand-1" }));
+    const first = enqueueOfflineAction(target, { kind: "interaction", payload: { note: "Brand 1" } });
+
+    target.setItem("tr1:pwa:active-scope:v1", JSON.stringify({ userId: "user-1", brandId: "brand-2" }));
+    vi.stubGlobal("crypto", { randomUUID: () => "00000000-0000-4000-8000-000000000002" });
+    const second = enqueueOfflineAction(target, { kind: "interaction", payload: { note: "Brand 2" } });
+
+    expect(first.scope).toBe("brand-1:user-1");
+    expect(second.scope).toBe("brand-2:user-1");
+    expect(listOfflineActions(target).map((action) => action.id)).toEqual([second.id]);
+
+    const result = await flushOfflineActions(target, async () => ({ ok: true }));
+    expect(result).toEqual({ attempted: 1, completed: 1, remaining: 0 });
+
+    target.setItem("tr1:pwa:active-scope:v1", JSON.stringify({ userId: "user-1", brandId: "brand-1" }));
+    expect(listOfflineActions(target).map((action) => action.id)).toEqual([first.id]);
+  });
 });
