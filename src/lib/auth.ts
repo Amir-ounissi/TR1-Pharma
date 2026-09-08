@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -23,16 +24,16 @@ type UserProfile = {
   onboarding_completed_at: string;
 };
 
-export async function requireUser() {
+export const requireUser = cache(async () => {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getClaims();
   const subject = data?.claims?.sub;
 
   if (error || !subject) redirect("/login");
   return { supabase, userId: subject };
-}
+});
 
-export async function requirePlatformAdmin() {
+export const requirePlatformAdmin = cache(async () => {
   const { supabase, userId } = await requireUser();
   await getUserProfile(supabase, userId);
   const membership = await getPlatformAdminMembership(supabase, userId);
@@ -40,9 +41,9 @@ export async function requirePlatformAdmin() {
   if (!membership) redirect("/dashboard");
 
   return { supabase, userId };
-}
+});
 
-export async function getBrandContexts(): Promise<BrandContext[]> {
+export const getBrandContexts = cache(async (): Promise<BrandContext[]> => {
   const { supabase } = await requireUser();
 
   let { data, error } = await supabase.rpc("get_my_brand_contexts");
@@ -60,21 +61,21 @@ export async function getBrandContexts(): Promise<BrandContext[]> {
     slug: context.brand_slug,
     role: context.role_key,
   }));
-}
+});
 
-export async function isPlatformAdmin() {
+export const isPlatformAdmin = cache(async () => {
   const { supabase, userId } = await requireUser();
   await getUserProfile(supabase, userId);
   return Boolean(await getPlatformAdminMembership(supabase, userId));
-}
+});
 
-export async function requireCompletedOnboarding() {
+export const requireCompletedOnboarding = cache(async () => {
   const { supabase, userId } = await requireUser();
   const profile = await getUserProfile(supabase, userId);
   return { supabase, userId, profile };
-}
+});
 
-export async function getOptionalActiveBrand() {
+export const getOptionalActiveBrand = cache(async () => {
   const cookieStore = await cookies();
   const activeBrandId = cookieStore.get(ACTIVE_BRAND_COOKIE)?.value;
   const { supabase, userId } = await requireUser();
@@ -86,13 +87,13 @@ export async function getOptionalActiveBrand() {
 
   const { data: brand } = await supabase.from("brands").select("id,name,slug").eq("id", activeBrandId).maybeSingle();
   return { supabase, userId, profile, brand: brand ?? null };
-}
+});
 
-export async function requireActiveBrand() {
+export const requireActiveBrand = cache(async () => {
   const session = await getOptionalActiveBrand();
   if (!session.brand) redirect("/select-brand");
   return session as typeof session & { brand: { id: string; name: string; slug: string } };
-}
+});
 
 export async function requireActiveBrandRole(allowedRoles: readonly string[], fallback = "/dashboard") {
   const session = await requireActiveBrand();
@@ -102,7 +103,7 @@ export async function requireActiveBrandRole(allowedRoles: readonly string[], fa
   return { ...session, role };
 }
 
-async function getPlatformAdminMembership(supabase: Awaited<ReturnType<typeof createClient>>, userId: string) {
+const getPlatformAdminMembership = cache(async (supabase: Awaited<ReturnType<typeof createClient>>, userId: string) => {
   const { data: membership, error } = await supabase
     .from("memberships")
     .select("id,roles!inner(key)")
@@ -114,11 +115,11 @@ async function getPlatformAdminMembership(supabase: Awaited<ReturnType<typeof cr
 
   if (error) throw error;
   return membership;
-}
+});
 
-async function getUserProfile(supabase: Awaited<ReturnType<typeof createClient>>, userId: string): Promise<UserProfile> {
+const getUserProfile = cache(async (supabase: Awaited<ReturnType<typeof createClient>>, userId: string): Promise<UserProfile> => {
   const { data: profile } = await supabase.from("user_profiles").select("full_name,onboarding_completed_at").eq("user_id", userId).maybeSingle();
 
   if (!profile?.full_name?.trim() || !profile.onboarding_completed_at) redirect("/onboarding");
   return profile;
-}
+});

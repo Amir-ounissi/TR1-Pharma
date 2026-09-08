@@ -3,13 +3,16 @@ import { getBrandContexts, requireCompletedOnboarding } from "@/lib/auth";
 import { addCalendarDays, mondayOfWeek, parseCalendarDate, todayInParis } from "@/lib/agenda";
 
 export default async function AgendaPage({ searchParams }:{ searchParams:Promise<{date?:string;view?:string}> }) {
-  const params = await searchParams;
+  const [params, { supabase }, contexts] = await Promise.all([
+    searchParams,
+    requireCompletedOnboarding(),
+    getBrandContexts(),
+  ]);
   const requested = params.date ?? todayInParis();
   const safeDate = parseCalendarDate(requested) ? requested : todayInParis();
   const view = params.view === "week" ? "week" : "day";
   const date = view === "week" ? mondayOfWeek(safeDate) : safeDate;
   const end = view === "week" ? addCalendarDays(date, 6) : date;
-  const [{ supabase }, contexts] = await Promise.all([requireCompletedOnboarding(), getBrandContexts()]);
   const brandIds = contexts.map((context) => context.id);
   const facilitatorOnly = contexts.length > 0 && contexts.every((context) => context.role === "facilitator");
   const [{ data: agenda, error: agendaError }, { data: backlog, error: backlogError }, { data: relations }] = await Promise.all([
