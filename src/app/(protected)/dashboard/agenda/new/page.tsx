@@ -41,7 +41,7 @@ export default async function NewAgendaVisitPage() {
     const brand = Array.isArray(relation.brands)
       ? relation.brands[0]
       : relation.brands;
-    const current = grouped.get(relation.pharmacy_id) ?? {
+    const current: VisitPharmacyOption = grouped.get(relation.pharmacy_id) ?? {
       id: relation.pharmacy_id,
       label: pharmacy?.trade_name || pharmacy?.legal_name || "Pharmacie",
       city: pharmacy?.city ?? undefined,
