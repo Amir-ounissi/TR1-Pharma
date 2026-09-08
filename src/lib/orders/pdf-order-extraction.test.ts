@@ -22,41 +22,41 @@ describe("order document extraction", () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 
-  it("uses a non-persistent file input for PDFs and always deletes the temporary OpenAI file", async () => {
+  it("sends PDFs inline to Responses without upload/delete round trips", async () => {
     process.env.OPENAI_API_KEY = "key";
-    const fetcher = vi.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ id: "file_pdf" }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ output_text: JSON.stringify(extracted) }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    const fetcher = vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({ output_text: JSON.stringify(extracted) }), { status: 200 }));
     await expect(extractPdfOrder(new File(["pdf"], "order.pdf", { type: "application/pdf" }), fetcher)).resolves.toMatchObject({ orderNumber: "PDF-42" });
-    const upload = fetcher.mock.calls[0][1].body as FormData;
-    expect(upload.get("purpose")).toBe("user_data");
-    expect(JSON.parse(fetcher.mock.calls[1][1].body)).toMatchObject({ store: false, input: [expect.objectContaining({ content: expect.arrayContaining([expect.objectContaining({ type: "input_file", file_id: "file_pdf" })]) })] });
-    expect(fetcher.mock.calls[2][0]).toBe("https://api.openai.com/v1/files/file_pdf");
-    expect(fetcher.mock.calls[2][1]).toMatchObject({ method: "DELETE" });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(fetcher.mock.calls[0][0]).toBe("https://api.openai.com/v1/responses");
+    const body = JSON.parse(fetcher.mock.calls[0][1].body);
+    expect(body).toMatchObject({
+      model: "gpt-5",
+      store: false,
+      input: [expect.objectContaining({
+        content: expect.arrayContaining([
+          expect.objectContaining({ type: "input_file", filename: "order.pdf" }),
+        ]),
+      })],
+    });
+    const fileInput = body.input[0].content.find((item: { type: string }) => item.type === "input_file");
+    expect(fileInput.file_data).toBe(Buffer.from("pdf").toString("base64"));
   });
 
-  it("uses a vision image input for order photos and deletes the temporary file", async () => {
+  it("sends order photos inline as high-detail data URLs", async () => {
     process.env.OPENAI_API_KEY = "key";
-    const fetcher = vi.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ id: "file_image" }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ output_text: JSON.stringify(extracted) }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    const fetcher = vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({ output_text: JSON.stringify(extracted) }), { status: 200 }));
     await expect(extractPdfOrder(new File(["jpeg"], "order.jpg", { type: "image/jpeg" }), fetcher)).resolves.toMatchObject({ orderNumber: "PDF-42" });
-    const upload = fetcher.mock.calls[0][1].body as FormData;
-    expect(upload.get("purpose")).toBe("vision");
-    expect(JSON.parse(fetcher.mock.calls[1][1].body)).toMatchObject({ store: false, input: [expect.objectContaining({ content: expect.arrayContaining([expect.objectContaining({ type: "input_image", file_id: "file_image", detail: "original" })]) })] });
-    expect(fetcher.mock.calls[2][0]).toBe("https://api.openai.com/v1/files/file_image");
-    expect(fetcher.mock.calls[2][1]).toMatchObject({ method: "DELETE" });
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    const body = JSON.parse(fetcher.mock.calls[0][1].body);
+    const imageInput = body.input[0].content.find((item: { type: string }) => item.type === "input_image");
+    expect(imageInput).toMatchObject({ type: "input_image", detail: "high" });
+    expect(imageInput.image_url).toBe(`data:image/jpeg;base64,${Buffer.from("jpeg").toString("base64")}`);
   });
 
-  it("returns a controlled error when the API is unavailable and still deletes the uploaded file", async () => {
+  it("returns a controlled error when the Responses API is unavailable", async () => {
     process.env.OPENAI_API_KEY = "key";
-    const fetcher = vi.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ id: "file_123" }), { status: 200 }))
-      .mockResolvedValueOnce(new Response("unavailable", { status: 503 }))
-      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    const fetcher = vi.fn().mockResolvedValueOnce(new Response("unavailable", { status: 503 }));
     await expect(extractPdfOrder(new File(["pdf"], "order.pdf", { type: "application/pdf" }), fetcher)).rejects.toBeInstanceOf(PdfOrderImportError);
-    expect(fetcher).toHaveBeenLastCalledWith("https://api.openai.com/v1/files/file_123", expect.objectContaining({ method: "DELETE" }));
+    expect(fetcher).toHaveBeenCalledTimes(1);
   });
 });
