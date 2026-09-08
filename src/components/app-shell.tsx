@@ -1,5 +1,6 @@
-import { Building2, ChevronsUpDown, LogOut, Menu, ShieldCheck } from "lucide-react";
+import { Building2, ChevronsUpDown, Menu, ShieldCheck } from "lucide-react";
 import { changeBrandAction, returnToPlatformAdministrationAction, signOutAction } from "@/app/(protected)/dashboard/actions";
+import { OfflineAwareSignOut } from "@/components/pwa/offline-aware-sign-out";
 import { CommandPalette } from "@/components/shell/command-palette";
 import { MobileBottomNav } from "@/components/shell/mobile-bottom-nav";
 import { RoleNavigation } from "@/components/shell/role-navigation";
@@ -36,7 +37,7 @@ export function AppShell({ children, brandName, brandHint = "Marque active", rol
           {showPlatformAdministrationReturn ? <PlatformAdministrationReturn /> : null}
           <Separator className="bg-white/10" />
           <div className="flex items-center gap-3 px-2"><span className="grid size-8 place-items-center rounded-full bg-white/10 text-xs font-semibold">{initials(userName)}</span><div className="min-w-0"><p className="truncate text-sm font-medium">{userName}</p><p className="truncate text-xs text-sidebar-foreground/45">{roleLabel(role)}</p></div></div>
-          <form action={signOutAction}><Button className="w-full justify-start text-sidebar-foreground/65 hover:bg-white/8 hover:text-white" variant="ghost"><LogOut className="size-4" />Déconnexion</Button></form>
+          <OfflineAwareSignOut action={signOutAction} />
         </div>
       </aside>
 
@@ -51,7 +52,7 @@ export function AppShell({ children, brandName, brandHint = "Marque active", rol
                 <div className="mt-4 space-y-3 border-t border-white/10 pt-4">
                   {showPlatformAdministrationReturn ? <PlatformAdministrationReturn /> : null}
                   <div className="flex items-center gap-3 px-2"><span className="grid size-8 place-items-center rounded-full bg-white/10 text-xs font-semibold">{initials(userName)}</span><div className="min-w-0"><p className="truncate text-sm font-medium">{userName}</p><p className="truncate text-xs text-sidebar-foreground/45">{roleLabel(role)}</p></div></div>
-                  <form action={signOutAction}><Button className="w-full justify-start text-sidebar-foreground/65 hover:bg-white/8 hover:text-white" variant="ghost"><LogOut className="size-4" />Déconnexion</Button></form>
+                  <OfflineAwareSignOut action={signOutAction} />
                 </div>
               </div>
             </SheetContent>
