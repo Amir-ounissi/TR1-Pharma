@@ -31,7 +31,7 @@ export function NetworkMap({ dataset }: { dataset: NetworkMapDataset }) {
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
-      <section className="grid grid-cols-5 gap-px overflow-hidden rounded-[0.45rem] border border-[var(--tr1-line-strong)] bg-[var(--tr1-line-strong)]">
+      <section className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-[var(--tr1-line-strong)] bg-[var(--tr1-line-strong)] md:grid-cols-5">
         <Metric detail="Périmètre autorisé" icon={Building2} label="Pharmacies visibles" value={dataset.summary.visiblePharmacies} />
         <Metric detail="Couverture active" icon={UserRound} label="Acteurs terrain" value={dataset.summary.activeActors} />
         <Metric detail="Interactions + missions" icon={Route} label="Actions période" value={dataset.summary.actionsInPeriod} />
@@ -39,8 +39,8 @@ export function NetworkMap({ dataset }: { dataset: NetworkMapDataset }) {
         <Metric detail="Signaux observés" icon={ShoppingCart} label="Réassorts observés" value={dataset.summary.reordersObserved} />
       </section>
 
-      <Card className="tr1-da-panel flex min-h-0 flex-1 flex-col overflow-hidden py-0">
-        <CardContent className="flex min-h-0 flex-1 flex-col gap-3 px-3 py-3">
+      <Card className="tr1-da-panel flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl py-0">
+        <CardContent className="flex min-h-0 flex-1 flex-col gap-3 px-2.5 py-2.5 sm:px-3 sm:py-3">
           <NetworkMapLayout
             bottom={
               <MapBottomStats
