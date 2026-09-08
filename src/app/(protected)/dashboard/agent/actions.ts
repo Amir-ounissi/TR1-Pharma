@@ -100,3 +100,16 @@ export async function quickInteractionAction(
       : "Interaction et prochaine action enregistrées.",
   };
 }
+
+export async function syncOfflineInteractionAction(
+  payload: Record<string, string | number | boolean | null>,
+): Promise<QuickInteractionState> {
+  const formData = new FormData();
+  for (const [key, value] of Object.entries(payload)) {
+    if (value !== null && value !== undefined && key !== "noNextAction") {
+      formData.set(key, String(value));
+    }
+  }
+  if (payload.noNextAction === true) formData.set("noNextAction", "on");
+  return quickInteractionAction({}, formData);
+}
