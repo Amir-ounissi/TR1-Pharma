@@ -6,17 +6,17 @@ test("PDF mocké : prévisualisation puis confirmation crée une commande, sans 
   await signIn(page, "agent@dermavita.local", /Dermavita/i);
   await page.goto("/dashboard/orders/new");
   await page.getByRole("button", { name: "Importer ou photographier" }).click();
-  await page.getByLabel("PDF ou photo de commande").setInputFiles({
+  await page.locator('input[name="document"]').setInputFiles({
     name: "commande.pdf",
     mimeType: "application/pdf",
     buffer: Buffer.from("mock pdf"),
   });
   await page.getByRole("button", { name: "Analyser la commande" }).click();
-  await expect(page.getByRole("heading", { name: "Prévisualisation obligatoire" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Vérifier la commande" })).toBeVisible();
 
   await expect(page.getByLabel("Pharmacie")).toHaveValue("00000000-0000-0000-0000-000000000401");
   await expect(page.locator('input[name="brandPharmacyId"]')).toHaveValue("00000000-0000-0000-0000-000000000411");
-  await expect(page.getByLabel("Produit 1")).toHaveValue("00000000-0000-0000-0000-000000000601");
+  await expect(page.getByLabel("Produit 1").first()).toHaveValue("00000000-0000-0000-0000-000000000601");
 
   const service = adminClient();
   const { count: beforeConfirmation } = await service
@@ -49,7 +49,7 @@ test("une photo de commande peut être importée et la caméra arrière accepte 
   await page.getByRole("button", { name: "Importer ou photographier" }).click();
 
   const cameraInput = page.locator('input[name="camera"]');
-  const documentInput = page.getByLabel("PDF ou photo de commande");
+  const documentInput = page.locator('input[name="document"]');
   await expect(cameraInput).toHaveAttribute("capture", "environment");
   await expect(cameraInput).toHaveAttribute("accept", "image/*");
   await expect(documentInput).toHaveAttribute("accept", /image\/heic/);
@@ -60,7 +60,7 @@ test("une photo de commande peut être importée et la caméra arrière accepte 
     mimeType: "image/jpeg",
     buffer: Buffer.from("mock jpeg"),
   });
-  await expect(page.getByText(/Document prêt :/)).toBeVisible();
+  await expect(page.getByText(/Prêt :/)).toBeVisible();
   await page.getByRole("button", { name: "Analyser la commande" }).click();
-  await expect(page.getByRole("heading", { name: "Prévisualisation obligatoire" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Vérifier la commande" })).toBeVisible();
 });

@@ -1,5 +1,6 @@
 "use client";
 
+import { Camera, FileUp, LoaderCircle } from "lucide-react";
 import Link from "next/link";
 import { useActionState, useMemo, useRef, useState, type ReactNode } from "react";
 import { analyzePdfOrderAction, confirmPdfOrderAction, type PdfOrderPreview } from "@/app/(protected)/dashboard/orders/pdf-actions";
@@ -10,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { translateMatchMethod, translateUiMessage } from "@/lib/ui-copy";
 
 const MAX_ORDER_DOCUMENT_SIZE = 3 * 1024 * 1024;
+const TARGET_ORDER_IMAGE_SIZE = 1.5 * 1024 * 1024;
 const ORDER_DOCUMENT_ACCEPT = "application/pdf,image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif";
 const ORDER_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]);
 
@@ -35,7 +37,7 @@ function ProductSelect({ line, value, onChange }: { line: PdfOrderPreview["lines
   return (
     <select
       aria-label={`Produit ${line.index + 1}`}
-      className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+      className="h-11 w-full min-w-0 rounded-xl border bg-background px-3 text-sm"
       value={value}
       onChange={(event) => onChange(event.target.value)}
     >
@@ -61,7 +63,7 @@ function isHeicPhoto(file: File) {
 }
 
 async function compressOrderPhoto(file: File): Promise<File> {
-  if (file.size <= MAX_ORDER_DOCUMENT_SIZE && !isHeicPhoto(file)) return file;
+  if (file.size <= TARGET_ORDER_IMAGE_SIZE && !isHeicPhoto(file)) return file;
   const objectUrl = URL.createObjectURL(file);
   try {
     const image = new Image();
@@ -71,7 +73,7 @@ async function compressOrderPhoto(file: File): Promise<File> {
       image.src = objectUrl;
     });
     const largestSide = Math.max(image.naturalWidth, image.naturalHeight);
-    const scale = Math.min(1, 2000 / largestSide);
+    const scale = Math.min(1, 1800 / largestSide);
     const canvas = document.createElement("canvas");
     canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
     canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
@@ -79,7 +81,7 @@ async function compressOrderPhoto(file: File): Promise<File> {
     if (!context) throw new Error("canvas_unavailable");
     context.drawImage(image, 0, 0, canvas.width, canvas.height);
     const baseName = file.name.replace(/\.[^.]+$/, "") || "commande";
-    for (const quality of [0.82, 0.68, 0.55]) {
+    for (const quality of [0.8, 0.7, 0.6]) {
       const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
       if (blob && blob.size <= MAX_ORDER_DOCUMENT_SIZE) {
         return new File([blob], `${baseName}.jpg`, { type: "image/jpeg", lastModified: file.lastModified });
@@ -146,10 +148,10 @@ export function PdfOrderImport({ isAgent = false }: { isAgent?: boolean }) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <form
         action={analyzeAction}
-        className="space-y-4 rounded-lg border border-dashed p-5"
+        className="space-y-3 rounded-2xl border border-dashed p-3 sm:space-y-4 sm:p-5"
         onDrop={(event) => {
           event.preventDefault();
           const file = event.dataTransfer.files[0];
@@ -161,25 +163,60 @@ export function PdfOrderImport({ isAgent = false }: { isAgent?: boolean }) {
       >
         <div>
           <h2 className="font-medium">Ajouter la commande</h2>
-          <p className="text-sm text-muted-foreground">Importez un PDF ou une photo, ou photographiez directement la commande. Rien n’est créé avant votre confirmation.</p>
+          <p className="mt-0.5 text-xs leading-snug text-muted-foreground sm:text-sm">
+            Prenez une photo nette ou importez le document. Vous vérifierez les données avant création.
+          </p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="order-document-file">PDF ou photo de commande</Label>
-            <Input ref={inputRef} id="order-document-file" name="document" type="file" accept={ORDER_DOCUMENT_ACCEPT} onChange={(event) => void prepareFile(event.target.files?.[0], event.currentTarget, cameraRef.current)} />
-            <p className="text-xs text-muted-foreground">PDF, JPG, PNG, WebP ou HEIC · 3 Mo max après optimisation.</p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="order-camera-file">Photo avec l’appareil</Label>
-            <input ref={cameraRef} id="order-camera-file" name="camera" type="file" accept="image/*" capture="environment" className="sr-only" onChange={(event) => void prepareFile(event.target.files?.[0], event.currentTarget, inputRef.current)} />
-            <Button type="button" variant="outline" className="w-full" onClick={() => cameraRef.current?.click()}>Prendre une photo</Button>
-            <p className="text-xs text-muted-foreground">Sur mobile, ouvre directement l’appareil photo arrière.</p>
-          </div>
+
+        <input
+          ref={inputRef}
+          id="order-document-file"
+          name="document"
+          type="file"
+          accept={ORDER_DOCUMENT_ACCEPT}
+          className="sr-only"
+          onChange={(event) => void prepareFile(event.target.files?.[0], event.currentTarget, cameraRef.current)}
+        />
+        <input
+          ref={cameraRef}
+          id="order-camera-file"
+          name="camera"
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="sr-only"
+          onChange={(event) => void prepareFile(event.target.files?.[0], event.currentTarget, inputRef.current)}
+        />
+
+        <div className="grid grid-cols-2 gap-2 sm:gap-3">
+          <Button type="button" variant="outline" className="h-11 rounded-xl" onClick={() => cameraRef.current?.click()}>
+            <Camera className="size-4" />
+            Photo
+          </Button>
+          <Button type="button" variant="outline" className="h-11 rounded-xl" onClick={() => inputRef.current?.click()}>
+            <FileUp className="size-4" />
+            Importer
+          </Button>
         </div>
-        {fileName ? <p className="text-sm font-medium">Document prêt : <span className="font-normal text-muted-foreground">{fileName}</span></p> : null}
+
+        {fileName ? (
+          <div className="flex min-w-0 items-center gap-2 rounded-xl bg-muted/45 px-3 py-2 text-sm">
+            <span className="shrink-0 font-medium">Prêt :</span>
+            <span className="truncate text-muted-foreground">{fileName}</span>
+          </div>
+        ) : (
+          <p className="text-center text-[0.68rem] text-muted-foreground">PDF ou photo · 3 Mo max après optimisation</p>
+        )}
         {fileError ? <p className="text-sm text-destructive">{fileError}</p> : null}
         <ActionFeedback {...analysis} />
-        <Button disabled={analyzing || Boolean(fileError) || !fileName}>{analyzing ? "Analyse du document…" : "Analyser la commande"}</Button>
+        <Button
+          disabled={analyzing || Boolean(fileError) || !fileName}
+          className="h-11 w-full rounded-xl bg-[var(--tr1-navy)] text-white hover:bg-[var(--tr1-navy-soft)] sm:w-auto"
+        >
+          {analyzing ? <LoaderCircle className="size-4 animate-spin" /> : null}
+          {analyzing ? "Analyse en cours…" : "Analyser la commande"}
+        </Button>
+        {analyzing ? <p className="text-center text-xs text-muted-foreground sm:text-left">Lecture du document et rapprochement des produits…</p> : null}
       </form>
 
       {preview ? <PdfOrderPreviewForm key={`${preview.extraction.orderNumber}-${preview.extraction.orderDate}-${preview.lines.length}`} preview={preview} isAgent={isAgent} /> : null}
@@ -192,6 +229,8 @@ function PdfOrderPreviewForm({ preview, isAgent }: { preview: PdfOrderPreview; i
   const [pharmacyId, setPharmacyId] = useState(preview.pharmacy.selectedPharmacyId || "");
   const [brandPharmacyId, setBrandPharmacyId] = useState(preview.pharmacy.selectedBrandPharmacyId || "");
   const [createMissing, setCreateMissing] = useState(false);
+  const [orderNumber, setOrderNumber] = useState(preview.extraction.orderNumber ?? "");
+  const [orderDate, setOrderDate] = useState(preview.extraction.orderDate?.slice(0, 10) ?? "");
   const [newPharmacy, setNewPharmacy] = useState({
     legalName: preview.extraction.pharmacy.name ?? "",
     tradeName: preview.extraction.pharmacy.name ?? "",
@@ -219,32 +258,40 @@ function PdfOrderPreviewForm({ preview, isAgent }: { preview: PdfOrderPreview; i
     return Number(total.toFixed(2));
   }, [lines]);
 
+  const reviewWarnings = useMemo(() => {
+    const warnings = preview.warnings.map((warning) => translateUiMessage(warning));
+    if (preview.extraction.totalHt != null && Math.abs(preview.extraction.totalHt - totalTr1) > 0.02) {
+      warnings.unshift("Le total du document diffère du total recalculé TR1 de plus de 0,02 €.");
+    }
+    return [...new Set(warnings)];
+  }, [preview.extraction.totalHt, preview.warnings, totalTr1]);
+
   const canConfirm = Boolean(
     (brandPharmacyId || pharmacyId || (createMissing && newPharmacy.legalName))
-    && preview.extraction.orderNumber
-    && preview.extraction.orderDate
+    && orderNumber.trim()
+    && orderDate
     && lines.length > 0
     && lines.every((line) => line.productId && Number(line.quantity) > 0 && Number(line.freeQuantity) >= 0 && Number(line.unitPriceHt) >= 0),
   );
 
   return (
-    <form action={confirmAction} className="space-y-5 rounded-lg border p-5">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h2 className="font-medium">Prévisualisation obligatoire</h2>
-          <p className="text-sm text-muted-foreground">Vérifiez les correspondances avant création.</p>
+    <form action={confirmAction} className="space-y-4 rounded-2xl border p-3 pb-28 sm:space-y-5 sm:p-5 md:pb-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="font-medium">Vérifier la commande</h2>
+          <p className="text-xs text-muted-foreground sm:text-sm">Corrigez uniquement ce qui est nécessaire avant validation.</p>
         </div>
-        <span className="rounded-full bg-muted px-3 py-1 text-xs">Aucune écriture effectuée</span>
+        <span className="shrink-0 rounded-full bg-muted px-2.5 py-1 text-[0.66rem] font-medium text-muted-foreground sm:text-xs">Aucune écriture</span>
       </div>
       <ActionFeedback {...confirmation} />
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-3 md:gap-4">
         <div className="space-y-1">
           <Label>Pharmacie</Label>
           {preview.pharmacy.candidates.length > 0 ? (
             <select
               aria-label="Pharmacie"
-              className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+              className="h-11 w-full min-w-0 rounded-xl border bg-background px-3 text-sm"
               value={pharmacyId}
               onChange={(event) => {
                 const candidate = preview.pharmacy.candidates.find((item) => item.pharmacyId === event.target.value);
@@ -260,21 +307,27 @@ function PdfOrderPreviewForm({ preview, isAgent }: { preview: PdfOrderPreview; i
             </select>
           ) : (
             <>
-              <p className="rounded border border-amber-300 bg-amber-50 p-3 text-sm">Pharmacie absente du référentiel TR1. La création est explicite et sera vérifiée à la confirmation.</p>
+              <p className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm">Pharmacie absente du référentiel TR1. La création sera vérifiée à la confirmation.</p>
               <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={createMissing} onChange={(event) => { setCreateMissing(event.target.checked); setPharmacyId(""); setBrandPharmacyId(""); }} />Créer cette pharmacie et continuer</label>
             </>
           )}
           {brandPharmacyId ? <p className="text-xs text-muted-foreground">Déjà cliente de la marque.</p> : null}
           {!brandPharmacyId && pharmacyId ? <p className="text-xs text-muted-foreground">Nouvelle pharmacie pour la marque : rattachement à la confirmation.</p> : null}
-          {!pharmacyId && preview.pharmacy.status === "suggested" ? <p className="text-xs text-amber-700">Correspondance probable trouvée : vérifiez la pharmacie avant confirmation.</p> : null}
-          {!pharmacyId && preview.pharmacy.status === "unmatched" && preview.pharmacy.candidates.length > 0 ? <p className="text-xs text-amber-700">Aucune correspondance certaine : choisissez la bonne pharmacie parmi les propositions.</p> : null}
+          {!pharmacyId && preview.pharmacy.status === "suggested" ? <p className="text-xs text-amber-700">Correspondance probable : vérifiez la pharmacie.</p> : null}
+          {!pharmacyId && preview.pharmacy.status === "unmatched" && preview.pharmacy.candidates.length > 0 ? <p className="text-xs text-amber-700">Choisissez la bonne pharmacie parmi les propositions.</p> : null}
         </div>
-        <div className="space-y-1"><Label htmlFor="pdf-order-number">Numéro commande</Label><Input id="pdf-order-number" name="orderNumber" defaultValue={preview.extraction.orderNumber ?? ""} required /></div>
-        <div className="space-y-1"><Label htmlFor="pdf-order-date">Date</Label><Input id="pdf-order-date" name="orderDate" type="date" defaultValue={preview.extraction.orderDate?.slice(0, 10) ?? ""} required /></div>
+        <div className="space-y-1">
+          <Label htmlFor="pdf-order-number">Numéro commande</Label>
+          <Input id="pdf-order-number" name="orderNumber" value={orderNumber} onChange={(event) => setOrderNumber(event.target.value)} required className="h-11 rounded-xl" />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="pdf-order-date">Date</Label>
+          <Input id="pdf-order-date" name="orderDate" type="date" value={orderDate} onChange={(event) => setOrderDate(event.target.value)} required className="h-11 rounded-xl" />
+        </div>
       </div>
 
       {createMissing ? (
-        <div className="grid gap-3 rounded-md border p-3 md:grid-cols-2">
+        <div className="grid gap-3 rounded-xl border p-3 md:grid-cols-2">
           {([['legalName','Nom'],['tradeName','Enseigne'],['siret','SIRET'],['cip','CIP'],['finess','FINESS'],['postalCode','Code postal'],['city','Ville'],['address','Adresse']] as const).map(([field, label]) => (
             <div key={field}><Label htmlFor={`new-pharmacy-${field}`}>{label}</Label><Input id={`new-pharmacy-${field}`} value={newPharmacy[field]} onChange={(event) => setNewPharmacy((current) => ({ ...current, [field]: event.target.value }))} /></div>
           ))}
@@ -286,7 +339,41 @@ function PdfOrderPreviewForm({ preview, isAgent }: { preview: PdfOrderPreview; i
       <input type="hidden" name="newPharmacy" value={createMissing ? JSON.stringify(newPharmacy) : ""} />
       <input type="hidden" name="items" value={JSON.stringify(lines.map((line) => ({ productId: line.productId, quantity: Number(line.quantity), freeQuantity: Number(line.freeQuantity || "0"), unitPriceHt: Number(line.unitPriceHt), discountRate: line.discountRate === "" ? null : Number(line.discountRate) })))} />
 
-      <div className="overflow-x-auto">
+      <div className="space-y-3 md:hidden">
+        {preview.lines.map((line, index) => {
+          const selected = line.product.candidates.find((candidate) => candidate.id === lines[index]?.productId);
+          const documentTaxRate = preview.extraction.lines[index]?.taxRate ?? null;
+          const displayedTaxRate = selected?.taxRate ?? documentTaxRate;
+          return (
+            <section key={line.index} className="min-w-0 space-y-3 rounded-2xl border bg-white/55 p-3">
+              <div className="min-w-0">
+                <p className="break-words text-sm font-semibold text-[var(--tr1-navy)]">{line.label || "Produit non identifié"}</p>
+                <p className="mt-0.5 break-all text-[0.68rem] text-muted-foreground">{line.ean || line.sku || "Référence absente"}</p>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Produit TR1</Label>
+                <ProductSelect line={line} value={lines[index]?.productId ?? ""} onChange={(value) => updateLine(index, "productId", value)} />
+                <p className="text-[0.68rem] text-muted-foreground">{line.product.status === "matched" ? `Correspondance ${translateMatchMethod(line.product.method)}` : "Sélection requise."}</p>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <MobileNumberField label="Qté" ariaLabel={`Quantité ${index + 1}`} min="1" value={lines[index]?.quantity ?? ""} onChange={(value) => updateLine(index, "quantity", value)} />
+                <MobileNumberField label="UG" ariaLabel={`UG ${index + 1}`} min="0" value={lines[index]?.freeQuantity ?? "0"} onChange={(value) => updateLine(index, "freeQuantity", value)} />
+                <MobileNumberField label="Prix HT" ariaLabel={`Prix HT ${index + 1}`} min="0" step="0.01" value={lines[index]?.unitPriceHt ?? ""} onChange={(value) => updateLine(index, "unitPriceHt", value)} />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <MobileNumberField label="Remise %" ariaLabel={`Remise ${index + 1}`} min="0" max="100" step="0.01" value={lines[index]?.discountRate ?? ""} onChange={(value) => updateLine(index, "discountRate", value)} />
+                <div className="space-y-1">
+                  <Label className="text-xs">TVA</Label>
+                  <div className="flex h-10 items-center rounded-xl border bg-muted/25 px-3 text-sm">{displayedTaxRate == null ? "—" : `${displayedTaxRate}%`}</div>
+                </div>
+              </div>
+              {line.priceWarning ? <p className="rounded-lg bg-amber-50 px-2.5 py-2 text-xs text-amber-800">{line.priceWarning}</p> : null}
+            </section>
+          );
+        })}
+      </div>
+
+      <div className="hidden overflow-x-auto md:block">
         <table className="w-full text-sm">
           <thead className="border-b text-left text-muted-foreground"><tr><th className="p-2">Produit document</th><th className="p-2">Produit TR1</th><th className="p-2">Qté</th><th className="p-2">UG</th><th className="p-2">Prix HT</th><th className="p-2">Remise</th><th className="p-2">TVA</th></tr></thead>
           <tbody>
@@ -310,19 +397,60 @@ function PdfOrderPreviewForm({ preview, isAgent }: { preview: PdfOrderPreview; i
         </table>
       </div>
 
-      <div className="space-y-1 rounded-md bg-muted/40 p-4 text-sm">
-        <p>Total document HT : <strong>{preview.extraction.totalHt == null ? "Non indiqué" : `${preview.extraction.totalHt.toFixed(2)} €`}</strong></p>
-        {preview.extraction.totalVat != null ? <p>TVA document : <strong>{preview.extraction.totalVat.toFixed(2)} €</strong></p> : null}
-        {preview.extraction.totalTtc != null ? <p>Total document TTC : <strong>{preview.extraction.totalTtc.toFixed(2)} €</strong></p> : null}
-        <p>Total TR1 HT : <strong>{totalTr1.toFixed(2)} €</strong></p>
-        {preview.extraction.totalHt != null && Math.abs(preview.extraction.totalHt - totalTr1) > 0.02 ? <p className="font-medium text-amber-700">Attention : le total du document diffère du total recalculé TR1 de plus de 0,02 €.</p> : null}
-        {preview.warnings.map((warning) => <p className="text-amber-700" key={warning}>{translateUiMessage(warning)}</p>)}
+      <div className="rounded-2xl bg-muted/40 p-3 sm:p-4">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-4">
+          <TotalItem label="Document HT" value={preview.extraction.totalHt == null ? "—" : `${preview.extraction.totalHt.toFixed(2)} €`} />
+          <TotalItem label="TVA" value={preview.extraction.totalVat == null ? "—" : `${preview.extraction.totalVat.toFixed(2)} €`} />
+          <TotalItem label="Document TTC" value={preview.extraction.totalTtc == null ? "—" : `${preview.extraction.totalTtc.toFixed(2)} €`} />
+          <TotalItem label="TR1 HT" value={`${totalTr1.toFixed(2)} €`} />
+        </div>
+        {reviewWarnings.length > 0 ? (
+          <details className="mt-3 rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-2 text-sm text-amber-900">
+            <summary className="cursor-pointer font-medium">{reviewWarnings.length} point{reviewWarnings.length > 1 ? "s" : ""} à vérifier</summary>
+            <ul className="mt-2 space-y-1.5 pl-4 text-xs leading-relaxed">
+              {reviewWarnings.map((warning) => <li className="list-disc" key={warning}>{warning}</li>)}
+            </ul>
+          </details>
+        ) : (
+          <p className="mt-3 text-xs font-medium text-emerald-700">Aucune anomalie détectée dans le document.</p>
+        )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <Button disabled={!canConfirm || confirming}>{confirming ? "Enregistrement…" : isAgent ? "Envoyer à la marque" : "Valider la commande"}</Button>
-        {confirmation.orderId ? <Link className="text-sm underline" href={`/dashboard/orders/${confirmation.orderId}`}>Ouvrir la commande</Link> : null}
+      <div className="fixed inset-x-3 bottom-[calc(5.2rem+env(safe-area-inset-bottom))] z-20 rounded-2xl border bg-[var(--tr1-ivory)]/96 p-2 shadow-lg backdrop-blur md:static md:flex md:flex-wrap md:items-center md:gap-3 md:border-0 md:bg-transparent md:p-0 md:shadow-none">
+        <Button disabled={!canConfirm || confirming} className="h-12 w-full rounded-xl md:h-10 md:w-auto">
+          {confirming ? <LoaderCircle className="size-4 animate-spin" /> : null}
+          {confirming ? "Enregistrement…" : isAgent ? "Envoyer à la marque" : "Valider la commande"}
+        </Button>
+        {confirmation.orderId ? <Link className="mt-2 block text-center text-sm underline md:mt-0" href={`/dashboard/orders/${confirmation.orderId}`}>Ouvrir la commande</Link> : null}
       </div>
     </form>
+  );
+}
+
+function MobileNumberField({ label, ariaLabel, value, onChange, min, max, step }: { label: string; ariaLabel: string; value: string; onChange: (value: string) => void; min?: string; max?: string; step?: string }) {
+  return (
+    <div className="min-w-0 space-y-1">
+      <Label className="text-xs">{label}</Label>
+      <Input
+        aria-label={ariaLabel}
+        type="number"
+        inputMode="decimal"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-10 min-w-0 rounded-xl px-2 text-sm"
+      />
+    </div>
+  );
+}
+
+function TotalItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-[0.68rem] text-muted-foreground">{label}</p>
+      <p className="font-semibold text-[var(--tr1-navy)]">{value}</p>
+    </div>
   );
 }

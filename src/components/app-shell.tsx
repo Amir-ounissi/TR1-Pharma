@@ -1,9 +1,9 @@
 import { Building2, ChevronsUpDown, Menu, ShieldCheck } from "lucide-react";
 import { changeBrandAction, returnToPlatformAdministrationAction, signOutAction } from "@/app/(protected)/dashboard/actions";
 import { OfflineAwareSignOut } from "@/components/pwa/offline-aware-sign-out";
-import { CommandPalette } from "@/components/shell/command-palette";
 import { MobileBottomNav } from "@/components/shell/mobile-bottom-nav";
 import { RoleNavigation } from "@/components/shell/role-navigation";
+import { RouteAwareCommandPalette } from "@/components/shell/route-aware-command-palette";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -66,7 +66,7 @@ export function AppShell({ children, brandName, brandHint = "Marque active", rol
             </Button>
           </form>
 
-          <div className="ml-auto flex min-w-0 flex-1 justify-end md:ml-3 md:justify-center"><CommandPalette items={searchItems} /></div>
+          <div className="ml-auto flex min-w-0 flex-1 justify-end md:ml-3 md:justify-center"><RouteAwareCommandPalette items={searchItems} /></div>
           <div className="hidden size-9 shrink-0 place-items-center rounded-md border border-[var(--tr1-line-strong)] bg-transparent font-mono text-[0.65rem] font-bold text-[var(--tr1-navy)] lg:grid" title={userName}>{initials(userName)}</div>
         </header>
         <main className="mx-auto w-full max-w-[96rem] p-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:p-6 md:pb-8 lg:p-7">{children}</main>

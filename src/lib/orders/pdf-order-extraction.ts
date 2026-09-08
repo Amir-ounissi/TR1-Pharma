@@ -68,19 +68,12 @@ export async function extractPdfOrder(file: File, fetcher: Fetcher = fetch): Pro
   const apiKey = process.env.OPENAI_API_KEY ?? process.env.OPEN_API_PREVIEW_KEY;
   if (!apiKey) throw new PdfOrderImportError("openai_unavailable", "L’extraction du document est indisponible pour le moment.");
 
-  let fileId: string | null = null;
   try {
-    const upload = new FormData();
-    upload.set("purpose", isPdf ? "user_data" : "vision");
-    upload.set("file", file);
-    const uploadResponse = await fetcher("https://api.openai.com/v1/files", { method: "POST", headers: { Authorization: `Bearer ${apiKey}` }, body: upload });
-    if (!uploadResponse.ok) throw new PdfOrderImportError("openai_unavailable", "L’extraction du document est indisponible pour le moment.");
-    fileId = (await uploadResponse.json() as { id?: string }).id ?? null;
-    if (!fileId) throw new PdfOrderImportError("extraction_failed", "Le document n’a pas pu être préparé.");
-
+    const base64 = Buffer.from(await file.arrayBuffer()).toString("base64");
     const documentInput = isPdf
-      ? { type: "input_file", file_id: fileId }
-      : { type: "input_image", file_id: fileId, detail: "original" };
+      ? { type: "input_file", filename: file.name || "commande.pdf", file_data: base64 }
+      : { type: "input_image", image_url: `data:${file.type};base64,${base64}`, detail: "high" };
+
     const response = await fetcher("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -100,7 +93,5 @@ export async function extractPdfOrder(file: File, fetcher: Fetcher = fetch): Pro
   } catch (error) {
     if (error instanceof PdfOrderImportError) throw error;
     throw new PdfOrderImportError("extraction_failed", "Le document ne contient pas de commande exploitable.");
-  } finally {
-    if (fileId) await fetcher(`https://api.openai.com/v1/files/${fileId}`, { method: "DELETE", headers: { Authorization: `Bearer ${apiKey}` } }).catch(() => undefined);
   }
 }
