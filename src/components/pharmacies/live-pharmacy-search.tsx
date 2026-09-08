@@ -23,7 +23,7 @@ export function LivePharmacySearch({ initialValue, params }: LivePharmacySearchP
   useEffect(() => {
     const trimmed = query.trim();
     if (trimmed === initialValue) return;
-    if (trimmed.length === 1) return;
+    if (trimmed.length === 1 && !initialValue) return;
 
     const timeout = window.setTimeout(() => {
       const next = toUrlSearchParams(params);
