@@ -128,9 +128,11 @@ export function FranceMap({
 
   return (
     <div className="relative flex min-h-[25rem] flex-1 items-center justify-center overflow-hidden rounded-2xl border border-[var(--tr1-line-strong)] bg-[#fdf8f1] p-2 md:min-h-[34rem]">
-      <div className="pointer-events-none absolute left-3 top-3 z-20 rounded-full border border-amber-200 bg-amber-50/95 px-2.5 py-1 text-[0.62rem] font-semibold text-amber-800 shadow-sm">
-        Position approximative par département
-      </div>
+      {pharmacies.some((pharmacy) => pharmacy.locationPrecision !== "exact") ? (
+        <div className="pointer-events-none absolute left-3 top-3 z-20 rounded-full border border-amber-200 bg-amber-50/95 px-2.5 py-1 text-[0.62rem] font-semibold text-amber-800 shadow-sm">
+          Certaines positions restent approximatives
+        </div>
+      ) : null}
 
       <svg
         aria-label="Carte du portefeuille pharmacies"
