@@ -3,7 +3,7 @@ name: Mobile EAS iOS Internal Build
 on:
   push:
     branches:
-      - feat/mobile-mvp-foundation
+      - build/ios-native-scan-07cb6586
     paths:
       - ".github/workflows/mobile-eas-ios.yml"
   workflow_dispatch:
