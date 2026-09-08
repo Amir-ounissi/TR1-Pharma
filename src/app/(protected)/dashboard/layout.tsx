@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
+import { OfflineScopeRuntime } from "@/components/pwa/offline-scope-runtime";
 import { getBrandContexts, getOptionalActiveBrand, isPlatformAdmin } from "@/lib/auth";
 import { isSaasCapability, type SaasCapability } from "@/lib/saas/capabilities";
 import { getNavigationItems, getRoleFamily } from "@/lib/ux/navigation";
@@ -27,7 +28,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
       label: item.label,
       href: item.href,
     }));
-    return <AppShell brandHint="Espace terrain" brandName="Toutes mes marques" role="facilitator" searchItems={navigationItems} userName={session.profile.full_name}>{children}</AppShell>;
+    return (
+      <>
+        <OfflineScopeRuntime userId={session.userId} brandId={null} />
+        <AppShell brandHint="Espace terrain" brandName="Toutes mes marques" role="facilitator" searchItems={navigationItems} userName={session.profile.full_name}>{children}</AppShell>
+      </>
+    );
   }
 
   if (!session.brand) {
@@ -44,7 +50,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
       { id: "navigation-leads", kind: "navigation", label: "Leads TR1", href: "/dashboard/admin/leads" },
     ];
 
-    return <AppShell brandHint="Vue active" brandName="TR1 global" role="super_admin" navigationScope="platform" searchItems={globalNavigation} userName={session.profile.full_name}>{children}</AppShell>;
+    return (
+      <>
+        <OfflineScopeRuntime userId={session.userId} brandId={null} />
+        <AppShell brandHint="Vue active" brandName="TR1 global" role="super_admin" navigationScope="platform" searchItems={globalNavigation} userName={session.profile.full_name}>{children}</AppShell>
+      </>
+    );
   }
 
   const { brand, profile, supabase } = session;
@@ -94,5 +105,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const missionItems: SearchItem[] = missionRows.map((mission) => ({ id: `mission-${mission.id}`, kind: "mission", label: mission.title, description: mission.status, href: `/dashboard/missions/${mission.id}` }));
   const taskItems: SearchItem[] = taskRows.map((task) => ({ id: `task-${task.id}`, kind: "task", label: task.title, description: task.status, href: "/dashboard/tasks" }));
 
-  return <AppShell brandName={brand.name} role={role} capabilities={enabledCapabilities} searchItems={[...quickActions, ...navigationItems, ...pharmacyItems, ...missionItems, ...taskItems]} userName={profile.full_name}>{children}</AppShell>;
+  return (
+    <>
+      <OfflineScopeRuntime userId={session.userId} brandId={brand.id} />
+      <AppShell brandName={brand.name} role={role} capabilities={enabledCapabilities} searchItems={[...quickActions, ...navigationItems, ...pharmacyItems, ...missionItems, ...taskItems]} userName={profile.full_name}>{children}</AppShell>
+    </>
+  );
 }

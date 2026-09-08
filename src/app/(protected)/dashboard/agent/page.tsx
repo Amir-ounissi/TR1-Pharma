@@ -4,6 +4,7 @@ import { DashboardTracker } from "@/components/agent/dashboard-tracker";
 import { StockAlertsPanel } from "@/components/agent/stock-alerts-panel";
 import { TerrainActivityFeed, type TerrainImpact } from "@/components/agent/terrain-activity-feed";
 import { TerrainMomentum } from "@/components/agent/terrain-momentum";
+import { OfflineDayPreloader } from "@/components/pwa/offline-day-preloader";
 import { QuickActions } from "@/components/ux/quick-actions";
 import { buildGoogleMapsUrl, buildWazeUrl } from "@/lib/agent-experience";
 import type { AgentScheduledVisit } from "@/lib/agent-visits";
@@ -105,8 +106,39 @@ export default async function AgentPage() {
     };
   });
 
+  const offlineVisits = fieldVisits.flatMap((event) => {
+    if (!event.pharmacy_id) return [];
+    const relation = (relations ?? []).find((item) => item.pharmacy_id === event.pharmacy_id);
+    if (!relation) return [];
+    return [{
+      id: event.source_id,
+      brandPharmacyId: relation.id,
+      pharmacyId: event.pharmacy_id,
+      pharmacyName: event.pharmacy_name || event.title,
+      city: event.city,
+      startAt: event.start_at,
+      endAt: event.end_at || null,
+      status: event.status,
+    }];
+  });
+
   return (
     <main className="mx-auto min-w-0 max-w-6xl space-y-5 overflow-x-hidden pb-[calc(2rem+env(safe-area-inset-bottom))]">
+      <OfflineDayPreloader
+        snapshot={{
+          version: 1,
+          userId,
+          brandId: brand.id,
+          brandName: brand.name,
+          businessDate: today,
+          dayLabel,
+          savedAt: now.toISOString(),
+          day,
+          nextVisit: visit,
+          visits: offlineVisits,
+          stockAlerts,
+        }}
+      />
       <DashboardTracker />
       <TerrainMomentum
         firstName={firstName}

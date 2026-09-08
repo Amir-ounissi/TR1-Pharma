@@ -53,11 +53,26 @@ export function PwaRuntime() {
   const showInstallHint = pathname.startsWith("/dashboard") && installHintEligible;
 
   useEffect(() => {
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {
+    if (!("serviceWorker" in navigator)) return;
+    let cancelled = false;
+
+    void navigator.serviceWorker.register("/sw.js", { scope: "/" })
+      .then(() => navigator.serviceWorker.ready)
+      .then(() => {
+        if (cancelled) return;
+        // Charge le module de l'écran hors ligne pendant que le réseau est disponible.
+        // Les chunks Next statiques sont ensuite conservés par le service worker / cache HTTP.
+        window.setTimeout(() => {
+          if (!cancelled) void import("@/components/pwa/offline-day-screen").catch(() => undefined);
+        }, 250);
+      })
+      .catch(() => {
         // The web app remains fully usable when service-worker registration is unavailable.
       });
-    }
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (!showInstallHint) return null;

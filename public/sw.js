@@ -1,4 +1,4 @@
-const STATIC_CACHE = "tr1-pwa-static-v1";
+const STATIC_CACHE = "tr1-pwa-static-v2";
 const STATIC_PREFIX = "tr1-pwa-static-";
 const PRECACHE = [
   "/offline",
@@ -45,6 +45,9 @@ self.addEventListener("fetch", (event) => {
   if (request.mode === "navigate") {
     event.respondWith(
       fetch(request).catch(async () => {
+        if (url.pathname !== "/offline") {
+          return Response.redirect(new URL("/offline", self.location.origin).toString(), 302);
+        }
         return (await caches.match("/offline")) || Response.error();
       }),
     );
