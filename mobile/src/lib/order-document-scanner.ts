@@ -31,7 +31,8 @@ export async function scanOrderDocumentPages(): Promise<string[]> {
     });
 
     if (result.status === "cancel") return [];
-    return result.scannedImages.filter(Boolean).slice(0, MAX_ORDER_SCAN_PAGES);
+    const scannedImages = result.scannedImages ?? [];
+    return scannedImages.filter(Boolean).slice(0, MAX_ORDER_SCAN_PAGES);
   } catch (error) {
     if (error instanceof Error && /camera|permission|autor/i.test(error.message)) throw error;
     throw new Error("Le scanner natif n’est pas disponible dans cette version de l’application. Un nouveau build TR1 est requis.");
