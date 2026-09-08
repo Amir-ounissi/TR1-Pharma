@@ -13,16 +13,6 @@ export type OfflineAction = {
 const storageKey = "tr1:offline-actions:v1";
 const legacyStorageKey = "tr1:offline-actions";
 
-function isOfflineAction(value: unknown): value is OfflineAction {
-  if (!value || typeof value !== "object") return false;
-  const candidate = value as Partial<OfflineAction>;
-  return candidate.kind === "interaction"
-    && typeof candidate.id === "string"
-    && typeof candidate.createdAt === "string"
-    && Boolean(candidate.payload)
-    && typeof candidate.payload === "object";
-}
-
 function normalize(value: unknown): OfflineAction[] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((item) => {
