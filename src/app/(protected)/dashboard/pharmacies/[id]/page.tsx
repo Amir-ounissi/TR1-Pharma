@@ -12,6 +12,7 @@ import {
   type ImpactRow,
 } from "@/components/missions/mission-impact";
 import { PharmacyCockpit } from "@/components/pharmacies/pharmacy-cockpit";
+import { PharmacySectionNav } from "@/components/pharmacies/pharmacy-section-nav";
 import { TerrainPharmacyHeader } from "@/components/agent/terrain-pharmacy-header";
 import {
   AddImplantedProductForm,
@@ -401,16 +402,6 @@ export default async function PharmacyDetailPage({
     ),
     commercialStatus: relation.commercial_status,
   });
-  const tabs = [
-    ["overview", "Vue générale"],
-    ["activity", "Activité"],
-    ["orders", "Commandes"],
-    ["performance", "Performance"],
-    ["contacts", "Contacts"],
-    ["products", "Produits / Assortiment"],
-    ["history", "Historique"],
-    ["admin", "Administratif"],
-  ];
   return (
     <div className="space-y-6">
       <TerrainPharmacyHeader
@@ -448,31 +439,7 @@ export default async function PharmacyDetailPage({
           <ArchiveButton id={id} />
         </div>
       ) : null}
-      <nav
-        aria-label="Sections de la pharmacie"
-        className="flex gap-1 overflow-x-auto rounded-[0.4rem] border border-[var(--tr1-line-strong)] bg-transparent p-1"
-      >
-        {tabs.map(([value, label]) => (
-          <Button
-            key={value}
-            asChild
-            variant={tab === value ? "secondary" : "ghost"}
-            size="sm"
-            className={
-              tab === value
-                ? "bg-[var(--tr1-navy)] text-white hover:bg-[var(--tr1-navy-soft)] hover:text-white"
-                : ""
-            }
-          >
-            <Link
-              aria-current={tab === value ? "page" : undefined}
-              href={`/dashboard/pharmacies/${id}?tab=${value}`}
-            >
-              {label}
-            </Link>
-          </Button>
-        ))}
-      </nav>
+      <PharmacySectionNav pharmacyId={id} activeTab={tab} />
       {tabLoadError ? (
         <InlineError
           title="Impossible de charger cette section."
