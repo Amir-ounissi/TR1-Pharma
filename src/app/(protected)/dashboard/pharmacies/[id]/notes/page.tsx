@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Camera, StickyNote } from "lucide-react";
+import { EditableVisitNote } from "@/components/agent/editable-visit-note";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireActiveBrand } from "@/lib/auth";
+import { canEditVisitNote } from "@/lib/visit-note-editing";
 
 const tagLabels: Record<string, string> = {
   order: "Commande",
@@ -19,7 +21,7 @@ type Params = Promise<{ id: string }>;
 
 export default async function PharmacyNotesPage({ params }: { params: Params }) {
   const { id } = await params;
-  const { supabase, brand } = await requireActiveBrand();
+  const { supabase, brand, userId } = await requireActiveBrand();
   const { data: relation } = await supabase
     .from("brand_pharmacies")
     .select("id,pharmacy_id,pharmacies(trade_name,legal_name,city)")
@@ -32,7 +34,7 @@ export default async function PharmacyNotesPage({ params }: { params: Params }) 
 
   const { data: notes, error } = await supabase
     .from("interactions")
-    .select("id,occurred_at,subject,notes,tags,field_visit_id")
+    .select("id,occurred_at,subject,notes,tags,field_visit_id,created_by")
     .eq("brand_pharmacy_id", id)
     .eq("brand_id", brand.id)
     .eq("interaction_type", "internal_note")
@@ -42,14 +44,28 @@ export default async function PharmacyNotesPage({ params }: { params: Params }) 
   if (error) throw new Error(error.message);
 
   const noteIds = (notes ?? []).map((note) => note.id);
-  const { data: attachments } = noteIds.length
-    ? await supabase
-        .from("interaction_attachments")
-        .select("id,interaction_id,object_path,original_name,mime_type")
-        .in("interaction_id", noteIds)
-        .is("archived_at", null)
-        .order("created_at")
-    : { data: [] };
+  const visitIds = Array.from(
+    new Set((notes ?? []).map((note) => note.field_visit_id).filter((value): value is string => Boolean(value))),
+  );
+  const [{ data: attachments }, { data: linkedVisits }] = await Promise.all([
+    noteIds.length
+      ? supabase
+          .from("interaction_attachments")
+          .select("id,interaction_id,object_path,original_name,mime_type")
+          .in("interaction_id", noteIds)
+          .is("archived_at", null)
+          .order("created_at")
+      : Promise.resolve({ data: [] }),
+    visitIds.length
+      ? supabase
+          .from("field_visits")
+          .select("id,status,owner_user_id")
+          .in("id", visitIds)
+          .eq("pharmacy_id", relation.pharmacy_id)
+          .is("archived_at", null)
+      : Promise.resolve({ data: [] }),
+  ]);
+  const visitById = new Map((linkedVisits ?? []).map((visit) => [visit.id, visit]));
 
   const paths = (attachments ?? []).map((attachment) => attachment.object_path);
   const { data: signed } = paths.length
@@ -79,13 +95,20 @@ export default async function PharmacyNotesPage({ params }: { params: Params }) 
 
       <div>
         <h1 className="flex items-center gap-2 text-2xl font-black text-[var(--tr1-navy)]"><StickyNote className="size-6" />Historique des notes</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Texte, dictée, tags et photos pris sur le terrain.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Texte, dictée, tags et photos pris sur le terrain. Une note liée à une visite reste modifiable jusqu’à sa clôture.</p>
       </div>
 
       <div className="space-y-3">
         {(notes ?? []).map((note) => {
           const photos = attachmentsByInteraction.get(note.id) ?? [];
           const tags = Array.isArray(note.tags) ? note.tags : [];
+          const linkedVisit = note.field_visit_id ? visitById.get(note.field_visit_id) : null;
+          const editable = Boolean(linkedVisit && canEditVisitNote({
+            visitStatus: linkedVisit.status,
+            visitOwnerUserId: linkedVisit.owner_user_id,
+            noteCreatedBy: note.created_by,
+            userId,
+          }));
           return (
             <Card key={note.id}>
               <CardContent className="space-y-3 p-4">
@@ -96,7 +119,10 @@ export default async function PharmacyNotesPage({ params }: { params: Params }) 
                       {new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Paris" }).format(new Date(note.occurred_at))}
                     </time>
                   </div>
-                  {photos.length ? <Badge variant="secondary"><Camera className="mr-1 size-3" />{photos.length}</Badge> : null}
+                  <div className="flex flex-wrap justify-end gap-1.5">
+                    {editable ? <Badge className="bg-emerald-100 text-emerald-900 hover:bg-emerald-100">Visite en cours</Badge> : null}
+                    {photos.length ? <Badge variant="secondary"><Camera className="mr-1 size-3" />{photos.length}</Badge> : null}
+                  </div>
                 </div>
                 {note.notes ? <p className="whitespace-pre-wrap text-sm leading-relaxed">{note.notes}</p> : null}
                 {tags.length ? (
@@ -113,6 +139,16 @@ export default async function PharmacyNotesPage({ params }: { params: Params }) 
                       </a>
                     ))}
                   </div>
+                ) : null}
+                {editable ? (
+                  <EditableVisitNote
+                    brandPharmacyId={id}
+                    interactionId={note.id}
+                    initialNotes={note.notes || ""}
+                    initialTags={tags}
+                  />
+                ) : note.field_visit_id ? (
+                  <p className="text-xs text-muted-foreground">Note verrouillée après clôture de la visite.</p>
                 ) : null}
               </CardContent>
             </Card>
