@@ -1,6 +1,7 @@
 import { CalendarPlus, ClipboardPlus, MapPin, ShoppingCart } from "lucide-react";
 import { AgentDayExperience, type AgentNextVisit, type AgentTodayData } from "@/components/agent/agent-day-experience";
 import { DashboardTracker } from "@/components/agent/dashboard-tracker";
+import { StockAlertsPanel } from "@/components/agent/stock-alerts-panel";
 import { TerrainActivityFeed, type TerrainImpact } from "@/components/agent/terrain-activity-feed";
 import { TerrainMomentum } from "@/components/agent/terrain-momentum";
 import { QuickActions } from "@/components/ux/quick-actions";
@@ -9,6 +10,7 @@ import type { AgentScheduledVisit } from "@/lib/agent-visits";
 import { requireActiveBrand } from "@/lib/auth";
 import { parisBusinessDate } from "@/lib/business-date";
 import { requireActiveBrandCapability } from "@/lib/saas/server";
+import { loadStockAlerts } from "@/lib/stock-alerts-server";
 
 type FieldAgendaEvent = {
   event_key: string;
@@ -39,7 +41,7 @@ export default async function AgentPage() {
   const { supabase, brand, profile, userId } = session;
   const today = parisBusinessDate();
   const now = new Date();
-  const [{ data: agenda }, { data: nextVisit }, recentImpactResult, fieldAgendaResult] = await Promise.all([
+  const [{ data: agenda }, { data: nextVisit }, recentImpactResult, fieldAgendaResult, stockAlerts] = await Promise.all([
     supabase.rpc("get_agent_today", { target_brand_id: brand.id, target_date: today }),
     supabase.rpc("get_next_agent_visit", { target_brand_id: brand.id }),
     saas.capabilities.has("missions")
@@ -50,6 +52,9 @@ export default async function AgentPage() {
       end_date: today,
       brand_filter: brand.id,
     }),
+    saas.capabilities.has("sell_out")
+      ? loadStockAlerts(supabase, brand.id, userId)
+      : Promise.resolve([]),
   ]);
 
   if (fieldAgendaResult.error) throw new Error(fieldAgendaResult.error.message);
@@ -111,6 +116,7 @@ export default async function AgentPage() {
         nowIso={now.toISOString()}
       />
       {quickActions.length ? <QuickActions className="hidden sm:grid" actions={quickActions} /> : null}
+      <StockAlertsPanel alerts={stockAlerts} />
       {saas.capabilities.has("missions") ? <TerrainActivityFeed impacts={(recentImpactResult.data ?? []) as TerrainImpact[]} /> : null}
       <div className="agent-home-focus min-w-0">
         <AgentDayExperience
