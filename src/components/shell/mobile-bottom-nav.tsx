@@ -47,14 +47,22 @@ function MobileLinkContent({ item, active }: { item: NavigationItem; active: boo
     <span
       aria-busy={pending || undefined}
       className={cn(
-        "relative flex min-h-12 flex-col items-center justify-center gap-1 rounded-md font-mono text-[0.57rem] font-bold uppercase text-muted-foreground transition-[color,background-color] duration-150",
-        (active || pending) && "text-[var(--tr1-orange)]",
-        pending && "bg-[var(--tr1-orange)]/6",
+        "relative flex min-h-12 flex-col items-center justify-center gap-1 overflow-hidden rounded-md px-0.5 font-mono text-[0.65rem] font-bold uppercase leading-none text-muted-foreground transition-[color,background-color] duration-150",
+        active && "bg-[var(--tr1-orange)]/6 text-[var(--tr1-orange)]",
+        pending && "bg-[var(--tr1-orange)]/8 text-[var(--tr1-orange)]",
       )}
     >
       <NavigationIcon className={cn("size-5", pending && "animate-pulse")} name={item.icon} />
-      <span>{item.shortLabel ?? (item.href === "/dashboard/orders" ? "Commandes" : item.label)}</span>
-      {pending ? <span aria-hidden="true" className="absolute inset-x-[28%] bottom-0 h-0.5 rounded-full bg-[var(--tr1-orange)]" /> : null}
+      <span className="max-w-full truncate">{item.shortLabel ?? (item.href === "/dashboard/orders" ? "Commandes" : item.label)}</span>
+      {(active || pending) ? (
+        <span
+          aria-hidden="true"
+          className={cn(
+            "absolute inset-x-[24%] top-0 h-0.5 rounded-full bg-[var(--tr1-orange)]",
+            pending && "animate-pulse",
+          )}
+        />
+      ) : null}
     </span>
   );
 }
