@@ -85,7 +85,8 @@ function OrderCapture({ brand, onBack, onAnalyzed }: { brand: BrandContext; onBa
     try {
       setError(null);
       const pageUris = await scanOrderDocumentPages();
-      if (pageUris.length === 0) return;
+      const firstPageUri = pageUris[0];
+      if (!firstPageUri) return;
       const documents: MobileOrderDocument[] = pageUris.map((uri, index) => ({
         uri,
         name: `commande-scan-page-${index + 1}.jpg`,
@@ -93,7 +94,7 @@ function OrderCapture({ brand, onBack, onAnalyzed }: { brand: BrandContext; onBa
       }));
       await analyzeDocuments(documents, {
         kind: "scan",
-        uri: pageUris[0],
+        uri: firstPageUri,
         label: pageUris.length === 1 ? "Commande scannée" : `Commande scannée · ${pageUris.length} pages`,
         pageCount: pageUris.length,
       });
@@ -112,6 +113,10 @@ function OrderCapture({ brand, onBack, onAnalyzed }: { brand: BrandContext; onBa
       });
       if (result.canceled) return;
       const asset = result.assets[0];
+      if (!asset) {
+        setError("Aucun PDF n’a été sélectionné.");
+        return;
+      }
       const isPdf = asset.mimeType === "application/pdf" || asset.name.toLowerCase().endsWith(".pdf");
       if (!isPdf) {
         setError("Seuls les fichiers PDF sont acceptés à l’import.");
