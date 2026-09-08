@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { PwaRuntime } from "@/components/pwa-runtime";
 import "./globals.css";
+import "./mobile-pharmacy-fixes.css";
 
 export const metadata: Metadata = {
   title: "TR1 Pharma",
