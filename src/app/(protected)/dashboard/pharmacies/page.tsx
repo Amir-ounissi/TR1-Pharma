@@ -1,5 +1,6 @@
 import { Building2, CircleAlert, MapPin, Plus, RotateCcw, Search, SlidersHorizontal, UserRound } from "lucide-react";
 import Link from "next/link";
+import { MobilePharmacyPortfolioControls } from "@/components/pharmacies/mobile-pharmacy-portfolio-controls";
 import { PharmacyListWithPanel } from "@/components/pharmacies/pharmacy-list-with-panel";
 import { MapFilters } from "@/components/network-map/map-filters";
 import { NetworkMap } from "@/components/network-map/network-map";
@@ -32,6 +33,7 @@ export default async function PharmaciesPage({ searchParams }: { searchParams: S
   const pageSize = 20;
   let query = supabase.from("brand_pharmacy_directory").select("*", { count: "exact" }).eq("brand_id", brand.id).is("archived_at", null);
   if (search) query = query.ilike("search_text", `%${search}%`);
+  if (params.attention === "1") query = query.in("activity_status", ["at_risk", "dormant"]);
   for (const [parameter, column] of [["status", "commercial_status"], ["activity", "activity_status"], ["priority", "priority_level"], ["potential", "potential_level"]] as const) {
     const value = params[parameter];
     if (typeof value === "string" && value !== "all") query = query.eq(column, value);
@@ -67,38 +69,53 @@ export default async function PharmaciesPage({ searchParams }: { searchParams: S
     }
   }
 
-  const hasActiveFilters = ["q", "status", "activity", "priority", "potential", "city", "postalCode", "agent", "territory", "group", "sort", "direction", "page"]
+  const hasActiveFilters = ["q", "status", "activity", "priority", "potential", "city", "postalCode", "agent", "territory", "group", "attention", "sort", "direction", "page"]
     .some((key) => typeof params[key] === "string" && params[key] !== "" && params[key] !== "all" && !(key === "sort" && params[key] === "trade_name") && !(key === "direction" && params[key] === "asc") && !(key === "page" && params[key] === "1"));
 
   return (
     <div className={view === "map" ? "flex min-h-[calc(100vh-8.5rem)] flex-col gap-3 overflow-hidden" : "space-y-3"}>
       {view === "list" ? (
-        <CompactPageHeader
-          eyebrow={`Réseau officinal / ${brand.name}`}
-          title="Pharmacies"
-          description="Le portefeuille, les affectations et les priorités commerciales se lisent ici en une seule vue dense."
-          actions={role !== "agent" ? (
-            <Button asChild className="h-9 rounded-md bg-[var(--tr1-navy)] px-3.5 text-sm font-medium text-white hover:bg-[var(--tr1-navy-soft)]">
-              <Link href="/dashboard/pharmacies/new">
-                <Plus className="size-4" />
-                Ajouter une pharmacie
-              </Link>
-            </Button>
-          ) : undefined}
-        />
+        <>
+          <div className="hidden md:block">
+            <CompactPageHeader
+              eyebrow={`Réseau officinal / ${brand.name}`}
+              title="Pharmacies"
+              description="Le portefeuille, les affectations et les priorités commerciales se lisent ici en une seule vue dense."
+              actions={role !== "agent" ? (
+                <Button asChild className="h-9 rounded-md bg-[var(--tr1-navy)] px-3.5 text-sm font-medium text-white hover:bg-[var(--tr1-navy-soft)]">
+                  <Link href="/dashboard/pharmacies/new">
+                    <Plus className="size-4" />
+                    Ajouter une pharmacie
+                  </Link>
+                </Button>
+              ) : undefined}
+            />
+          </div>
+          <MobilePharmacyPortfolioControls
+            params={params}
+            search={search}
+            count={count ?? 0}
+            role={role}
+            hasActiveFilters={hasActiveFilters}
+          />
+        </>
       ) : null}
 
-      <MapFilters basePath="/dashboard/pharmacies" mode={mapDataset?.mode ?? "network"} params={urlParams} period={mapDataset?.period ?? "30d"} roleScope={roleScope} view={view} />
+      <div className={view === "list" ? "hidden md:block" : "block"}>
+        <MapFilters basePath="/dashboard/pharmacies" mode={mapDataset?.mode ?? "network"} params={urlParams} period={mapDataset?.period ?? "30d"} roleScope={roleScope} view={view} />
+      </div>
 
       {view === "list" ? (
-        <MetricStrip
-          items={[
-            { icon: Building2, label: role === "agent" ? "Mon portefeuille" : "Portefeuille total", value: count ?? 0, detail: "Pharmacies référencées" },
-            { icon: CircleAlert, label: "Priorités", value: strategicCount, detail: "Sur cette page", accent: true },
-            role === "agent" ? { icon: CircleAlert, label: "À relancer", value: rows.filter((row) => row.activity_status === "at_risk" || row.activity_status === "dormant").length, detail: "Sur cette page" } : { icon: UserRound, label: "Sans agent", value: unassignedCount, detail: "Sur cette page · affectation à compléter" },
-            { icon: MapPin, label: "Villes couvertes", value: cityCount, detail: "Sur cette page" },
-          ]}
-        />
+        <div className="hidden md:block">
+          <MetricStrip
+            items={[
+              { icon: Building2, label: role === "agent" ? "Mon portefeuille" : "Portefeuille total", value: count ?? 0, detail: "Pharmacies référencées" },
+              { icon: CircleAlert, label: "Priorités", value: strategicCount, detail: "Sur cette page", accent: true },
+              role === "agent" ? { icon: CircleAlert, label: "À relancer", value: rows.filter((row) => row.activity_status === "at_risk" || row.activity_status === "dormant").length, detail: "Sur cette page" } : { icon: UserRound, label: "Sans agent", value: unassignedCount, detail: "Sur cette page · affectation à compléter" },
+              { icon: MapPin, label: "Villes couvertes", value: cityCount, detail: "Sur cette page" },
+            ]}
+          />
+        </div>
       ) : null}
 
       {view === "map" && mapDataset ? (
@@ -120,6 +137,7 @@ export default async function PharmaciesPage({ searchParams }: { searchParams: S
       ) : null}
 
       {view === "list" ? <>
+      <div className="hidden md:block">
       <Toolbar>
         <ToolbarRow className="justify-between">
           <ToolbarMeta>{count ?? 0} résultat(s)</ToolbarMeta>
@@ -190,6 +208,7 @@ export default async function PharmaciesPage({ searchParams }: { searchParams: S
             </Button>
           </form>
       </Toolbar>
+      </div>
 
       {error ? (
         <InlineError
