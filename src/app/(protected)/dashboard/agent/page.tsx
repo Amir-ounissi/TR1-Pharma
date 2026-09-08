@@ -150,7 +150,7 @@ export default async function AgentPage() {
       />
       {saas.capabilities.has("core_crm") ? (
         <Link
-          href="/dashboard/agenda"
+          href="/dashboard/agenda/new"
           className="flex min-h-12 w-full items-center justify-center gap-2 rounded-[0.45rem] bg-[var(--tr1-orange)] px-4 py-3 font-mono text-sm font-black uppercase tracking-[0.02em] text-white shadow-sm transition active:translate-y-px sm:w-fit"
         >
           <CalendarPlus className="size-5" aria-hidden="true" />
