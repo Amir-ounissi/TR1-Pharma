@@ -41,7 +41,7 @@ test("PWA icons, service worker and Apple install metadata are served", async ({
 
   const serviceWorker = await request.get("/sw.js");
   expect(serviceWorker.ok()).toBe(true);
-  expect(await serviceWorker.text()).toContain("tr1-pwa-static-v1");
+  expect(await serviceWorker.text()).toContain("tr1-pwa-static-v2");
 
   const offline = await request.get("/offline");
   expect(offline.ok()).toBe(true);
