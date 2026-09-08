@@ -1,5 +1,6 @@
-import { Map, Search, SlidersHorizontal } from "lucide-react";
+import { Map, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
+import { LivePharmacySearch } from "@/components/pharmacies/live-pharmacy-search";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -71,27 +72,7 @@ export function MobilePharmacyPortfolioControls({
         </Button>
       </div>
 
-      <form className="flex gap-2">
-        <input type="hidden" name="view" value="list" />
-        {preservedSearchInputs(params)}
-        <div className="relative min-w-0 flex-1">
-          <Search className="absolute left-3 top-3 size-4 text-muted-foreground" />
-          <Input
-            name="q"
-            defaultValue={search}
-            className="h-10 rounded-xl border-[var(--tr1-line-strong)] bg-white pl-9 text-sm"
-            placeholder="Pharmacie, ville, CP, CIP…"
-          />
-        </div>
-        <Button
-          type="submit"
-          size="icon"
-          className="size-10 shrink-0 rounded-xl bg-[var(--tr1-navy)] text-white hover:bg-[var(--tr1-navy-soft)]"
-        >
-          <Search className="size-4" />
-          <span className="sr-only">Rechercher</span>
-        </Button>
-      </form>
+      <LivePharmacySearch initialValue={search} params={params} />
 
       <div className="flex gap-1.5 overflow-x-auto pb-0.5">
         <MobileFilterLink
@@ -322,33 +303,6 @@ function MobileFilterLink({
       {children}
     </Link>
   );
-}
-
-function preservedSearchInputs(
-  params: Record<string, string | string[] | undefined>,
-) {
-  const keys = [
-    "status",
-    "activity",
-    "priority",
-    "potential",
-    "city",
-    "postalCode",
-    "agent",
-    "territory",
-    "group",
-    "attention",
-    "sort",
-    "direction",
-  ];
-
-  return keys.flatMap((key) => {
-    const value = params[key];
-    if (typeof value !== "string" || value === "" || value === "all") {
-      return [];
-    }
-    return <input key={key} type="hidden" name={key} value={value} />;
-  });
 }
 
 function stringParam(value: string | string[] | undefined, fallback = "") {
