@@ -61,6 +61,12 @@ export type MobileOrderPreview = {
   warnings: string[];
 };
 
+export type MobileOrderDocument = {
+  uri: string;
+  name: string;
+  type: "application/pdf" | "image/jpeg" | "image/png" | "image/webp";
+};
+
 export type ManualOrderType = "initial" | "reorder" | "complementary" | "replacement" | "sample" | "return" | "credit_note" | "other";
 export type ManualOrderStatus = "draft" | "pending" | "confirmed";
 
@@ -86,6 +92,7 @@ export type ManualOrderConfirmation = {
 };
 
 const apiBaseUrl = (process.env.EXPO_PUBLIC_TR1_API_URL ?? "").replace(/\/$/, "");
+const MAX_SCAN_PAGES = 6;
 
 async function accessToken() {
   const { data } = await supabase.auth.getSession();
@@ -113,16 +120,43 @@ async function optimizeOrderPhoto(asset: ImagePickerAsset) {
     width > 0 && width < asset.width ? [{ resize: { width } }] : [],
     { compress: 0.72, format: ImageManipulator.SaveFormat.JPEG },
   );
-  return { uri: result.uri, name: "commande-tr1.jpg", type: "image/jpeg" };
+  return { uri: result.uri, name: "commande-tr1.jpg", type: "image/jpeg" as const };
+}
+
+async function optimizeScannedPage(document: MobileOrderDocument, index: number): Promise<MobileOrderDocument> {
+  if (document.type === "application/pdf") return document;
+  const result = await ImageManipulator.manipulateAsync(
+    document.uri,
+    [{ resize: { width: 1800 } }],
+    { compress: 0.72, format: ImageManipulator.SaveFormat.JPEG },
+  );
+  return {
+    uri: result.uri,
+    name: `commande-tr1-page-${index + 1}.jpg`,
+    type: "image/jpeg",
+  };
+}
+
+export async function analyzeOrderDocuments(documents: MobileOrderDocument[], brandId: string): Promise<MobileOrderPreview> {
+  if (documents.length === 0) throw new Error("Scannez la commande ou importez un PDF.");
+  if (documents.length > MAX_SCAN_PAGES) throw new Error(`Une commande peut contenir au maximum ${MAX_SCAN_PAGES} pages scannées.`);
+  if (documents.some((document) => document.type === "application/pdf") && documents.length > 1) {
+    throw new Error("Importez un seul PDF à la fois.");
+  }
+
+  const optimized = await Promise.all(documents.map((document, index) => optimizeScannedPage(document, index)));
+  const form = new FormData();
+  form.append("brandId", brandId);
+  for (const document of optimized) {
+    form.append("document", document as unknown as Blob);
+  }
+  const payload = await apiFetch("/api/mobile/orders/document/analyze", { method: "POST", body: form });
+  return payload.preview as MobileOrderPreview;
 }
 
 export async function analyzeOrderPhoto(asset: ImagePickerAsset, brandId: string): Promise<MobileOrderPreview> {
   const photo = await optimizeOrderPhoto(asset);
-  const form = new FormData();
-  form.append("brandId", brandId);
-  form.append("document", photo as unknown as Blob);
-  const payload = await apiFetch("/api/mobile/orders/document/analyze", { method: "POST", body: form });
-  return payload.preview as MobileOrderPreview;
+  return analyzeOrderDocuments([photo], brandId);
 }
 
 export async function searchOrderPharmacies(brandId: string, term: string): Promise<OrderPharmacySelection[]> {

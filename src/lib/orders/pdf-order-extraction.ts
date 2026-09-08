@@ -1,12 +1,15 @@
 import { PDF_ORDER_JSON_SCHEMA, parsePdfOrderExtraction, type PdfOrderExtraction } from "@/lib/orders/pdf-order-schema";
 
 export const MAX_ORDER_DOCUMENT_SIZE = 3 * 1024 * 1024;
+export const MAX_ORDER_SCAN_PAGES = 6;
+export const MAX_ORDER_SCAN_TOTAL_SIZE = 12 * 1024 * 1024;
 export const ORDER_DOCUMENT_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 export const DEFAULT_ORDER_EXTRACTION_MODEL = "gpt-5-mini";
 const orderDocumentImageTypes = new Set<string>(ORDER_DOCUMENT_IMAGE_TYPES);
 
 const ORDER_EXTRACTION_INSTRUCTIONS = `
-Tu extrais fidèlement un bon de commande pharmacie depuis un PDF ou une photo. N'invente aucune donnée et ne réalise aucun matching avec TR1.
+Tu extrais fidèlement un bon de commande pharmacie depuis un PDF ou une ou plusieurs pages scannées. N'invente aucune donnée et ne réalise aucun matching avec TR1.
+Si plusieurs images sont fournies, elles appartiennent toutes au même bon de commande et sont présentées dans l'ordre des pages. Analyse-les comme un seul document.
 
 PHARMACIE ACHETEUSE
 - pharmacy décrit TOUJOURS la pharmacie cliente/acheteuse/destinataire, généralement dans le bloc d'identité du document.
@@ -77,6 +80,7 @@ export type OrderScanUsage = {
   latencyMs: number;
   mimeType: string;
   fileSizeBytes: number;
+  fileCount: number;
 };
 
 type OrderScanUsageSink = (usage: OrderScanUsage) => void;
@@ -132,19 +136,50 @@ function logOrderScanUsage(usage: OrderScanUsage) {
   console.info("[order_scan_usage]", usage);
 }
 
-export async function extractPdfOrder(
-  file: File,
+function validateOrderDocuments(files: File[]) {
+  if (files.length === 0) {
+    throw new PdfOrderImportError("invalid_file", "Ajoutez un scan de la commande ou un PDF.");
+  }
+  if (files.length > MAX_ORDER_SCAN_PAGES) {
+    throw new PdfOrderImportError("invalid_file", `Le scan ne peut pas dépasser ${MAX_ORDER_SCAN_PAGES} pages.`);
+  }
+
+  const pdfCount = files.filter((file) => file.type === "application/pdf").length;
+  if (pdfCount > 0 && files.length > 1) {
+    throw new PdfOrderImportError("invalid_file", "Importez un seul PDF à la fois ou utilisez uniquement des pages scannées.");
+  }
+
+  let totalSize = 0;
+  for (const file of files) {
+    const isPdf = file.type === "application/pdf";
+    const isImage = orderDocumentImageTypes.has(file.type);
+    if (!isPdf && !isImage) {
+      throw new PdfOrderImportError("invalid_file", "Le document doit être un PDF ou un scan JPG, PNG ou WebP.");
+    }
+    if (file.size > MAX_ORDER_DOCUMENT_SIZE) {
+      throw new PdfOrderImportError("invalid_file", "Chaque page ou PDF ne peut pas dépasser 3 Mo.");
+    }
+    totalSize += file.size;
+  }
+  if (totalSize > MAX_ORDER_SCAN_TOTAL_SIZE) {
+    throw new PdfOrderImportError("invalid_file", "Le scan complet ne peut pas dépasser 12 Mo.");
+  }
+}
+
+async function toOpenAIDocumentInput(file: File) {
+  const base64 = Buffer.from(await file.arrayBuffer()).toString("base64");
+  if (file.type === "application/pdf") {
+    return { type: "input_file", filename: file.name || "commande.pdf", file_data: base64 };
+  }
+  return { type: "input_image", image_url: `data:${file.type};base64,${base64}`, detail: "high" };
+}
+
+export async function extractOrderDocuments(
+  files: File[],
   fetcher: Fetcher = fetch,
   usageSink: OrderScanUsageSink = logOrderScanUsage,
 ): Promise<PdfOrderExtraction> {
-  const isPdf = file.type === "application/pdf";
-  const isImage = orderDocumentImageTypes.has(file.type);
-  if (!isPdf && !isImage) {
-    throw new PdfOrderImportError("invalid_file", "Le document doit être un PDF ou une photo JPG, PNG ou WebP.");
-  }
-  if (file.size > MAX_ORDER_DOCUMENT_SIZE) {
-    throw new PdfOrderImportError("invalid_file", "Le document ne peut pas dépasser 3 Mo.");
-  }
+  validateOrderDocuments(files);
   if (process.env.APP_ENV === "test" && process.env.PDF_ORDER_E2E_MOCK) {
     return parsePdfOrderExtraction(JSON.parse(process.env.PDF_ORDER_E2E_MOCK));
   }
@@ -156,11 +191,7 @@ export async function extractPdfOrder(
   const startedAt = Date.now();
 
   try {
-    const base64 = Buffer.from(await file.arrayBuffer()).toString("base64");
-    const documentInput = isPdf
-      ? { type: "input_file", filename: file.name || "commande.pdf", file_data: base64 }
-      : { type: "input_image", image_url: `data:${file.type};base64,${base64}`, detail: "high" };
-
+    const documentInputs = await Promise.all(files.map(toOpenAIDocumentInput));
     const response = await fetcher("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -169,7 +200,13 @@ export async function extractPdfOrder(
         ...(reasoning ? { reasoning } : {}),
         store: false,
         instructions: ORDER_EXTRACTION_INSTRUCTIONS,
-        input: [{ role: "user", content: [{ type: "input_text", text: "Extrais cette commande sous forme de données structurées." }, documentInput] }],
+        input: [{
+          role: "user",
+          content: [
+            { type: "input_text", text: "Extrais cette commande sous forme de données structurées. Si plusieurs images suivent, ce sont les pages du même document dans l’ordre." },
+            ...documentInputs,
+          ],
+        }],
         text: { format: { type: "json_schema", name: "pdf_order", strict: true, schema: PDF_ORDER_JSON_SCHEMA } },
       }),
     });
@@ -189,8 +226,9 @@ export async function extractPdfOrder(
       totalTokens: validTokenCount(payload.usage?.total_tokens),
       estimatedCostUsd: estimateOrderScanCostUsd(model, payload.usage),
       latencyMs: Math.max(0, Date.now() - startedAt),
-      mimeType: file.type,
-      fileSizeBytes: file.size,
+      mimeType: files.length === 1 ? files[0].type : "image/multipage",
+      fileSizeBytes: files.reduce((total, file) => total + file.size, 0),
+      fileCount: files.length,
     });
 
     const outputText = payload.output_text ?? payload.output?.flatMap((item) => item.content ?? []).find((item) => item.type === "output_text")?.text;
@@ -200,4 +238,12 @@ export async function extractPdfOrder(
     if (error instanceof PdfOrderImportError) throw error;
     throw new PdfOrderImportError("extraction_failed", "Le document ne contient pas de commande exploitable.");
   }
+}
+
+export async function extractPdfOrder(
+  file: File,
+  fetcher: Fetcher = fetch,
+  usageSink: OrderScanUsageSink = logOrderScanUsage,
+): Promise<PdfOrderExtraction> {
+  return extractOrderDocuments([file], fetcher, usageSink);
 }

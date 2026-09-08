@@ -10,8 +10,14 @@
       [
         "expo-image-picker",
         {
-          "cameraPermission": "Autoriser TR1 Pharma à photographier les commandes.",
-          "photosPermission": "Autoriser TR1 Pharma à sélectionner une photo de commande."
+          "cameraPermission": "Autoriser TR1 Pharma à photographier les preuves terrain.",
+          "photosPermission": "Autoriser TR1 Pharma à sélectionner des preuves terrain."
+        }
+      ],
+      [
+        "react-native-document-scanner-plugin",
+        {
+          "cameraPermission": "Autoriser TR1 Pharma à scanner les bons de commande."
         }
       ],
       "expo-notifications"
