@@ -72,7 +72,7 @@ export function MobilePharmacyPortfolioControls({
         </Button>
       </div>
 
-      <LivePharmacySearch initialValue={search} params={params} />
+      <LivePharmacySearch key={search} initialValue={search} params={params} />
 
       <div className="flex gap-1.5 overflow-x-auto pb-0.5">
         <MobileFilterLink
