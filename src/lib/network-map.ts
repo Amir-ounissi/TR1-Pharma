@@ -22,6 +22,13 @@ type DirectoryRow = {
   agent_name: string | null;
   pharmacy_group_name: string | null;
   archived_at: string | null;
+  latitude: number | string | null;
+  longitude: number | string | null;
+  geocoding_status: string | null;
+  geocoded_at: string | null;
+  geocoding_source: string | null;
+  address_line_1: string | null;
+  address_line_2: string | null;
 };
 
 type TimelineRow = {
@@ -47,6 +54,8 @@ export type NetworkMapPharmacy = {
   postalCode: string | null;
   latitude: number | null;
   longitude: number | null;
+  locationPrecision: "exact" | "department" | "missing";
+  geocodingSource: string | null;
   commercialStatus: string;
   commercialStatusLabel: string;
   activityStatus: string;
@@ -313,7 +322,13 @@ export async function loadNetworkMapData(args: {
       signals,
       firstOrderAt: null,
     });
-    const approximateCoordinate = getApproximateCoordinateFromPostalCode(directoryRow.postal_code);
+    const exactLatitude = toCoordinate(directoryRow.latitude, -90, 90);
+    const exactLongitude = toCoordinate(directoryRow.longitude, -180, 180);
+    const hasExactCoordinate = exactLatitude != null && exactLongitude != null;
+    const approximateCoordinate = hasExactCoordinate ? null : getApproximateCoordinateFromPostalCode(directoryRow.postal_code);
+    const latitude = hasExactCoordinate ? exactLatitude : approximateCoordinate?.latitude ?? null;
+    const longitude = hasExactCoordinate ? exactLongitude : approximateCoordinate?.longitude ?? null;
+    const locationPrecision = hasExactCoordinate ? "exact" : approximateCoordinate ? "department" : "missing";
 
     return [{
       id: directoryRow.id,
@@ -321,8 +336,10 @@ export async function loadNetworkMapData(args: {
       name: directoryRow.trade_name || directoryRow.legal_name || "Pharmacie",
       city: directoryRow.city || null,
       postalCode: directoryRow.postal_code || null,
-      latitude: approximateCoordinate?.latitude ?? null,
-      longitude: approximateCoordinate?.longitude ?? null,
+      latitude,
+      longitude,
+      locationPrecision,
+      geocodingSource: directoryRow.geocoding_source ?? null,
       commercialStatus: directoryRow.commercial_status,
       commercialStatusLabel: labels.commercialStatus[directoryRow.commercial_status as keyof typeof labels.commercialStatus] ?? directoryRow.commercial_status,
       activityStatus: directoryRow.activity_status,
@@ -363,6 +380,12 @@ export async function loadNetworkMapData(args: {
 
 function getSingleValue(value: string | string[] | undefined) {
   return typeof value === "string" ? value : undefined;
+}
+
+function toCoordinate(value: number | string | null, min: number, max: number) {
+  if (value == null || value === "") return null;
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) && parsed >= min && parsed <= max ? parsed : null;
 }
 
 function buildSignals(events: TimelineRow[]) {
@@ -477,7 +500,7 @@ function buildActorMarkers(pharmacies: NetworkMapPharmacy[]): NetworkMapActor[] 
 function buildSummary(pharmacies: NetworkMapPharmacy[], actors: NetworkMapActor[]): NetworkMapSummary {
   return {
     visiblePharmacies: pharmacies.length,
-    nonGeocodedPharmacies: pharmacies.filter((pharmacy) => pharmacy.latitude == null || pharmacy.longitude == null).length,
+    nonGeocodedPharmacies: pharmacies.filter((pharmacy) => pharmacy.locationPrecision !== "exact").length,
     activeActors: actors.length,
     actionsInPeriod: pharmacies.reduce((sum, pharmacy) => sum + pharmacy.signals.interactionsInPeriod + pharmacy.signals.missionsInPeriod, 0),
     accountsToTreat: pharmacies.filter((pharmacy) => pharmacy.presentationTone === "warning" || pharmacy.presentationTone === "accent").length,

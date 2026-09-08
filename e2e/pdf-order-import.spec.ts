@@ -5,7 +5,7 @@ test("PDF mocké : prévisualisation puis confirmation crée une commande, sans 
   const orderNumber = `E2E-PDF-${Date.now()}`;
   await signIn(page, "agent@dermavita.local", /Dermavita/i);
   await page.goto("/dashboard/orders/new");
-  await page.getByRole("button", { name: "Importer ou photographier" }).click();
+  await page.getByRole("button", { name: "Scanner / importer" }).click();
   await page.locator('input[name="document"]').setInputFiles({
     name: "commande.pdf",
     mimeType: "application/pdf",
@@ -46,7 +46,7 @@ test("PDF mocké : prévisualisation puis confirmation crée une commande, sans 
 test("une photo de commande peut être importée et la caméra arrière accepte les formats iPhone", async ({ page }) => {
   await signIn(page, "agent@dermavita.local", /Dermavita/i);
   await page.goto("/dashboard/orders/new");
-  await page.getByRole("button", { name: "Importer ou photographier" }).click();
+  await page.getByRole("button", { name: "Scanner / importer" }).click();
 
   const cameraInput = page.locator('input[name="camera"]');
   const documentInput = page.locator('input[name="document"]');

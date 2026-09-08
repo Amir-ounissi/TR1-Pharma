@@ -103,7 +103,7 @@ export function OrderEntryModes({ manual, isAgent = false }: { manual: ReactNode
     <div className="space-y-5">
       <div className="flex flex-wrap gap-2 border-b pb-4">
         <Button type="button" variant={mode === "manual" ? "default" : "outline"} onClick={() => setMode("manual")}>Saisie manuelle</Button>
-        <Button type="button" variant={mode === "document" ? "default" : "outline"} onClick={() => setMode("document")}>Importer ou photographier</Button>
+        <Button type="button" variant={mode === "document" ? "default" : "outline"} onClick={() => setMode("document")}>Scanner / importer</Button>
       </div>
       {mode === "manual" ? manual : <PdfOrderImport isAgent={isAgent} />}
     </div>
@@ -124,7 +124,7 @@ export function PdfOrderImport({ isAgent = false }: { isAgent?: boolean }) {
     if (file.type !== "application/pdf" && !supportedImage) {
       input.value = "";
       setFileName("");
-      setFileError("Ajoutez un PDF ou une photo JPG, PNG, WebP ou HEIC.");
+      setFileError("Ajoutez un PDF ou un scan JPG, PNG, WebP ou HEIC.");
       return;
     }
     if (file.type === "application/pdf" && file.size > MAX_ORDER_DOCUMENT_SIZE) {
@@ -143,7 +143,7 @@ export function PdfOrderImport({ isAgent = false }: { isAgent?: boolean }) {
     } catch {
       input.value = "";
       setFileName("");
-      setFileError("La photo est trop lourde ou illisible. Reprenez une photo nette de la commande.");
+      setFileError("Le scan est trop lourd ou illisible. Reprenez une capture nette de la commande.");
     }
   }
 
@@ -164,7 +164,7 @@ export function PdfOrderImport({ isAgent = false }: { isAgent?: boolean }) {
         <div>
           <h2 className="font-medium">Ajouter la commande</h2>
           <p className="mt-0.5 text-xs leading-snug text-muted-foreground sm:text-sm">
-            Prenez une photo nette ou importez le document. Vous vérifierez les données avant création.
+            Scannez la commande avec la caméra du téléphone ou importez un PDF. La capture web est optimisée avant analyse et vous vérifierez toujours les données avant création.
           </p>
         </div>
 
@@ -191,7 +191,7 @@ export function PdfOrderImport({ isAgent = false }: { isAgent?: boolean }) {
         <div className="grid grid-cols-2 gap-2 sm:gap-3">
           <Button type="button" variant="outline" className="h-11 rounded-xl" onClick={() => cameraRef.current?.click()}>
             <Camera className="size-4" />
-            Photo
+            Scanner
           </Button>
           <Button type="button" variant="outline" className="h-11 rounded-xl" onClick={() => inputRef.current?.click()}>
             <FileUp className="size-4" />
@@ -205,7 +205,7 @@ export function PdfOrderImport({ isAgent = false }: { isAgent?: boolean }) {
             <span className="truncate text-muted-foreground">{fileName}</span>
           </div>
         ) : (
-          <p className="text-center text-[0.68rem] text-muted-foreground">PDF ou photo · 3 Mo max après optimisation</p>
+          <p className="text-center text-[0.68rem] text-muted-foreground">PDF ou scan caméra · 3 Mo max après optimisation</p>
         )}
         {fileError ? <p className="text-sm text-destructive">{fileError}</p> : null}
         <ActionFeedback {...analysis} />

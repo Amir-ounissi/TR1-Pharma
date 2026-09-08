@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Clock3, MoveRight } from "lucide-react";
+import { Clock3, MapPin, MoveRight } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -56,6 +56,10 @@ export function PharmacyMapPanel({ pharmacy }: { pharmacy: NetworkMapPharmacy | 
           <Badge className="rounded-[0.35rem] border-[var(--tr1-line-strong)] bg-white/75 text-[var(--tr1-navy)]" variant="outline">
             {pharmacy.commercialStatusLabel}
           </Badge>
+        </div>
+        <div className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-[0.68rem] leading-4 ${pharmacy.locationPrecision === "exact" ? "border-emerald-200 bg-emerald-50/80 text-emerald-800" : "border-amber-200 bg-amber-50/80 text-amber-800"}`}>
+          <MapPin className="size-3.5 shrink-0" />
+          {pharmacy.locationPrecision === "exact" ? "Position pharmacie géocodée précisément." : "Position cartographique approximative au niveau du département."}
         </div>
         {pharmacy.priorityLevel === "strategic" ? (
           <div className="font-mono text-[0.62rem] font-bold uppercase tracking-[0.1em] text-[var(--tr1-orange)]">★ Compte stratégique</div>
@@ -132,7 +136,7 @@ export function PharmacyMapPanel({ pharmacy }: { pharmacy: NetworkMapPharmacy | 
           </section>
         ) : null}
 
-        <Button asChild className="w-full rounded-[0.45rem] bg-[var(--tr1-navy)] hover:bg-[var(--tr1-navy-soft)]">
+        <Button asChild className="h-11 w-full rounded-xl bg-[var(--tr1-navy)] hover:bg-[var(--tr1-navy-soft)]">
           <Link href={`/dashboard/pharmacies/${pharmacy.id}`}>
             Ouvrir la fiche pharmacie
             <MoveRight className="size-4" />

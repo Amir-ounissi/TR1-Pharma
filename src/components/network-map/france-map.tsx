@@ -15,9 +15,15 @@ type GeometryFeature = {
   };
 };
 
+type ProjectedPharmacy = {
+  pharmacy: NetworkMapPharmacy;
+  point: { x: number; y: number };
+  overlapCount: number;
+};
+
 const MAP_WIDTH = 840;
 const MAP_HEIGHT = 640;
-const DEMO_VISUAL_ONLY_CITY_LABELS = [
+const CITY_LABELS = [
   { label: "Lille", latitude: 50.6292, longitude: 3.0573 },
   { label: "Paris", latitude: 48.8566, longitude: 2.3522 },
   { label: "Nantes", latitude: 47.2184, longitude: -1.5536 },
@@ -61,8 +67,8 @@ export function FranceMap({
     [viewport],
   );
 
-  const points = useMemo(
-    () => geoCoded.map((pharmacy) => ({
+  const points = useMemo(() => {
+    const projected = geoCoded.map((pharmacy) => ({
       pharmacy,
       point: projectCoordinate(
         { latitude: pharmacy.latitude!, longitude: pharmacy.longitude! },
@@ -70,9 +76,9 @@ export function FranceMap({
         MAP_WIDTH,
         MAP_HEIGHT,
       ),
-    })),
-    [geoCoded, viewport],
-  );
+    }));
+    return spreadOverlappingPoints(projected);
+  }, [geoCoded, viewport]);
 
   const actorPoints = useMemo(
     () => actors
@@ -108,7 +114,7 @@ export function FranceMap({
   );
 
   const cityLabels = useMemo(
-    () => DEMO_VISUAL_ONLY_CITY_LABELS.map((item) => ({
+    () => CITY_LABELS.map((item) => ({
       ...item,
       point: projectCoordinate(
         { latitude: item.latitude, longitude: item.longitude },
@@ -121,9 +127,15 @@ export function FranceMap({
   );
 
   return (
-    <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-[0.95rem] border border-[var(--tr1-line-strong)] bg-[#fdf8f1] p-2">
+    <div className="relative flex min-h-[25rem] flex-1 items-center justify-center overflow-hidden rounded-2xl border border-[var(--tr1-line-strong)] bg-[#fdf8f1] p-2 md:min-h-[34rem]">
+      {pharmacies.some((pharmacy) => pharmacy.locationPrecision !== "exact") ? (
+        <div className="pointer-events-none absolute left-3 top-3 z-20 rounded-full border border-amber-200 bg-amber-50/95 px-2.5 py-1 text-[0.62rem] font-semibold text-amber-800 shadow-sm">
+          Certaines positions restent approximatives
+        </div>
+      ) : null}
+
       <svg
-        aria-label="Carte stratégique du réseau officinal"
+        aria-label="Carte du portefeuille pharmacies"
         className="h-full max-h-full w-full"
         viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}
         preserveAspectRatio="xMidYMid meet"
@@ -133,11 +145,11 @@ export function FranceMap({
           {paths.map((path) => <path d={path.d} key={path.key} />)}
         </g>
         {controls.showConnections ? (
-          <g stroke="rgba(230,121,41,0.34)" strokeDasharray="4 6" strokeWidth="1.15">
+          <g stroke="rgba(230,121,41,0.30)" strokeDasharray="4 6" strokeWidth="1.1">
             {actorConnections.map((connection) => (
               <line
                 key={connection.key}
-                opacity={selectedActorKey && selectedActorKey !== connection.actorKey ? 0.15 : 1}
+                opacity={selectedActorKey && selectedActorKey !== connection.actorKey ? 0.12 : 1}
                 x1={connection.x1}
                 x2={connection.x2}
                 y1={connection.y1}
@@ -149,7 +161,7 @@ export function FranceMap({
         <defs>
           <pattern height="48" id="tr1-map-grid" patternUnits="userSpaceOnUse" width="48">
             <rect fill="#fdf8f1" height="48" width="48" />
-            <path d="M 48 0 L 0 0 0 48" fill="none" stroke="rgba(223,205,179,0.22)" strokeWidth="1" />
+            <path d="M 48 0 L 0 0 0 48" fill="none" stroke="rgba(223,205,179,0.20)" strokeWidth="1" />
           </pattern>
         </defs>
       </svg>
@@ -157,7 +169,7 @@ export function FranceMap({
       <div className="pointer-events-none absolute inset-0">
         {cityLabels.map((item) => (
           <div
-            className="absolute hidden -translate-x-1/2 text-[0.58rem] text-[#9d8d74] xl:block"
+            className="absolute hidden -translate-x-1/2 text-[0.58rem] text-[#9d8d74] lg:block"
             key={item.label}
             style={{ left: `${item.point.x}px`, top: `${item.point.y}px` }}
           >
@@ -165,36 +177,53 @@ export function FranceMap({
           </div>
         ))}
 
-        {controls.showPharmacies ? points.map(({ pharmacy, point }) => (
-          <div key={pharmacy.id}>
-            <div className="absolute max-w-[8.5rem] -translate-x-1/2 -translate-y-[calc(100%+8px)] text-center" style={{ left: `${point.x}px`, top: `${point.y}px` }}>
-              <div className="rounded-full border border-[var(--tr1-line)] bg-white/90 px-2 py-1">
-                <p className="truncate font-mono text-[0.52rem] font-bold uppercase tracking-[0.06em] text-[var(--tr1-navy)]">
-                  {pharmacy.name}
-                </p>
-                <p className="truncate text-[0.6rem] text-muted-foreground">{pharmacy.city || pharmacy.territoryName || "Officine"}</p>
+        {controls.showPharmacies ? points.map(({ pharmacy, point, overlapCount }) => {
+          const active = selectedPharmacyId === pharmacy.id;
+          return (
+            <div key={pharmacy.id}>
+              {active ? (
+                <div
+                  className="absolute z-20 w-[12rem] -translate-x-1/2 -translate-y-[calc(100%+10px)] text-center"
+                  style={{ left: `${point.x}px`, top: `${point.y}px` }}
+                >
+                  <div className="rounded-xl border border-[var(--tr1-line-strong)] bg-white/96 px-3 py-2 shadow-lg">
+                    <p className="truncate text-xs font-bold text-[var(--tr1-navy)]">{pharmacy.name}</p>
+                    <p className="truncate text-[0.68rem] text-muted-foreground">
+                      {[pharmacy.postalCode, pharmacy.city].filter(Boolean).join(" ") || pharmacy.territoryName || "Officine"}
+                    </p>
+                    <p className="mt-1 text-[0.62rem] font-semibold text-[var(--tr1-orange)]">{pharmacy.presentationLabel}</p>
+                  </div>
+                </div>
+              ) : null}
+              <div className="pointer-events-auto">
+                <PharmacyMarker
+                  active={active}
+                  animated={pharmacy.signals.animationsInPeriod > 0}
+                  label={`${pharmacy.name} · ${pharmacy.presentationLabel}`}
+                  onSelect={() => onSelectPharmacy(pharmacy.id)}
+                  strategic={pharmacy.priorityLevel === "strategic"}
+                  tone={pharmacy.presentationTone}
+                  x={point.x}
+                  y={point.y}
+                />
+                {overlapCount > 1 && !active ? (
+                  <span
+                    className="pointer-events-none absolute z-10 grid min-w-5 -translate-x-1/2 -translate-y-[1.65rem] place-items-center rounded-full bg-[var(--tr1-navy)] px-1 text-[0.56rem] font-black text-white shadow"
+                    style={{ left: `${point.x}px`, top: `${point.y}px` }}
+                  >
+                    {overlapCount}
+                  </span>
+                ) : null}
               </div>
             </div>
-            <div className="pointer-events-auto">
-              <PharmacyMarker
-                active={selectedPharmacyId === pharmacy.id}
-                animated={pharmacy.signals.animationsInPeriod > 0}
-                label={`${pharmacy.name} · ${pharmacy.presentationLabel}`}
-                onSelect={() => onSelectPharmacy(pharmacy.id)}
-                strategic={pharmacy.priorityLevel === "strategic"}
-                tone={pharmacy.presentationTone}
-                x={point.x}
-                y={point.y}
-              />
-            </div>
-          </div>
-        )) : null}
+          );
+        }) : null}
 
         {controls.showActors ? actorPoints.map(({ actor, point }) => (
           <button
             className={cn(
-              "pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 rounded-full border border-[var(--tr1-line-strong)] bg-white/96 px-2 py-1 text-left transition",
-              selectedActorKey === actor.key && "border-[var(--tr1-orange)]",
+              "pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 rounded-full border border-[var(--tr1-line-strong)] bg-white/96 px-2 py-1 text-left shadow-sm transition hover:border-[var(--tr1-orange)]",
+              selectedActorKey === actor.key && "border-[var(--tr1-orange)] ring-2 ring-[var(--tr1-orange)]/15",
             )}
             key={actor.key}
             onClick={() => onSelectActor(selectedActorKey === actor.key ? null : actor.key)}
@@ -205,8 +234,8 @@ export function FranceMap({
               <span className="grid size-5 place-items-center rounded-full bg-[var(--tr1-navy)] font-mono text-[0.54rem] font-black text-white">
                 {initials(actor.name)}
               </span>
-              <span>
-                <span className="block truncate font-mono text-[0.52rem] font-bold uppercase tracking-[0.06em] text-[var(--tr1-navy)]">
+              <span className="hidden sm:block">
+                <span className="block max-w-28 truncate font-mono text-[0.52rem] font-bold uppercase tracking-[0.06em] text-[var(--tr1-navy)]">
                   {actor.name}
                 </span>
                 <span className="block text-[0.58rem] text-muted-foreground">{actor.pharmacyCount} pharmacies</span>
@@ -217,6 +246,37 @@ export function FranceMap({
       </div>
     </div>
   );
+}
+
+function spreadOverlappingPoints(
+  source: Array<{ pharmacy: NetworkMapPharmacy; point: { x: number; y: number } }>,
+): ProjectedPharmacy[] {
+  const groups = new Map<string, Array<{ pharmacy: NetworkMapPharmacy; point: { x: number; y: number } }>>();
+  for (const item of source) {
+    const key = `${Math.round(item.point.x / 3)}:${Math.round(item.point.y / 3)}`;
+    const bucket = groups.get(key) ?? [];
+    bucket.push(item);
+    groups.set(key, bucket);
+  }
+
+  return [...groups.values()].flatMap((group) => {
+    if (group.length === 1) {
+      return [{ ...group[0], overlapCount: 1 }];
+    }
+
+    const ring = Math.min(52, 24 + group.length * 2);
+    return group.map((item, index) => {
+      const angle = (Math.PI * 2 * index) / group.length - Math.PI / 2;
+      return {
+        pharmacy: item.pharmacy,
+        overlapCount: group.length,
+        point: {
+          x: item.point.x + Math.cos(angle) * ring,
+          y: item.point.y + Math.sin(angle) * ring,
+        },
+      };
+    });
+  });
 }
 
 function initials(name: string) {
@@ -239,9 +299,7 @@ function featureToPath(feature: GeometryFeature, viewport: ProjectionViewport) {
 }
 
 function polygonToPath(polygon: number[][][], viewport: ProjectionViewport) {
-  return polygon
-    .map((ring) => ringToPath(ring, viewport))
-    .join(" ");
+  return polygon.map((ring) => ringToPath(ring, viewport)).join(" ");
 }
 
 function ringToPath(ring: number[][], viewport: ProjectionViewport) {
