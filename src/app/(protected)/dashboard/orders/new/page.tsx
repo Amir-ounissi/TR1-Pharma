@@ -57,11 +57,11 @@ export default async function NewOrderPage({ searchParams }: { searchParams: Sea
     : { data: [] };
 
   const lastOrderItems = (lastItems ?? [])
-    .filter((item) => item.quantity > 0 && productOptions.some((option) => option.id === item.product_id))
+    .filter((item) => Number(item.quantity ?? 0) > 0 && productOptions.some((option) => option.id === item.product_id))
     .map((item) => ({
       productId: item.product_id,
-      quantity: item.quantity,
-      freeQuantity: item.free_quantity,
+      quantity: Number(item.quantity),
+      freeQuantity: Number(item.free_quantity ?? 0),
       unitPriceHt: item.unit_price_ht,
       discountRate: item.discount_rate,
     }));
@@ -72,7 +72,7 @@ export default async function NewOrderPage({ searchParams }: { searchParams: Sea
         productId: prioritizedProduct.id,
         quantity: prioritizedProduct.minimumOrderQuantity ?? 1,
         freeQuantity: 0,
-        unitPriceHt: prioritizedProduct.price ?? 0,
+        unitPriceHt: prioritizedProduct.price ?? "",
         discountRate: 0,
       }, ...lastOrderItems]
     : lastOrderItems;
