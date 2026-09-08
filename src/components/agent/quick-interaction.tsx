@@ -152,6 +152,12 @@ export function QuickInteraction({
     if (isOnline) return;
     event.preventDefault();
 
+    const queuedAt = new Date();
+    const visitStart = visitStartedAt ? new Date(visitStartedAt) : null;
+    const durationMinutes = visitStart
+      ? Math.max(1, Math.min(1440, Math.round((queuedAt.getTime() - visitStart.getTime()) / 60_000)))
+      : null;
+
     enqueueOfflineAction(localStorage, {
       kind: "interaction",
       payload: {
@@ -165,6 +171,8 @@ export function QuickInteraction({
         nextTaskType: draft.noNextAction ? null : draft.nextTaskType,
         nextTaskAt: draft.noNextAction ? null : draft.nextTaskAt,
         visitStartedAt: visitStartedAt ?? null,
+        occurredAt: visitStart?.toISOString() ?? queuedAt.toISOString(),
+        durationMinutes,
       },
     });
 
