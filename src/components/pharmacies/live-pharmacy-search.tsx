@@ -17,10 +17,6 @@ export function LivePharmacySearch({ initialValue, params }: LivePharmacySearchP
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
-    setQuery(initialValue);
-  }, [initialValue]);
-
-  useEffect(() => {
     const trimmed = query.trim();
     if (trimmed === initialValue) return;
     if (trimmed.length === 1 && !initialValue) return;
