@@ -41,7 +41,7 @@ export default async function NewOrderPage({ searchParams }: { searchParams: Sea
         .select("id")
         .eq("brand_pharmacy_id", initialRelation.id)
         .eq("brand_id", brand.id)
-        .in("order_status", ["pending", "confirmed", "invoiced", "partially_delivered", "delivered"])
+        .in("order_status", ["confirmed", "invoiced", "partially_delivered", "delivered"])
         .is("archived_at", null)
         .order("order_date", { ascending: false })
         .limit(1)
