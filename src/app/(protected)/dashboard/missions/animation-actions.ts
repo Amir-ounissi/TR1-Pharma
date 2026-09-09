@@ -1,11 +1,16 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireActiveBrand } from "@/lib/auth";
 import { parisLocalToIso } from "@/lib/agenda";
 
 export type AnimationRequestActionState = {
+  error?: string;
+};
+
+export type AnimationScheduleActionState = {
   error?: string;
 };
 
@@ -113,4 +118,46 @@ export async function createAnimationRequestAction(
 
   if (error) return { error: error.message };
   redirect(`/dashboard/missions/${data}?brand=${brand.id}`);
+}
+
+export async function scheduleOwnAnimationAction(
+  _state: AnimationScheduleActionState,
+  formData: FormData,
+): Promise<AnimationScheduleActionState> {
+  const parsed = z.object({
+    missionId: uuid,
+    scheduledStartAt: z.string().min(16),
+    scheduledEndAt: z.string().min(16),
+  }).safeParse(Object.fromEntries(formData));
+
+  if (!parsed.success) return { error: "Le créneau choisi est invalide." };
+
+  let startAt: string;
+  let endAt: string;
+  try {
+    startAt = parisLocalToIso(parsed.data.scheduledStartAt);
+    endAt = parisLocalToIso(parsed.data.scheduledEndAt);
+  } catch {
+    return { error: "Le créneau choisi est invalide." };
+  }
+
+  if (new Date(endAt).getTime() <= new Date(startAt).getTime()) {
+    return { error: "La fin doit être postérieure au début." };
+  }
+
+  const { supabase } = await requireActiveBrand();
+  const { error } = await (supabase.rpc as unknown as (
+    name: string,
+    args: Record<string, unknown>,
+  ) => RpcResult<null>)("schedule_my_animation", {
+    target_mission_id: parsed.data.missionId,
+    target_scheduled_start_at: startAt,
+    target_scheduled_end_at: endAt,
+  });
+
+  if (error) return { error: error.message };
+  revalidatePath(`/dashboard/missions/${parsed.data.missionId}`);
+  revalidatePath("/dashboard/field");
+  revalidatePath("/dashboard/agenda");
+  redirect(`/dashboard/missions/${parsed.data.missionId}`);
 }
