@@ -23,27 +23,15 @@ export async function GET(
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "#0b1e32",
-        color: "white",
+        background: "#f4f0e7",
         fontFamily: "Arial, sans-serif",
         fontWeight: 900,
-        fontSize: Math.round(size * 0.31),
-        letterSpacing: "-0.055em",
-        position: "relative",
+        fontSize: Math.round(size * 0.34),
+        letterSpacing: "-0.075em",
       },
     },
-    createElement("span", null, "TR1"),
-    createElement("span", {
-      style: {
-        position: "absolute",
-        top: `${Math.round(size * 0.17)}px`,
-        right: `${Math.round(size * 0.17)}px`,
-        width: `${Math.round(size * 0.075)}px`,
-        height: `${Math.round(size * 0.075)}px`,
-        borderRadius: "999px",
-        background: "#ef6a3a",
-      },
-    }),
+    createElement("span", { style: { color: "#0e1d31" } }, "TR"),
+    createElement("span", { style: { color: "#ea7015", marginLeft: `${Math.round(size * 0.012)}px` } }, "1"),
   );
 
   return new ImageResponse(mark, {

@@ -6,13 +6,13 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "TR1 Pharma",
     short_name: "TR1",
     description:
-      "Pilotez vos pharmacies, commandes, missions et actions terrain avec TR1 Pharma.",
+      "Exécution commerciale terrain pour les marques qui se développent en pharmacie.",
     start_url: "/dashboard/field?source=pwa",
     scope: "/",
     display: "standalone",
     orientation: "portrait-primary",
-    background_color: "#fffdf8",
-    theme_color: "#0b1e32",
+    background_color: "#f4f0e7",
+    theme_color: "#0e1d31",
     lang: "fr",
     categories: ["business", "productivity"],
     icons: [

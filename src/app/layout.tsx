@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   title: "TR1 Pharma",
   applicationName: "TR1 Pharma",
   description:
-    "TR1 Pharma est une plateforme SaaS de pilotage commercial et d’exécution terrain dédiée aux marques qui se développent en pharmacie.",
+    "TR1 Pharma — exécution commerciale terrain pour les marques qui se développent en pharmacie.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
@@ -35,7 +35,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#0b1e32",
+  themeColor: "#0e1d31",
 };
 
 export default function RootLayout({

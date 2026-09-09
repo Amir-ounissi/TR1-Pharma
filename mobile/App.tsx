@@ -144,14 +144,16 @@ export default function App() {
         <StatusBar style="dark" />
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
           <ScrollView contentContainerStyle={styles.loginContainer} keyboardShouldPersistTaps="handled">
-            <View style={styles.brandMark}><Text style={styles.brandMarkText}>TR1</Text></View>
-            <Text style={styles.loginTitle}>TR1 Pharma</Text>
-            <Text style={styles.loginSubtitle}>Le terrain, dans votre poche.</Text>
+            <View style={styles.wordmarkRow}>
+              <Text style={styles.wordmarkNavy}>TR</Text><Text style={styles.wordmarkOrange}>1</Text>
+            </View>
+            <Text style={styles.loginTitle}>PHARMA</Text>
+            <Text style={styles.loginSubtitle}>EXÉCUTION COMMERCIALE TERRAIN</Text>
             <View style={styles.formCard}>
               <Text style={styles.label}>Email professionnel</Text>
-              <TextInput autoCapitalize="none" autoComplete="email" keyboardType="email-address" value={email} onChangeText={setEmail} placeholder="vous@marque.fr" placeholderTextColor="#98A2B3" style={styles.input} />
+              <TextInput autoCapitalize="none" autoComplete="email" keyboardType="email-address" value={email} onChangeText={setEmail} placeholder="vous@marque.fr" placeholderTextColor="#8A8F98" style={styles.input} />
               <Text style={styles.label}>Mot de passe</Text>
-              <TextInput autoCapitalize="none" autoComplete="password" secureTextEntry value={password} onChangeText={setPassword} placeholder="••••••••" placeholderTextColor="#98A2B3" style={styles.input} />
+              <TextInput autoCapitalize="none" autoComplete="password" secureTextEntry value={password} onChangeText={setPassword} placeholder="••••••••" placeholderTextColor="#8A8F98" style={styles.input} />
               {authError ? <Text style={styles.errorText}>{authError}</Text> : null}
               <Pressable disabled={authPending || !email.trim() || !password} onPress={signIn} style={[styles.primaryButton, (authPending || !email.trim() || !password) && styles.disabled]}>
                 {authPending ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.primaryButtonText}>Se connecter</Text>}
@@ -166,7 +168,7 @@ export default function App() {
   if (contextError) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.centered}><Text style={styles.errorTitle}>Connexion TR1 incomplète</Text><Text style={styles.muted}>{contextError}</Text><Pressable onPress={signOut} style={styles.secondaryButton}><Text>Se déconnecter</Text></Pressable></View>
+        <View style={styles.centered}><Text style={styles.errorTitle}>Connexion TR1 incomplète</Text><Text style={styles.muted}>{contextError}</Text><Pressable onPress={signOut} style={styles.secondaryButton}><Text style={styles.secondaryButtonText}>Se déconnecter</Text></Pressable></View>
       </SafeAreaView>
     );
   }
@@ -204,13 +206,38 @@ export default function App() {
 }
 
 function LoadingScreen({ label }: { label: string }) {
-  return <SafeAreaView style={styles.safeArea}><StatusBar style="dark" /><View style={styles.centered}><ActivityIndicator size="large" color="#3B5BDB" /><Text style={styles.muted}>{label}</Text></View></SafeAreaView>;
+  return <SafeAreaView style={styles.safeArea}><StatusBar style="dark" /><View style={styles.centered}><ActivityIndicator size="large" color="#EA7015" /><Text style={styles.muted}>{label}</Text></View></SafeAreaView>;
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 }, safeArea: { flex: 1, backgroundColor: "#F7F8FA" }, centered: { flex: 1, alignItems: "center", justifyContent: "center", padding: 28, gap: 14 },
-  loginContainer: { flexGrow: 1, justifyContent: "center", paddingHorizontal: 24, paddingVertical: 36 }, brandMark: { width: 54, height: 54, borderRadius: 17, backgroundColor: "#111827", alignItems: "center", justifyContent: "center", marginBottom: 20 }, brandMarkText: { color: "#FFF", fontSize: 19, fontWeight: "800" },
-  loginTitle: { color: "#111827", fontSize: 34, fontWeight: "800" }, loginSubtitle: { color: "#667085", fontSize: 17, marginTop: 6, marginBottom: 30 }, formCard: { backgroundColor: "#FFF", borderWidth: 1, borderColor: "#E4E7EC", borderRadius: 22, padding: 20, gap: 10 }, label: { color: "#111827", fontSize: 13, fontWeight: "700", marginTop: 4 }, input: { minHeight: 52, borderWidth: 1, borderColor: "#E4E7EC", borderRadius: 13, paddingHorizontal: 15, color: "#111827", backgroundColor: "#FFF", fontSize: 16, marginBottom: 6 },
-  primaryButton: { minHeight: 54, borderRadius: 14, backgroundColor: "#3B5BDB", alignItems: "center", justifyContent: "center", marginTop: 8 }, primaryButtonText: { color: "#FFF", fontWeight: "800", fontSize: 16 }, disabled: { opacity: 0.45 }, errorText: { color: "#B42318", fontSize: 13 }, errorTitle: { color: "#111827", fontSize: 22, fontWeight: "800", textAlign: "center" }, muted: { color: "#667085", fontSize: 15, lineHeight: 22, textAlign: "center" }, mutedSmall: { color: "#667085", fontSize: 13, marginTop: 4 }, secondaryButton: { borderWidth: 1, borderColor: "#E4E7EC", paddingHorizontal: 18, paddingVertical: 12, borderRadius: 12, backgroundColor: "#FFF" },
-  screenContainer: { padding: 22, paddingBottom: 40 }, eyebrow: { color: "#3B5BDB", fontWeight: "800", fontSize: 11, letterSpacing: 1.1 }, screenTitle: { color: "#111827", fontSize: 30, fontWeight: "800", marginTop: 7, marginBottom: 8 }, brandList: { gap: 12, marginTop: 24 }, brandCard: { backgroundColor: "#FFF", borderWidth: 1, borderColor: "#E4E7EC", borderRadius: 18, padding: 18, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, brandCardTitle: { color: "#111827", fontSize: 17, fontWeight: "800" }, chevron: { color: "#667085", fontSize: 30 }, linkButton: { alignSelf: "center", marginTop: 26, padding: 10 }, linkButtonText: { color: "#667085", fontWeight: "700" },
+  flex: { flex: 1 },
+  safeArea: { flex: 1, backgroundColor: "#F4F0E7" },
+  centered: { flex: 1, alignItems: "center", justifyContent: "center", padding: 28, gap: 14 },
+  loginContainer: { flexGrow: 1, justifyContent: "center", paddingHorizontal: 24, paddingVertical: 36 },
+  wordmarkRow: { flexDirection: "row", alignItems: "baseline" },
+  wordmarkNavy: { color: "#0E1D31", fontSize: 56, fontWeight: "900", letterSpacing: -5 },
+  wordmarkOrange: { color: "#EA7015", fontSize: 56, fontWeight: "900", letterSpacing: -4 },
+  loginTitle: { color: "#0E1D31", fontSize: 26, fontWeight: "800", letterSpacing: 7, marginTop: -4 },
+  loginSubtitle: { color: "#0E1D31", fontSize: 10, fontWeight: "600", letterSpacing: 2.2, marginTop: 13, marginBottom: 30 },
+  formCard: { backgroundColor: "#FFFDF8", borderWidth: 1, borderColor: "#DCD7CD", borderRadius: 18, padding: 20, gap: 10 },
+  label: { color: "#0E1D31", fontSize: 13, fontWeight: "700", marginTop: 4 },
+  input: { minHeight: 52, borderWidth: 1, borderColor: "#D4CEC2", borderRadius: 12, paddingHorizontal: 15, color: "#0E1D31", backgroundColor: "#FFFDF8", fontSize: 16, marginBottom: 6 },
+  primaryButton: { minHeight: 54, borderRadius: 12, backgroundColor: "#EA7015", alignItems: "center", justifyContent: "center", marginTop: 8 },
+  primaryButtonText: { color: "#FFF", fontWeight: "800", fontSize: 16 },
+  disabled: { opacity: 0.45 },
+  errorText: { color: "#B42318", fontSize: 13 },
+  errorTitle: { color: "#0E1D31", fontSize: 22, fontWeight: "800", textAlign: "center" },
+  muted: { color: "#69717D", fontSize: 15, lineHeight: 22, textAlign: "center" },
+  mutedSmall: { color: "#69717D", fontSize: 13, marginTop: 4 },
+  secondaryButton: { borderWidth: 1, borderColor: "#DCD7CD", paddingHorizontal: 18, paddingVertical: 12, borderRadius: 10, backgroundColor: "#FFFDF8" },
+  secondaryButtonText: { color: "#0E1D31", fontWeight: "700" },
+  screenContainer: { padding: 22, paddingBottom: 40 },
+  eyebrow: { color: "#EA7015", fontWeight: "800", fontSize: 11, letterSpacing: 1.1 },
+  screenTitle: { color: "#0E1D31", fontSize: 30, fontWeight: "800", marginTop: 7, marginBottom: 8 },
+  brandList: { gap: 12, marginTop: 24 },
+  brandCard: { backgroundColor: "#FFFDF8", borderWidth: 1, borderColor: "#DCD7CD", borderRadius: 16, padding: 18, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  brandCardTitle: { color: "#0E1D31", fontSize: 17, fontWeight: "800" },
+  chevron: { color: "#69717D", fontSize: 30 },
+  linkButton: { alignSelf: "center", marginTop: 26, padding: 10 },
+  linkButtonText: { color: "#69717D", fontWeight: "700" },
 });

@@ -12,8 +12,8 @@ test("PWA manifest exposes installable TR1 field metadata", async ({ request }) 
     start_url: "/dashboard/field?source=pwa",
     scope: "/",
     display: "standalone",
-    theme_color: "#0b1e32",
-    background_color: "#fffdf8",
+    theme_color: "#0e1d31",
+    background_color: "#f4f0e7",
   });
 
   expect(manifest.icons).toEqual(
