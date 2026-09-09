@@ -28,6 +28,7 @@ export function QuickOrderEntryModes({
         </Button>
         <Button
           type="button"
+          aria-label="Scanner / importer"
           variant={mode === "scan" ? "default" : "ghost"}
           className="h-11 rounded-xl"
           onClick={() => setMode("scan")}
