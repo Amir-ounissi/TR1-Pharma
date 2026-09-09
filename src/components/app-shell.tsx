@@ -28,9 +28,8 @@ export function AppShell({ children, brandName, brandHint = "Marque active", rol
   return (
     <div className="tr1-product-da min-h-screen bg-[var(--tr1-ivory)]">
       <aside className="fixed inset-y-0 z-40 hidden w-[16.5rem] flex-col border-r border-white/10 bg-sidebar px-4 py-5 text-sidebar-foreground md:flex">
-        <div className="mb-8 flex shrink-0 items-center gap-3 px-2">
-          <span className="relative grid size-10 place-items-center rounded-[0.55rem] border border-white/15 bg-white/6 font-mono text-[0.68rem] font-black tracking-[-0.04em] text-white">TR1<span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-[var(--tr1-orange)]" /></span>
-          <div><p className="text-[0.86rem] font-black uppercase tracking-[-0.02em]">TR1 Pharma</p><p className="font-mono text-[0.55rem] uppercase tracking-[0.17em] text-sidebar-foreground/42">Intelligence terrain</p></div>
+        <div className="mb-8 shrink-0 px-2">
+          <Tr1SidebarBrand />
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto pb-5"><RoleNavigation role={role} scope={navigationScope} capabilities={capabilities} /></div>
         <div className="shrink-0 space-y-3">
@@ -46,7 +45,7 @@ export function AppShell({ children, brandName, brandHint = "Marque active", rol
           <Sheet>
             <SheetTrigger asChild><Button className="min-h-11 min-w-11 md:hidden" size="icon-lg" variant="ghost"><Menu className="size-5" /><span className="sr-only">Ouvrir le menu</span></Button></SheetTrigger>
             <SheetContent className="w-[19rem] border-r-0 bg-sidebar text-sidebar-foreground" side="left">
-              <SheetHeader className="border-white/10"><SheetTitle className="flex items-center gap-2 text-sidebar-foreground"><span className="grid size-8 place-items-center rounded-md border border-white/15 bg-white/6 font-mono text-[0.6rem] font-black">TR1</span>TR1 Pharma</SheetTitle></SheetHeader>
+              <SheetHeader className="border-white/10"><SheetTitle className="text-sidebar-foreground"><Tr1SidebarBrand compact /></SheetTitle></SheetHeader>
               <div className="flex min-h-0 flex-1 flex-col p-4">
                 <div className="min-h-0 flex-1 overflow-y-auto"><RoleNavigation role={role} scope={navigationScope} capabilities={capabilities} /></div>
                 <div className="mt-4 space-y-3 border-t border-white/10 pt-4">
@@ -72,6 +71,20 @@ export function AppShell({ children, brandName, brandHint = "Marque active", rol
         <main className="mx-auto w-full max-w-[96rem] p-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:p-6 md:pb-8 lg:p-7">{children}</main>
       </div>
       <MobileBottomNav role={role} capabilities={capabilities} />
+    </div>
+  );
+}
+
+function Tr1SidebarBrand({ compact = false }: { compact?: boolean }) {
+  return (
+    <div className="flex items-center gap-3" aria-label="TR1 Pharma — Exécution commerciale terrain">
+      <div className={`${compact ? "text-[1.35rem]" : "text-[1.7rem]"} flex items-baseline font-sans font-black leading-none tracking-[-0.09em]`}>
+        <span className="text-[var(--tr1-ivory)]">TR</span><span className="text-[var(--tr1-orange)]">1</span>
+      </div>
+      <div className="min-w-0">
+        <p className={`${compact ? "text-[0.76rem]" : "text-[0.84rem]"} font-black uppercase tracking-[0.16em] text-[var(--tr1-ivory)]`}>Pharma</p>
+        <p className="mt-1 max-w-[8.8rem] font-mono text-[0.47rem] font-semibold uppercase leading-[1.35] tracking-[0.14em] text-sidebar-foreground/48">Exécution commerciale terrain</p>
+      </div>
     </div>
   );
 }
