@@ -7,8 +7,8 @@ import { ACTIVE_BRAND_COOKIE, isPlatformAdmin, requireUser } from "@/lib/auth";
 export async function signOutAction() {
   const { supabase } = await requireUser();
   await supabase.auth.signOut();
-  const cookieStore = await cookies();
-  cookieStore.delete(ACTIVE_BRAND_COOKIE);
+  // Keep the non-sensitive active-brand preference so the next login can
+  // reopen the last workspace without a forced context-selection step.
   redirect("/login");
 }
 
