@@ -5,8 +5,24 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { ACTIVE_BRAND_COOKIE } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { getRoleLandingPath } from "@/lib/ux/navigation";
 
 export type LoginState = { error?: string };
+
+type BrandContextRow = {
+  brand_id: string;
+  brand_name: string;
+  brand_slug: string;
+  role_key: string;
+};
+
+const brandCookieOptions = {
+  httpOnly: true,
+  sameSite: "lax" as const,
+  secure: process.env.NODE_ENV === "production",
+  path: "/",
+  maxAge: 60 * 60 * 24 * 30,
+};
 
 const loginSchema = z.object({
   email: z.email(),
@@ -70,7 +86,28 @@ export async function loginAction(
     redirect("/setup");
   }
 
-  // No forced brand-selection screen: silently restore the last valid brand
-  // or activate the first accessible brand, then land on the role workspace.
-  redirect("/auth/activate-brand");
+  // Resolve the first working context in the same server action that created
+  // the Supabase session. This avoids an immediate extra request that can race
+  // the newly-issued auth cookies in production-mode browser tests.
+  const { data: contextRows, error: contextError } = await supabase.rpc("get_my_brand_contexts");
+  if (contextError) throw contextError;
+
+  const contexts = ((contextRows ?? []) as BrandContextRow[]).map((context) => ({
+    id: context.brand_id,
+    role: context.role_key,
+  }));
+  const cookieStore = await cookies();
+  const rememberedBrandId = cookieStore.get(ACTIVE_BRAND_COOKIE)?.value;
+  const rememberedContext = rememberedBrandId
+    ? contexts.find((context) => context.id === rememberedBrandId)
+    : undefined;
+  const selectedContext = rememberedContext ?? contexts[0];
+
+  if (!selectedContext) {
+    cookieStore.delete(ACTIVE_BRAND_COOKIE);
+    redirect("/select-brand?status=no-brand");
+  }
+
+  cookieStore.set(ACTIVE_BRAND_COOKIE, selectedContext.id, brandCookieOptions);
+  redirect(getRoleLandingPath(selectedContext.role));
 }
