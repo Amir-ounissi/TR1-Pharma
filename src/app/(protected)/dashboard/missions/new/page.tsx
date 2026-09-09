@@ -104,7 +104,9 @@ export default async function NewMissionPage({
   if (animationMode) {
     if (![...managerRoles, "agent"].includes(role)) redirect("/dashboard/missions");
 
-    const callRpc = supabase.rpc as unknown as <T>(name: string, args: Record<string, unknown>) => RpcResult<T>;
+    const callRpc = <T,>(name: string, args: Record<string, unknown>): RpcResult<T> =>
+      (supabase.rpc as unknown as (rpcName: string, rpcArgs: Record<string, unknown>) => RpcResult<T>)(name, args);
+
     const [pharmacyResult, productResult, facilitatorResult] = await Promise.all([
       callRpc<AnimationPharmacyRow[]>("get_animation_request_pharmacies", { target_brand_id: brand.id }),
       supabase.from("products").select("id,name,sku").eq("brand_id", brand.id).eq("is_active", true).order("name"),
