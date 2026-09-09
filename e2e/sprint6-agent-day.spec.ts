@@ -18,7 +18,7 @@ async function runAgentDay(browser: Browser, viewport: { width: number; height: 
 
   await signIn(page, "agent@dermavita.local", /Dermavita/i);
   await page.goto("/dashboard/agent");
-  await expect(page.getByRole("heading", { name: /Bonjour Nora/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Aujourd’hui", exact: true }).first()).toBeVisible();
   await expect(page.getByTestId("next-visit-card")).toContainText("Pharmacie République");
   await expect(page.getByRole("link", { name: "Appeler", exact: true }).first()).toBeVisible();
   await expect(page.getByRole("link", { name: "Waze", exact: true }).first()).toBeVisible();
