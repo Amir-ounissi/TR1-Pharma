@@ -11,6 +11,13 @@ function withParams(basePath: string, params: URLSearchParams, patch: Record<str
   return `${basePath}?${next.toString()}`;
 }
 
+const PERIODS = [
+  { value: "7d" as const, label: "7 jours" },
+  { value: "30d" as const, label: "30 jours" },
+  { value: "90d" as const, label: "90 jours" },
+  { value: "ytd" as const, label: "YTD" },
+];
+
 export function MapFilters({
   basePath,
   params,
@@ -37,25 +44,25 @@ export function MapFilters({
 
   return (
     <div className={view === "map" ? "space-y-2" : "space-y-3"}>
-      <div className={cn("flex flex-wrap items-center justify-between gap-3", view === "map" && "rounded-[0.45rem] border border-[var(--tr1-line-strong)] bg-white/55 px-3 py-2")}>
-        <div className="flex flex-wrap items-center gap-2">
-        {[
-          { value: "list" as const, label: "Liste" },
-          { value: "map" as const, label: "Carte" },
-        ].map((item) => (
-          <Link
-            className={cn(
-              "rounded-md border px-3 py-2 font-mono text-[0.62rem] font-bold uppercase tracking-[0.08em]",
-              view === item.value
-                ? "border-[var(--tr1-navy)] bg-[var(--tr1-navy)] text-white"
-                : "border-[var(--tr1-line-strong)] bg-white/70 text-[var(--tr1-navy)]",
-            )}
-            href={withParams(basePath, params, { view: item.value })}
-            key={item.value}
-          >
-            {item.label}
-          </Link>
-        ))}
+      <div className={cn("flex flex-wrap items-center justify-between gap-2 md:gap-3", view === "map" && "md:rounded-[0.45rem] md:border md:border-[var(--tr1-line-strong)] md:bg-white/55 md:px-3 md:py-2")}>
+        <div className="flex items-center gap-2">
+          {[
+            { value: "list" as const, label: "Liste" },
+            { value: "map" as const, label: "Carte" },
+          ].map((item) => (
+            <Link
+              className={cn(
+                "min-w-[5.5rem] rounded-lg border px-3 py-2.5 text-center font-mono text-[0.62rem] font-bold uppercase tracking-[0.08em] md:min-w-0 md:rounded-md md:py-2",
+                view === item.value
+                  ? "border-[var(--tr1-navy)] bg-[var(--tr1-navy)] text-white"
+                  : "border-[var(--tr1-line-strong)] bg-white/70 text-[var(--tr1-navy)]",
+              )}
+              href={withParams(basePath, params, { view: item.value })}
+              key={item.value}
+            >
+              {item.label}
+            </Link>
+          ))}
         </div>
         <div className="hidden items-center gap-2 xl:flex">
           <ToolbarChip label="Période" value={periodLabel(period)} />
@@ -70,28 +77,52 @@ export function MapFilters({
       </div>
 
       {view === "map" ? (
-        <div className="flex flex-wrap items-center gap-2">
-          {modes.map((item) => (
-            <Link
-              className={cn(
-                "rounded-[0.45rem] border px-3 py-2 font-mono text-[0.6rem] font-bold uppercase tracking-[0.09em]",
-                mode === item.value
-                  ? "border-[var(--tr1-navy)] bg-[var(--tr1-navy)] text-white"
-                  : "border-[var(--tr1-line-strong)] bg-white/55 text-[var(--tr1-navy)]",
-              )}
-              href={withParams(basePath, params, { mode: item.value })}
-              key={item.value}
-            >
-              {item.label}
-            </Link>
-          ))}
-          <div className="ml-auto flex flex-wrap items-center gap-2 xl:hidden">
-            {[
-              { value: "7d" as const, label: "7 jours" },
-              { value: "30d" as const, label: "30 jours" },
-              { value: "90d" as const, label: "90 jours" },
-              { value: "ytd" as const, label: "YTD" },
-            ].map((item) => (
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {modes.map((item) => (
+              <Link
+                className={cn(
+                  "shrink-0 rounded-lg border px-3 py-2.5 font-mono text-[0.6rem] font-bold uppercase tracking-[0.09em] md:rounded-[0.45rem] md:py-2",
+                  mode === item.value
+                    ? "border-[var(--tr1-navy)] bg-[var(--tr1-navy)] text-white"
+                    : "border-[var(--tr1-line-strong)] bg-white/55 text-[var(--tr1-navy)]",
+                )}
+                href={withParams(basePath, params, { mode: item.value })}
+                key={item.value}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
+
+          <details className="group relative shrink-0 md:hidden">
+            <summary className="flex h-10 cursor-pointer list-none items-center gap-1.5 rounded-lg border border-[var(--tr1-line-strong)] bg-white/80 px-3 font-mono text-[0.58rem] font-black uppercase tracking-[0.08em] text-[var(--tr1-navy)] [&::-webkit-details-marker]:hidden">
+              <SlidersHorizontal className="size-3.5" />
+              Filtres
+            </summary>
+            <div className="absolute right-0 top-12 z-50 w-64 rounded-xl border border-[var(--tr1-line-strong)] bg-[var(--card)] p-3 shadow-xl">
+              <p className="mb-2 font-mono text-[0.56rem] font-black uppercase tracking-[0.12em] text-muted-foreground">Période</p>
+              <div className="grid grid-cols-2 gap-2">
+                {PERIODS.map((item) => (
+                  <Link
+                    className={cn(
+                      "rounded-lg border px-2.5 py-2.5 text-center font-mono text-[0.58rem] font-bold uppercase tracking-[0.08em]",
+                      period === item.value
+                        ? "border-[var(--tr1-orange)] bg-[var(--tr1-orange)] text-white"
+                        : "border-[var(--tr1-line-strong)] bg-white/70 text-[var(--tr1-navy)]",
+                    )}
+                    href={withParams(basePath, params, { period: item.value })}
+                    key={item.value}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </details>
+
+          <div className="hidden flex-wrap items-center gap-2 md:flex xl:hidden">
+            {PERIODS.map((item) => (
               <Link
                 className={cn(
                   "rounded-[0.45rem] border px-2.5 py-2 font-mono text-[0.58rem] font-bold uppercase tracking-[0.08em]",
