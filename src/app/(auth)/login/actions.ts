@@ -70,5 +70,7 @@ export async function loginAction(
     redirect("/setup");
   }
 
-  redirect("/select-brand");
+  // No forced brand-selection screen: silently restore the last valid brand
+  // or activate the first accessible brand, then land on the role workspace.
+  redirect("/auth/activate-brand");
 }
