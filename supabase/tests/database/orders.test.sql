@@ -195,7 +195,7 @@ select set_config('request.jwt.claims','{"sub":"00000000-0000-0000-0000-00000000
 
 select lives_ok($$select pg_temp.tr1_create_order_at_status(
   '00000000-0000-0000-0000-000000000412',
-  '{"external_order_id":"S4-001","order_number":"CMD-001","order_type":"initial","order_status":"invoiced","order_date":"2026-07-11T10:00:00Z"}',
+  jsonb_build_object('external_order_id','S4-001','order_number','CMD-001','order_type','initial','order_status','invoiced','order_date',current_date - 10),
   '[{"product_id":"00000000-0000-0000-0000-000000000601","quantity":2,"free_quantity":1,"unit_price_ht":10,"discount_rate":10,"tax_rate":20}]'
 )$$,'first invoiced order is created transactionally');
 select is((select subtotal_ht from public.orders where external_order_id='S4-001'),20.00::numeric,'subtotal is recalculated by SQL');
@@ -214,7 +214,7 @@ select is(
     select count(*)
     from public.brand_pharmacy_distribution_snapshots
     where brand_pharmacy_id='00000000-0000-0000-0000-000000000412'
-      and snapshot_date='2026-07-11'::date
+      and snapshot_date=current_date - 10
       and source='order'
   ),
   1::bigint,
@@ -225,7 +225,7 @@ select is((select strategic_distribution_rate from public.brand_pharmacy_distrib
 
 select lives_ok($$select pg_temp.tr1_create_order_at_status(
   '00000000-0000-0000-0000-000000000412',
-  '{"external_order_id":"S4-002","order_type":"other","order_status":"delivered","order_date":"2026-07-20T10:00:00Z"}',
+  jsonb_build_object('external_order_id','S4-002','order_type','other','order_status','delivered','order_date',current_date - 1),
   '[{"product_id":"00000000-0000-0000-0000-000000000603","quantity":1,"unit_price_ht":20,"tax_rate":20}]'
 )$$,'second valid order is created');
 select ok((select is_reorder and not is_initial_order from public.orders where external_order_id='S4-002'),'second valid order is classified as reorder');
@@ -234,7 +234,7 @@ select is((select valid_order_count from public.brand_pharmacy_order_performance
 select is((select reorder_count from public.brand_pharmacy_order_performance where brand_pharmacy_id='00000000-0000-0000-0000-000000000412'),1,'aggregate counts reorders');
 select is((select total_revenue_net_ht from public.brand_pharmacy_order_performance where brand_pharmacy_id='00000000-0000-0000-0000-000000000412'),38.00::numeric,'aggregate sums recognized revenue');
 select ok((select expected_next_order_at is not null from public.brand_pharmacy_order_performance where brand_pharmacy_id='00000000-0000-0000-0000-000000000412'),'next reorder date is estimated');
-select is((select first_reorder_at from public.brand_pharmacy_order_performance where brand_pharmacy_id='00000000-0000-0000-0000-000000000412'),'2026-07-20 10:00:00+00'::timestamptz,'first reorder date is retained');
+select is((select first_reorder_at from public.brand_pharmacy_order_performance where brand_pharmacy_id='00000000-0000-0000-0000-000000000412'),(current_date - 1)::timestamptz,'first reorder date is retained');
 select is((select distribution_rate from public.brand_pharmacy_distribution where brand_pharmacy_id='00000000-0000-0000-0000-000000000412'),66.67::numeric,'distribution includes ordered strategic product');
 select is((select strategic_distribution_rate from public.brand_pharmacy_distribution where brand_pharmacy_id='00000000-0000-0000-0000-000000000412'),100.00::numeric,'strategic distribution is correct');
 select is(
@@ -242,7 +242,7 @@ select is(
     select count(*)
     from public.brand_pharmacy_distribution_snapshots
     where brand_pharmacy_id='00000000-0000-0000-0000-000000000412'
-      and snapshot_date='2026-07-20'::date
+      and snapshot_date=current_date - 1
       and source='order'
   ),
   1::bigint,
@@ -250,7 +250,7 @@ select is(
 );
 
 select throws_ok($$select public.create_order('00000000-0000-0000-0000-000000000412','{"external_order_id":"S4-002"}','[{"product_id":"00000000-0000-0000-0000-000000000601","quantity":1,"unit_price_ht":10}]')$$,'23505',null,'duplicate external order id is blocked');
-select throws_ok($$select public.create_order('00000000-0000-0000-0000-000000000412','{"order_type":"initial","order_date":"2026-07-21T10:00:00Z"}','[{"product_id":"00000000-0000-0000-0000-000000000601","quantity":1,"unit_price_ht":10}]')$$,'23514','An initial order already exists for this brand pharmacy','initial type cannot be declared after a valid order');
+select throws_ok($$select public.create_order('00000000-0000-0000-0000-000000000412',jsonb_build_object('order_type','initial','order_date',current_date),'[{"product_id":"00000000-0000-0000-0000-000000000601","quantity":1,"unit_price_ht":10}]')$$,'23514','An initial order already exists for this brand pharmacy','initial type cannot be declared after a valid order');
 select throws_ok($$select public.create_order('00000000-0000-0000-0000-000000000412','{}','[{"product_id":"00000000-0000-0000-0000-000000000602","quantity":1,"unit_price_ht":10}]')$$,'23514','Order item product is unavailable for this brand','cross-brand product is blocked');
 select throws_ok($$select public.create_order('00000000-0000-0000-0000-000000000413','{}','[{"product_id":"00000000-0000-0000-0000-000000000602","quantity":1,"unit_price_ht":10}]')$$,'42501','Brand pharmacy unavailable','cross-brand pharmacy is blocked');
 select throws_ok($$update public.orders set net_amount_ht=999 where external_order_id='S4-001'$$,'42501','Order totals are server controlled','client cannot alter server totals');
@@ -267,7 +267,7 @@ select lives_ok($$select public.change_order_status((select id from public.order
 select is((select valid_order_count from public.brand_pharmacy_order_performance where brand_pharmacy_id='00000000-0000-0000-0000-000000000412'),1,'refunded order is excluded from activity count');
 select is((select total_revenue_net_ht from public.brand_pharmacy_order_performance where brand_pharmacy_id='00000000-0000-0000-0000-000000000412'),18.00::numeric,'refunded order is excluded from revenue');
 select lives_ok($$select pg_temp.tr1_create_order_at_status(
-  '00000000-0000-0000-0000-000000000412','{"external_order_id":"S4-CREDIT","order_type":"credit_note","order_status":"invoiced","order_date":"2026-07-21T12:00:00Z"}',
+  '00000000-0000-0000-0000-000000000412',jsonb_build_object('external_order_id','S4-CREDIT','order_type','credit_note','order_status','invoiced','order_date',current_date),
   '[{"product_id":"00000000-0000-0000-0000-000000000601","quantity":1,"unit_price_ht":5,"tax_rate":20}]'
 )$$,'credit note is created as an explicit negative order');
 select is((select net_amount_ht from public.orders where external_order_id='S4-CREDIT'),-5.00::numeric,'credit note amount is negative and controlled');
@@ -291,9 +291,9 @@ select is(
 select is((select count(*) from public.brand_pharmacy_activity_history where brand_pharmacy_id='00000000-0000-0000-0000-00000000d418' and new_activity_status='dormant'),1::bigint,'idempotent recalculation does not duplicate history');
 
 select lives_ok($$select public.change_activity_status('00000000-0000-0000-0000-00000000d419','lost','Compte perdu confirmé')$$,'lost status is set manually with a reason');
-select pg_temp.tr1_create_order_at_status('00000000-0000-0000-0000-00000000d419','{"external_order_id":"S4-LOST","order_status":"invoiced","order_date":"2026-07-21T10:00:00Z"}','[{"product_id":"00000000-0000-0000-0000-000000000601","quantity":1,"unit_price_ht":10}]');
+select pg_temp.tr1_create_order_at_status('00000000-0000-0000-0000-00000000d419',jsonb_build_object('external_order_id','S4-LOST','order_status','invoiced','order_date',current_date),'[{"product_id":"00000000-0000-0000-0000-000000000601","quantity":1,"unit_price_ht":10}]');
 select is((select activity_status from public.brand_pharmacies where id='00000000-0000-0000-0000-00000000d419'),'lost'::public.activity_status,'manual lost status remains prioritary after an order');
-select pg_temp.tr1_create_order_at_status('00000000-0000-0000-0000-00000000d418','{"external_order_id":"S4-REACTIVATE","order_status":"invoiced","order_date":"2026-07-21T11:00:00Z"}','[{"product_id":"00000000-0000-0000-0000-000000000603","quantity":1,"unit_price_ht":20}]');
+select pg_temp.tr1_create_order_at_status('00000000-0000-0000-0000-00000000d418',jsonb_build_object('external_order_id','S4-REACTIVATE','order_status','invoiced','order_date',current_date),'[{"product_id":"00000000-0000-0000-0000-000000000603","quantity":1,"unit_price_ht":20}]');
 select is((select activity_status from public.brand_pharmacies where id='00000000-0000-0000-0000-00000000d418'),'active'::public.activity_status,'new valid order reactivates a dormant account');
 select is((select count(*) from public.brand_pharmacy_activity_history where brand_pharmacy_id='00000000-0000-0000-0000-00000000d418' and previous_activity_status='dormant' and new_activity_status='active'),1::bigint,'dormant reactivation is historized');
 select is((select count(*) from public.tasks where brand_pharmacy_id='00000000-0000-0000-0000-00000000d418' and title='Activité dormant — action de suivi' and status='completed'),1::bigint,'reactivation closes the explicit dormant follow-up');
@@ -318,7 +318,7 @@ insert into public.import_batches (id,brand_id,entity_type,strategy,file_name,va
 values ('00000000-0000-0000-0000-000000000a04','00000000-0000-0000-0000-000000000101','orders','create_only','orders.csv',1,'00000000-0000-0000-0000-0000000000a2');
 insert into public.import_rows (batch_id,line_number,payload,normalized_payload,is_valid) values (
   '00000000-0000-0000-0000-000000000a04',2,'{}',
-  '{"brand_pharmacy_id":"00000000-0000-0000-0000-000000000412","external_order_id":"S4-IMPORT","order_status":"invoiced","order_date":"2026-07-21T12:00:00Z","items":[{"product_id":"00000000-0000-0000-0000-000000000604","quantity":1,"unit_price_ht":12}]}',true
+  jsonb_build_object('brand_pharmacy_id','00000000-0000-0000-0000-000000000412','external_order_id','S4-IMPORT','order_status','invoiced','order_date',current_date,'items',jsonb_build_array(jsonb_build_object('product_id','00000000-0000-0000-0000-000000000604','quantity',1,'unit_price_ht',12))),true
 );
 select is((select count(*) from public.orders),:'orders_before_preview'::bigint,'order import preview writes no business order');
 select is((public.confirm_order_import('00000000-0000-0000-0000-000000000a04')->>'created')::integer,1,'valid order import confirms one order');
