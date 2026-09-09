@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { QuickOrderForm } from "@/components/orders/quick-order-form";
-import { OrderEntryModes } from "@/components/orders/pdf-order-import";
+import { QuickOrderEntryModes } from "@/components/orders/quick-order-entry-modes";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
 import type { OrderPharmacySearchResult } from "@/app/(protected)/dashboard/orders/actions";
@@ -164,7 +164,7 @@ export default async function NewOrderPage({
         </CardHeader>
         <CardContent className="p-3 sm:p-6">
           {pdfImportEnabled ? (
-            <OrderEntryModes isAgent={isAgent} manual={quickOrderForm} />
+            <QuickOrderEntryModes isAgent={isAgent} manual={quickOrderForm} />
           ) : (
             quickOrderForm
           )}
