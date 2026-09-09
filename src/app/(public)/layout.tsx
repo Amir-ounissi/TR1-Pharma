@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
@@ -7,13 +6,12 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
       <header className="sticky top-0 z-40 border-b border-[var(--tr1-line)] bg-[var(--tr1-ivory)]/95 backdrop-blur-xl">
         <div className="mx-auto flex h-[4.75rem] max-w-7xl items-center gap-5 px-5 lg:px-8">
           <Link className="flex shrink-0 items-center" href="/" aria-label="TR1 Pharma — Accueil">
-            <Image
+            <img
               alt="TR1 Pharma"
               className="h-[3.15rem] w-auto object-contain"
-              height={430}
-              priority
+              height="430"
               src="/brand/tr1-wordmark.webp"
-              width={735}
+              width="735"
             />
           </Link>
 
@@ -50,12 +48,12 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
       <footer className="border-t border-[var(--tr1-line)] bg-[var(--tr1-ivory)] px-5 py-10 lg:px-8">
         <div className="mx-auto flex max-w-7xl flex-col gap-7 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <Image
+            <img
               alt="TR1 Pharma"
               className="h-14 w-auto object-contain"
-              height={430}
+              height="430"
               src="/brand/tr1-wordmark.webp"
-              width={735}
+              width="735"
             />
             <p className="mt-3 max-w-md text-sm leading-6 text-[var(--tr1-muted)]">
               Exécution commerciale terrain pour les marques qui se développent en pharmacie.
