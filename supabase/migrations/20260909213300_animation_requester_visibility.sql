@@ -27,7 +27,11 @@ as $$
   );
 $$;
 
-revoke all on function private.can_access_mission(uuid) from public, anon, authenticated;
+-- This helper is evaluated directly by authenticated RLS policies. Keep it
+-- unavailable to anonymous callers while preserving the execute privilege
+-- required for signed-in policy evaluation.
+revoke execute on function private.can_access_mission(uuid) from public, anon;
+grant execute on function private.can_access_mission(uuid) to authenticated;
 
 comment on function private.can_access_mission(uuid) is
   'Mission read access for TR1/brand users, assigned intervenor, or the authenticated active-brand member who requested the mission.';
