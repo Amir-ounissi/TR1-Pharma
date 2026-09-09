@@ -18,11 +18,11 @@ export async function selectBrandAction(formData: FormData) {
   const brandId = formData.get("brandId");
   const contexts = await getBrandContexts();
   if (!canSelectBrand(contexts, brandId)) {
-    redirect("/select-brand?error=unauthorized");
+    redirect("/dashboard/account?error=unauthorized");
   }
   const selectedContext = contexts.find((context) => context.id === brandId);
   if (!selectedContext) {
-    redirect("/select-brand?error=unauthorized");
+    redirect("/dashboard/account?error=unauthorized");
   }
 
   const cookieStore = await cookies();
@@ -32,7 +32,7 @@ export async function selectBrandAction(formData: FormData) {
 
 export async function selectPlatformViewAction() {
   if (!(await isPlatformAdmin())) {
-    redirect("/select-brand?error=unauthorized");
+    redirect("/dashboard");
   }
 
   const cookieStore = await cookies();
