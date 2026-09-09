@@ -82,7 +82,7 @@ test("parcours complet animation Sprint 5 avec vérification en base", async ({ 
   const animatorPage = await animatorContext.newPage();
   await signIn(animatorPage, "animatrice@dermavita.local", /Dermavita/i);
   await animatorPage.goto(`/dashboard/field/missions/${missionId}`);
-  await expect(animatorPage).toHaveURL(new RegExp(`/dashboard/missions/${missionId}$`));
+  await expect(animatorPage).toHaveURL(new RegExp(`/dashboard/missions/${missionId}/animation-brief$`));
   await expect(animatorPage.getByText(briefing)).toBeVisible();
 
   await chooseWorkflow(animatorPage, "Acceptée");
