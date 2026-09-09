@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarPlus, ClipboardPlus, MapPin, ShoppingCart } from "lucide-react";
+import { CalendarPlus, ClipboardPlus, MapPin, Megaphone, ShoppingCart } from "lucide-react";
 import { AgentDayExperience, type AgentNextVisit, type AgentTodayData } from "@/components/agent/agent-day-experience";
 import { DashboardTracker } from "@/components/agent/dashboard-tracker";
 import { StockAlertsPanel } from "@/components/agent/stock-alerts-panel";
@@ -148,15 +148,26 @@ export default async function AgentPage() {
         visits={scheduledVisits}
         nowIso={now.toISOString()}
       />
-      {saas.capabilities.has("core_crm") ? (
-        <Link
-          href="/dashboard/agenda/new"
-          className="flex min-h-12 w-full items-center justify-center gap-2 rounded-[0.45rem] bg-[var(--tr1-orange)] px-4 py-3 font-mono text-sm font-black uppercase tracking-[0.02em] text-white shadow-sm transition active:translate-y-px sm:w-fit"
-        >
-          <CalendarPlus className="size-5" aria-hidden="true" />
-          Ajouter une visite
-        </Link>
-      ) : null}
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+        {saas.capabilities.has("core_crm") ? (
+          <Link
+            href="/dashboard/agenda/new"
+            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-[0.45rem] bg-[var(--tr1-orange)] px-4 py-3 font-mono text-sm font-black uppercase tracking-[0.02em] text-white shadow-sm transition active:translate-y-px sm:w-fit"
+          >
+            <CalendarPlus className="size-5" aria-hidden="true" />
+            Ajouter une visite
+          </Link>
+        ) : null}
+        {saas.capabilities.has("missions") ? (
+          <Link
+            href="/dashboard/missions/new?mode=animation"
+            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-[0.45rem] border border-[var(--tr1-navy)] bg-white px-4 py-3 font-mono text-sm font-black uppercase tracking-[0.02em] text-[var(--tr1-navy)] shadow-sm transition active:translate-y-px sm:w-fit"
+          >
+            <Megaphone className="size-5" aria-hidden="true" />
+            Demander une animation
+          </Link>
+        ) : null}
+      </div>
       {quickActions.length ? <QuickActions className="hidden sm:grid" actions={quickActions} /> : null}
       <StockAlertsPanel alerts={stockAlerts} />
       {saas.capabilities.has("missions") ? <TerrainActivityFeed impacts={(recentImpactResult.data ?? []) as TerrainImpact[]} /> : null}
