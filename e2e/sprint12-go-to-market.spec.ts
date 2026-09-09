@@ -139,7 +139,9 @@ test("isolation, changement autorisé et marque sans membership", async ({ brows
     await expect(nutrilabForm()).toHaveCount(0);
     await context.addCookies([{ name: "tr1_active_brand", value: nutrilabBrandId, domain: "127.0.0.1", path: "/", httpOnly: true, sameSite: "Lax" }]);
     await page.goto("/dashboard/agent");
-    await expect(page).toHaveURL(/\/select-brand/);
+    // A stale inaccessible brand cookie is ignored without reintroducing a forced brand picker.
+    await expect(page).toHaveURL(/\/dashboard\/agent$/);
+    await expect(page.locator("#active-brand-execution-title")).toHaveText("Dermavita");
   } finally {
     await service.from("product_events").delete()
       .eq("user_id", "00000000-0000-0000-0000-0000000000a3")
