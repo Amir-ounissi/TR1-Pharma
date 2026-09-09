@@ -119,20 +119,34 @@ test("isolation, changement autorisé et marque sans membership", async ({ brows
 
   const context = await browser.newContext();
   const page = await context.newPage();
-  await signIn(page, "agent@dermavita.local", /Dermavita/i);
-  await page.getByTitle("Changer de marque").click();
-  await page.getByRole("button", { name: /Nutrilab/i }).click();
-  await expect(page).toHaveURL(/\/dashboard\/agent$/);
-  await expect(page.getByText("Nutrilab", { exact: true }).first()).toBeVisible();
+  const nutrilabBrandId = "00000000-0000-0000-0000-000000000102";
+  const nutrilabForm = () => page.locator(`form:has(input[name="brandId"][value="${nutrilabBrandId}"])`);
 
-  await service.from("product_events").delete()
-    .eq("user_id", "00000000-0000-0000-0000-0000000000a3")
-    .eq("brand_id", "00000000-0000-0000-0000-000000000102");
-  await service.from("memberships").delete().eq("id", temporaryMembership!.id);
-  await page.getByTitle("Changer de marque").click();
-  await expect(page.getByRole("button", { name: /Nutrilab/i })).toHaveCount(0);
-  await context.addCookies([{ name: "tr1_active_brand", value: "00000000-0000-0000-0000-000000000102", domain: "127.0.0.1", path: "/", httpOnly: true, sameSite: "Lax" }]);
-  await page.goto("/dashboard/agent");
-  await expect(page).toHaveURL(/\/select-brand/);
-  await context.close();
+  try {
+    await signIn(page, "agent@dermavita.local", /Dermavita/i);
+    await page.goto("/dashboard/account");
+    await expect(nutrilabForm()).toHaveCount(1);
+    await nutrilabForm().getByRole("button").click();
+    await expect(page).toHaveURL(/\/dashboard\/agent$/);
+    await expect(page.getByText("Nutrilab", { exact: true }).first()).toBeVisible();
+
+    await service.from("product_events").delete()
+      .eq("user_id", "00000000-0000-0000-0000-0000000000a3")
+      .eq("brand_id", nutrilabBrandId);
+    await service.from("memberships").delete().eq("id", temporaryMembership!.id);
+
+    await page.goto("/dashboard/account");
+    await expect(nutrilabForm()).toHaveCount(0);
+    await context.addCookies([{ name: "tr1_active_brand", value: nutrilabBrandId, domain: "127.0.0.1", path: "/", httpOnly: true, sameSite: "Lax" }]);
+    await page.goto("/dashboard/agent");
+    await expect(page).toHaveURL(/\/select-brand/);
+  } finally {
+    await service.from("product_events").delete()
+      .eq("user_id", "00000000-0000-0000-0000-0000000000a3")
+      .eq("brand_id", nutrilabBrandId);
+    if (temporaryMembership?.id) {
+      await service.from("memberships").delete().eq("id", temporaryMembership.id);
+    }
+    await context.close();
+  }
 });
