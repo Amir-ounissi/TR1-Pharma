@@ -91,7 +91,7 @@ export const getOptionalActiveBrand = cache(async () => {
 
 export const requireActiveBrand = cache(async () => {
   const session = await getOptionalActiveBrand();
-  if (!session.brand) redirect("/select-brand");
+  if (!session.brand) redirect("/auth/activate-brand");
   return session as typeof session & { brand: { id: string; name: string; slug: string } };
 });
 

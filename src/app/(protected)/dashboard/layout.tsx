@@ -38,7 +38,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   if (!session.brand) {
     if (!platformAdmin) {
-      redirect("/select-brand");
+      redirect("/auth/activate-brand");
     }
 
     const globalNavigation: SearchItem[] = [
