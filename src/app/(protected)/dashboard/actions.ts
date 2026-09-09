@@ -13,9 +13,7 @@ export async function signOutAction() {
 }
 
 export async function changeBrandAction() {
-  const cookieStore = await cookies();
-  cookieStore.delete(ACTIVE_BRAND_COOKIE);
-  redirect("/select-brand");
+  redirect("/dashboard/account");
 }
 
 export async function returnToPlatformAdministrationAction() {
