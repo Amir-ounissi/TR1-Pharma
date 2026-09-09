@@ -14,7 +14,7 @@ vi.mock("@/lib/supabase/server", () => ({ createClient: mocks.createClient }));
 describe("loginAction", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("checks the membership of the authenticated user before selecting the platform dashboard", async () => {
+  it("checks the membership of the authenticated user before silently resolving the active brand", async () => {
     const membershipQuery = {
       select: vi.fn(),
       eq: vi.fn(),
@@ -36,6 +36,6 @@ describe("loginAction", () => {
     await expect(loginAction({}, formData)).rejects.toThrow("redirect");
 
     expect(membershipQuery.eq).toHaveBeenCalledWith("user_id", "00000000-0000-4000-8000-000000000001");
-    expect(mocks.redirect).toHaveBeenCalledWith("/select-brand");
+    expect(mocks.redirect).toHaveBeenCalledWith("/auth/activate-brand");
   });
 });
