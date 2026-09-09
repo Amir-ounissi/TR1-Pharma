@@ -16,14 +16,33 @@ type Requirements = {
   sales_by_product_required?: boolean;
 };
 
+type AnimationMission = {
+  id: string;
+  title: string;
+  objective: string;
+  briefing: string | null;
+  status: string;
+  mission_type: string;
+  assigned_user_id: string | null;
+  scheduled_start_at: string | null;
+  scheduled_end_at: string | null;
+  provider_cost_ht: number | null;
+  travel_cost_ht: number | null;
+  execution_requirements: Requirements | null;
+  pharmacies:
+    | { legal_name: string | null; trade_name: string | null; city: string | null }
+    | Array<{ legal_name: string | null; trade_name: string | null; city: string | null }>
+    | null;
+};
+
 export default async function AnimationBriefPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { supabase, brand, userId } = await requireActiveBrand();
 
-  const [{ data: mission }, { data: products }] = await Promise.all([
+  const [{ data: rawMission }, { data: products }] = await Promise.all([
     supabase
       .from("missions")
-      .select("id,title,objective,briefing,status,mission_type,assigned_user_id,scheduled_start_at,scheduled_end_at,provider_cost_ht,travel_cost_ht,execution_requirements,pharmacies(legal_name,trade_name,city)")
+      .select("*,pharmacies(legal_name,trade_name,city)")
       .eq("id", id)
       .eq("brand_id", brand.id)
       .eq("assigned_user_id", userId)
@@ -34,10 +53,11 @@ export default async function AnimationBriefPage({ params }: { params: Promise<{
       .eq("mission_id", id),
   ]);
 
+  const mission = rawMission as unknown as AnimationMission | null;
   if (!mission || mission.mission_type !== "animation") redirect("/dashboard/field");
 
   const pharmacy = Array.isArray(mission.pharmacies) ? mission.pharmacies[0] : mission.pharmacies;
-  const requirements = (mission.execution_requirements ?? {}) as Requirements;
+  const requirements = mission.execution_requirements ?? {};
   const proofLabels = [
     requirements.merch_plan_required ? "Photo plan merchandising" : null,
     requirements.merch_result_required ? "Photo résultat merchandising" : null,
