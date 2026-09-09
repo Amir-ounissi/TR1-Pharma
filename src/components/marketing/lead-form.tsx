@@ -21,7 +21,7 @@ export function LeadForm() {
     }
   };
   return (
-    <form action={action} className="grid gap-4 rounded-[1.2rem] border border-[#d8d0c2] bg-[#fffaf0] p-5 shadow-[0_24px_70px_rgba(15,39,64,.08)] sm:p-7" id="diagnostic" onFocus={start}>
+    <form action={action} className="grid gap-4 rounded-[1.2rem] border border-[#d8d0c2] bg-[#fffaf0] p-5 shadow-[0_24px_70px_rgba(15,39,64,.08)] sm:p-7" id="diagnostic-form" onFocus={start}>
       <div><p className="font-mono text-[.65rem] font-bold uppercase tracking-[.18em] text-[#c9562d]">Diagnostic personnalisé</p><h2 className="mt-2 text-2xl font-black tracking-[-.04em] text-[#0f2740]">Découvrir TR1 sur mon réseau officinal</h2><p className="mt-2 text-sm text-[#596574]">Diagnostic et démonstration personnalisée de 30 minutes.</p></div>
       {state.error ? <p className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800" role="alert">{state.error}</p> : null}
       <div className="grid gap-2"><Label htmlFor="fullName">Nom et prénom</Label><Input defaultValue={state.fields?.fullName} id="fullName" maxLength={120} name="fullName" required /></div>
