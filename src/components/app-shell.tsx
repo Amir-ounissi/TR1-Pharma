@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Building2, ChevronsUpDown, Menu, ShieldCheck } from "lucide-react";
 import { changeBrandAction, returnToPlatformAdministrationAction, signOutAction } from "@/app/(protected)/dashboard/actions";
 import { OfflineAwareSignOut } from "@/components/pwa/offline-aware-sign-out";
@@ -35,7 +36,10 @@ export function AppShell({ children, brandName, brandHint = "Marque active", rol
         <div className="shrink-0 space-y-3">
           {showPlatformAdministrationReturn ? <PlatformAdministrationReturn /> : null}
           <Separator className="bg-white/10" />
-          <div className="flex items-center gap-3 px-2"><span className="grid size-8 place-items-center rounded-full bg-white/10 text-xs font-semibold">{initials(userName)}</span><div className="min-w-0"><p className="truncate text-sm font-medium">{userName}</p><p className="truncate text-xs text-sidebar-foreground/45">{roleLabel(role)}</p></div></div>
+          <Link className="flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-white/8" href="/dashboard/account">
+            <span className="grid size-8 place-items-center rounded-full bg-white/10 text-xs font-semibold">{initials(userName)}</span>
+            <div className="min-w-0"><p className="truncate text-sm font-medium">{userName}</p><p className="truncate text-xs text-sidebar-foreground/45">{roleLabel(role)}</p></div>
+          </Link>
           <OfflineAwareSignOut action={signOutAction} />
         </div>
       </aside>
@@ -50,7 +54,10 @@ export function AppShell({ children, brandName, brandHint = "Marque active", rol
                 <div className="min-h-0 flex-1 overflow-y-auto"><RoleNavigation role={role} scope={navigationScope} capabilities={capabilities} /></div>
                 <div className="mt-4 space-y-3 border-t border-white/10 pt-4">
                   {showPlatformAdministrationReturn ? <PlatformAdministrationReturn /> : null}
-                  <div className="flex items-center gap-3 px-2"><span className="grid size-8 place-items-center rounded-full bg-white/10 text-xs font-semibold">{initials(userName)}</span><div className="min-w-0"><p className="truncate text-sm font-medium">{userName}</p><p className="truncate text-xs text-sidebar-foreground/45">{roleLabel(role)}</p></div></div>
+                  <Link className="flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-white/8" href="/dashboard/account">
+                    <span className="grid size-8 place-items-center rounded-full bg-white/10 text-xs font-semibold">{initials(userName)}</span>
+                    <div className="min-w-0"><p className="truncate text-sm font-medium">{userName}</p><p className="truncate text-xs text-sidebar-foreground/45">{roleLabel(role)}</p></div>
+                  </Link>
                   <OfflineAwareSignOut action={signOutAction} />
                 </div>
               </div>
@@ -58,7 +65,7 @@ export function AppShell({ children, brandName, brandHint = "Marque active", rol
           </Sheet>
 
           <form action={changeBrandAction} className="shrink-0">
-            <Button className="h-10 max-w-44 justify-between gap-2 rounded-md px-2.5" title="Changer de marque" type="submit" variant="ghost">
+            <Button className="h-10 max-w-44 justify-between gap-2 rounded-md px-2.5" title="Compte et marque" type="submit" variant="ghost">
               <span className="grid size-7 shrink-0 place-items-center rounded-md border border-[var(--tr1-line-strong)] bg-transparent text-[var(--tr1-navy)]"><Building2 className="size-3.5" /></span>
               <span className="hidden min-w-0 text-left sm:block"><span className="block text-[0.62rem] font-medium uppercase tracking-wider text-muted-foreground">{brandHint}</span><span className="block truncate text-xs font-semibold">{brandName}</span></span>
               <ChevronsUpDown className="hidden size-3.5 text-muted-foreground sm:block" />
@@ -66,7 +73,7 @@ export function AppShell({ children, brandName, brandHint = "Marque active", rol
           </form>
 
           <div className="ml-auto flex min-w-0 flex-1 justify-end md:ml-3 md:justify-center"><RouteAwareCommandPalette items={searchItems} /></div>
-          <div className="hidden size-9 shrink-0 place-items-center rounded-md border border-[var(--tr1-line-strong)] bg-transparent font-mono text-[0.65rem] font-bold text-[var(--tr1-navy)] lg:grid" title={userName}>{initials(userName)}</div>
+          <Link className="hidden size-9 shrink-0 place-items-center rounded-md border border-[var(--tr1-line-strong)] bg-transparent font-mono text-[0.65rem] font-bold text-[var(--tr1-navy)] hover:bg-muted lg:grid" href="/dashboard/account" title="Mon compte">{initials(userName)}</Link>
         </header>
         <main className="mx-auto w-full max-w-[96rem] p-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:p-6 md:pb-8 lg:p-7">{children}</main>
       </div>

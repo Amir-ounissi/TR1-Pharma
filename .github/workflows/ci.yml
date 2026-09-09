@@ -67,6 +67,9 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      - name: Neutraliser le dépôt Chrome du runner
+        run: |
+          grep -rl "dl.google.com/linux/chrome-stable/deb" /etc/apt/sources.list.d 2>/dev/null | xargs -r sudo rm -f
       - run: npx playwright install --with-deps chromium
       - run: npm run db:start
       - run: npm run db:reset
