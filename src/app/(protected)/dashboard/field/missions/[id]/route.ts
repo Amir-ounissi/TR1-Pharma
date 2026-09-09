@@ -19,8 +19,10 @@ export async function GET(
     return NextResponse.redirect(new URL("/dashboard/field", request.url));
   }
 
-  const destination = mission.mission_type === "animation" && mission.status === "accepted"
-    ? `/dashboard/missions/${mission.id}/schedule-animation`
+  const isAnimationIntake =
+    mission.mission_type === "animation" && ["assigned", "accepted"].includes(mission.status);
+  const destination = isAnimationIntake
+    ? `/dashboard/missions/${mission.id}/animation-brief`
     : `/dashboard/missions/${mission.id}`;
   const response = NextResponse.redirect(new URL(destination, request.url));
   response.cookies.set(ACTIVE_BRAND_COOKIE, mission.brand_id, {
