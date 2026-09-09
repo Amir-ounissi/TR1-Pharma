@@ -55,6 +55,14 @@ function localDateTimeNow() {
   return local.toISOString().slice(0, 16);
 }
 
+function money(value: number) {
+  return new Intl.NumberFormat("fr-FR", {
+    style: "currency",
+    currency: "EUR",
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
 function PharmacyAutocomplete({
   initialPharmacy,
   onSelectionChange,
@@ -147,14 +155,6 @@ function PharmacyAutocomplete({
       ) : null}
     </div>
   );
-}
-
-function money(value: number) {
-  return new Intl.NumberFormat("fr-FR", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 2,
-  }).format(value);
 }
 
 export function QuickOrderForm({
@@ -258,11 +258,7 @@ export function QuickOrderForm({
   return (
     <form action={action} className="space-y-5">
       <ActionFeedback {...state} />
-      <input
-        type="hidden"
-        name="orderStatus"
-        value={isAgent ? "pending" : "draft"}
-      />
+      {isAgent ? <input type="hidden" name="orderStatus" value="pending" /> : null}
 
       <div className="rounded-2xl border bg-muted/20 p-4">
         <PharmacyAutocomplete
@@ -411,25 +407,14 @@ export function QuickOrderForm({
                 </div>
               </div>
 
-              <input
-                type="hidden"
-                name="freeQuantity"
-                value={line.freeQuantity}
-              />
-              <input
-                type="hidden"
-                name="discountRate"
-                value={line.discountRate}
-              />
-              {line.unitPriceHt ? (
-                <input
-                  type="hidden"
-                  name="unitPriceHt"
-                  value={line.unitPriceHt}
-                />
-              ) : (
+              <input type="hidden" name="freeQuantity" value={line.freeQuantity} />
+              <input type="hidden" name="discountRate" value={line.discountRate} />
+
+              {!isAgent || !line.unitPriceHt ? (
                 <div className="mt-3 max-w-xs space-y-2">
-                  <Label htmlFor={`quick-price-${index}`}>Prix HT nécessaire</Label>
+                  <Label htmlFor={`quick-price-${index}`}>
+                    {isAgent ? "Prix HT nécessaire" : "Prix unitaire HT"}
+                  </Label>
                   <Input
                     id={`quick-price-${index}`}
                     name="unitPriceHt"
@@ -443,6 +428,8 @@ export function QuickOrderForm({
                     required
                   />
                 </div>
+              ) : (
+                <input type="hidden" name="unitPriceHt" value={line.unitPriceHt} />
               )}
 
               <div className="mt-3 flex items-center justify-between gap-3 border-t pt-3 text-sm">
@@ -469,7 +456,7 @@ export function QuickOrderForm({
         })}
       </section>
 
-      <details className="rounded-2xl border bg-muted/15 p-4">
+      <details open={!isAgent} className="rounded-2xl border bg-muted/15 p-4">
         <summary className="cursor-pointer font-semibold text-[var(--tr1-navy)]">
           Plus de détails
         </summary>
@@ -478,7 +465,7 @@ export function QuickOrderForm({
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="quick-order-date">Date</Label>
+            <Label htmlFor="quick-order-date">Date de commande</Label>
             <Input
               id="quick-order-date"
               name="orderDate"
@@ -487,8 +474,24 @@ export function QuickOrderForm({
               required
             />
           </div>
+
+          {!isAgent ? (
+            <div className="space-y-2">
+              <Label htmlFor="quick-order-status">Statut</Label>
+              <Select name="orderStatus" defaultValue="confirmed">
+                <SelectTrigger id="quick-order-status" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="draft">Brouillon</SelectItem>
+                  <SelectItem value="confirmed">Validée</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
+
           <div className="space-y-2">
-            <Label htmlFor="quick-order-type">Type</Label>
+            <Label htmlFor="quick-order-type">Type demandé</Label>
             <Select name="orderType" value={orderType} onValueChange={setOrderType}>
               <SelectTrigger id="quick-order-type" className="w-full">
                 <SelectValue />
@@ -511,6 +514,7 @@ export function QuickOrderForm({
               </SelectContent>
             </Select>
           </div>
+
           <div className="space-y-2">
             <Label htmlFor="quick-external-order">Référence externe</Label>
             <Input id="quick-external-order" name="externalOrderId" />
