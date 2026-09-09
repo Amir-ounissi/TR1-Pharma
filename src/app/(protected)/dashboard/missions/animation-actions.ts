@@ -9,6 +9,8 @@ export type AnimationRequestActionState = {
   error?: string;
 };
 
+type RpcResult<T> = Promise<{ data: T | null; error: { message: string } | null }>;
+
 const uuid = z.string().uuid();
 
 export async function createAnimationRequestAction(
@@ -87,7 +89,10 @@ export async function createAnimationRequestAction(
   };
 
   const { supabase, brand } = await requireActiveBrand();
-  const { data, error } = await supabase.rpc("request_animation", {
+  const { data, error } = await (supabase.rpc as unknown as (
+    name: string,
+    args: Record<string, unknown>,
+  ) => RpcResult<string>)("request_animation", {
     target_brand_pharmacy_id: parsed.data.brandPharmacyId,
     target_assigned_user_id: assignedUserId,
     mission_payload: {
