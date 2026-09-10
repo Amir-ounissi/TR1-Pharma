@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   icons: {
     apple: [
       {
-        url: "/pwa/icon/180",
+        url: "/pwa/icon/180?v=official-20260910",
         sizes: "180x180",
         type: "image/png",
       },
