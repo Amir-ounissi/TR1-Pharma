@@ -64,11 +64,6 @@ begin
       and bp.archived_at is null
       and p.archived_at is null
       and p.is_active
-      and (
-        target_territory_id is null
-        or bp.territory_id in (select territory_scope.id from territory_scope)
-      )
-      and (target_agent_id is null or bp.current_agent_user_id = target_agent_id)
       and (target_group_type is null or coalesce(pg.group_type, 'independent'::public.pharmacy_group_type) = target_group_type)
       and (target_group_id is null or p.pharmacy_group_id = target_group_id)
       and (target_potential_level is null or bp.potential_level = target_potential_level)
@@ -97,6 +92,7 @@ begin
     where f.brand_id = target_brand_id
       and f.order_date >= target_period_start::timestamptz
       and f.order_date < (target_period_end + 1)::timestamptz
+      and (target_territory_id is null or f.territory_id in (select territory_scope.id from territory_scope))
       and (target_agent_id is null or f.agent_user_id_at_order = target_agent_id)
       and (
         target_product_id is null
@@ -145,6 +141,7 @@ begin
     where f.brand_id = target_brand_id
       and f.order_date >= target_period_start::timestamptz
       and f.order_date < (target_period_end + 1)::timestamptz
+      and (target_territory_id is null or f.territory_id in (select territory_scope.id from territory_scope))
       and (target_agent_id is null or f.agent_user_id_at_order = target_agent_id)
       and (
         target_product_id is null
@@ -170,6 +167,7 @@ begin
       and i.kind = 'visit'
       and i.occurred_at >= target_period_start::timestamptz
       and i.occurred_at < (target_period_end + 1)::timestamptz
+      and (target_territory_id is null or sr.territory_id in (select territory_scope.id from territory_scope))
       and (target_agent_id is null or i.user_id = target_agent_id)
   ), summary_metrics as (
     select
