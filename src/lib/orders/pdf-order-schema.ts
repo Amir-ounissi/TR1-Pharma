@@ -20,7 +20,7 @@ export const pdfOrderExtractionSchema = z.object({
     label: optionalText,
     sku: optionalText,
     ean: optionalText,
-    quantity: z.number().finite().positive().nullable(),
+    quantity: z.number().finite().nonnegative().nullable(),
     freeQuantity: z.number().int().nonnegative().nullable().optional(),
     unitPriceHt: optionalAmount,
     discountRate: z.number().finite().min(0).max(100).nullable(),
@@ -33,6 +33,11 @@ export const pdfOrderExtractionSchema = z.object({
 });
 
 export type PdfOrderExtraction = z.infer<typeof pdfOrderExtractionSchema>;
+export type PdfOrderLine = PdfOrderExtraction["lines"][number];
+
+export function isActionablePdfOrderLine(line: PdfOrderLine) {
+  return (line.quantity ?? 0) > 0 || (line.freeQuantity ?? 0) > 0;
+}
 
 export const PDF_ORDER_JSON_SCHEMA = {
   type: "object",
@@ -82,5 +87,9 @@ export const PDF_ORDER_JSON_SCHEMA = {
 } as const;
 
 export function parsePdfOrderExtraction(value: unknown): PdfOrderExtraction {
-  return pdfOrderExtractionSchema.parse(value);
+  const parsed = pdfOrderExtractionSchema.parse(value);
+  return {
+    ...parsed,
+    lines: parsed.lines.filter(isActionablePdfOrderLine),
+  };
 }
