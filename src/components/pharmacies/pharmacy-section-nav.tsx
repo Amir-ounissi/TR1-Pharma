@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { MoreHorizontal } from "lucide-react";
+import { AiVisitClose } from "@/components/agent/ai-visit-close";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -43,6 +44,8 @@ export function PharmacySectionNav({ pharmacyId, activeTab }: PharmacySectionNav
 
   return (
     <>
+      <AiVisitClose brandPharmacyId={pharmacyId} />
+
       <nav
         aria-label="Sections de la pharmacie"
         className="hidden gap-1 overflow-x-auto rounded-[0.4rem] border border-[var(--tr1-line-strong)] bg-transparent p-1 sm:flex"
