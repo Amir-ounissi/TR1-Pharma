@@ -70,6 +70,8 @@ export const defaultCommercialHealthRules: CommercialHealthRules = {
   dormantMultiplier: 2,
 };
 
+export const OPEN_ACTION_RECOMMENDATION = "Suivre l’action ouverte";
+
 function median(values: number[]) {
   const sorted = [...values].sort((left, right) => left - right);
   const middle = Math.floor(sorted.length / 2);
@@ -173,12 +175,12 @@ export function commercialPriority(input: {
 }
 
 export function commercialRecommendation(status: CommercialHealthStatus, hasNextAction: boolean) {
+  if (hasNextAction) return OPEN_ACTION_RECOMMENDATION;
   if (status === "dormant") return "Évaluer une réactivation";
   if (status === "at_risk" || status === "reorder_overdue") return "Contacter la pharmacie";
   if (status === "awaiting_first_reorder" || status === "newly_implanted") return "Sécuriser le premier réassort";
   if (status === "reorder_due_soon" || status === "reorder_expected") return "Préparer une relance";
-  if (!hasNextAction) return "Programmer une prochaine action";
-  return "Maintenir le suivi";
+  return "Programmer une prochaine action";
 }
 
 export function buildReorderFollowUp(input: {
