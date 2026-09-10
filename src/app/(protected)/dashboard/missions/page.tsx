@@ -34,7 +34,7 @@ export default async function MissionsPage({ searchParams }: { searchParams: Pro
   const canProposeMission = role === "facilitator";
   let query = session.supabase
     .from("missions")
-    .select("id,title,mission_type,status,priority,scheduled_start_at,report_due_at,assigned_user_id,managed_by,pharmacies(legal_name,trade_name,city),brands(name)")
+    .select("id,title,mission_type,status,priority,scheduled_start_at,report_due_at,assigned_user_id,managed_by,pharmacies(legal_name,trade_name,city),brands!missions_brand_organization_fk(name)")
     .is("archived_at", null)
     .order("scheduled_start_at", { ascending: false })
     .limit(100);
