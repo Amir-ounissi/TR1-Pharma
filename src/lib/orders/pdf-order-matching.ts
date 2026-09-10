@@ -184,6 +184,12 @@ function pharmacyResult(result: MatchResult<PharmacyCandidate>, approximate = fa
   return result;
 }
 
+function pharmacyPostalCodeConflicts(extractedPostalCode: string | null | undefined, candidate: PharmacyCandidate | null) {
+  const extracted = normalizeIdentifier(extractedPostalCode);
+  const stored = normalizeIdentifier(candidate?.postalCode);
+  return Boolean(extracted && stored && extracted !== stored);
+}
+
 function pharmacyNameContains(extractedName: string | null | undefined, candidateName: string | null | undefined) {
   const extractedCore = normalizePharmacyNameCore(extractedName);
   const candidateCore = normalizePharmacyNameCore(candidateName);
@@ -230,13 +236,22 @@ export function matchPdfPharmacy(pharmacy: PdfOrderExtraction["pharmacy"], candi
       candidates.filter((candidate) => normalizeText(candidate.name) === name),
       "name",
     );
-    if (exactByName.status !== "unmatched") return pharmacyResult(exactByName);
+    if (exactByName.status !== "unmatched") {
+      const postalMismatch = exactByName.status === "matched" && pharmacyPostalCodeConflicts(pharmacy.postalCode, exactByName.match);
+      if (postalMismatch) {
+        return { ...exactByName, status: "suggested", method: "name_postal_mismatch" };
+      }
+      return pharmacyResult(exactByName);
+    }
 
     const containedByName = resolve(
       candidates.filter((candidate) => pharmacyNameContains(pharmacy.name, candidate.name)),
       "name_contains",
     );
     if (containedByName.status === "matched" && containedByName.match?.relationStatus === "existing_brand_relation") {
+      if (pharmacyPostalCodeConflicts(pharmacy.postalCode, containedByName.match)) {
+        return { ...containedByName, status: "suggested", method: "name_contains_postal_mismatch" };
+      }
       return containedByName;
     }
     if (containedByName.status !== "unmatched") return pharmacyResult(containedByName, true);
