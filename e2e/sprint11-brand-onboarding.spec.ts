@@ -183,7 +183,7 @@ test.describe.serial("Sprint 11 — Onboarding marque et imports contrôlés", (
     await brandAdminPage.getByLabel("Mot de passe", { exact: true }).fill(password);
     await brandAdminPage.getByLabel("Confirmer le mot de passe").fill(password);
     await brandAdminPage.getByRole("button", { name: "Continuer" }).click();
-    await expect(brandAdminPage).toHaveURL(/\/select-brand$/);
+    await expect(brandAdminPage).toHaveURL(/\/dashboard$/);
     await expect.poll(async () => (
       await admin.from("memberships").select("status").eq("user_id", (await admin.from("users").select("id").eq("email", brandAdminEmail).single()).data!.id).eq("brand_id", brandId).single()
     ).data?.status).toBe("active");
@@ -196,8 +196,6 @@ test.describe.serial("Sprint 11 — Onboarding marque et imports contrôlés", (
     expect(profile).toMatchObject({ full_name: "Admin Marque Pilote" });
     expect(profile?.onboarding_completed_at).toBeTruthy();
     expect(activePlatformMemberships).toBe(0);
-    await brandAdminPage.getByRole("button", { name: brandName, exact: false }).click();
-    await expect(brandAdminPage).toHaveURL(/\/dashboard$/);
     await brandAdminPage.getByRole("button", { name: "Déconnexion", exact: true }).click();
     await expect(brandAdminPage).toHaveURL(/\/login$/);
     await signIn(brandAdminPage, brandAdminEmail, new RegExp(brandName));

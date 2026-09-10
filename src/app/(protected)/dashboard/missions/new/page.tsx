@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { AnimationRequestForm } from "@/components/missions/animation-request-form";
 import { MissionForm } from "@/components/missions/forms";
 import {
   FacilitatorAnimationPlanner,
@@ -24,7 +25,25 @@ type MissionPharmacyRow = {
   cip_code?: string | null;
 };
 
-export default async function NewMissionPage() {
+type AnimationPharmacyRow = {
+  brand_pharmacy_id: string;
+  pharmacy_name: string;
+  city: string | null;
+};
+
+type AnimationFacilitatorRow = {
+  user_id: string;
+  full_name: string;
+};
+
+type RpcResult<T> = Promise<{ data: T | null; error: { message: string } | null }>;
+
+export default async function NewMissionPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ mode?: string }>;
+}) {
+  const filters = await searchParams;
   const [session, contexts] = await Promise.all([
     getOptionalActiveBrand(),
     getBrandContexts(),
@@ -61,9 +80,7 @@ export default async function NewMissionPage() {
           </p>
         </div>
         <Card>
-          <CardHeader>
-            <CardTitle>Animations à proposer</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle>Animations à proposer</CardTitle></CardHeader>
           <CardContent>
             {pharmacies.length ? (
               <FacilitatorAnimationPlanner pharmacies={pharmacies} />
@@ -81,9 +98,58 @@ export default async function NewMissionPage() {
   if (!session.brand) redirect("/select-brand");
   const { supabase, brand } = session;
   const role = activeRole ?? "brand_user";
-  if (!["brand_admin", "tr1_manager", "super_admin"].includes(role)) {
-    redirect("/dashboard/missions");
+  const managerRoles = ["brand_admin", "tr1_manager", "super_admin"];
+  const animationMode = role === "agent" || filters.mode === "animation";
+
+  if (animationMode) {
+    if (![...managerRoles, "agent"].includes(role)) redirect("/dashboard/missions");
+
+    const callRpc = <T,>(name: string, args: Record<string, unknown>): RpcResult<T> =>
+      (supabase.rpc as unknown as (rpcName: string, rpcArgs: Record<string, unknown>) => RpcResult<T>)(name, args);
+
+    const [pharmacyResult, productResult, facilitatorResult] = await Promise.all([
+      callRpc<AnimationPharmacyRow[]>("get_animation_request_pharmacies", { target_brand_id: brand.id }),
+      supabase.from("products").select("id,name,sku").eq("brand_id", brand.id).eq("is_active", true).order("name"),
+      callRpc<AnimationFacilitatorRow[]>("get_animation_facilitators", { target_brand_id: brand.id }),
+    ]);
+
+    if (pharmacyResult.error) throw new Error(pharmacyResult.error.message);
+    if (productResult.error) throw new Error(productResult.error.message);
+    if (facilitatorResult.error) throw new Error(facilitatorResult.error.message);
+
+    const pharmacies = (pharmacyResult.data ?? []).map((item) => ({
+      id: item.brand_pharmacy_id,
+      label: item.pharmacy_name,
+      detail: item.city ?? undefined,
+    }));
+    const products = (productResult.data ?? []).map((product) => ({
+      id: product.id,
+      label: product.name,
+      detail: product.sku,
+    }));
+    const facilitators = (facilitatorResult.data ?? []).map((item) => ({ id: item.user_id, label: item.full_name }));
+
+    return (
+      <div className="mx-auto max-w-5xl space-y-5">
+        <div>
+          <p className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-[var(--tr1-orange)]">Exécution terrain / Animation</p>
+          <h1 className="mt-1 text-2xl font-semibold text-[var(--tr1-navy)]">Demander une animation</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Définissez l’objectif, les conditions et les preuves attendues. Ce brief suivra la mission jusqu’à sa clôture.
+          </p>
+        </div>
+        {pharmacies.length ? (
+          <AnimationRequestForm pharmacies={pharmacies} products={products} facilitators={facilitators} requesterRole={role} />
+        ) : (
+          <Card><CardContent className="p-6 text-sm text-muted-foreground">
+            {role === "agent" ? "Aucune pharmacie active de votre portefeuille n’est disponible pour une demande d’animation." : "Aucune pharmacie active n’est disponible pour cette marque."}
+          </CardContent></Card>
+        )}
+      </div>
+    );
   }
+
+  if (!managerRoles.includes(role)) redirect("/dashboard/missions");
 
   const [{ data: relations }, { data: products }] = await Promise.all([
     supabase
@@ -99,9 +165,7 @@ export default async function NewMissionPage() {
   ]);
 
   const pharmacies = (relations ?? []).map((relation) => {
-    const pharmacy = Array.isArray(relation.pharmacies)
-      ? relation.pharmacies[0]
-      : relation.pharmacies;
+    const pharmacy = Array.isArray(relation.pharmacies) ? relation.pharmacies[0] : relation.pharmacies;
     return {
       id: relation.id,
       label: pharmacy?.trade_name || pharmacy?.legal_name || "Pharmacie",
@@ -118,16 +182,11 @@ export default async function NewMissionPage() {
         </p>
       </div>
       <Card>
-        <CardHeader>
-          <CardTitle>Brief terrain</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle>Brief terrain</CardTitle></CardHeader>
         <CardContent>
           <MissionForm
             pharmacies={pharmacies}
-            products={(products ?? []).map((product) => ({
-              id: product.id,
-              label: `${product.name} · ${product.sku}`,
-            }))}
+            products={(products ?? []).map((product) => ({ id: product.id, label: `${product.name} · ${product.sku}` }))}
           />
         </CardContent>
       </Card>

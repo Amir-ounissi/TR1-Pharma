@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarPlus, RotateCcw, Inbox } from "lucide-react";
+import { CalendarPlus, RotateCcw, Inbox, Megaphone } from "lucide-react";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +30,7 @@ export default async function MissionsPage({ searchParams }: { searchParams: Pro
   }
 
   const canCreateMission = ["brand_admin", "tr1_manager", "super_admin"].includes(role);
+  const canRequestAnimation = canCreateMission || role === "agent";
   const canProposeMission = role === "facilitator";
   let query = session.supabase
     .from("missions")
@@ -46,14 +47,27 @@ export default async function MissionsPage({ searchParams }: { searchParams: Pro
 
   const { data: missions, error } = await query;
   const hasActiveFilters = Boolean(filters.q || filters.status || filters.type);
-  const createLabel = canCreateMission ? "Nouvelle mission" : "Planifier des animations";
+  const createLabel = role === "agent" ? "Demander une animation" : canCreateMission ? "Nouvelle mission" : "Planifier des animations";
+  const createHref = role === "agent" ? "/dashboard/missions/new?mode=animation" : "/dashboard/missions/new";
+
+  const headerActions = canCreateMission ? (
+    <div className="flex flex-wrap gap-2">
+      <Button asChild variant="ghost" className="h-9"><Link href="/dashboard/missions/proposals"><Inbox className="size-4"/>Propositions</Link></Button>
+      <Button asChild variant="outline" className="h-9"><Link href="/dashboard/missions/new"><CalendarPlus className="size-4" />Mission</Link></Button>
+      <Button asChild className="h-9 rounded-md bg-[var(--tr1-navy)] px-3.5 text-sm font-medium text-white hover:bg-[var(--tr1-navy-soft)]"><Link href="/dashboard/missions/new?mode=animation"><Megaphone className="size-4" />Demander une animation</Link></Button>
+    </div>
+  ) : role === "agent" ? (
+    <Button asChild className="h-9 rounded-md bg-[var(--tr1-navy)] px-3.5 text-sm font-medium text-white hover:bg-[var(--tr1-navy-soft)]"><Link href="/dashboard/missions/new?mode=animation"><Megaphone className="size-4" />Demander une animation</Link></Button>
+  ) : canProposeMission ? (
+    <Button asChild className="h-9 rounded-md bg-[var(--tr1-navy)] px-3.5 text-sm font-medium text-white hover:bg-[var(--tr1-navy-soft)]"><Link href="/dashboard/missions/new"><CalendarPlus className="size-4" />Planifier des animations</Link></Button>
+  ) : undefined;
 
   return <div className="space-y-3">
     <CompactPageHeader
       eyebrow={`Terrain / ${contextLabel}`}
       title={facilitatorOnly ? "Mes animations" : "Missions"}
-      description={facilitatorOnly ? "Toutes vos animations, quelle que soit la marque, dans une seule liste." : "Le planning, les affectations et les statuts se suivent ici dans une lecture opérationnelle plus directe."}
-      actions={canCreateMission ? <div className="flex gap-2"><Button asChild variant="outline" className="h-9"><Link href="/dashboard/missions/proposals"><Inbox className="size-4"/>Propositions à valider</Link></Button><Button asChild className="h-9 rounded-md bg-[var(--tr1-navy)] px-3.5 text-sm font-medium text-white hover:bg-[var(--tr1-navy-soft)]"><Link href="/dashboard/missions/new"><CalendarPlus className="size-4" />Nouvelle mission</Link></Button></div> : canProposeMission ? <Button asChild className="h-9 rounded-md bg-[var(--tr1-navy)] px-3.5 text-sm font-medium text-white hover:bg-[var(--tr1-navy-soft)]"><Link href="/dashboard/missions/new"><CalendarPlus className="size-4" />Planifier des animations</Link></Button> : undefined}
+      description={facilitatorOnly ? "Toutes vos animations, quelle que soit la marque, dans une seule liste." : role === "agent" ? "Demandez une animation, suivez son acceptation et retrouvez son exécution dans le même flux." : "Le planning, les affectations et les statuts se suivent ici dans une lecture opérationnelle plus directe."}
+      actions={headerActions}
     />
 
     <Toolbar>
@@ -80,9 +94,9 @@ export default async function MissionsPage({ searchParams }: { searchParams: Pro
     ) : (missions ?? []).length === 0 ? (
       <EmptyState
         tone={hasActiveFilters ? "no_results" : "no_data"}
-        title={hasActiveFilters ? "Aucune mission ne correspond à ces filtres." : facilitatorOnly ? "Aucune animation planifiée pour le moment." : "Aucune mission planifiée pour le moment."}
-        description={hasActiveFilters ? "Essayez d’élargir votre recherche ou de réinitialiser les filtres." : facilitatorOnly ? "Ajoutez une ou plusieurs animations sans ressaisir les informations communes." : "Créez une première mission pour commencer à piloter les interventions terrain."}
-        action={hasActiveFilters ? <Button asChild size="sm" variant="outline"><Link href="/dashboard/missions"><RotateCcw className="size-3.5" />Réinitialiser</Link></Button> : canCreateMission || canProposeMission ? <Button asChild size="sm" className="h-9 bg-[var(--tr1-navy)] px-3.5 text-sm font-medium text-white hover:bg-[var(--tr1-navy-soft)]"><Link href="/dashboard/missions/new"><CalendarPlus className="size-3.5" />{createLabel}</Link></Button> : undefined}
+        title={hasActiveFilters ? "Aucune mission ne correspond à ces filtres." : facilitatorOnly ? "Aucune animation planifiée pour le moment." : role === "agent" ? "Aucune animation demandée pour le moment." : "Aucune mission planifiée pour le moment."}
+        description={hasActiveFilters ? "Essayez d’élargir votre recherche ou de réinitialiser les filtres." : facilitatorOnly ? "Ajoutez une ou plusieurs animations sans ressaisir les informations communes." : role === "agent" ? "Créez une demande depuis une pharmacie de votre portefeuille et définissez les preuves attendues." : "Créez une première mission pour commencer à piloter les interventions terrain."}
+        action={hasActiveFilters ? <Button asChild size="sm" variant="outline"><Link href="/dashboard/missions"><RotateCcw className="size-3.5" />Réinitialiser</Link></Button> : canRequestAnimation || canProposeMission ? <Button asChild size="sm" className="h-9 bg-[var(--tr1-navy)] px-3.5 text-sm font-medium text-white hover:bg-[var(--tr1-navy-soft)]"><Link href={createHref}><CalendarPlus className="size-3.5" />{createLabel}</Link></Button> : undefined}
       />
     ) : (
       <div className="overflow-hidden rounded-[0.8rem] border border-[var(--tr1-line)] bg-white/78">

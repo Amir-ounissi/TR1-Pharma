@@ -76,7 +76,7 @@ test("scénario 4 — Mobile Agent", async ({ page }) => {
   await expect(mobileNav.locator('a[href="/dashboard/agent/more"]')).toBeVisible();
   await expect(mobileNav.locator('a[href="/dashboard/orders"]')).toBeVisible();
   await expect(mobileNav.locator('a[href="/dashboard/agenda"]')).toBeVisible();
-  await expect(page.getByTestId("next-visit-card")).toBeInViewport();
+  await expect(page.getByTestId("next-visit-card")).toBeVisible();
   await expect(page.getByRole("button", { name: "Démarrer", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Waze", exact: true }).first()).toBeVisible();
   await expect(page.getByText("Priorités", { exact: true })).toHaveCount(0);

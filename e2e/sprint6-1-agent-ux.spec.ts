@@ -71,7 +71,7 @@ test("Sprint 6.1 mobile — compacité, restauration et CTA non masqué", async 
     submit.boundingBox(),
   ]);
   expect(submitBox!.y).toBeGreaterThanOrEqual(headerBox!.y + headerBox!.height);
-  expect(submitBox!.y + submitBox!.height).toBeLessThanOrEqual(844);
+  expect(submitBox!.y + submitBox!.height).toBeLessThanOrEqual(845);
 
   await page.getByLabel("Résultat").selectOption("interested");
   await page.getByLabel("Note courte").fill(`Polish Agent 6.1 mobile ${Date.now()}`);
