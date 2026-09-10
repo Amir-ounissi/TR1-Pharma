@@ -210,7 +210,7 @@ function validateOrderDocuments(files: File[]) {
 async function toOpenAIDocumentInput(file: File) {
   const base64 = Buffer.from(await file.arrayBuffer()).toString("base64");
   if (file.type === "application/pdf") {
-    return { type: "input_file", filename: file.name || "commande.pdf", file_data: base64 };
+    return { type: "input_file", filename: file.name || "commande.pdf", file_data: `data:application/pdf;base64,${base64}` };
   }
   return { type: "input_image", image_url: `data:${file.type};base64,${base64}`, detail: "high" };
 }
