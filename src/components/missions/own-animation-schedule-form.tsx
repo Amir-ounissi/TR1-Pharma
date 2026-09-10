@@ -1,7 +1,10 @@
 "use client";
 
 import { useActionState } from "react";
-import { scheduleOwnAnimationAction } from "@/app/(protected)/dashboard/missions/animation-actions";
+import {
+  scheduleAnimationRequestDayAction,
+  scheduleOwnAnimationAction,
+} from "@/app/(protected)/dashboard/missions/animation-actions";
 import { ActionFeedback } from "@/components/reference/action-feedback";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,12 +21,15 @@ export function OwnAnimationScheduleForm({
   missionId,
   defaultStart,
   defaultEnd,
+  requestMode = false,
 }: {
   missionId: string;
   defaultStart: string | null;
   defaultEnd: string | null;
+  requestMode?: boolean;
 }) {
-  const [state, action, pending] = useActionState(scheduleOwnAnimationAction, {});
+  const serverAction = requestMode ? scheduleAnimationRequestDayAction : scheduleOwnAnimationAction;
+  const [state, action, pending] = useActionState(serverAction, {});
 
   return (
     <form action={action} className="space-y-4">
@@ -31,19 +37,21 @@ export function OwnAnimationScheduleForm({
       <ActionFeedback {...state} />
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label>Début confirmé</Label>
+          <Label>{requestMode ? "Début de la journée" : "Début confirmé"}</Label>
           <Input name="scheduledStartAt" type="datetime-local" defaultValue={toLocal(defaultStart)} required />
         </div>
         <div className="space-y-2">
-          <Label>Fin confirmée</Label>
+          <Label>{requestMode ? "Fin de la journée" : "Fin confirmée"}</Label>
           <Input name="scheduledEndAt" type="datetime-local" defaultValue={toLocal(defaultEnd)} required />
         </div>
       </div>
       <p className="text-xs text-muted-foreground">
-        Vous pouvez conserver le créneau proposé ou l’ajuster. TR1 vérifie automatiquement les chevauchements avec vos autres missions.
+        {requestMode
+          ? "Cette date sera rattachée à la demande acceptée. TR1 vérifiera le quota du mois et les chevauchements avec vos autres missions."
+          : "Vous pouvez conserver le créneau proposé ou l’ajuster. TR1 vérifie automatiquement les chevauchements avec vos autres missions."}
       </p>
       <Button disabled={pending} className="w-full sm:w-auto">
-        {pending ? "Planification…" : "Confirmer mon créneau"}
+        {pending ? "Planification…" : requestMode ? "Planifier cette journée" : "Confirmer mon créneau"}
       </Button>
     </form>
   );
