@@ -8,16 +8,22 @@ import {
 import { parsePdfOrderExtraction } from "./pdf-order-schema";
 
 const originalApiKey = process.env.OPENAI_API_KEY;
+const originalPreviewKey = process.env.OPEN_API_PREVIEW_KEY;
+const originalGatewayKey = process.env.AI_GATEWAY_API_KEY;
+const originalOidcToken = process.env.VERCEL_OIDC_TOKEN;
 const originalModel = process.env.OPENAI_PDF_ORDER_MODEL;
 const extracted = { orderNumber: "PDF-42", orderDate: "2026-09-02", pharmacy: { name: "Pharmacie Centre", siret: null, cip: null, finess: null, address: null, postalCode: "75001" }, lines: [{ label: "Produit", sku: "SKU", ean: null, quantity: 2, unitPriceHt: 10, discountRate: null }], totalHt: 20, totalTtc: null, warnings: [] };
 
-function restoreEnv(name: "OPENAI_API_KEY" | "OPENAI_PDF_ORDER_MODEL", value: string | undefined) {
+function restoreEnv(name: "OPENAI_API_KEY" | "OPEN_API_PREVIEW_KEY" | "AI_GATEWAY_API_KEY" | "VERCEL_OIDC_TOKEN" | "OPENAI_PDF_ORDER_MODEL", value: string | undefined) {
   if (value === undefined) delete process.env[name];
   else process.env[name] = value;
 }
 
 afterEach(() => {
   restoreEnv("OPENAI_API_KEY", originalApiKey);
+  restoreEnv("OPEN_API_PREVIEW_KEY", originalPreviewKey);
+  restoreEnv("AI_GATEWAY_API_KEY", originalGatewayKey);
+  restoreEnv("VERCEL_OIDC_TOKEN", originalOidcToken);
   restoreEnv("OPENAI_PDF_ORDER_MODEL", originalModel);
   vi.restoreAllMocks();
 });
@@ -84,6 +90,23 @@ describe("order document extraction", () => {
     }));
     expect(JSON.stringify(usageSink.mock.calls[0][0])).not.toContain("Pharmacie Centre");
     expect(JSON.stringify(usageSink.mock.calls[0][0])).not.toContain("PDF-42");
+  });
+
+  it("falls back to Vercel AI Gateway through OIDC when no OpenAI key is configured", async () => {
+    delete process.env.OPENAI_API_KEY;
+    delete process.env.OPEN_API_PREVIEW_KEY;
+    delete process.env.AI_GATEWAY_API_KEY;
+    process.env.VERCEL_OIDC_TOKEN = "oidc-token";
+    delete process.env.OPENAI_PDF_ORDER_MODEL;
+    const usageSink = vi.fn();
+    const fetcher = vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({ output_text: JSON.stringify(extracted) }), { status: 200 }));
+
+    await expect(extractPdfOrder(new File(["pdf"], "order.pdf", { type: "application/pdf" }), fetcher, usageSink)).resolves.toMatchObject({ orderNumber: "PDF-42" });
+    expect(fetcher.mock.calls[0][0]).toBe("https://ai-gateway.vercel.sh/v1/responses");
+    expect(fetcher.mock.calls[0][1].headers.Authorization).toBe("Bearer oidc-token");
+    const body = JSON.parse(fetcher.mock.calls[0][1].body);
+    expect(body).toMatchObject({ model: `openai/${DEFAULT_ORDER_EXTRACTION_MODEL}`, reasoning: { effort: "minimal" } });
+    expect(usageSink).toHaveBeenCalledWith(expect.objectContaining({ model: `openai/${DEFAULT_ORDER_EXTRACTION_MODEL}` }));
   });
 
   it("does not double-count reasoning tokens in the estimated output cost", () => {

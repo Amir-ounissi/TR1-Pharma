@@ -7,6 +7,9 @@ export const ORDER_DOCUMENT_IMAGE_TYPES = ["image/jpeg", "image/png", "image/web
 export const DEFAULT_ORDER_EXTRACTION_MODEL = "gpt-5-mini";
 const orderDocumentImageTypes = new Set<string>(ORDER_DOCUMENT_IMAGE_TYPES);
 
+const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
+const VERCEL_AI_GATEWAY_RESPONSES_URL = "https://ai-gateway.vercel.sh/v1/responses";
+
 const ORDER_EXTRACTION_INSTRUCTIONS = `
 Tu extrais fidèlement un bon de commande pharmacie depuis un PDF ou une ou plusieurs pages scannées. N'invente aucune donnée et ne réalise aucun matching avec TR1.
 Si plusieurs images sont fournies, elles appartiennent toutes au même bon de commande et sont présentées dans l'ordre des pages. Analyse-les comme un seul document.
@@ -91,6 +94,14 @@ type ModelPricing = {
   output: number;
 };
 
+type ExtractionProvider = {
+  apiKey: string;
+  endpoint: string;
+  model: string;
+  pricingModel: string;
+  source: "openai" | "vercel_ai_gateway";
+};
+
 const MODEL_PRICING_PER_MILLION: Record<string, ModelPricing> = {
   "gpt-5": { input: 1.25, cachedInput: 0.125, output: 10 },
   "gpt-5-mini": { input: 0.25, cachedInput: 0.025, output: 2 },
@@ -98,9 +109,10 @@ const MODEL_PRICING_PER_MILLION: Record<string, ModelPricing> = {
 };
 
 function getModelPricing(model: string): ModelPricing | null {
-  const exact = MODEL_PRICING_PER_MILLION[model];
+  const normalizedModel = model.startsWith("openai/") ? model.slice("openai/".length) : model;
+  const exact = MODEL_PRICING_PER_MILLION[normalizedModel];
   if (exact) return exact;
-  if (model.startsWith("gpt-5-mini-")) return MODEL_PRICING_PER_MILLION["gpt-5-mini"];
+  if (normalizedModel.startsWith("gpt-5-mini-")) return MODEL_PRICING_PER_MILLION["gpt-5-mini"];
   return null;
 }
 
@@ -125,11 +137,40 @@ export function estimateOrderScanCostUsd(model: string, usage: OpenAIUsage | und
 }
 
 function getReasoningConfig(model: string): { effort: "minimal" | "none" } | undefined {
-  if (model === "gpt-5" || model === "gpt-5-mini" || model.startsWith("gpt-5-mini-")) {
+  const normalizedModel = model.startsWith("openai/") ? model.slice("openai/".length) : model;
+  if (normalizedModel === "gpt-5" || normalizedModel === "gpt-5-mini" || normalizedModel.startsWith("gpt-5-mini-")) {
     return { effort: "minimal" };
   }
-  if (model.startsWith("gpt-5.6-")) return { effort: "none" };
+  if (normalizedModel.startsWith("gpt-5.6-")) return { effort: "none" };
   return undefined;
+}
+
+function resolveExtractionProvider(): ExtractionProvider | null {
+  const requestedModel = process.env.OPENAI_PDF_ORDER_MODEL ?? DEFAULT_ORDER_EXTRACTION_MODEL;
+  const directApiKey = process.env.OPENAI_API_KEY ?? process.env.OPEN_API_PREVIEW_KEY;
+  if (directApiKey) {
+    return {
+      apiKey: directApiKey,
+      endpoint: OPENAI_RESPONSES_URL,
+      model: requestedModel,
+      pricingModel: requestedModel,
+      source: "openai",
+    };
+  }
+
+  const gatewayApiKey = process.env.AI_GATEWAY_API_KEY ?? process.env.VERCEL_OIDC_TOKEN;
+  if (gatewayApiKey) {
+    const gatewayModel = requestedModel.includes("/") ? requestedModel : `openai/${requestedModel}`;
+    return {
+      apiKey: gatewayApiKey,
+      endpoint: VERCEL_AI_GATEWAY_RESPONSES_URL,
+      model: gatewayModel,
+      pricingModel: requestedModel,
+      source: "vercel_ai_gateway",
+    };
+  }
+
+  return null;
 }
 
 function logOrderScanUsage(usage: OrderScanUsage) {
@@ -183,20 +224,26 @@ export async function extractOrderDocuments(
   if (process.env.APP_ENV === "test" && process.env.PDF_ORDER_E2E_MOCK) {
     return parsePdfOrderExtraction(JSON.parse(process.env.PDF_ORDER_E2E_MOCK));
   }
-  const apiKey = process.env.OPENAI_API_KEY ?? process.env.OPEN_API_PREVIEW_KEY;
-  if (!apiKey) throw new PdfOrderImportError("openai_unavailable", "L’extraction du document est indisponible pour le moment.");
 
-  const model = process.env.OPENAI_PDF_ORDER_MODEL ?? DEFAULT_ORDER_EXTRACTION_MODEL;
-  const reasoning = getReasoningConfig(model);
+  const provider = resolveExtractionProvider();
+  if (!provider) {
+    console.error("[order_scan_error] No extraction provider credential is configured", {
+      hasOpenAIKey: Boolean(process.env.OPENAI_API_KEY || process.env.OPEN_API_PREVIEW_KEY),
+      hasGatewayKey: Boolean(process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN),
+    });
+    throw new PdfOrderImportError("openai_unavailable", "L’extraction du document est indisponible pour le moment.");
+  }
+
+  const reasoning = getReasoningConfig(provider.model);
   const startedAt = Date.now();
 
   try {
     const documentInputs = await Promise.all(files.map(toOpenAIDocumentInput));
-    const response = await fetcher("https://api.openai.com/v1/responses", {
+    const response = await fetcher(provider.endpoint, {
       method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${provider.apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model,
+        model: provider.model,
         ...(reasoning ? { reasoning } : {}),
         store: false,
         instructions: ORDER_EXTRACTION_INSTRUCTIONS,
@@ -210,7 +257,18 @@ export async function extractOrderDocuments(
         text: { format: { type: "json_schema", name: "pdf_order", strict: true, schema: PDF_ORDER_JSON_SCHEMA } },
       }),
     });
-    if (!response.ok) throw new PdfOrderImportError("openai_unavailable", "L’extraction du document est indisponible pour le moment.");
+
+    if (!response.ok) {
+      const responseBody = await response.text().catch(() => "");
+      console.error("[order_scan_error] Extraction provider rejected request", {
+        provider: provider.source,
+        model: provider.model,
+        status: response.status,
+        response: responseBody.slice(0, 800),
+      });
+      throw new PdfOrderImportError("openai_unavailable", "L’extraction du document est indisponible pour le moment.");
+    }
+
     const payload = await response.json() as {
       output_text?: string;
       output?: Array<{ content?: Array<{ type?: string; text?: string }> }>;
@@ -218,13 +276,13 @@ export async function extractOrderDocuments(
     };
 
     usageSink({
-      model,
+      model: provider.model,
       inputTokens: validTokenCount(payload.usage?.input_tokens),
       cachedInputTokens: validTokenCount(payload.usage?.input_tokens_details?.cached_tokens),
       outputTokens: validTokenCount(payload.usage?.output_tokens),
       reasoningTokens: validTokenCount(payload.usage?.output_tokens_details?.reasoning_tokens),
       totalTokens: validTokenCount(payload.usage?.total_tokens),
-      estimatedCostUsd: estimateOrderScanCostUsd(model, payload.usage),
+      estimatedCostUsd: estimateOrderScanCostUsd(provider.pricingModel, payload.usage),
       latencyMs: Math.max(0, Date.now() - startedAt),
       mimeType: files.length === 1 ? files[0].type : "image/multipage",
       fileSizeBytes: files.reduce((total, file) => total + file.size, 0),
@@ -236,6 +294,11 @@ export async function extractOrderDocuments(
     return parsePdfOrderExtraction(JSON.parse(outputText));
   } catch (error) {
     if (error instanceof PdfOrderImportError) throw error;
+    console.error("[order_scan_error] Unexpected extraction failure", {
+      provider: provider.source,
+      model: provider.model,
+      error: error instanceof Error ? error.message : String(error),
+    });
     throw new PdfOrderImportError("extraction_failed", "Le document ne contient pas de commande exploitable.");
   }
 }
