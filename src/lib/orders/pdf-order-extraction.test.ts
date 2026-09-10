@@ -73,7 +73,7 @@ describe("order document extraction", () => {
       })],
     });
     const fileInput = body.input[0].content.find((item: { type: string }) => item.type === "input_file");
-    expect(fileInput.file_data).toBe(Buffer.from("pdf").toString("base64"));
+    expect(fileInput.file_data).toBe(`data:application/pdf;base64,${Buffer.from("pdf").toString("base64")}`);
 
     expect(usageSink).toHaveBeenCalledTimes(1);
     expect(usageSink).toHaveBeenCalledWith(expect.objectContaining({
