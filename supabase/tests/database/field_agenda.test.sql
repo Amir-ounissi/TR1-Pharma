@@ -12,7 +12,7 @@ insert into public.pharmacy_assignments(brand_id,brand_pharmacy_id,user_id,assig
 select plan(15);
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"00000000-0000-0000-0000-0000000000a5","role":"authenticated"}',true);
-select lives_ok($$select public.propose_mission('00000000-0000-0000-0000-000000000411','{"mission_type":"animation","title":"Proposition intervenant","objective":"Conseiller","scheduled_start_at":"2030-06-10T08:00:00Z","scheduled_end_at":"2030-06-10T12:00:00Z","budget_estimated_ht":"250"}','[]')$$,'facilitator can propose an animation');
+select lives_ok($$select public.propose_mission('00000000-0000-0000-0000-000000000411','{"mission_type":"animation","title":"Proposition intervenant","objective":"Conseiller","briefing":"Présenter le produit prioritaire et documenter l’animation.","scheduled_start_at":"2030-06-10T08:00:00Z","scheduled_end_at":"2030-06-10T12:00:00Z","budget_estimated_ht":"250"}','[{"product_id":"00000000-0000-0000-0000-000000000601"}]')$$,'facilitator can propose an animation');
 select is((select proposal_review_status from missions where title='Proposition intervenant'),'pending'::mission_proposal_review_status,'provider proposal remains pending');
 select throws_ok($$select public.propose_mission('00000000-0000-0000-0000-000000000411','{"mission_type":"commercial_visit","title":"Bad role","objective":"No","scheduled_start_at":"2030-06-11T08:00:00Z","scheduled_end_at":"2030-06-11T09:00:00Z"}','[]')$$,'42501','Mission type is incompatible with provider role','facilitator cannot propose a commercial visit');
 
@@ -23,7 +23,7 @@ select set_config('request.jwt.claims','{"sub":"00000000-0000-0000-0000-00000000
 select throws_ok($$select public.review_provider_mission_proposal((select id from missions where title='Proposition intervenant'),'approved',null,null,null,null,null,null)$$,'42501','Proposal unavailable','read-only brand user cannot approve');
 
 select set_config('request.jwt.claims','{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}',true);
-select lives_ok($$select public.review_provider_mission_proposal((select id from missions where title='Proposition intervenant'),'approved',null,null,null,null,null,null)$$,'brand admin can approve');
+select lives_ok($$select public.review_provider_mission_proposal((select id from missions where title='Proposition intervenant'),'approved',null,null,null,null,null,null)$$,'brand admin can approve a complete proposal');
 select is((select status from missions where title='Proposition intervenant'),'scheduled'::mission_status,'approved proposal becomes scheduled directly');
 
 select set_config('request.jwt.claims','{"sub":"00000000-0000-0000-0000-0000000000a5","role":"authenticated"}',true);
