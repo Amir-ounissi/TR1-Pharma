@@ -96,4 +96,41 @@ describe("pharmacy order table with paid and UG rows", () => {
     expect(consolidated.some((item) => item.label === "NAALI COLLAGENE CIT V.M. 186G")).toBe(false);
     expect(consolidated.some((item) => item.label === "NAALI GUMMIES ANTI STRESS X42")).toBe(false);
   });
+
+  it("turns a 100%-discount quantity into UG when extraction reads the wrong quantity column", () => {
+    const extraction = parsePdfOrderExtraction({
+      orderNumber: "155045",
+      orderDate: "2026-09-10",
+      orderDateSource: "order_date",
+      deliveryDate: null,
+      pharmacy: {
+        name: "Grande Pharmacie de la Valentine",
+        siret: null,
+        cip: null,
+        finess: null,
+        address: null,
+        postalCode: "13011",
+      },
+      lines: [
+        line("NAALI GUMMIES ANTI STRESS X60", 24, 0, 28.34, 30, "3770010539445"),
+        // Regression seen on the real ERP PDF: the model can put the UG count in quantity.
+        line("NAALI GUMMIES ANTI STRESS X60", 4, 0, 28.34, 100, "3770010539445"),
+      ],
+      totalHt: 476.11,
+      totalVat: 26.19,
+      totalTtc: 502.30,
+      warnings: [],
+    });
+
+    expect(extraction.lines[1]).toMatchObject({ quantity: null, freeQuantity: 4, discountRate: 100 });
+    expect(consolidatePdfOrderLines(extraction.lines)).toEqual([
+      expect.objectContaining({
+        label: "NAALI GUMMIES ANTI STRESS X60",
+        quantity: 24,
+        freeQuantity: 4,
+        unitPriceHt: 28.34,
+        discountRate: 30,
+      }),
+    ]);
+  });
 });
