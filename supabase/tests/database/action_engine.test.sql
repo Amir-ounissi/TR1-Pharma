@@ -25,6 +25,7 @@ insert into public.pharmacy_assignments(brand_id,brand_pharmacy_id,user_id,assig
   ('00000000-0000-0000-0000-000000000101','00000000-0000-0000-0000-000000000491','00000000-0000-0000-0000-0000000000a3','commercial_agent',true,'00000000-0000-0000-0000-0000000000a2');
 
 create temp table _action_orders(relation_id uuid, kind text, order_id uuid);
+grant select, insert on table pg_temp._action_orders to authenticated;
 
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}',true);
