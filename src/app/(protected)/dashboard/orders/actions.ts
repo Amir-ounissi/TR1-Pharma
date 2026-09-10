@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
+import { syncHubSpotOrderAfterPersistence } from "@/lib/integrations/hubspot/runtime";
 import { translateUiMessage } from "@/lib/ui-copy";
 
 export type OrderActionState = { error?: string; success?: string; orderId?: string };
@@ -95,9 +96,12 @@ export async function createOrderAction(_state: OrderActionState, formData: Form
   });
   if (error) return { error: error.code === "23505" ? "Cette commande externe existe déjà." : error.message };
   const result = Array.isArray(data) ? data[0] : data;
-  return { success: "Commande créée et indicateurs recalculés.", orderId: result?.order_id as string };
+  const orderId = result?.order_id ? String(result.order_id) : null;
+  if (orderId && header.data.orderStatus !== "draft") {
+    await syncHubSpotOrderAfterPersistence(brand.id, orderId);
+  }
+  return { success: "Commande créée et indicateurs recalculés.", orderId: orderId ?? undefined };
 }
-
 
 export async function reviseOrderAction(
   _state: OrderActionState,
@@ -199,6 +203,10 @@ export async function reviseOrderAction(
     return { error: translateUiMessage(error.message) };
   }
 
+  if (submitAfterRevision) {
+    await syncHubSpotOrderAfterPersistence(brand.id, header.data.orderId);
+  }
+
   revalidatePath(`/dashboard/orders/${header.data.orderId}`);
   revalidatePath("/dashboard/orders");
   revalidatePath("/dashboard/network");
@@ -246,9 +254,10 @@ export async function searchOrderPharmaciesAction(search: string): Promise<Order
 export async function changeOrderStatusAction(_state: OrderActionState, formData: FormData): Promise<OrderActionState> {
   const parsed = z.object({ orderId: uuid, orderStatus: z.enum(orderStatuses), reason: z.string().trim().max(500).optional() }).safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: "Changement de statut invalide." };
-  const { supabase } = await requireActiveBrand();
+  const { supabase, brand } = await requireActiveBrand();
   const { error } = await supabase.rpc("change_order_status", { target_order_id: parsed.data.orderId, target_status: parsed.data.orderStatus, reason: parsed.data.reason || null });
   if (error) return { error: translateUiMessage(error.message) };
+  await syncHubSpotOrderAfterPersistence(brand.id, parsed.data.orderId);
   revalidatePath(`/dashboard/orders/${parsed.data.orderId}`);
   revalidatePath("/dashboard/orders");
   revalidatePath("/dashboard/network");

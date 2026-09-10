@@ -21,11 +21,38 @@ const NAALI_INTERNAL_ORDER_ROLES = new Set([
   "brand_direction",
 ]);
 
+const NAALI_HUBSPOT_VISIT_TYPES: Record<string, string> = {
+  client_visit: "Visite client",
+  prospecting: "Visite prospection",
+  relationship: "Rendez-vous client",
+  merchandising: "Visite client",
+  sell_out: "Visite client",
+};
+
+const NAALI_HUBSPOT_ORDER_TYPES: Record<string, string> = {
+  initial: "Implantation",
+  implantation: "Implantation",
+  reorder: "Réassort",
+  restock: "Réassort",
+};
+
 export function resolveNaaliHubSpotOrderRoute(roleKey: string) {
   const normalized = roleKey.trim().toLowerCase();
   if (normalized === "agent") return NAALI_HUBSPOT_ORDER_ROUTES.agent;
   if (NAALI_INTERNAL_ORDER_ROLES.has(normalized)) return NAALI_HUBSPOT_ORDER_ROUTES.commercial;
   throw new Error(`Unsupported TR1 role for Naali HubSpot order routing: ${roleKey}`);
+}
+
+export function resolveNaaliHubSpotVisitType(visitKind: string) {
+  const normalized = visitKind.trim().toLowerCase();
+  const activityType = NAALI_HUBSPOT_VISIT_TYPES[normalized];
+  if (!activityType) throw new Error(`Unsupported TR1 visit kind for Naali HubSpot sync: ${visitKind}`);
+  return activityType;
+}
+
+export function resolveNaaliHubSpotOrderType(orderType: string | null | undefined) {
+  const normalized = orderType?.trim().toLowerCase();
+  return normalized ? NAALI_HUBSPOT_ORDER_TYPES[normalized] ?? null : null;
 }
 
 // Portal-specific values live here, never in the generic HubSpot runtime.
@@ -60,6 +87,7 @@ export const NAALI_HUBSPOT_CONFIGURATION: HubSpotBrandConfiguration = {
       currency: "deal_currency_code",
       ownerId: "hubspot_owner_id",
       origin: "origine_de_la_commande",
+      orderType: "type_de_commande",
       pipeline: "pipeline",
       stage: "dealstage",
     },
@@ -80,6 +108,10 @@ export const NAALI_HUBSPOT_CONFIGURATION: HubSpotBrandConfiguration = {
       endAt: "hs_meeting_end_time",
       timestamp: "hs_timestamp",
       outcome: "hs_meeting_outcome",
+      ownerId: "hubspot_owner_id",
+      activityType: "hs_activity_type",
+      body: "hs_meeting_body",
+      internalNotes: "hs_internal_meeting_notes",
     },
     note: {
       body: "hs_note_body",

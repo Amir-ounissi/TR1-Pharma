@@ -124,6 +124,7 @@ export function mapOrderToHubSpot(input: HubSpotOrderSyncInput, config: HubSpotB
   set(dealProperties, orderMap.name, input.orderNumber);
   set(dealProperties, orderMap.orderNumber, input.orderNumber);
   set(dealProperties, orderMap.orderDate, input.orderDate);
+  set(dealProperties, orderMap.orderType, input.orderTypeValue);
   set(dealProperties, orderMap.amountHt, decimal(input.netAmountHt));
   if (input.taxAmount !== null && input.taxAmount !== undefined) set(dealProperties, orderMap.taxAmount, decimal(input.taxAmount));
   if (input.amountTtc !== null && input.amountTtc !== undefined) set(dealProperties, orderMap.amountTtc, decimal(input.amountTtc));
@@ -163,6 +164,10 @@ export function mapMeetingToHubSpot(input: HubSpotMeetingSyncInput, config: HubS
   }
   set(properties, map.endAt, input.endAt);
   set(properties, map.outcome, input.outcome);
+  set(properties, map.ownerId, input.ownerExternalId);
+  set(properties, map.activityType, input.activityType);
+  set(properties, map.body, input.body);
+  set(properties, map.internalNotes, input.internalNotes);
   return externalRecord(input.id, map, properties);
 }
 

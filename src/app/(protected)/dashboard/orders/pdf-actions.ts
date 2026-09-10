@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
+import { syncHubSpotOrderAfterPersistence } from "@/lib/integrations/hubspot/runtime";
 import { extractPdfOrder, PdfOrderImportError } from "@/lib/orders/pdf-order-extraction";
 import { calculateOrderTotal, consolidatePdfOrderLines, hasMeaningfulTotalDifference, matchPdfPharmacy, matchPdfProduct, resolvedLinePrice, type PharmacyCandidate, type ProductCandidate } from "@/lib/orders/pdf-order-matching";
 import type { PdfOrderExtraction } from "@/lib/orders/pdf-order-schema";
@@ -199,5 +200,9 @@ export async function confirmPdfOrderAction(_state: PdfOrderActionState, formDat
   revalidatePath("/dashboard/orders");
   revalidatePath("/dashboard/pharmacies");
   const result = Array.isArray(data) ? data[0] : data;
-  return { success: isAgent ? "Commande envoyée à la marque." : "Commande importée et validée.", orderId: result?.order_id as string };
+  const orderId = result?.order_id ? String(result.order_id) : null;
+  if (orderId) {
+    await syncHubSpotOrderAfterPersistence(brand.id, orderId);
+  }
+  return { success: isAgent ? "Commande envoyée à la marque." : "Commande importée et validée.", orderId: orderId ?? undefined };
 }
