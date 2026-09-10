@@ -34,6 +34,30 @@ describe("PDF order deterministic matching", () => {
     expect(matchPdfPharmacy({ name: "Pharmacie du Centre", siret: null, cip: null, finess: null, address: null, postalCode: "75002" }, pharmacies)).toMatchObject({ status: "suggested", method: "name_postal_code", match: { pharmacyId: "pharmacy-2" } });
   });
 
+  it("does not auto-select an existing pharmacy when the document postal code conflicts", () => {
+    expect(matchPdfPharmacy({
+      name: "GRANDE PHARMACIE DE LA VALENTINE",
+      siret: null,
+      cip: null,
+      finess: null,
+      address: "13011 Marseille",
+      postalCode: "13011",
+    }, [{
+      pharmacyId: "valentine",
+      brandPharmacyId: "brand-valentine",
+      relationStatus: "existing_brand_relation",
+      name: "GRANDE PHARMACIE DE LA VALENTINE",
+      siret: null,
+      cip: null,
+      finess: null,
+      postalCode: "13924",
+    }])).toMatchObject({
+      status: "suggested",
+      method: "name_postal_mismatch",
+      match: { pharmacyId: "valentine" },
+    });
+  });
+
   it("suggests a pharmacy when the PDF adds titulaire names to the directory name", () => {
     expect(
       matchPdfPharmacy(
