@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, Boxes, Building2, Gauge, MapPinned, ReceiptText, ShoppingCart, Target, TrendingUp, Users } from "lucide-react";
+import { ArrowRight, Boxes, Building2, Gauge, MapPinned, PackageCheck, ReceiptText, ShoppingCart, Target, TrendingUp, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -115,6 +115,24 @@ type Cockpit = {
   pharmacies?: PharmacyRow[];
 };
 
+type ProductDistributionRow = {
+  product_id: string;
+  product_name: string;
+  sku: string | null;
+  customer_pharmacies: number;
+  distributing_pharmacies: number;
+  distribution_rate: number | null;
+};
+
+type ProductDistribution = {
+  summary?: {
+    customer_pharmacies: number | null;
+    products_count: number | null;
+    avg_product_distribution_rate: number | null;
+  };
+  products?: ProductDistributionRow[];
+};
+
 const groupTypeOptions = [
   "national_group",
   "regional_group",
@@ -169,11 +187,28 @@ export default async function CommercialPerformancePage({ searchParams }: { sear
   const role = contexts.find((context) => context.id === brand.id)?.role ?? "brand_user";
   if (!["tr1_manager", "brand_admin", "brand_user", "super_admin"].includes(role)) notFound();
 
-  const [{ data: cockpitData, error: cockpitError }, { data: territories }, { data: memberships }, { data: groups }, { data: products }] = await Promise.all([
+  const [
+    { data: cockpitData, error: cockpitError },
+    { data: distributionData, error: distributionError },
+    { data: territories },
+    { data: memberships },
+    { data: groups },
+    { data: products },
+  ] = await Promise.all([
     supabase.rpc("get_commercial_performance_cockpit", {
       target_brand_id: brand.id,
       target_period_start: from,
       target_period_end: to,
+      target_territory_id: territoryId,
+      target_agent_id: agentId,
+      target_group_type: groupType,
+      target_group_id: groupId,
+      target_potential_level: potential,
+      target_priority_level: priority,
+      target_product_id: productId,
+    }),
+    supabase.rpc("get_commercial_performance_distribution", {
+      target_brand_id: brand.id,
       target_territory_id: territoryId,
       target_agent_id: agentId,
       target_group_type: groupType,
@@ -209,6 +244,9 @@ export default async function CommercialPerformancePage({ searchParams }: { sear
 
   const cockpit = (cockpitData ?? {}) as Cockpit;
   const summary = cockpit.summary ?? ({} as Summary);
+  const distribution = (distributionData ?? {}) as ProductDistribution;
+  const distributionSummary = distribution.summary ?? {};
+  const distributionByProduct = new Map((distribution.products ?? []).map((row) => [row.product_id, row]));
   const agentOptions = (memberships ?? []).map((membership) => {
     const user = Array.isArray(membership.users) ? membership.users[0] : membership.users;
     const profile = Array.isArray(user?.user_profiles) ? user.user_profiles[0] : user?.user_profiles;
@@ -224,7 +262,7 @@ export default async function CommercialPerformancePage({ searchParams }: { sear
       <PageHeader
         eyebrow={`Performance · ${brand.name}`}
         title="Cockpit de performance commerciale"
-        description="Du national à la pharmacie : chiffre d’affaires, commandes, panier, largeur d’assortiment et efficacité commerciale dans une même lecture."
+        description="Du national à la pharmacie : chiffre d’affaires, commandes, panier, DN produit, largeur d’assortiment et efficacité commerciale dans une même lecture."
         tone="dark"
       />
 
@@ -286,16 +324,19 @@ export default async function CommercialPerformancePage({ searchParams }: { sear
         </CardContent>
       </Card>
 
-      {cockpitError ? (
+      {cockpitError || distributionError ? (
         <Card className="border-destructive/40">
-          <CardContent className="pt-6 text-sm text-destructive">Les indicateurs commerciaux ne peuvent pas encore être calculés : {cockpitError.message}</CardContent>
+          <CardContent className="pt-6 text-sm text-destructive">
+            Les indicateurs commerciaux ne peuvent pas tous être calculés : {cockpitError?.message ?? distributionError?.message}
+          </CardContent>
         </Card>
       ) : null}
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <Metric icon={TrendingUp} label="CA réalisé HT" value={formatCompactCurrency(summary.revenue_ht)} detail={productId ? "CA réalisé du produit filtré" : "Commandes facturées ou livrées"} />
         <Metric icon={ShoppingCart} label="Commandes réalisées" value={formatCompactNumber(summary.orders_count)} detail={`${formatCompactNumber(summary.ordering_pharmacies)} pharmacie(s) commandante(s)`} />
         <Metric icon={ReceiptText} label="Panier moyen" value={formatCompactCurrency(summary.average_order_value_ht)} detail={productId ? "Commandes contenant le produit" : "Valeur moyenne par commande"} />
+        <Metric icon={PackageCheck} label="DN produit moyenne" value={formatCompactPercent(distributionSummary.avg_product_distribution_rate)} detail={productId ? "DN du produit sélectionné" : `Moyenne sur ${formatCompactNumber(distributionSummary.products_count)} référence(s)`} />
         <Metric icon={Boxes} label="Références / commande" value={formatCompactNumber(summary.average_skus_per_order)} detail="Nombre moyen de SKU distincts" />
         <Metric icon={Target} label="CA commandé HT" value={formatCompactCurrency(summary.booked_revenue_ht)} detail={`${formatCompactNumber(summary.booked_orders_count)} commande(s) bookée(s)`} />
         <Metric icon={Gauge} label="Unités / commande" value={formatCompactNumber(summary.average_paid_units_per_order)} detail={`${formatCompactNumber(summary.paid_units)} unités payantes sur la période`} />
@@ -306,14 +347,15 @@ export default async function CommercialPerformancePage({ searchParams }: { sear
       <Card>
         <CardHeader>
           <CardTitle>Comment se construit la performance ?</CardTitle>
-          <CardDescription>Lecture des leviers réels. La conversion mesure une corrélation sur la période, pas une causalité visite → commande.</CardDescription>
+          <CardDescription>Lecture des leviers réels. La conversion mesure une corrélation sur la période, pas une causalité visite → commande. La DN est une photo actuelle du portefeuille client filtré.</CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
           <FlowStep label="Couverture" value={`${formatCompactNumber(summary.visited_pharmacies)} comptes`} detail={`${formatCompactNumber(summary.visits_count)} visites`} />
           <FlowStep label="Conversion" value={formatCompactPercent(summary.visited_account_conversion_rate)} detail="visités ayant commandé" />
           <FlowStep label="Fréquence" value={summary.orders_per_ordering_pharmacy == null ? "—" : `${formatCompactNumber(summary.orders_per_ordering_pharmacy)}×`} detail="commandes / client" />
           <FlowStep label="Panier" value={formatCompactCurrency(summary.average_order_value_ht)} detail="par commande" />
           <FlowStep label="Assortiment" value={formatCompactNumber(summary.average_skus_per_order)} detail="SKU / commande" />
+          <FlowStep label="DN produit" value={formatCompactPercent(distributionSummary.avg_product_distribution_rate)} detail={`${formatCompactNumber(distributionSummary.customer_pharmacies)} pharmacies clientes`} />
         </CardContent>
       </Card>
 
@@ -363,22 +405,25 @@ export default async function CommercialPerformancePage({ searchParams }: { sear
       <Card>
         <CardHeader>
           <CardTitle>Performance produit</CardTitle>
-          <CardDescription>CA, volumes, pénétration dans les commandes et diffusion client. Le filtre produit recalcule ensuite tout le cockpit.</CardDescription>
+          <CardDescription>La DN mesure la présence actuelle du produit dans les pharmacies clientes du périmètre ; la pénétration mesure la part des commandes de la période contenant ce produit.</CardDescription>
         </CardHeader>
         <CardContent className="overflow-x-auto p-0">
           <Table>
-            <TableHeader><TableRow><TableHead>Produit</TableHead><TableHead>CA réalisé</TableHead><TableHead>Commandes</TableHead><TableHead>Pénétration</TableHead><TableHead>Pharmacies</TableHead><TableHead>Unités</TableHead></TableRow></TableHeader>
+            <TableHeader><TableRow><TableHead>Produit</TableHead><TableHead>CA réalisé</TableHead><TableHead>Commandes</TableHead><TableHead>DN produit</TableHead><TableHead>Pénétration cmd.</TableHead><TableHead>Unités</TableHead></TableRow></TableHeader>
             <TableBody>
-              {(cockpit.products ?? []).length ? (cockpit.products ?? []).map((row) => (
-                <TableRow key={row.product_id}>
-                  <TableCell><Link className="font-medium hover:underline" href={`/dashboard/network/commercial?${qs({ ...baseFilters, product: row.product_id })}`}>{row.product_name}</Link><p className="text-xs text-muted-foreground">{row.sku ?? "Sans SKU"}</p></TableCell>
-                  <TableCell>{formatCompactCurrency(row.revenue_ht)}</TableCell>
-                  <TableCell>{formatCompactNumber(row.orders_count)}</TableCell>
-                  <TableCell>{formatCompactPercent(row.order_penetration_rate)}</TableCell>
-                  <TableCell>{formatCompactNumber(row.ordering_pharmacies)}</TableCell>
-                  <TableCell>{formatCompactNumber(row.paid_units)}<p className="text-xs text-muted-foreground">+ {formatCompactNumber(row.free_units)} UG</p></TableCell>
-                </TableRow>
-              )) : <TableRow><TableCell colSpan={6}><EmptyState text="Aucune donnée produit réalisée sur ce périmètre." /></TableCell></TableRow>}
+              {(cockpit.products ?? []).length ? (cockpit.products ?? []).map((row) => {
+                const dn = distributionByProduct.get(row.product_id);
+                return (
+                  <TableRow key={row.product_id}>
+                    <TableCell><Link className="font-medium hover:underline" href={`/dashboard/network/commercial?${qs({ ...baseFilters, product: row.product_id })}`}>{row.product_name}</Link><p className="text-xs text-muted-foreground">{row.sku ?? "Sans SKU"}</p></TableCell>
+                    <TableCell>{formatCompactCurrency(row.revenue_ht)}</TableCell>
+                    <TableCell>{formatCompactNumber(row.orders_count)}</TableCell>
+                    <TableCell>{formatCompactPercent(dn?.distribution_rate)}<p className="text-xs text-muted-foreground">{formatCompactNumber(dn?.distributing_pharmacies)} / {formatCompactNumber(dn?.customer_pharmacies)} pharmacies</p></TableCell>
+                    <TableCell>{formatCompactPercent(row.order_penetration_rate)}</TableCell>
+                    <TableCell>{formatCompactNumber(row.paid_units)}<p className="text-xs text-muted-foreground">+ {formatCompactNumber(row.free_units)} UG</p></TableCell>
+                  </TableRow>
+                );
+              }) : <TableRow><TableCell colSpan={6}><EmptyState text="Aucune donnée produit réalisée sur ce périmètre." /></TableCell></TableRow>}
             </TableBody>
           </Table>
         </CardContent>
