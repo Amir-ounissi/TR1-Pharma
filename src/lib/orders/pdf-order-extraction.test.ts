@@ -72,12 +72,15 @@ describe("order document extraction", () => {
         ]),
       })],
     });
+    expect(body.instructions).toContain("FORMAT ERP PHARMACIE FRÉQUENT");
+    expect(body.instructions).toContain("Code/EAN de la ligne suivante");
     const fileInput = body.input[0].content.find((item: { type: string }) => item.type === "input_file");
     expect(fileInput.file_data).toBe(`data:application/pdf;base64,${Buffer.from("pdf").toString("base64")}`);
 
     expect(usageSink).toHaveBeenCalledTimes(1);
     expect(usageSink).toHaveBeenCalledWith(expect.objectContaining({
       model: "gpt-5-mini",
+      attempt: "initial",
       inputTokens: 1_000,
       cachedInputTokens: 200,
       outputTokens: 500,
@@ -90,6 +93,48 @@ describe("order document extraction", () => {
     }));
     expect(JSON.stringify(usageSink.mock.calls[0][0])).not.toContain("Pharmacie Centre");
     expect(JSON.stringify(usageSink.mock.calls[0][0])).not.toContain("PDF-42");
+  });
+
+  it("automatically re-reads the same document when the first extraction does not reconcile", async () => {
+    process.env.OPENAI_API_KEY = "key";
+    const usageSink = vi.fn();
+    const inconsistent = {
+      ...extracted,
+      lines: [{ ...extracted.lines[0], quantity: 1 }],
+      totalHt: 20,
+    };
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ output_text: JSON.stringify(inconsistent) }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ output_text: JSON.stringify(extracted) }), { status: 200 }));
+
+    await expect(extractPdfOrder(new File(["pdf"], "order.pdf", { type: "application/pdf" }), fetcher, usageSink)).resolves.toMatchObject({
+      orderNumber: "PDF-42",
+      lines: [expect.objectContaining({ quantity: 2 })],
+      totalHt: 20,
+    });
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(usageSink.mock.calls.map((call) => call[0].attempt)).toEqual(["initial", "repair"]);
+    const repairBody = JSON.parse(fetcher.mock.calls[1][1].body);
+    expect(repairBody.input[0].content[0].text).toContain("première lecture n'est pas suffisamment fiable");
+    expect(repairBody.input[0].content[0].text).toContain("total HT recalculé");
+  });
+
+  it("blocks a still-incoherent extraction instead of showing a potentially false order", async () => {
+    process.env.OPENAI_API_KEY = "key";
+    const inconsistent = {
+      ...extracted,
+      lines: [{ ...extracted.lines[0], quantity: 1 }],
+      totalHt: 20,
+    };
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ output_text: JSON.stringify(inconsistent) }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ output_text: JSON.stringify(inconsistent) }), { status: 200 }));
+
+    await expect(extractPdfOrder(new File(["pdf"], "order.pdf", { type: "application/pdf" }), fetcher)).rejects.toMatchObject({
+      code: "extraction_failed",
+      message: expect.stringContaining("reste incohérente"),
+    });
+    expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
   it("falls back to Vercel AI Gateway through OIDC when no OpenAI key is configured", async () => {
