@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
 import { extractPdfOrder, PdfOrderImportError } from "@/lib/orders/pdf-order-extraction";
-import { calculateOrderTotal, consolidatePdfOrderLines, hasMeaningfulTotalDifference, matchPdfPharmacy, matchPdfProduct, resolvePdfOrderDate, resolvedLinePrice, type PharmacyCandidate, type ProductCandidate } from "@/lib/orders/pdf-order-matching";
+import { calculateOrderTotal, consolidatePdfOrderLines, hasMeaningfulTotalDifference, matchPdfPharmacy, matchPdfProduct, resolvedLinePrice, type PharmacyCandidate, type ProductCandidate } from "@/lib/orders/pdf-order-matching";
 import type { PdfOrderExtraction } from "@/lib/orders/pdf-order-schema";
 import { activeBrandHasCapability } from "@/lib/saas/server";
 
@@ -36,6 +36,17 @@ export type PdfOrderPreview = {
 };
 
 export type PdfOrderActionState = { error?: string; preview?: PdfOrderPreview; success?: string; orderId?: string };
+
+function currentEntryDateInParis() {
+  const parts = new Intl.DateTimeFormat("fr-FR", {
+    timeZone: "Europe/Paris",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
 
 function readPharmacy(row: Record<string, unknown>): PharmacyCandidate | null {
   if (!row.pharmacy_id) return null;
@@ -79,13 +90,9 @@ export async function analyzePdfOrderAction(_state: PdfOrderActionState, formDat
   try {
     const { supabase, brand } = await requireActiveBrand();
     const rawExtraction = await extractPdfOrder(candidate);
-    const resolvedOrderDate = resolvePdfOrderDate(rawExtraction);
-    const dateWarning = rawExtraction.orderDate && !resolvedOrderDate
-      ? "Date de livraison ou date non fiable ignorée : renseignez la date de commande."
-      : null;
     const extraction: PdfOrderExtraction = {
       ...rawExtraction,
-      orderDate: resolvedOrderDate,
+      orderDate: currentEntryDateInParis(),
       lines: consolidatePdfOrderLines(rawExtraction.lines),
     };
     const [{ data: directoryRows, error: pharmaciesError }, { data: productRows, error: productsError }] = await Promise.all([
@@ -117,7 +124,7 @@ export async function analyzePdfOrderAction(_state: PdfOrderActionState, formDat
       };
     });
     const totalTr1Ht = calculateOrderTotal(lines.map((line) => ({ quantity: line.quantity, unitPriceHt: line.suggestedPriceHt, discountRate: line.discountRate })));
-    const warnings = [...extraction.warnings, ...(dateWarning ? [dateWarning] : []), ...lines.flatMap((line) => line.priceWarning ? [line.priceWarning] : [])];
+    const warnings = [...extraction.warnings, ...lines.flatMap((line) => line.priceWarning ? [line.priceWarning] : [])];
     return {
       preview: {
         extraction,
@@ -138,7 +145,6 @@ const confirmationSchema = z.object({
   pharmacyId: uuid.optional(),
   newPharmacy: z.object({ legalName: z.string().trim().min(1).max(200), tradeName: z.string().trim().max(200).optional(), siret: z.string().trim().max(32).optional(), cip: z.string().trim().max(32).optional(), finess: z.string().trim().max(32).optional(), postalCode: z.string().trim().max(16).optional(), city: z.string().trim().max(120).optional(), address: z.string().trim().max(300).optional() }).optional(),
   orderNumber: z.string().trim().min(1).max(120),
-  orderDate: z.string().min(1),
   items: z.array(z.object({ productId: uuid, quantity: z.number().int().positive(), freeQuantity: z.number().int().nonnegative(), unitPriceHt: z.number().finite().nonnegative(), discountRate: z.number().finite().min(0).max(100).nullable() })).min(1),
 });
 
@@ -157,7 +163,7 @@ export async function confirmPdfOrderAction(_state: PdfOrderActionState, formDat
   } catch {
     return { error: "Les informations de la pharmacie sont invalides." };
   }
-  const parsed = confirmationSchema.safeParse({ brandPharmacyId: formData.get("brandPharmacyId") || undefined, pharmacyId: formData.get("pharmacyId") || undefined, newPharmacy: newPharmacy || undefined, orderNumber: formData.get("orderNumber"), orderDate: formData.get("orderDate"), items });
+  const parsed = confirmationSchema.safeParse({ brandPharmacyId: formData.get("brandPharmacyId") || undefined, pharmacyId: formData.get("pharmacyId") || undefined, newPharmacy: newPharmacy || undefined, orderNumber: formData.get("orderNumber"), items });
   if (!parsed.success) return { error: "La confirmation de commande est invalide." };
   if (Number(Boolean(parsed.data.brandPharmacyId)) + Number(Boolean(parsed.data.pharmacyId)) + Number(Boolean(parsed.data.newPharmacy)) !== 1) return { error: "Sélectionnez ou créez explicitement une pharmacie." };
   const { supabase, brand } = await requireActiveBrand();
@@ -186,7 +192,7 @@ export async function confirmPdfOrderAction(_state: PdfOrderActionState, formDat
       city: parsed.data.newPharmacy.city || null,
       address_line_1: parsed.data.newPharmacy.address || null,
     } : null,
-    order_payload: { external_order_id: parsed.data.orderNumber, order_number: parsed.data.orderNumber, order_type: "other", order_status: isAgent ? "pending" : "confirmed", order_date: new Date(parsed.data.orderDate).toISOString(), shipping_amount_ht: 0, payment_status: "not_applicable", notes: "Commande créée depuis un document (PDF/photo) vérifié par l’utilisateur.", source: "import" },
+    order_payload: { external_order_id: parsed.data.orderNumber, order_number: parsed.data.orderNumber, order_type: "other", order_status: isAgent ? "pending" : "confirmed", order_date: new Date().toISOString(), shipping_amount_ht: 0, payment_status: "not_applicable", notes: "Commande créée depuis un document (PDF/photo) vérifié par l’utilisateur.", source: "import" },
     item_payload: trustedItems,
   });
   if (error) return { error: error.code === "23505" ? "Cette commande existe déjà." : error.message };

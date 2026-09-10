@@ -33,6 +33,12 @@ function toDraftLines(preview: PdfOrderPreview): DraftLine[] {
   }));
 }
 
+function formatEntryDate(value: string | null) {
+  if (!value) return "Aujourd’hui";
+  const [year, month, day] = value.slice(0, 10).split("-");
+  return year && month && day ? `${day}/${month}/${year}` : "Aujourd’hui";
+}
+
 function ProductSelect({ line, value, onChange }: { line: PdfOrderPreview["lines"][number]; value: string; onChange: (value: string) => void }) {
   return (
     <select
@@ -219,7 +225,7 @@ export function PdfOrderImport({ isAgent = false }: { isAgent?: boolean }) {
         {analyzing ? <p className="text-center text-xs text-muted-foreground sm:text-left">Lecture du document et rapprochement des produits…</p> : null}
       </form>
 
-      {preview ? <PdfOrderPreviewForm key={`${preview.extraction.orderNumber}-${preview.extraction.orderDate}-${preview.lines.length}`} preview={preview} isAgent={isAgent} /> : null}
+      {preview ? <PdfOrderPreviewForm key={`${preview.extraction.orderNumber}-${preview.lines.length}`} preview={preview} isAgent={isAgent} /> : null}
     </div>
   );
 }
@@ -230,7 +236,6 @@ function PdfOrderPreviewForm({ preview, isAgent }: { preview: PdfOrderPreview; i
   const [brandPharmacyId, setBrandPharmacyId] = useState(preview.pharmacy.selectedBrandPharmacyId || "");
   const [createMissing, setCreateMissing] = useState(false);
   const [orderNumber, setOrderNumber] = useState(preview.extraction.orderNumber ?? "");
-  const [orderDate, setOrderDate] = useState(preview.extraction.orderDate?.slice(0, 10) ?? "");
   const [newPharmacy, setNewPharmacy] = useState({
     legalName: preview.extraction.pharmacy.name ?? "",
     tradeName: preview.extraction.pharmacy.name ?? "",
@@ -269,7 +274,6 @@ function PdfOrderPreviewForm({ preview, isAgent }: { preview: PdfOrderPreview; i
   const canConfirm = Boolean(
     (brandPharmacyId || pharmacyId || (createMissing && newPharmacy.legalName))
     && orderNumber.trim()
-    && orderDate
     && lines.length > 0
     && lines.every((line) => line.productId && Number(line.quantity) > 0 && Number(line.freeQuantity) >= 0 && Number(line.unitPriceHt) >= 0),
   );
@@ -321,8 +325,11 @@ function PdfOrderPreviewForm({ preview, isAgent }: { preview: PdfOrderPreview; i
           <Input id="pdf-order-number" name="orderNumber" value={orderNumber} onChange={(event) => setOrderNumber(event.target.value)} required className="h-11 rounded-xl" />
         </div>
         <div className="space-y-1">
-          <Label htmlFor="pdf-order-date">Date</Label>
-          <Input id="pdf-order-date" name="orderDate" type="date" value={orderDate} onChange={(event) => setOrderDate(event.target.value)} required className="h-11 rounded-xl" />
+          <Label>Date de saisie</Label>
+          <div className="flex h-11 items-center rounded-xl border bg-muted/25 px-3 text-sm">
+            {formatEntryDate(preview.extraction.orderDate)}
+          </div>
+          <p className="text-xs text-muted-foreground">Définie automatiquement à la validation dans TR1.</p>
         </div>
       </div>
 
