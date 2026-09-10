@@ -123,3 +123,23 @@ begin
   where id = target_mission_id;
 end;
 $function$;
+
+-- Product Trust P0: an existing open task always wins over a new-action CTA.
+create or replace function private.commercial_recommendation(
+  health_status public.commercial_health_status,
+  has_next_action boolean
+)
+returns text
+language sql
+immutable
+set search_path = ''
+as $$
+  select case
+    when has_next_action then 'Suivre l’action ouverte'
+    when health_status = 'dormant' then 'Évaluer une réactivation'
+    when health_status in ('at_risk','reorder_overdue') then 'Contacter la pharmacie'
+    when health_status in ('awaiting_first_reorder','newly_implanted') then 'Sécuriser le premier réassort'
+    when health_status in ('reorder_due_soon','reorder_expected') then 'Préparer une relance'
+    else 'Programmer une prochaine action'
+  end;
+$$;
