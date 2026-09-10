@@ -89,41 +89,75 @@ function pdfLineIdentity(line: PdfOrderExtraction["lines"][number]) {
   return label ? `label:${label}` : "";
 }
 
+function samePdfProductLabel(
+  left: PdfOrderExtraction["lines"][number],
+  right: PdfOrderExtraction["lines"][number],
+) {
+  const leftLabel = normalizeText(left.label);
+  const rightLabel = normalizeText(right.label);
+  return Boolean(leftLabel && rightLabel && leftLabel === rightLabel);
+}
+
+function attachFreeUnits(
+  target: PdfOrderExtraction["lines"][number],
+  freeLine: PdfOrderExtraction["lines"][number],
+) {
+  target.freeQuantity = (target.freeQuantity ?? 0) + (freeLine.freeQuantity ?? 0);
+}
+
 export function consolidatePdfOrderLines(lines: PdfOrderExtraction["lines"]) {
-  const meaningful = lines.filter(
-    (line) => (line.quantity ?? 0) > 0 || (line.freeQuantity ?? 0) > 0,
-  );
+  const result: PdfOrderExtraction["lines"] = [];
 
-  const result = meaningful
-    .filter((line) => (line.quantity ?? 0) > 0)
-    .map((line) => ({
+  for (const line of lines) {
+    const quantity = line.quantity ?? 0;
+    const freeQuantity = line.freeQuantity ?? 0;
+    if (quantity <= 0 && freeQuantity <= 0) continue;
+
+    const normalizedLine = {
       ...line,
-      freeQuantity: line.freeQuantity ?? 0,
-    }));
+      freeQuantity,
+    };
 
-  const freeOnlyLines = meaningful.filter(
-    (line) => (line.quantity ?? 0) <= 0 && (line.freeQuantity ?? 0) > 0,
-  );
-
-  for (const freeLine of freeOnlyLines) {
-    const identity = pdfLineIdentity(freeLine);
-    const matches = result.filter(
-      (candidate) =>
-        (candidate.quantity ?? 0) > 0 &&
-        identity &&
-        pdfLineIdentity(candidate) === identity,
-    );
-
-    if (matches.length === 1) {
-      matches[0].freeQuantity =
-        (matches[0].freeQuantity ?? 0) + (freeLine.freeQuantity ?? 0);
+    if (quantity > 0) {
+      result.push(normalizedLine);
       continue;
     }
 
-    result.push({
-      ...freeLine,
-      freeQuantity: freeLine.freeQuantity ?? 0,
-    });
+    const identity = pdfLineIdentity(normalizedLine);
+    const previous = result[result.length - 1];
+
+    // Pharmacy ERPs usually print UG directly under the paid line. Prefer that
+    // adjacency when the product identity or exact label agrees, even if OCR/LLM
+    // shifted an EAN to the free row.
+    if (
+      previous &&
+      (previous.quantity ?? 0) > 0 &&
+      (
+        (identity && pdfLineIdentity(previous) === identity) ||
+        samePdfProductLabel(previous, normalizedLine)
+      )
+    ) {
+      attachFreeUnits(previous, normalizedLine);
+      continue;
+    }
+
+    const matches = result.filter(
+      (candidate) =>
+        (candidate.quantity ?? 0) > 0 &&
+        (
+          (identity && pdfLineIdentity(candidate) === identity) ||
+          samePdfProductLabel(candidate, normalizedLine)
+        ),
+    );
+
+    if (matches.length === 1) {
+      attachFreeUnits(matches[0], normalizedLine);
+      continue;
+    }
+
+    // Keep an unresolved free-only row visible instead of silently assigning it
+    // to the wrong product. The confirmation UI will require a manual correction.
+    result.push(normalizedLine);
   }
 
   return result;
@@ -233,6 +267,29 @@ function productNameTokens(value: string | null | undefined) {
     .filter((token) => token && !PRODUCT_GENERIC_TOKENS.has(token));
 }
 
+function meaningfulProductNameTokens(value: string | null | undefined) {
+  return productNameTokens(value).filter((token) => !/^\d+(?:g|mg|ml)?$/.test(token));
+}
+
+function candidateLabelTokens(candidate: ProductCandidate) {
+  return [...new Set([
+    ...meaningfulProductNameTokens(candidate.name),
+    ...candidate.references.flatMap((reference) => meaningfulProductNameTokens(reference.label)),
+  ])];
+}
+
+function productIdentifierConflictsWithLabel(
+  line: PdfOrderExtraction["lines"][number],
+  candidate: ProductCandidate,
+) {
+  const lineTokens = meaningfulProductNameTokens(line.label);
+  const productTokens = candidateLabelTokens(candidate);
+  if (lineTokens.length === 0 || productTokens.length === 0) return false;
+
+  const lineSet = new Set(lineTokens);
+  return productTokens.every((token) => !lineSet.has(token));
+}
+
 function matchProductByLabelTokens(line: PdfOrderExtraction["lines"][number], candidates: ProductCandidate[]): MatchResult<ProductCandidate> {
   const lineTokens = productNameTokens(line.label);
   if (lineTokens.length === 0) return { status: "unmatched", method: null, match: null, candidates: [] };
@@ -260,19 +317,42 @@ function matchProductByLabelTokens(line: PdfOrderExtraction["lines"][number], ca
   return { status: "matched", method: "label_tokens", match: best.candidate, candidates: [best.candidate] };
 }
 
+function guardIdentifierMatch(
+  line: PdfOrderExtraction["lines"][number],
+  result: MatchResult<ProductCandidate>,
+  method: string,
+  candidates: ProductCandidate[],
+): MatchResult<ProductCandidate> {
+  if (result.status !== "matched" || !result.match) return result;
+  if (!productIdentifierConflictsWithLabel(line, result.match)) return result;
+
+  const labelResult = matchProductByLabelTokens(line, candidates);
+  const conflictCandidates = [
+    result.match,
+    ...labelResult.candidates.filter((candidate) => candidate.id !== result.match?.id),
+  ];
+
+  return {
+    status: "ambiguous",
+    method: `${method}_label_conflict`,
+    match: null,
+    candidates: conflictCandidates,
+  };
+}
+
 export function matchPdfProduct(line: PdfOrderExtraction["lines"][number], candidates: ProductCandidate[]): MatchResult<ProductCandidate> {
   const ean = normalizeIdentifier(line.ean);
   if (ean) {
     const direct = resolve(candidates.filter((candidate) => normalizeIdentifier(candidate.ean) === ean), "ean");
-    if (direct.status !== "unmatched") return direct;
+    if (direct.status !== "unmatched") return guardIdentifierMatch(line, direct, "ean", candidates);
   }
 
   const numericCodes = [...new Set([normalizeNumericIdentifier(line.ean), normalizeNumericIdentifier(line.sku)].filter(Boolean))];
   for (const code of numericCodes) {
     const direct = resolve(candidates.filter((candidate) => normalizeNumericIdentifier(candidate.ean) === code), "barcode");
-    if (direct.status !== "unmatched") return direct;
+    if (direct.status !== "unmatched") return guardIdentifierMatch(line, direct, "barcode", candidates);
     const references = resolve(candidates.filter((candidate) => candidate.references.some((reference) => normalizeNumericIdentifier(reference.ean) === code)), "reference_barcode");
-    if (references.status !== "unmatched") return references;
+    if (references.status !== "unmatched") return guardIdentifierMatch(line, references, "reference_barcode", candidates);
   }
 
   const sku = normalizeIdentifier(line.sku);
@@ -282,7 +362,7 @@ export function matchPdfProduct(line: PdfOrderExtraction["lines"][number], candi
   }
   if (ean) {
     const references = resolve(candidates.filter((candidate) => candidate.references.some((reference) => normalizeIdentifier(reference.ean) === ean)), "reference_ean");
-    if (references.status !== "unmatched") return references;
+    if (references.status !== "unmatched") return guardIdentifierMatch(line, references, "reference_ean", candidates);
   }
   if (sku) {
     const references = resolve(candidates.filter((candidate) => candidate.references.some((reference) => normalizeIdentifier(reference.sku) === sku)), "reference_sku");
