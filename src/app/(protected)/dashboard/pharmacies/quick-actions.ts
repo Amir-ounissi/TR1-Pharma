@@ -9,10 +9,8 @@ import {
   parisLocalToIso,
   todayInParis,
 } from "@/lib/agenda";
-import {
-  syncHubSpotNoteAfterPersistence,
-  syncHubSpotVisitAfterPersistence,
-} from "@/lib/integrations/hubspot/runtime";
+import { syncNaaliHubSpotVisitAfterPersistence } from "@/lib/integrations/hubspot/naali-visit-runtime";
+import { syncHubSpotNoteAfterPersistence } from "@/lib/integrations/hubspot/runtime";
 
 const uuid = z.string().uuid();
 const planPreset = z.enum(["today", "tomorrow", "week", "custom"]);
@@ -251,7 +249,7 @@ export async function completeVisitAction(
       target_next_start_at: nextStart,
     });
     if (error) throw error;
-    await syncHubSpotVisitAfterPersistence(brand.id, parsed.visitId);
+    await syncNaaliHubSpotVisitAfterPersistence(brand.id, parsed.visitId);
     revalidatePath("/dashboard/agenda");
     revalidatePath("/dashboard/field");
     revalidatePath(`/dashboard/pharmacies/${parsed.brandPharmacyId}`);
@@ -330,7 +328,11 @@ export async function createQuickNoteAction(formData: FormData): Promise<QuickAc
       .eq("id", String(interactionId))
       .eq("created_by", userId);
     if (enrichError) throw enrichError;
-    await syncHubSpotNoteAfterPersistence(brand.id, String(interactionId));
+    if (parsed.fieldVisitId) {
+      await syncNaaliHubSpotVisitAfterPersistence(brand.id, parsed.fieldVisitId);
+    } else {
+      await syncHubSpotNoteAfterPersistence(brand.id, String(interactionId));
+    }
 
     let uploaded = 0;
     const failed: string[] = [];
