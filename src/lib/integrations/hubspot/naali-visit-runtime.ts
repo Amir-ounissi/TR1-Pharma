@@ -85,16 +85,22 @@ async function saveVisitExternalId(
   if (error) throw error;
 }
 
-function formatMeetingBody(rows: Array<{ subject: unknown; notes: unknown }> | null) {
-  return (rows ?? [])
-    .map((row) => {
-      const subject = row.subject ? String(row.subject).trim() : "";
-      const notes = row.notes ? String(row.notes).trim() : "";
-      if (subject && notes) return `${subject}\n\n${notes}`;
-      return notes || subject;
-    })
-    .filter(Boolean)
-    .join("\n\n---\n\n") || null;
+function formatMeetingBody(
+  visitNotes: unknown,
+  rows: Array<{ subject: unknown; notes: unknown }> | null,
+) {
+  const blocks: string[] = [];
+  if (visitNotes) {
+    const value = String(visitNotes).trim();
+    if (value) blocks.push(value);
+  }
+  for (const row of rows ?? []) {
+    const subject = row.subject ? String(row.subject).trim() : "";
+    const notes = row.notes ? String(row.notes).trim() : "";
+    if (subject && notes) blocks.push(`${subject}\n\n${notes}`);
+    else if (notes || subject) blocks.push(notes || subject);
+  }
+  return blocks.join("\n\n---\n\n") || null;
 }
 
 export async function syncNaaliHubSpotVisitAfterPersistence(brandId: string, visitId: string) {
@@ -181,13 +187,13 @@ export async function syncNaaliHubSpotVisitAfterPersistence(brandId: string, vis
     try {
       const { data: visit, error: visitError } = await admin
         .from("field_visits")
-        .select("id,brand_id,pharmacy_id,owner_user_id,status,visit_kind,title,scheduled_start_at,scheduled_end_at,actual_start_at,actual_end_at")
+        .select("id,pharmacy_id,owner_user_id,status,visit_kind,title,notes,scheduled_start_at,scheduled_end_at,actual_start_at,actual_end_at")
         .eq("id", visitId)
         .is("archived_at", null)
         .maybeSingle();
       if (visitError) throw visitError;
       if (!visit || visit.status !== "completed") {
-        await admin.rpc("complete_connector_sync_run", {
+        const { error: skippedError } = await admin.rpc("complete_connector_sync_run", {
           target_run_id: run,
           target_status: "succeeded",
           target_records_seen: 1,
@@ -196,6 +202,7 @@ export async function syncNaaliHubSpotVisitAfterPersistence(brandId: string, vis
           target_cursor_after: null,
           target_error_summary: null,
         });
+        if (skippedError) throw skippedError;
         return;
       }
 
@@ -236,7 +243,7 @@ export async function syncNaaliHubSpotVisitAfterPersistence(brandId: string, vis
         outcome: "COMPLETED",
         ownerExternalId,
         activityType: resolveNaaliHubSpotVisitType(String(visit.visit_kind)),
-        body: formatMeetingBody(notes),
+        body: formatMeetingBody(visit.notes, notes),
       };
 
       await syncHubSpotVisit({
