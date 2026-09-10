@@ -133,7 +133,7 @@ function percentChange(current: number, previous: number) {
 }
 
 function signedPercent(value: number | null) {
-  if (value === null) return "N-1 indisponible";
+  if (value === null) return "Pas de comparaison N-1";
   const sign = value > 0 ? "+" : "";
   return `${sign}${value.toLocaleString("fr-FR", { maximumFractionDigits: 1 })} % vs N-1`;
 }
@@ -278,7 +278,7 @@ export default async function CommercialBusinessPerformancePage({ searchParams }
   const agentOptions = (memberships ?? []).map((membership) => {
     const user = Array.isArray(membership.users) ? membership.users[0] : membership.users;
     const profile = Array.isArray(user?.user_profiles) ? user.user_profiles[0] : user?.user_profiles;
-    return { id: membership.user_id, name: profile?.full_name ?? "Commercial" };
+    return { id: membership.user_id, name: profile?.full_name ?? "Délégué" };
   });
   const baseFilters = { from, to, territory: territoryId, agent: agentId, groupType, group: groupId, potential, priority, product: productId };
   const activeFilterCount = [territoryId, agentId, groupType, groupId, potential, priority, productId].filter(Boolean).length;
@@ -288,19 +288,19 @@ export default async function CommercialBusinessPerformancePage({ searchParams }
     <main className="space-y-6">
       <PageHeader
         eyebrow={`Performance · ${brand.name}`}
-        title="Performance commerciale"
-        description="CA vs objectif, panier moyen, commandes et DN produit. Une lecture business du résultat, séparée de l’exécution terrain."
+        title="Résultats commerciaux"
+        description="Suivez le CA, l’atteinte des objectifs, le panier moyen et la DN par produit."
         tone="dark"
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2">
           <Badge variant="secondary">Période {from} → {to}</Badge>
-          {activeFilterCount ? <Badge variant="secondary">{activeFilterCount} filtre(s) actif(s)</Badge> : <Badge variant="secondary">Vue globale</Badge>}
+          {activeFilterCount ? <Badge variant="secondary">{activeFilterCount} filtre(s) actif(s)</Badge> : <Badge variant="secondary">Vue réseau</Badge>}
           <Badge variant="secondary">Comparaison N-1</Badge>
         </div>
         <Button asChild variant="outline" size="sm">
-          <Link href={`/dashboard/network?${qs({ from, to, territory: territoryId, agent: agentId })}`}>Voir l’exécution terrain</Link>
+          <Link href={`/dashboard/network?${qs({ from, to, territory: territoryId, agent: agentId })}`}>Voir l’activité terrain</Link>
         </Button>
       </div>
 
@@ -308,8 +308,8 @@ export default async function CommercialBusinessPerformancePage({ searchParams }
         <CardHeader className="pb-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <CardTitle className="text-base">Périmètre d’analyse</CardTitle>
-              <CardDescription>Tous les indicateurs business se recalculent avec les mêmes filtres.</CardDescription>
+              <CardTitle className="text-base">Filtres</CardTitle>
+              <CardDescription>Les résultats se mettent à jour selon la période, le secteur, le délégué, le groupement et le produit.</CardDescription>
             </div>
             {activeFilterCount ? (
               <Button asChild variant="ghost" size="sm">
@@ -323,15 +323,15 @@ export default async function CommercialBusinessPerformancePage({ searchParams }
             <input className="h-10 rounded-md border bg-background px-3" name="from" type="date" defaultValue={from} />
             <input className="h-10 rounded-md border bg-background px-3" name="to" type="date" defaultValue={to} />
             <select className="h-10 rounded-md border bg-background px-3" name="territory" defaultValue={territoryId ?? "all"}>
-              <option value="all">France / tous territoires</option>
+              <option value="all">Tous les secteurs</option>
               {(territories ?? []).map((territory) => <option key={territory.id} value={territory.id}>{territory.name}</option>)}
             </select>
             <select className="h-10 rounded-md border bg-background px-3" name="agent" defaultValue={agentId ?? "all"}>
-              <option value="all">Tous les commerciaux</option>
+              <option value="all">Tous les délégués</option>
               {agentOptions.map((agent) => <option key={agent.id} value={agent.id}>{agent.name}</option>)}
             </select>
             <select className="h-10 rounded-md border bg-background px-3" name="groupType" defaultValue={groupType ?? "all"}>
-              <option value="all">Toutes typologies</option>
+              <option value="all">Tous les types de réseau</option>
               {groupTypeOptions.map((value) => <option key={value} value={value}>{presentationLabel(value)}</option>)}
             </select>
             <select className="h-10 rounded-md border bg-background px-3" name="group" defaultValue={groupId ?? "all"}>
@@ -339,18 +339,18 @@ export default async function CommercialBusinessPerformancePage({ searchParams }
               {(groups ?? []).map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
             </select>
             <select className="h-10 rounded-md border bg-background px-3" name="potential" defaultValue={potential ?? "all"}>
-              <option value="all">Tous potentiels</option>
+              <option value="all">Tous les potentiels</option>
               {potentialOptions.map((value) => <option key={value} value={value}>Potentiel · {presentationLabel(value)}</option>)}
             </select>
             <select className="h-10 rounded-md border bg-background px-3" name="priority" defaultValue={priority ?? "all"}>
-              <option value="all">Toutes priorités</option>
+              <option value="all">Toutes les priorités</option>
               {priorityOptions.map((value) => <option key={value} value={value}>Priorité · {presentationLabel(value)}</option>)}
             </select>
             <select className="h-10 rounded-md border bg-background px-3" name="product" defaultValue={productId ?? "all"}>
               <option value="all">Tous les produits</option>
               {(products ?? []).map((product) => <option key={product.id} value={product.id}>{product.name}{product.sku ? ` · ${product.sku}` : ""}</option>)}
             </select>
-            <Button>Appliquer</Button>
+            <Button>Afficher</Button>
           </form>
         </CardContent>
       </Card>
@@ -358,15 +358,15 @@ export default async function CommercialBusinessPerformancePage({ searchParams }
       {cockpitError || distributionError ? (
         <Card className="border-destructive/40">
           <CardContent className="pt-6 text-sm text-destructive">
-            Certains indicateurs ne peuvent pas être calculés : {cockpitError?.message ?? distributionError?.message}
+            Certains indicateurs ne sont pas disponibles : {cockpitError?.message ?? distributionError?.message}
           </CardContent>
         </Card>
       ) : null}
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Indicateurs business">
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Indicateurs commerciaux">
         <Metric
           icon={TrendingUp}
-          label="CA réalisé HT"
+          label="CA HT"
           value={formatCompactCurrency(summary.revenue_ht)}
           detail={signedPercent(revenueDelta)}
           trend={revenueDelta}
@@ -380,16 +380,16 @@ export default async function CommercialBusinessPerformancePage({ searchParams }
         />
         <Metric
           icon={ReceiptText}
-          label="Panier moyen"
+          label="Panier moyen HT"
           value={formatCompactCurrency(summary.average_order_value_ht)}
           detail={signedPercent(basketDelta)}
           trend={basketDelta}
         />
         <Metric
           icon={PackageCheck}
-          label="DN globale"
+          label="DN moyenne"
           value={formatCompactPercent(distributionSummary.avg_product_distribution_rate)}
-          detail={productId ? "DN du produit sélectionné" : `Moyenne de ${formatCompactNumber(distributionSummary.products_count)} référence(s)`}
+          detail={productId ? "DN de la référence sélectionnée" : `Sur ${formatCompactNumber(distributionSummary.products_count)} référence(s)`}
         />
       </section>
 
@@ -397,31 +397,31 @@ export default async function CommercialBusinessPerformancePage({ searchParams }
         <CardHeader>
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <CardTitle className="flex items-center gap-2"><Target className="size-4 text-[var(--tr1-orange)]" /> CA vs objectif</CardTitle>
-              <CardDescription>Le chiffre principal à piloter : réalisé, cible, écart et projection.</CardDescription>
+              <CardTitle className="flex items-center gap-2"><Target className="size-4 text-[var(--tr1-orange)]" /> Atteinte de l’objectif CA</CardTitle>
+              <CardDescription>Suivi du CA réalisé par rapport à l’objectif de la période.</CardDescription>
             </div>
             {revenueObjective?.projected_value != null ? (
-              <Badge variant="secondary">Projection {formatCompactCurrency(revenueObjective.projected_value)}</Badge>
+              <Badge variant="secondary">Atterrissage estimé {formatCompactCurrency(revenueObjective.projected_value)}</Badge>
             ) : null}
           </div>
         </CardHeader>
         <CardContent>
           {objectiveError ? (
-            <p className="rounded-xl border border-dashed p-5 text-sm text-muted-foreground">L’objectif CA n’est pas disponible actuellement.</p>
+            <p className="rounded-xl border border-dashed p-5 text-sm text-muted-foreground">Aucun objectif CA disponible pour cette période.</p>
           ) : !objectiveCompatible ? (
             <p className="rounded-xl border border-dashed p-5 text-sm text-muted-foreground">
-              L’objectif n’est pas affiché avec un filtre produit, groupement, potentiel/priorité ou un croisement secteur + commercial afin d’éviter une comparaison trompeuse.
+              L’objectif CA ne peut pas être comparé avec les filtres sélectionnés. Retirez le filtre produit, groupement, potentiel ou priorité pour retrouver la comparaison à l’objectif.
             </p>
           ) : revenueObjective && targetRevenue ? (
             <div className="grid gap-6 lg:grid-cols-[1.4fr_.6fr] lg:items-end">
               <div>
                 <div className="flex flex-wrap items-end justify-between gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Réalisé</p>
+                    <p className="text-sm text-muted-foreground">CA réalisé</p>
                     <p className="mt-1 text-3xl font-bold tracking-tight">{formatCompactCurrency(revenue)}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-muted-foreground">Objectif</p>
+                    <p className="text-sm text-muted-foreground">Objectif CA</p>
                     <p className="mt-1 text-xl font-semibold">{formatCompactCurrency(targetRevenue)}</p>
                   </div>
                 </div>
@@ -429,19 +429,19 @@ export default async function CommercialBusinessPerformancePage({ searchParams }
                   <div className="h-full rounded-full bg-[var(--tr1-orange)]" style={{ width: `${clampPercent(attainment)}%` }} />
                 </div>
                 <div className="mt-2 flex items-center justify-between gap-3 text-sm">
-                  <span className="font-semibold">{formatCompactPercent(attainment)} atteint</span>
-                  <span className="text-muted-foreground">Reste {formatCompactCurrency(remainingRevenue)}</span>
+                  <span className="font-semibold">{formatCompactPercent(attainment)} d’atteinte</span>
+                  <span className="text-muted-foreground">Reste à réaliser : {formatCompactCurrency(remainingRevenue)}</span>
                 </div>
               </div>
               <div className="rounded-xl border bg-muted/20 p-4">
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Écart à combler</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Reste à réaliser</p>
                 <p className="mt-2 text-2xl font-bold">{formatCompactCurrency(remainingRevenue)}</p>
-                <p className="mt-1 text-xs text-muted-foreground">Sur l’objectif CA configuré pour ce périmètre.</p>
+                <p className="mt-1 text-xs text-muted-foreground">Pour atteindre l’objectif de la période.</p>
               </div>
             </div>
           ) : (
             <p className="rounded-xl border border-dashed p-5 text-sm text-muted-foreground">
-              Aucun objectif CA n’est configuré pour ce périmètre et cette période. Le CA réalisé reste affiché sans inventer de cible.
+              Aucun objectif CA n’est renseigné pour cette période. Le CA réalisé reste disponible.
             </p>
           )}
         </CardContent>
@@ -450,8 +450,8 @@ export default async function CommercialBusinessPerformancePage({ searchParams }
       <section className="grid gap-6 xl:grid-cols-[.9fr_1.1fr]">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><MapPinned className="size-4 text-[var(--tr1-orange)]" /> Performance par secteur</CardTitle>
-            <CardDescription>CA, contribution, commandes et panier. Cliquez sur un secteur pour filtrer toute la vue.</CardDescription>
+            <CardTitle className="flex items-center gap-2"><MapPinned className="size-4 text-[var(--tr1-orange)]" /> Résultats par secteur</CardTitle>
+            <CardDescription>CA, poids dans le CA total, commandes et panier moyen.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {sortedTerritories.length ? sortedTerritories.slice(0, 12).map((row) => {
@@ -465,23 +465,23 @@ export default async function CommercialBusinessPerformancePage({ searchParams }
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="font-semibold">{row.territory_name}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">{presentationLabel(row.territory_type)} · {formatCompactNumber(row.orders_count)} commandes · panier {formatCompactCurrency(row.average_order_value_ht)}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{presentationLabel(row.territory_type)} · {formatCompactNumber(row.orders_count)} commandes · panier moyen {formatCompactCurrency(row.average_order_value_ht)}</p>
                     </div>
                     <div className="text-right">
                       <p className="font-bold">{formatCompactCurrency(row.revenue_ht)}</p>
-                      <p className="text-xs text-muted-foreground">{caShare == null ? "—" : `${formatCompactPercent(caShare)} du CA`}</p>
+                      <p className="text-xs text-muted-foreground">{caShare == null ? "—" : `${formatCompactPercent(caShare)} du CA total`}</p>
                     </div>
                   </div>
                 </Link>
               );
-            }) : <EmptyState text="Aucun CA réalisé par secteur sur ce périmètre." />}
+            }) : <EmptyState text="Aucun CA sur la période sélectionnée." />}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Performance produit</CardTitle>
-            <CardDescription>Quels produits font le CA et quelle est leur DN actuelle.</CardDescription>
+            <CardTitle>Résultats par produit</CardTitle>
+            <CardDescription>CA, poids dans le CA, commandes, DN et quantités par référence.</CardDescription>
           </CardHeader>
           <CardContent className="overflow-x-auto p-0">
             <Table>
@@ -489,10 +489,10 @@ export default async function CommercialBusinessPerformancePage({ searchParams }
                 <TableRow>
                   <TableHead>Produit</TableHead>
                   <TableHead>CA</TableHead>
-                  <TableHead>Part CA</TableHead>
-                  <TableHead>Cmd.</TableHead>
+                  <TableHead>Poids CA</TableHead>
+                  <TableHead>Commandes</TableHead>
                   <TableHead>DN</TableHead>
-                  <TableHead>Unités</TableHead>
+                  <TableHead>Qté commandée</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -513,7 +513,7 @@ export default async function CommercialBusinessPerformancePage({ searchParams }
                     </TableRow>
                   );
                 }) : (
-                  <TableRow><TableCell colSpan={6}><EmptyState text="Aucune donnée produit sur ce périmètre." /></TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6}><EmptyState text="Aucune commande produit sur la période sélectionnée." /></TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
