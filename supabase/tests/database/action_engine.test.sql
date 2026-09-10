@@ -2,7 +2,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(18);
+select plan(19);
 
 select has_column('public','tasks','action_code','tasks expose a semantic action code');
 select has_column('public','tasks','triggered_at','tasks retain their business trigger date');
