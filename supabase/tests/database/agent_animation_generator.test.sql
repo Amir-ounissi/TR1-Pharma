@@ -44,9 +44,10 @@ select lives_ok(
     '{
       "title":"Animation demandée par agent",
       "objective":"Développer le sell-out",
-      "scheduled_start_at":"2026-12-16T09:00:00Z",
-      "scheduled_end_at":"2026-12-16T17:00:00Z",
-      "provider_cost_ht":250,
+      "days_per_month":2,
+      "start_month":"2026-12-01",
+      "remuneration_model":"fixed",
+      "remuneration_config":{"fixed_amount_ht":250},
       "travel_cost_ht":35,
       "execution_requirements":{
         "merch_plan_required":true,
@@ -57,19 +58,19 @@ select lives_ok(
     }',
     '[{"product_id":"00000000-0000-0000-0000-000000000601","target_quantity":18}]'
   )$$,
-  'agent creates a governed animation request on an assigned pharmacy'
+  'agent creates a governed monthly animation request on an assigned pharmacy'
 );
 
 select is(
   (select status from public.missions where title='Animation demandée par agent'),
   'requested'::public.mission_status,
-  'unassigned agent animation starts as requested'
+  'unassigned agent animation request starts as requested'
 );
 
 select is(
   (select requested_by from public.missions where title='Animation demandée par agent'),
   '00000000-0000-0000-0000-0000000000a3'::uuid,
-  'commercial requester is retained on the mission'
+  'commercial requester is retained on the animation request'
 );
 
 select is(
@@ -82,7 +83,14 @@ select throws_ok(
   $$select public.request_animation(
     '00000000-0000-0000-0000-000000000412',
     null,
-    '{"title":"Animation hors portefeuille","objective":"Interdit","scheduled_start_at":"2026-12-17T09:00:00Z","scheduled_end_at":"2026-12-17T17:00:00Z"}',
+    '{
+      "title":"Animation hors portefeuille",
+      "objective":"Interdit",
+      "days_per_month":1,
+      "start_month":"2026-12-01",
+      "remuneration_model":"fixed",
+      "remuneration_config":{"fixed_amount_ht":200}
+    }',
     '[]'
   )$$,
   '42501',
@@ -97,14 +105,15 @@ select lives_ok(
     '{
       "title":"Animation adressée à animateur",
       "objective":"Tester acceptation et planification",
-      "scheduled_start_at":"2026-12-18T09:00:00Z",
-      "scheduled_end_at":"2026-12-18T17:00:00Z",
-      "provider_cost_ht":275,
+      "days_per_month":2,
+      "start_month":"2026-12-01",
+      "remuneration_model":"fixed",
+      "remuneration_config":{"fixed_amount_ht":275},
       "travel_cost_ht":30
     }',
     '[]'
   )$$,
-  'agent can address an animation directly to an active facilitator'
+  'agent can address a monthly animation request directly to an active facilitator'
 );
 
 select is(
@@ -120,28 +129,39 @@ select lives_ok(
     'accepted',
     null
   )$$,
-  'facilitator accepts directly addressed animation'
+  'facilitator accepts directly addressed animation request'
 );
 
 select is(
   (select status from public.missions where title='Animation adressée à animateur'),
   'accepted'::public.mission_status,
-  'accepted animation stays pending scheduling'
+  'accepted animation request stays pending day scheduling'
 );
 
 select lives_ok(
-  $$select public.schedule_my_animation(
-    (select id from public.missions where title='Animation adressée à animateur'),
+  $$select public.schedule_animation_request_day(
+    (select id from public.missions where title='Animation adressée à animateur' and animation_parent_request_id is null),
     '2026-12-18T10:00:00Z',
     '2026-12-18T18:00:00Z'
   )$$,
-  'assigned facilitator confirms the definitive animation slot'
+  'assigned facilitator positions one concrete animation day'
 );
 
 select is(
-  (select status from public.missions where title='Animation adressée à animateur'),
+  (
+    select status
+    from public.missions
+    where animation_parent_request_id = (
+      select id
+      from public.missions
+      where title='Animation adressée à animateur'
+        and animation_parent_request_id is null
+    )
+    order by created_at desc
+    limit 1
+  ),
   'scheduled'::public.mission_status,
-  'self scheduling moves accepted animation to scheduled'
+  'planning creates a scheduled child animation day'
 );
 
 select * from finish();
