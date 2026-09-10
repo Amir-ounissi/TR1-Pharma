@@ -4,7 +4,7 @@ import { createElement } from "react";
 const supportedSizes = new Set([180, 192, 512]);
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ size: string }> },
 ) {
   const { size: rawSize } = await params;
@@ -14,7 +14,11 @@ export async function GET(
     return new Response("Unsupported icon size", { status: 404 });
   }
 
-  const mark = createElement(
+  const logoUrl = new URL("/brand/tr1-wordmark.webp", request.url).toString();
+  const logoWidth = Math.round(size * 0.72);
+  const logoHeight = Math.round(logoWidth * (430 / 735));
+
+  const icon = createElement(
     "div",
     {
       style: {
@@ -24,17 +28,22 @@ export async function GET(
         alignItems: "center",
         justifyContent: "center",
         background: "#f4f0e7",
-        fontFamily: "Arial, sans-serif",
-        fontWeight: 900,
-        fontSize: Math.round(size * 0.34),
-        letterSpacing: "-0.075em",
       },
     },
-    createElement("span", { style: { color: "#0e1d31" } }, "TR"),
-    createElement("span", { style: { color: "#ea7015", marginLeft: `${Math.round(size * 0.012)}px` } }, "1"),
+    createElement("img", {
+      src: logoUrl,
+      alt: "TR1 Pharma",
+      width: logoWidth,
+      height: logoHeight,
+      style: {
+        width: `${logoWidth}px`,
+        height: `${logoHeight}px`,
+        objectFit: "contain",
+      },
+    }),
   );
 
-  return new ImageResponse(mark, {
+  return new ImageResponse(icon, {
     width: size,
     height: size,
   });
