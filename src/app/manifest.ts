@@ -1,5 +1,7 @@
 import type { MetadataRoute } from "next";
 
+const pwaIconVersion = "official-svg-20260910";
+
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/dashboard/field",
@@ -17,27 +19,27 @@ export default function manifest(): MetadataRoute.Manifest {
     categories: ["business", "productivity"],
     icons: [
       {
-        src: "/pwa/icon/192",
+        src: `/pwa/icon/192?v=${pwaIconVersion}`,
         sizes: "192x192",
-        type: "image/png",
+        type: "image/svg+xml",
         purpose: "any",
       },
       {
-        src: "/pwa/icon/192",
+        src: `/pwa/icon/192?v=${pwaIconVersion}`,
         sizes: "192x192",
-        type: "image/png",
+        type: "image/svg+xml",
         purpose: "maskable",
       },
       {
-        src: "/pwa/icon/512",
+        src: `/pwa/icon/512?v=${pwaIconVersion}`,
         sizes: "512x512",
-        type: "image/png",
+        type: "image/svg+xml",
         purpose: "any",
       },
       {
-        src: "/pwa/icon/512",
+        src: `/pwa/icon/512?v=${pwaIconVersion}`,
         sizes: "512x512",
-        type: "image/png",
+        type: "image/svg+xml",
         purpose: "maskable",
       },
     ],
