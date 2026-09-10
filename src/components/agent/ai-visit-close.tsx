@@ -68,7 +68,6 @@ export function AiVisitClose({ brandPharmacyId }: { brandPharmacyId: string }) {
 
   useEffect(() => {
     let cancelled = false;
-    setChecking(true);
     void getVisitCloseAvailabilityAction(brandPharmacyId).then((result) => {
       if (cancelled) return;
       setVisitId(result.active ? result.visitId ?? null : null);
