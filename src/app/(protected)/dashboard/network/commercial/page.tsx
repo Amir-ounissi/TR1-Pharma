@@ -115,6 +115,12 @@ type Cockpit = {
   pharmacies?: PharmacyRow[];
 };
 
+type ProductDistributionSummary = {
+  customer_pharmacies: number | null;
+  products_count: number | null;
+  avg_product_distribution_rate: number | null;
+};
+
 type ProductDistributionRow = {
   product_id: string;
   product_name: string;
@@ -125,11 +131,7 @@ type ProductDistributionRow = {
 };
 
 type ProductDistribution = {
-  summary?: {
-    customer_pharmacies: number | null;
-    products_count: number | null;
-    avg_product_distribution_rate: number | null;
-  };
+  summary?: ProductDistributionSummary;
   products?: ProductDistributionRow[];
 };
 
@@ -245,7 +247,11 @@ export default async function CommercialPerformancePage({ searchParams }: { sear
   const cockpit = (cockpitData ?? {}) as Cockpit;
   const summary = cockpit.summary ?? ({} as Summary);
   const distribution = (distributionData ?? {}) as ProductDistribution;
-  const distributionSummary = distribution.summary ?? {};
+  const distributionSummary: ProductDistributionSummary = distribution.summary ?? {
+    customer_pharmacies: null,
+    products_count: null,
+    avg_product_distribution_rate: null,
+  };
   const distributionByProduct = new Map((distribution.products ?? []).map((row) => [row.product_id, row]));
   const agentOptions = (memberships ?? []).map((membership) => {
     const user = Array.isArray(membership.users) ? membership.users[0] : membership.users;
