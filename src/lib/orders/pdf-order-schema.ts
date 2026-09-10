@@ -39,6 +39,28 @@ export function isActionablePdfOrderLine(line: PdfOrderLine) {
   return (line.quantity ?? 0) > 0 || (line.freeQuantity ?? 0) > 0;
 }
 
+function normalizeExtractedLine(line: PdfOrderLine): PdfOrderLine {
+  const quantity = line.quantity ?? 0;
+  const freeQuantity = line.freeQuantity ?? 0;
+
+  // ERP pharmacy orders commonly print free goods on a second line at 100% discount.
+  // If the model places that number in the paid-quantity column, treat it as UG instead
+  // of creating a second paid line. The subsequent consolidation step will attach it
+  // to the matching paid product whenever possible.
+  if (line.discountRate === 100 && quantity > 0 && freeQuantity === 0) {
+    return {
+      ...line,
+      quantity: null,
+      freeQuantity: quantity,
+    };
+  }
+
+  return {
+    ...line,
+    freeQuantity,
+  };
+}
+
 export const PDF_ORDER_JSON_SCHEMA = {
   type: "object",
   additionalProperties: false,
@@ -88,8 +110,9 @@ export const PDF_ORDER_JSON_SCHEMA = {
 
 export function parsePdfOrderExtraction(value: unknown): PdfOrderExtraction {
   const parsed = pdfOrderExtractionSchema.parse(value);
+  const normalizedLines = parsed.lines.map(normalizeExtractedLine);
   return {
     ...parsed,
-    lines: parsed.lines.filter(isActionablePdfOrderLine),
+    lines: normalizedLines.filter(isActionablePdfOrderLine),
   };
 }

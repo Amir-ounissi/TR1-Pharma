@@ -18,7 +18,7 @@ describe("order photo regression rules", () => {
     expect(resolvePdfOrderDate({ orderDate: "Le 06/09/2026", orderDateSource: "header_date", deliveryDate: "09/09/2026" })).toBe("2026-09-06");
   });
 
-  it("matches Grande Pharmacie de la Valentine despite the printed postcode differing from the CEDEX directory postcode", () => {
+  it("suggests Grande Pharmacie de la Valentine when the printed postcode differs from the directory postcode", () => {
     expect(matchPdfPharmacy(
       {
         name: "GRANDE PHARMACIE DE LA VALENTINE MAROCCHINO CARADELLI",
@@ -39,8 +39,8 @@ describe("order photo regression rules", () => {
         postalCode: "13924",
       }],
     )).toMatchObject({
-      status: "matched",
-      method: "name_contains",
+      status: "suggested",
+      method: "name_contains_postal_mismatch",
       match: { pharmacyId: "valentine", brandPharmacyId: "naali-valentine" },
     });
   });
