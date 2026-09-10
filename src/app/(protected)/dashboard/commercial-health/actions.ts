@@ -33,6 +33,9 @@ export async function createReorderFollowupAction(
   });
   const health = rows?.[0];
   if (healthError || !health || health.brand_id !== brand.id) return { error: "Compte inaccessible." };
+  if (health.has_next_action) {
+    return { error: "Une action est déjà ouverte pour ce compte. Vérifiez-la avant d’en créer une autre." };
+  }
 
   const dueAt = new Date(parsed.data.dueAt);
   if (Number.isNaN(dueAt.getTime())) return { error: "Échéance invalide." };
