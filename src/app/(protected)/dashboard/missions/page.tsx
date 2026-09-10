@@ -34,7 +34,7 @@ export default async function MissionsPage({ searchParams }: { searchParams: Pro
   const canProposeMission = role === "facilitator";
   let query = session.supabase
     .from("missions")
-    .select("id,title,mission_type,status,priority,scheduled_start_at,report_due_at,assigned_user_id,managed_by,users!missions_intervenor_user_id_fkey(user_profiles(full_name)),pharmacies(legal_name,trade_name,city),brands(name)")
+    .select("id,title,mission_type,status,priority,scheduled_start_at,report_due_at,assigned_user_id,managed_by,pharmacies(legal_name,trade_name,city),brands!missions_brand_organization_fk(name)")
     .is("archived_at", null)
     .order("scheduled_start_at", { ascending: false })
     .limit(100);
@@ -46,6 +46,19 @@ export default async function MissionsPage({ searchParams }: { searchParams: Pro
   if (filters.type) query = query.eq("mission_type", filters.type);
 
   const { data: missions, error } = await query;
+  if (error) console.error("Impossible de charger les missions.", { code: error.code, message: error.message });
+
+  const assignedUserIds = error ? [] : [...new Set((missions ?? []).map((mission) => mission.assigned_user_id).filter((id): id is string => Boolean(id)))];
+  const usersResult = assignedUserIds.length
+    ? await session.supabase.from("users").select("id,user_profiles(full_name)").in("id", assignedUserIds)
+    : { data: [], error: null };
+  if (usersResult.error) console.error("Impossible de charger les responsables des missions.", { code: usersResult.error.code, message: usersResult.error.message });
+
+  const assigneeNames = new Map((usersResult.data ?? []).map((user) => {
+    const profile = Array.isArray(user.user_profiles) ? user.user_profiles[0] : user.user_profiles;
+    return [user.id, profile?.full_name?.trim() || "Intervenant"];
+  }));
+
   const hasActiveFilters = Boolean(filters.q || filters.status || filters.type);
   const createLabel = role === "agent" ? "Demander une animation" : canCreateMission ? "Nouvelle mission" : "Planifier des animations";
   const createHref = role === "agent" ? "/dashboard/missions/new?mode=animation" : "/dashboard/missions/new";
@@ -89,8 +102,12 @@ export default async function MissionsPage({ searchParams }: { searchParams: Pro
       </form>
     </Toolbar>
 
+    {!error && usersResult.error ? (
+      <p className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Les missions sont disponibles, mais certains noms de responsables n’ont pas pu être chargés.</p>
+    ) : null}
+
     {error ? (
-      <InlineError title="Impossible de charger les missions." description="Réessayez ou revenez aux filtres par défaut." action={<Button asChild size="sm" variant="outline"><Link href="/dashboard/missions">Réessayer</Link></Button>} />
+      <InlineError title="Impossible de charger les missions." description="Le service Missions est momentanément indisponible. Les filtres ne sont pas interprétés comme une liste vide." action={<Button asChild size="sm" variant="outline"><Link href="/dashboard/missions">Réessayer</Link></Button>} />
     ) : (missions ?? []).length === 0 ? (
       <EmptyState
         tone={hasActiveFilters ? "no_results" : "no_data"}
@@ -115,15 +132,14 @@ export default async function MissionsPage({ searchParams }: { searchParams: Pro
             {(missions ?? []).map((mission) => {
               const pharmacy = Array.isArray(mission.pharmacies) ? mission.pharmacies[0] : mission.pharmacies;
               const brand = Array.isArray(mission.brands) ? mission.brands[0] : mission.brands;
-              const assignedUser = Array.isArray(mission.users) ? mission.users[0] : mission.users;
-              const profile = Array.isArray(assignedUser?.user_profiles) ? assignedUser.user_profiles[0] : assignedUser?.user_profiles;
               const href = facilitatorOnly ? `/dashboard/field/missions/${mission.id}` : `/dashboard/missions/${mission.id}`;
+              const assigneeName = mission.assigned_user_id ? assigneeNames.get(mission.assigned_user_id) : undefined;
               return <TableRow key={mission.id} className="border-[var(--tr1-line)] hover:bg-white/45">
                 <TableCell className="px-3 py-2.5"><Link className="text-[0.82rem] font-semibold text-[var(--tr1-navy)] hover:text-[var(--tr1-orange)]" href={href}>{mission.title}</Link></TableCell>
                 <TableCell className="px-3 py-2.5"><p className="font-medium text-[var(--tr1-navy)]">{pharmacy?.trade_name || pharmacy?.legal_name || "Pharmacie"}</p><p className="text-[0.68rem] text-muted-foreground">{pharmacy?.city || "Ville non renseignée"}{facilitatorOnly && brand?.name ? ` · ${brand.name}` : ""}</p></TableCell>
                 <TableCell className="px-3 py-2.5 text-[0.72rem] text-[var(--tr1-navy)]">{uiLabel(mission.mission_type)}</TableCell>
                 <TableCell className="px-3 py-2.5"><Badge variant={mission.status === "report_pending" ? "destructive" : "secondary"} className="h-5 rounded-full text-[0.54rem]">{uiLabel(mission.status)}</Badge></TableCell>
-                <TableCell className="px-3 py-2.5 text-[0.72rem] text-[var(--tr1-navy)]">{profile?.full_name || "Non affectée"}</TableCell>
+                <TableCell className="px-3 py-2.5 text-[0.72rem] text-[var(--tr1-navy)]">{assigneeName || (mission.assigned_user_id ? "Intervenant" : "Non affectée")}</TableCell>
                 <TableCell className="px-3 py-2.5 text-[0.72rem] text-[var(--tr1-navy)]">{mission.scheduled_start_at ? new Date(mission.scheduled_start_at).toLocaleString("fr-FR") : "À planifier"}</TableCell>
               </TableRow>;
             })}

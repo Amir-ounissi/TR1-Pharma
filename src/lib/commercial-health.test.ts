@@ -3,6 +3,7 @@ import {
   buildReorderFollowUp,
   commercialPriority,
   commercialRecommendation,
+  OPEN_ACTION_RECOMMENDATION,
   representativeReorderInterval,
   resolveCommercialHealthStatus,
   revenueTrend,
@@ -76,7 +77,8 @@ describe("commercial health rules", () => {
   it("returns deterministic recommendations", () => {
     expect(commercialRecommendation("reorder_overdue", false)).toBe("Contacter la pharmacie");
     expect(commercialRecommendation("awaiting_first_reorder", false)).toBe("Sécuriser le premier réassort");
-    expect(commercialRecommendation("reorder_due_soon", true)).toBe("Préparer une relance");
+    expect(commercialRecommendation("reorder_due_soon", true)).toBe(OPEN_ACTION_RECOMMENDATION);
+    expect(commercialRecommendation("dormant", true)).toBe(OPEN_ACTION_RECOMMENDATION);
     expect(commercialRecommendation("healthy", false)).toBe("Programmer une prochaine action");
   });
 

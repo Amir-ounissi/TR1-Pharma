@@ -1,13 +1,19 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ProposalReviewForm } from "@/components/missions/forms";
+import { ProposalIncompleteReviewForm } from "@/components/missions/proposal-incomplete-review-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { InlineError } from "@/components/ux/inline-error";
 import { isoToParisLocal } from "@/lib/agenda";
 import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
-import { attachProposalAssignees, reviewableProposalStatuses } from "@/lib/mission-proposals";
+import {
+  attachProposalAssignees,
+  getProposalReadinessIssues,
+  proposalReadinessLabels,
+  reviewableProposalStatuses,
+} from "@/lib/mission-proposals";
 import { uiLabel } from "@/lib/ui-copy";
 
 export default async function MissionProposalsPage() {
@@ -44,11 +50,23 @@ export default async function MissionProposalsPage() {
     {proposals.map((mission) => {
       const pharmacy = Array.isArray(mission.pharmacies) ? mission.pharmacies[0] : mission.pharmacies;
       const isPending = mission.proposal_review_status === "pending";
+      const productCount = mission.mission_products?.length ?? 0;
+      const readinessIssues = getProposalReadinessIssues({
+        assigned_user_id: mission.assigned_user_id,
+        scheduled_start_at: mission.scheduled_start_at,
+        scheduled_end_at: mission.scheduled_end_at,
+        budget_estimated_ht: mission.budget_estimated_ht,
+        objective: mission.objective,
+        briefing: mission.briefing,
+        productCount,
+      });
+      const canApprove = readinessIssues.length === 0;
       const products = mission.mission_products?.map((entry) => {
         const product = entry.products as unknown as { name?: string } | { name?: string }[] | null;
         return Array.isArray(product) ? product[0]?.name : product?.name;
       }).filter(Boolean).join(", ");
-      return <Card key={mission.id}><CardHeader><div className="flex flex-wrap justify-between gap-2"><div><CardTitle><Link href={`/dashboard/missions/${mission.id}`}>{mission.title}</Link></CardTitle><p className="text-sm text-muted-foreground">{pharmacy?.trade_name || pharmacy?.legal_name || "Pharmacie"}{pharmacy?.city ? ` · ${pharmacy.city}` : ""} · {mission.assigneeName}</p></div><div className="flex gap-2"><Badge>{uiLabel(mission.mission_type)}</Badge><Badge variant="secondary">{uiLabel(mission.proposal_review_status)}</Badge></div></div></CardHeader><CardContent className="space-y-4"><div className="grid gap-3 text-sm sm:grid-cols-3"><p><strong>Créneau</strong><br />{mission.scheduled_start_at ? isoToParisLocal(mission.scheduled_start_at).replace("T", " ") : "À préciser"}</p><p><strong>Budget proposé</strong><br />{Number(mission.budget_estimated_ht ?? 0).toLocaleString("fr-FR")} € HT</p><p><strong>Produits</strong><br />{products || "Aucun"}</p></div><p className="text-sm"><strong>Objectif :</strong> {mission.objective}</p><p className="whitespace-pre-wrap text-sm"><strong>Brief :</strong> {mission.briefing || "—"}</p>{isPending ? <ProposalReviewForm mission={mission} /> : <p className="rounded-md bg-muted p-3 text-sm">Correction demandée à l’intervenant{mission.proposal_review_note ? ` : ${mission.proposal_review_note}` : "."}</p>}</CardContent></Card>;
+
+      return <Card key={mission.id}><CardHeader><div className="flex flex-wrap justify-between gap-2"><div><CardTitle><Link href={`/dashboard/missions/${mission.id}`}>{mission.title}</Link></CardTitle><p className="text-sm text-muted-foreground">{pharmacy?.trade_name || pharmacy?.legal_name || "Pharmacie"}{pharmacy?.city ? ` · ${pharmacy.city}` : ""} · {mission.assigneeName}</p></div><div className="flex gap-2"><Badge>{uiLabel(mission.mission_type)}</Badge><Badge variant="secondary">{uiLabel(mission.proposal_review_status)}</Badge></div></div></CardHeader><CardContent className="space-y-4"><div className="grid gap-3 text-sm sm:grid-cols-3"><p><strong>Créneau</strong><br />{mission.scheduled_start_at ? isoToParisLocal(mission.scheduled_start_at).replace("T", " ") : "À préciser"}</p><p><strong>Budget proposé</strong><br />{Number(mission.budget_estimated_ht ?? 0).toLocaleString("fr-FR")} € HT</p><p><strong>Produits</strong><br />{products || "Aucun"}</p></div><p className="text-sm"><strong>Objectif :</strong> {mission.objective || "—"}</p><p className="whitespace-pre-wrap text-sm"><strong>Brief :</strong> {mission.briefing || "—"}</p>{isPending && !canApprove ? <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950"><p className="font-semibold">À compléter avant validation</p><p className="mt-1">Il manque : {readinessIssues.map((issue) => proposalReadinessLabels[issue]).join(", ")}.</p><p className="mt-1 text-xs text-amber-800">TR1 ne permet plus de valider une proposition incomplète comme si elle était finalisée.</p></div> : null}{isPending ? (canApprove ? <ProposalReviewForm mission={mission} /> : <ProposalIncompleteReviewForm missionId={mission.id} />) : <p className="rounded-md bg-muted p-3 text-sm">Correction demandée à l’intervenant{mission.proposal_review_note ? ` : ${mission.proposal_review_note}` : "."}</p>}</CardContent></Card>;
     })}
     {!proposals.length ? <Card><CardContent className="p-8 text-center text-sm text-muted-foreground">Aucune proposition à traiter pour le moment.</CardContent></Card> : null}
   </div>;
