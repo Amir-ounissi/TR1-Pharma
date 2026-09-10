@@ -14,8 +14,20 @@ export type AgentMultibrandTask = {
   title: string;
   task_type: string;
   priority: string;
+  source: string;
+  action_code: string | null;
+  rule_code: string | null;
+  triggered_at: string | null;
   due_at: string | null;
+  snoozed_until: string | null;
   is_overdue: boolean;
+  due_state: "unscheduled" | "overdue" | "today" | "upcoming";
+  days_overdue: number;
+  action_score: number;
+  priority_reasons: string[];
+  account_activity_status: string | null;
+  account_priority_level: string | null;
+  potential_level: string | null;
   pharmacy_name: string;
   city: string | null;
 };
@@ -56,6 +68,9 @@ export type AgentMultibrandFollowUp = {
   city: string | null;
   last_interaction_at: string | null;
   priority: string;
+  activity_status: string | null;
+  reason: string;
+  action_score: number;
 };
 
 export type AgentMultibrandDay = {
@@ -101,6 +116,19 @@ export type AgentMultibrandVisitSummary = {
   href: string;
 };
 
+type PriorityAction = {
+  key: string;
+  href: string;
+  score: number;
+  title: string;
+  brandName: string;
+  pharmacyName: string;
+  city: string | null;
+  timing: string | null;
+  overdue: boolean;
+  reason: string | null;
+};
+
 function formatTime(value: string | null) {
   if (!value) return "—";
   return new Intl.DateTimeFormat("fr-FR", {
@@ -120,6 +148,47 @@ function formatDateTime(value: string | null) {
     minute: "2-digit",
     timeZone: "Europe/Paris",
   }).format(new Date(value));
+}
+
+function taskActionLabel(task: AgentMultibrandTask) {
+  switch (task.action_code) {
+    case "post_implantation":
+      return "Suivi post-implantation";
+    case "activity_watch":
+      return "Vérifier l’activité du compte";
+    case "activity_at_risk":
+      return "Sécuriser le compte à risque";
+    case "activity_dormant":
+      return "Réactiver le compte dormant";
+    default:
+      return presentationText(task.title);
+  }
+}
+
+function followUpActionLabel(followUp: AgentMultibrandFollowUp) {
+  switch (followUp.activity_status) {
+    case "watch":
+      return "Vérifier l’activité du compte";
+    case "at_risk":
+      return "Sécuriser le compte à risque";
+    case "dormant":
+      return "Réactiver le compte dormant";
+    default:
+      return "Programmer une prochaine action";
+  }
+}
+
+function taskTiming(task: AgentMultibrandTask) {
+  if (task.days_overdue > 0) {
+    return `Retard ${task.days_overdue} j`;
+  }
+  if (task.due_state === "today") {
+    return "Aujourd’hui";
+  }
+  if (task.due_state === "unscheduled") {
+    return "À planifier";
+  }
+  return task.due_at ? formatDateTime(task.due_at) : null;
 }
 
 function BrandBadge({ name }: { name: string }) {
@@ -161,9 +230,36 @@ export function AgentMultibrandOverview({
   nextVisit: AgentMultibrandNextVisit | null;
   visits: AgentMultibrandVisitSummary[];
 }) {
-  const overdue = day.tasks.filter((task) => task.is_overdue);
-  const priorityTasks = day.tasks.filter((task) => !task.is_overdue).slice(0, 4);
-  const priorityActions = [...overdue, ...priorityTasks].slice(0, 6);
+  const priorityActions: PriorityAction[] = [
+    ...day.tasks.map((task) => ({
+      key: `task:${task.id}`,
+      href: `/dashboard/pharmacies/${task.brand_pharmacy_id}?tab=activity`,
+      score: task.action_score,
+      title: taskActionLabel(task),
+      brandName: task.brand_name,
+      pharmacyName: task.pharmacy_name,
+      city: task.city,
+      timing: taskTiming(task),
+      overdue: task.is_overdue,
+      reason: task.priority_reasons?.[0] ?? null,
+    })),
+    ...day.follow_ups.map((followUp) => ({
+      key: `follow-up:${followUp.brand_pharmacy_id}`,
+      href: `/dashboard/pharmacies/${followUp.brand_pharmacy_id}?tab=activity`,
+      score: followUp.action_score,
+      title: followUpActionLabel(followUp),
+      brandName: followUp.brand_name,
+      pharmacyName: followUp.pharmacy_name,
+      city: followUp.city,
+      timing: null,
+      overdue: false,
+      reason: followUp.reason,
+    })),
+  ]
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 5);
+  const totalPriorityActions = day.tasks.length + day.follow_ups.length;
+  const remainingPriorityActions = Math.max(0, totalPriorityActions - priorityActions.length);
   const selectedBrand = brands.find((brand) => brand.id === selectedBrandId) ?? null;
 
   return (
@@ -275,28 +371,39 @@ export function AgentMultibrandOverview({
                   <AlertTriangle className="size-4 text-[var(--tr1-orange)]" aria-hidden="true" />
                   <CardTitle className="text-base">Actions prioritaires</CardTitle>
                 </div>
-                <Badge variant="secondary">{day.tasks.length + day.follow_ups.length}</Badge>
+                <Badge variant="secondary">{totalPriorityActions} à traiter</Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-2">
-              {priorityActions.length ? priorityActions.map((task) => (
-                <Link key={task.id} href={`/dashboard/pharmacies/${task.brand_pharmacy_id}?tab=activity`} className="block rounded-lg border p-3 transition hover:bg-muted/30">
+              {priorityActions.map((action) => (
+                <Link key={action.key} href={action.href} className="block rounded-lg border px-3 py-2.5 transition hover:bg-muted/30">
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-semibold text-[var(--tr1-navy)]">{presentationText(task.title)}</p>
-                    <BrandBadge name={task.brand_name} />
+                    <p className="text-sm font-semibold leading-5 text-[var(--tr1-navy)]">{action.title}</p>
+                    <BrandBadge name={action.brandName} />
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">{task.pharmacy_name}{task.city ? ` · ${task.city}` : ""}{task.is_overdue ? " · En retard" : ""}</p>
-                </Link>
-              )) : day.follow_ups.slice(0, 4).map((followUp) => (
-                <Link key={followUp.brand_pharmacy_id} href={`/dashboard/pharmacies/${followUp.brand_pharmacy_id}?tab=activity`} className="block rounded-lg border p-3 transition hover:bg-muted/30">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-semibold text-[var(--tr1-navy)]">Relancer {followUp.pharmacy_name}</p>
-                    <BrandBadge name={followUp.brand_name} />
-                  </div>
-                  <p className="mt-1 text-xs text-muted-foreground">Compte actif sans prochaine action</p>
+                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                    {action.pharmacyName}{action.city ? ` · ${action.city}` : ""}
+                  </p>
+                  {(action.timing || action.reason) ? (
+                    <p className="mt-1 flex min-w-0 items-center gap-1.5 text-xs">
+                      {action.timing ? (
+                        <span className={action.overdue ? "shrink-0 font-semibold text-[var(--tr1-orange)]" : "shrink-0 font-semibold text-[var(--tr1-navy)]"}>
+                          {action.timing}
+                        </span>
+                      ) : null}
+                      {action.timing && action.reason ? <span className="text-muted-foreground">·</span> : null}
+                      {action.reason ? <span className="truncate text-muted-foreground">{action.reason}</span> : null}
+                    </p>
+                  ) : null}
                 </Link>
               ))}
-              {!priorityActions.length && !day.follow_ups.length ? <p className="py-2 text-sm text-muted-foreground">Aucune action prioritaire.</p> : null}
+              {!priorityActions.length ? <p className="py-2 text-sm text-muted-foreground">Aucune action prioritaire.</p> : null}
+              {remainingPriorityActions > 0 ? (
+                <Link href="/dashboard/tasks" className="flex min-h-9 items-center justify-between rounded-lg px-1 text-sm font-semibold text-[var(--tr1-navy)] hover:underline">
+                  Voir les {remainingPriorityActions} autres actions
+                  <ArrowRight className="size-4" aria-hidden="true" />
+                </Link>
+              ) : null}
             </CardContent>
           </Card>
 
