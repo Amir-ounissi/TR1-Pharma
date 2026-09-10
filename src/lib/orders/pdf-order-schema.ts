@@ -20,7 +20,7 @@ export const pdfOrderExtractionSchema = z.object({
     label: optionalText,
     sku: optionalText,
     ean: optionalText,
-    quantity: z.number().finite().positive().nullable(),
+    quantity: z.number().finite().nonnegative().nullable(),
     freeQuantity: z.number().int().nonnegative().nullable().optional(),
     unitPriceHt: optionalAmount,
     discountRate: z.number().finite().min(0).max(100).nullable(),
