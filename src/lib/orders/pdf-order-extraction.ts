@@ -1,4 +1,9 @@
 import { PDF_ORDER_JSON_SCHEMA, parsePdfOrderExtraction, type PdfOrderExtraction } from "@/lib/orders/pdf-order-schema";
+import {
+  assessPdfOrderExtraction,
+  buildPdfOrderRepairPrompt,
+  canonicalizePdfOrderExtraction,
+} from "@/lib/orders/pdf-order-extraction-quality";
 
 export const MAX_ORDER_DOCUMENT_SIZE = 3 * 1024 * 1024;
 export const MAX_ORDER_SCAN_PAGES = 6;
@@ -13,6 +18,32 @@ const VERCEL_AI_GATEWAY_RESPONSES_URL = "https://ai-gateway.vercel.sh/v1/respons
 const ORDER_EXTRACTION_INSTRUCTIONS = `
 Tu extrais fidèlement un bon de commande pharmacie depuis un PDF ou une ou plusieurs pages scannées. N'invente aucune donnée et ne réalise aucun matching avec TR1.
 Si plusieurs images sont fournies, elles appartiennent toutes au même bon de commande et sont présentées dans l'ordre des pages. Analyse-les comme un seul document.
+
+FORMAT ERP PHARMACIE FRÉQUENT
+Beaucoup de documents traités ont un tableau proche de : Code / Désignation / Qté Cmde / Qté UG / Prix Achat / Remise % / Prix Net / TVA.
+Quand tu reconnais ce type de tableau :
+- respecte strictement les cellules de la même ligne physique ;
+- ne prends JAMAIS le Code/EAN de la ligne suivante pour compléter une ligne où le code est vide ;
+- une référence imprimée sans quantité commandée positive et sans UG positive n'est pas une ligne de commande ;
+- une seconde ligne du même produit à 100 % correspond généralement aux UG : elle ne génère aucun CA HT ;
+- Prix Achat + Remise % sert au recalcul du HT ; Prix Net est un contrôle, pas un second prix à appliquer ;
+- le total HT imprimé en bas du document est un contrôle de cohérence. Relis les colonnes si le recalcul ne retombe pas dessus, sans jamais inventer ou modifier un chiffre pour forcer le résultat.
+
+EXEMPLES MÉTIER À REPRODUIRE
+Exemple 1, ligne payante puis gratuité :
+- ligne imprimée : Produit A | Qté Cmde 12 | Prix Achat 33,08 | Remise 35 %
+- ligne suivante : Produit A | Qté UG 2 | Remise 100 %
+=> première ligne : quantity=12, freeQuantity=0, unitPriceHt=33.08, discountRate=35
+=> seconde ligne : quantity=null, freeQuantity=2, unitPriceHt=33.08 si visible, discountRate=100
+Les 2 UG ne sont jamais ajoutées à quantity.
+
+Exemple 2, référence non commandée :
+- ligne imprimée : Produit B | Code 3770000000000 | Qté Cmde vide | Qté UG vide | Prix Achat 20,00
+=> ne crée aucune ligne produit pour cette référence.
+
+Exemple 3, code absent sur une ligne :
+- ligne Produit C sans Code/EAN, puis ligne Produit D avec Code 3770000000001
+=> Produit C garde ean=null. Le code 3770000000001 appartient uniquement à Produit D.
 
 PHARMACIE ACHETEUSE
 - pharmacy décrit TOUJOURS la pharmacie cliente/acheteuse/destinataire, généralement dans le bloc d'identité du document.
@@ -46,9 +77,12 @@ TOTAUX ET TVA
 - totalTtc = total TTC du document.
 - Si un tableau récapitulatif TVA indique plusieurs taux, conserve taxRate par ligne lorsqu'il est lisible et totalVat comme somme totale affichée.
 
-QUALITÉ
+QUALITÉ AVANT RÉPONSE
 - Préserve les EAN, quantités, UG, remises, prix et taux de TVA avec une attention prioritaire : ce sont les champs utilisés pour le rapprochement automatique.
 - Utilise null lorsqu'une valeur est absente ou illisible plutôt que de deviner.
+- Avant de répondre, vérifie une seconde fois chaque ligne qui contribue au total HT.
+- Recalcule le HT à partir de quantity × unitPriceHt × (1-remise). Les UG sont exclues du calcul.
+- Vérifie aussi que totalHt + totalVat = totalTtc lorsque les trois montants sont présents.
 - Tous les warnings doivent être courts, en français et compréhensibles par un commercial.
 `;
 
@@ -74,6 +108,7 @@ type OpenAIUsage = {
 
 export type OrderScanUsage = {
   model: string;
+  attempt: "initial" | "repair";
   inputTokens: number | null;
   cachedInputTokens: number | null;
   outputTokens: number | null;
@@ -100,6 +135,12 @@ type ExtractionProvider = {
   model: string;
   pricingModel: string;
   source: "openai" | "vercel_ai_gateway";
+};
+
+type ResponsesPayload = {
+  output_text?: string;
+  output?: Array<{ content?: Array<{ type?: string; text?: string }> }>;
+  usage?: OpenAIUsage;
 };
 
 const MODEL_PRICING_PER_MILLION: Record<string, ModelPricing> = {
@@ -215,6 +256,75 @@ async function toOpenAIDocumentInput(file: File) {
   return { type: "input_image", image_url: `data:${file.type};base64,${base64}`, detail: "high" };
 }
 
+function outputTextFromPayload(payload: ResponsesPayload) {
+  return payload.output_text
+    ?? payload.output?.flatMap((item) => item.content ?? []).find((item) => item.type === "output_text")?.text;
+}
+
+async function requestStructuredExtraction(params: {
+  provider: ExtractionProvider;
+  documentInputs: Awaited<ReturnType<typeof toOpenAIDocumentInput>>[];
+  files: File[];
+  fetcher: Fetcher;
+  usageSink: OrderScanUsageSink;
+  attempt: "initial" | "repair";
+  prompt: string;
+}) {
+  const { provider, documentInputs, files, fetcher, usageSink, attempt, prompt } = params;
+  const reasoning = getReasoningConfig(provider.model);
+  const startedAt = Date.now();
+  const response = await fetcher(provider.endpoint, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${provider.apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: provider.model,
+      ...(reasoning ? { reasoning } : {}),
+      store: false,
+      instructions: ORDER_EXTRACTION_INSTRUCTIONS,
+      input: [{
+        role: "user",
+        content: [
+          { type: "input_text", text: prompt },
+          ...documentInputs,
+        ],
+      }],
+      text: { format: { type: "json_schema", name: "pdf_order", strict: true, schema: PDF_ORDER_JSON_SCHEMA } },
+    }),
+  });
+
+  if (!response.ok) {
+    const responseBody = await response.text().catch(() => "");
+    console.error("[order_scan_error] Extraction provider rejected request", {
+      provider: provider.source,
+      model: provider.model,
+      attempt,
+      status: response.status,
+      response: responseBody.slice(0, 800),
+    });
+    throw new PdfOrderImportError("openai_unavailable", "L’extraction du document est indisponible pour le moment.");
+  }
+
+  const payload = await response.json() as ResponsesPayload;
+  usageSink({
+    model: provider.model,
+    attempt,
+    inputTokens: validTokenCount(payload.usage?.input_tokens),
+    cachedInputTokens: validTokenCount(payload.usage?.input_tokens_details?.cached_tokens),
+    outputTokens: validTokenCount(payload.usage?.output_tokens),
+    reasoningTokens: validTokenCount(payload.usage?.output_tokens_details?.reasoning_tokens),
+    totalTokens: validTokenCount(payload.usage?.total_tokens),
+    estimatedCostUsd: estimateOrderScanCostUsd(provider.pricingModel, payload.usage),
+    latencyMs: Math.max(0, Date.now() - startedAt),
+    mimeType: files.length === 1 ? files[0].type : "image/multipage",
+    fileSizeBytes: files.reduce((total, file) => total + file.size, 0),
+    fileCount: files.length,
+  });
+
+  const outputText = outputTextFromPayload(payload);
+  if (!outputText) throw new PdfOrderImportError("extraction_failed", "Le document ne contient pas de commande exploitable.");
+  return canonicalizePdfOrderExtraction(parsePdfOrderExtraction(JSON.parse(outputText)));
+}
+
 export async function extractOrderDocuments(
   files: File[],
   fetcher: Fetcher = fetch,
@@ -222,7 +332,7 @@ export async function extractOrderDocuments(
 ): Promise<PdfOrderExtraction> {
   validateOrderDocuments(files);
   if (process.env.APP_ENV === "test" && process.env.PDF_ORDER_E2E_MOCK) {
-    return parsePdfOrderExtraction(JSON.parse(process.env.PDF_ORDER_E2E_MOCK));
+    return canonicalizePdfOrderExtraction(parsePdfOrderExtraction(JSON.parse(process.env.PDF_ORDER_E2E_MOCK)));
   }
 
   const provider = resolveExtractionProvider();
@@ -234,64 +344,61 @@ export async function extractOrderDocuments(
     throw new PdfOrderImportError("openai_unavailable", "L’extraction du document est indisponible pour le moment.");
   }
 
-  const reasoning = getReasoningConfig(provider.model);
-  const startedAt = Date.now();
-
   try {
     const documentInputs = await Promise.all(files.map(toOpenAIDocumentInput));
-    const response = await fetcher(provider.endpoint, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${provider.apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: provider.model,
-        ...(reasoning ? { reasoning } : {}),
-        store: false,
-        instructions: ORDER_EXTRACTION_INSTRUCTIONS,
-        input: [{
-          role: "user",
-          content: [
-            { type: "input_text", text: "Extrais cette commande sous forme de données structurées. Si plusieurs images suivent, ce sont les pages du même document dans l’ordre." },
-            ...documentInputs,
-          ],
-        }],
-        text: { format: { type: "json_schema", name: "pdf_order", strict: true, schema: PDF_ORDER_JSON_SCHEMA } },
-      }),
+    const initial = await requestStructuredExtraction({
+      provider,
+      documentInputs,
+      files,
+      fetcher,
+      usageSink,
+      attempt: "initial",
+      prompt: "Extrais cette commande sous forme de données structurées. Si plusieurs images suivent, ce sont les pages du même document dans l’ordre. Applique les règles ERP et effectue le contrôle des totaux avant de répondre.",
+    });
+    const initialQuality = assessPdfOrderExtraction(initial);
+
+    if (initialQuality.reliable) return initial;
+
+    console.warn("[order_scan_quality] First extraction requires repair", {
+      model: provider.model,
+      lineCount: initialQuality.lineCount,
+      calculatedHt: initialQuality.calculatedHt,
+      issueCount: initialQuality.issues.length,
+      issues: initialQuality.issues,
     });
 
-    if (!response.ok) {
-      const responseBody = await response.text().catch(() => "");
-      console.error("[order_scan_error] Extraction provider rejected request", {
-        provider: provider.source,
+    const repaired = await requestStructuredExtraction({
+      provider,
+      documentInputs,
+      files,
+      fetcher,
+      usageSink,
+      attempt: "repair",
+      prompt: buildPdfOrderRepairPrompt(initial, initialQuality.issues),
+    });
+    const repairedQuality = assessPdfOrderExtraction(repaired);
+
+    if (repairedQuality.reliable) {
+      console.info("[order_scan_quality] Automatic repair succeeded", {
         model: provider.model,
-        status: response.status,
-        response: responseBody.slice(0, 800),
+        lineCount: repairedQuality.lineCount,
+        calculatedHt: repairedQuality.calculatedHt,
       });
-      throw new PdfOrderImportError("openai_unavailable", "L’extraction du document est indisponible pour le moment.");
+      return repaired;
     }
 
-    const payload = await response.json() as {
-      output_text?: string;
-      output?: Array<{ content?: Array<{ type?: string; text?: string }> }>;
-      usage?: OpenAIUsage;
-    };
-
-    usageSink({
+    console.error("[order_scan_error] Extraction remained inconsistent after automatic repair", {
+      provider: provider.source,
       model: provider.model,
-      inputTokens: validTokenCount(payload.usage?.input_tokens),
-      cachedInputTokens: validTokenCount(payload.usage?.input_tokens_details?.cached_tokens),
-      outputTokens: validTokenCount(payload.usage?.output_tokens),
-      reasoningTokens: validTokenCount(payload.usage?.output_tokens_details?.reasoning_tokens),
-      totalTokens: validTokenCount(payload.usage?.total_tokens),
-      estimatedCostUsd: estimateOrderScanCostUsd(provider.pricingModel, payload.usage),
-      latencyMs: Math.max(0, Date.now() - startedAt),
-      mimeType: files.length === 1 ? files[0].type : "image/multipage",
-      fileSizeBytes: files.reduce((total, file) => total + file.size, 0),
-      fileCount: files.length,
+      lineCount: repairedQuality.lineCount,
+      calculatedHt: repairedQuality.calculatedHt,
+      issueCount: repairedQuality.issues.length,
+      issues: repairedQuality.issues,
     });
-
-    const outputText = payload.output_text ?? payload.output?.flatMap((item) => item.content ?? []).find((item) => item.type === "output_text")?.text;
-    if (!outputText) throw new PdfOrderImportError("extraction_failed", "Le document ne contient pas de commande exploitable.");
-    return parsePdfOrderExtraction(JSON.parse(outputText));
+    throw new PdfOrderImportError(
+      "extraction_failed",
+      "L’analyse du document reste incohérente après vérification automatique. Réessayez ou contrôlez le PDF.",
+    );
   } catch (error) {
     if (error instanceof PdfOrderImportError) throw error;
     console.error("[order_scan_error] Unexpected extraction failure", {
