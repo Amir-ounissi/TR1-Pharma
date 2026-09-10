@@ -36,7 +36,7 @@ test("navigation mobile Agent expose les cinq destinations et Plus", async ({ pa
   await expect(links.nth(0)).toHaveAttribute("href", "/dashboard/agent");
   await expect(links.nth(1)).toHaveAttribute("href", "/dashboard/pharmacies");
   await expect(links.nth(2)).toHaveAttribute("href", "/dashboard/orders");
-  await expect(links.nth(3)).toHaveAttribute("href", "/dashboard/agenda");
+  await expect(links.nth(3)).toHaveAttribute("href", "/dashboard/agent/performance");
   await expect(links.nth(4)).toHaveAttribute("href", "/dashboard/agent/more");
 
   await links.nth(4).click();
