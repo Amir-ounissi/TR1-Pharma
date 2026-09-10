@@ -19,6 +19,7 @@ export type HubSpotPropertyMap = {
   vatRate?: string;
   orderNumber?: string;
   orderDate?: string;
+  orderType?: string;
   amountHt?: string;
   taxAmount?: string;
   amountTtc?: string;
@@ -32,6 +33,8 @@ export type HubSpotPropertyMap = {
   productType?: string;
   isFreeUnit?: string;
   body?: string;
+  internalNotes?: string;
+  activityType?: string;
   timestamp?: string;
   startAt?: string;
   endAt?: string;
@@ -99,6 +102,7 @@ export type HubSpotOrderSyncInput = {
   orderNumber: string;
   status: string;
   orderDate: string;
+  orderTypeValue?: string | null;
   netAmountHt: number;
   taxAmount?: number | null;
   amountTtc?: number | null;
@@ -116,6 +120,10 @@ export type HubSpotMeetingSyncInput = {
   startAt: string;
   endAt?: string | null;
   outcome?: string | null;
+  ownerExternalId?: string | null;
+  activityType?: string | null;
+  body?: string | null;
+  internalNotes?: string | null;
 };
 
 export type HubSpotNoteSyncInput = {
