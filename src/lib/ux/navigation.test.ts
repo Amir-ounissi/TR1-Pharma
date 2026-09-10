@@ -69,7 +69,7 @@ describe("role navigation", () => {
       expect.objectContaining({ href: "/dashboard/pharmacies" }),
       expect.objectContaining({ href: "/dashboard/orders" }),
       expect.objectContaining({ href: "/dashboard/missions" }),
-      expect.objectContaining({ href: "/dashboard/network", label: "Performance" }),
+      expect.objectContaining({ href: "/dashboard/network/commercial", label: "Performance" }),
     ]) });
     expect(sections.find((section) => section.label === "Paramètres")?.items.map((item) => item.href)).toEqual([
       "/dashboard/products", "/dashboard/groups", "/dashboard/territories", "/dashboard/imports", "/dashboard/connectors", "/dashboard/users", "/dashboard/subscription",

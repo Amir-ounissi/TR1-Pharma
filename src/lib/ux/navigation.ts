@@ -47,7 +47,7 @@ const managerItems: NavigationItem[] = [
   { href: "/dashboard/pharmacies", label: "Pharmacies", icon: "building", capability: "core_crm" },
   { href: "/dashboard/orders", label: "Commandes", icon: "clipboard", capability: "orders" },
   { href: "/dashboard/missions", label: "Missions", icon: "calendar", capability: "missions" },
-  { href: "/dashboard/network", label: "Performance", icon: "chart", capability: "performance" },
+  { href: "/dashboard/network/commercial", label: "Performance", icon: "chart", capability: "performance" },
 ];
 
 const directionItems: NavigationItem[] = [
