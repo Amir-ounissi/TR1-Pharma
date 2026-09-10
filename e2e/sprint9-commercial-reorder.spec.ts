@@ -115,7 +115,7 @@ test.describe.serial("Sprint 9 — Pilotage commercial et réassort", () => {
     );
   });
 
-  test("manager — décision, détail explicable et relance confirmée", async ({ page }) => {
+  test("manager — décision, détail explicable et action ouverte sans doublon", async ({ page }) => {
     await signIn(page, "admin@dermavita.local", /Dermavita/);
     await expect(page.getByRole("heading", { name: "Je constate, je comprends, j’agis" })).toBeVisible();
     await expect(page.getByText("À traiter maintenant")).toBeVisible();
@@ -136,29 +136,25 @@ test.describe.serial("Sprint 9 — Pilotage commercial et réassort", () => {
     await expect(health.getByText("Dernière commande")).toBeVisible();
     await expect(health.getByText("Réassort estimé")).toBeVisible();
     await expect(health.getByText("À convertir")).toBeVisible();
-    await health.getByText("Créer la relance").click();
-    await health.getByRole("button", { name: "Confirmer la création" }).click();
+    await expect(health.getByText("Action déjà planifiée")).toBeVisible();
+    await expect(health.getByRole("link", { name: "Suivre l’action ouverte" })).toHaveAttribute("href", `/dashboard/pharmacies/${conversionRelationId}`);
 
     const admin = adminClient();
-    await expect.poll(async () => {
-      const { count } = await admin
-        .from("tasks")
-        .select("*", { count: "exact", head: true })
-        .eq("brand_pharmacy_id", conversionRelationId)
-        .eq("title", `Relance réassort — ${conversionPharmacyName}`);
-      return count;
-    }).toBe(1);
-    const { data: tasks } = await admin
+    const { data: openTasks, error: openTasksError } = await admin
       .from("tasks")
-      .select("brand_id,brand_pharmacy_id,title,due_at,status")
+      .select("title,status")
+      .eq("brand_pharmacy_id", conversionRelationId)
+      .in("status", ["open", "in_progress"])
+      .is("archived_at", null);
+    expect(openTasksError).toBeNull();
+    expect(openTasks?.length ?? 0).toBeGreaterThanOrEqual(1);
+
+    const { count: duplicateCount } = await admin
+      .from("tasks")
+      .select("*", { count: "exact", head: true })
       .eq("brand_pharmacy_id", conversionRelationId)
       .eq("title", `Relance réassort — ${conversionPharmacyName}`);
-    expect(tasks).toHaveLength(1);
-    expect(tasks?.[0]).toMatchObject({
-      brand_id: dermavitaBrandId,
-      brand_pharmacy_id: conversionRelationId,
-      status: "open",
-    });
+    expect(duplicateCount).toBe(0);
   });
 
   test("premier réassort — conversion visible dans les données finales", async ({ page }) => {
