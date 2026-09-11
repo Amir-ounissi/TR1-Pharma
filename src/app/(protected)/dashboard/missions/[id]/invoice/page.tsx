@@ -18,7 +18,11 @@ export default async function AnimationInvoicePage({
   const role =
     contexts.find((context) => context.id === brand.id)?.role ?? "brand_user";
 
-  const [{ data: mission }, { data: invoice }] = await Promise.all([
+  const [
+    { data: mission },
+    { data: invoice },
+    { data: report },
+  ] = await Promise.all([
     supabase
       .from("missions")
       .select(
@@ -33,6 +37,12 @@ export default async function AnimationInvoicePage({
         "id,attachment_id,invoice_number,amount_ht,vat_amount,amount_ttc,status,review_note,submitted_at,reviewed_at,paid_at,facilitator_user_id",
       )
       .eq("mission_id", id)
+      .maybeSingle(),
+    supabase
+      .from("mission_reports")
+      .select("report_status")
+      .eq("mission_id", id)
+      .is("archived_at", null)
       .maybeSingle(),
   ]);
 
@@ -60,6 +70,7 @@ export default async function AnimationInvoicePage({
   const isAssigned = mission.assigned_user_id === userId;
   const isFacilitator = role === "facilitator";
   const isDatedAnimation = Boolean(mission.scheduled_start_at);
+  const reportValidated = report?.report_status === "validated";
   const invoiceStatus = invoice?.status ?? null;
 
   const canSubmit =
@@ -67,6 +78,7 @@ export default async function AnimationInvoicePage({
     isFacilitator &&
     isDatedAnimation &&
     mission.status === "completed" &&
+    reportValidated &&
     (!invoice || invoiceStatus === "rejected");
 
   const canReview = Boolean(
@@ -103,7 +115,7 @@ export default async function AnimationInvoicePage({
         </div>
         <h1 className="mt-2 text-2xl font-semibold">Facturation · {mission.title}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Une facture correspond à une journée d’animation réalisée et clôturée.
+          Une facture correspond à une journée d’animation réalisée, clôturée et validée.
         </p>
       </header>
 
@@ -111,6 +123,13 @@ export default async function AnimationInvoicePage({
         <div className="rounded-xl border bg-muted/30 p-4 text-sm text-muted-foreground">
           Cette demande d’animation n’est pas encore planifiée. La facturation
           sera disponible une fois une journée réalisée et clôturée.
+        </div>
+      ) : null}
+
+      {isAssigned && isFacilitator && mission.status === "completed" && !reportValidated ? (
+        <div className="rounded-xl border bg-muted/30 p-4 text-sm text-muted-foreground">
+          La facture sera disponible dès que le compte rendu de l’animation aura
+          été validé.
         </div>
       ) : null}
 
