@@ -34,7 +34,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "HubSpot connection unavailable" }, { status: 503 });
   }
 
-  const expectedNonce = connection.configuration?.pilot_nonce;
+  const configuration = connection.configuration as Record<string, unknown> | null;
+  const expectedNonce = configuration?.pilot_nonce;
   const providedNonce = request.nextUrl.searchParams.get("nonce");
   if (typeof expectedNonce !== "string" || !providedNonce || providedNonce !== expectedNonce) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
