@@ -7,7 +7,7 @@ describe("role navigation", () => {
     expect(links).toContain("/dashboard/agent");
     expect(links).toEqual(["/dashboard/agent", "/dashboard/pharmacies", "/dashboard/orders", "/dashboard/agent/performance", "/dashboard/agent/more"]);
     expect(links).not.toContain("/dashboard/missions");
-    expect(getAgentMoreItems().map((item) => item.href)).toEqual(["/dashboard/agenda", "/dashboard/products", "/dashboard/missions", "/dashboard/tasks", "/dashboard/sell-out", "/dashboard/reports", "/dashboard/agent/assistant"]);
+    expect(getAgentMoreItems().map((item) => item.href)).toEqual(["/dashboard/agent/performance", "/dashboard/products", "/dashboard/missions", "/dashboard/tasks", "/dashboard/sell-out", "/dashboard/reports", "/dashboard/agent/assistant"]);
     expect(links).not.toContain("/dashboard/users");
     expect(links).not.toContain("/dashboard/subscription");
     expect(links).not.toContain("/dashboard/admin/onboarding");
@@ -88,6 +88,7 @@ describe("role navigation", () => {
     const adminLinks = getNavigationItems("brand_admin", "tenant", coreCapabilities).map((item) => item.href);
     const agentLinks = getNavigationItems("agent", "tenant", coreCapabilities).map((item) => item.href);
     const agentMoreLinks = getAgentMoreItems(coreCapabilities).map((item) => item.href);
+    const mobileAgentLinks = getMobileAgentNavigationItems(coreCapabilities).map((item) => item.href);
 
     expect(managerLinks).not.toContain("/dashboard/forecast");
     expect(managerLinks).not.toContain("/dashboard/pharma-360");
@@ -99,10 +100,17 @@ describe("role navigation", () => {
     expect(adminLinks).toContain("/dashboard/subscription");
     expect(agentLinks).toContain("/dashboard/agent/performance");
     expect(agentMoreLinks).toContain("/dashboard/missions");
-    expect(agentMoreLinks).toContain("/dashboard/agenda");
-    expect(agentMoreLinks).not.toContain("/dashboard/agent/performance");
+    expect(agentMoreLinks).toContain("/dashboard/agent/performance");
+    expect(agentMoreLinks).not.toContain("/dashboard/agenda");
     expect(agentMoreLinks).not.toContain("/dashboard/sell-out");
     expect(agentMoreLinks).not.toContain("/dashboard/agent/assistant");
+    expect(mobileAgentLinks).toEqual([
+      "/dashboard/agent",
+      "/dashboard/agenda",
+      "/dashboard/pharmacies",
+      "/dashboard/orders",
+      "/dashboard/agent/more",
+    ]);
   });
 
   it("lets an explicit capability immediately expose its module", () => {
@@ -119,14 +127,15 @@ describe("role navigation", () => {
     expect(adminLinks).toContain("/dashboard/subscription");
   });
 
-  it("declares the same five primary destinations on mobile for the agent", () => {
+  it("puts the daily agenda directly under the commercial's thumb on mobile", () => {
     expect(getMobileAgentNavigationItems().map((item) => item.href)).toEqual([
       "/dashboard/agent",
+      "/dashboard/agenda",
       "/dashboard/pharmacies",
       "/dashboard/orders",
-      "/dashboard/agent/performance",
       "/dashboard/agent/more",
     ]);
+    expect(getAgentMoreItems().map((item) => item.href)).toContain("/dashboard/agent/performance");
   });
 
   it("classifies roles and nested active routes", () => {
