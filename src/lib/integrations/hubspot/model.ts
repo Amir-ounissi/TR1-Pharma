@@ -17,6 +17,7 @@ export type HubSpotPropertyMap = {
   sku?: string;
   unitPriceHt?: string;
   vatRate?: string;
+  taxRateGroupId?: string;
   orderNumber?: string;
   orderDate?: string;
   orderType?: string;
@@ -61,6 +62,7 @@ export type HubSpotBrandConfiguration = {
     freeUnitsMode: HubSpotFreeUnitsMode;
     freeUnitNameSuffix?: string;
     freeUnitNamePrefix?: string;
+    taxRateGroupIds?: Record<string, string>;
   };
 };
 
@@ -155,6 +157,12 @@ export function assertHubSpotBrandConfiguration(config: HubSpotBrandConfiguratio
   for (const map of maps) {
     for (const value of Object.values(map)) {
       if (value && !SAFE_NAME.test(value)) throw new Error("Invalid HubSpot property configuration");
+    }
+  }
+
+  if (config.order.taxRateGroupIds) {
+    for (const [rate, groupId] of Object.entries(config.order.taxRateGroupIds)) {
+      if (!rate.trim() || !groupId.trim()) throw new Error("Invalid HubSpot tax rate group configuration");
     }
   }
 
