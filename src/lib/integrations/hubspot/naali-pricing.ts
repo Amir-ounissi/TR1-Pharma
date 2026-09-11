@@ -149,7 +149,8 @@ export async function getNaaliHubSpotPharmacyPricing(brandId: string, pharmacyId
   if (overrideError) throw overrideError;
 
   const manualFreeUnitsRule = manualRule(override);
-  const manualDiscount = override?.discount_rate == null ? null : Number(override.discount_rate);
+  const hasManualDiscount = override?.discount_rate != null;
+  const manualDiscount = hasManualDiscount ? Number(override.discount_rate) : null;
   const overrideNote = override?.note?.trim() || null;
 
   const { data: connection, error: connectionError } = await admin
@@ -166,7 +167,7 @@ export async function getNaaliHubSpotPharmacyPricing(brandId: string, pharmacyId
       ...empty,
       discountRate: manualDiscount,
       freeUnitsRule: manualFreeUnitsRule,
-      discountSource: manualDiscount == null ? null : "tr1_override",
+      discountSource: hasManualDiscount ? "tr1_override" : null,
       freeUnitsSource: manualFreeUnitsRule ? "tr1_override" : null,
       overrideNote,
     };
@@ -180,7 +181,7 @@ export async function getNaaliHubSpotPharmacyPricing(brandId: string, pharmacyId
       ...empty,
       discountRate: manualDiscount,
       freeUnitsRule: manualFreeUnitsRule,
-      discountSource: manualDiscount == null ? null : "tr1_override",
+      discountSource: hasManualDiscount ? "tr1_override" : null,
       freeUnitsSource: manualFreeUnitsRule ? "tr1_override" : null,
       overrideNote,
     };
@@ -200,7 +201,7 @@ export async function getNaaliHubSpotPharmacyPricing(brandId: string, pharmacyId
       ...empty,
       discountRate: manualDiscount,
       freeUnitsRule: manualFreeUnitsRule,
-      discountSource: manualDiscount == null ? null : "tr1_override",
+      discountSource: hasManualDiscount ? "tr1_override" : null,
       freeUnitsSource: manualFreeUnitsRule ? "tr1_override" : null,
       overrideNote,
     };
@@ -220,11 +221,11 @@ export async function getNaaliHubSpotPharmacyPricing(brandId: string, pharmacyId
   const explicitFieldRule = parseFreeUnitsRule(properties?.unites_gratuites);
 
   return {
-    discountRate: manualDiscount ?? hubSpotDiscount,
+    discountRate: hasManualDiscount ? manualDiscount : hubSpotDiscount,
     potential: properties?.potentiel?.trim() || null,
     leadStatus: properties?.hs_lead_status?.trim() || null,
     freeUnitsRule: manualFreeUnitsRule ?? leadStatusRule ?? explicitFieldRule,
-    discountSource: manualDiscount == null ? (hubSpotDiscount == null ? null : "hubspot") : "tr1_override",
+    discountSource: hasManualDiscount ? "tr1_override" : (hubSpotDiscount == null ? null : "hubspot"),
     freeUnitsSource: manualFreeUnitsRule
       ? "tr1_override"
       : leadStatusRule
