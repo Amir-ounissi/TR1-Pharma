@@ -33,6 +33,7 @@ export type HubSpotPropertyMap = {
   primaryProductExternalId?: string;
   productType?: string;
   isFreeUnit?: string;
+  freeUnitReason?: string;
   body?: string;
   internalNotes?: string;
   activityType?: string;
@@ -62,6 +63,7 @@ export type HubSpotBrandConfiguration = {
     freeUnitsMode: HubSpotFreeUnitsMode;
     freeUnitNameSuffix?: string;
     freeUnitNamePrefix?: string;
+    freeUnitReasonValue?: string;
     taxRateGroupIds?: Record<string, string>;
   };
 };
