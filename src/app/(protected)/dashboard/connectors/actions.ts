@@ -138,7 +138,7 @@ export async function saveHubSpotFieldMappingProfileAction(formData: FormData): 
   const submitted: Record<string, unknown> = {};
   for (const definition of HUBSPOT_FIELD_DEFINITIONS[rawEntityType]) {
     const value = String(formData.get(`field:${definition.key}`) ?? "").trim();
-    if (value) submitted[definition.key] = value;
+    submitted[definition.key] = value || null;
   }
   const fieldMapping = normalizeHubSpotFieldMapping(rawEntityType, submitted);
 
