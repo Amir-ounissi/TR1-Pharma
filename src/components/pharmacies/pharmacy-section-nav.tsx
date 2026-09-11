@@ -39,8 +39,14 @@ function href(pharmacyId: string, tab: string) {
   return `/dashboard/pharmacies/${pharmacyId}?tab=${tab}`;
 }
 
+function commercialTermsHref(pharmacyId: string) {
+  return `/dashboard/pharmacies/${pharmacyId}/commercial-terms`;
+}
+
 export function PharmacySectionNav({ pharmacyId, activeTab }: PharmacySectionNavProps) {
-  const moreActive = MORE_TABS.some(([value]) => value === activeTab);
+  const commercialTermsActive = activeTab === "commercial_terms";
+  const moreActive =
+    commercialTermsActive || MORE_TABS.some(([value]) => value === activeTab);
 
   return (
     <>
@@ -69,6 +75,23 @@ export function PharmacySectionNav({ pharmacyId, activeTab }: PharmacySectionNav
             </Button>
           );
         })}
+        <Button
+          asChild
+          variant={commercialTermsActive ? "secondary" : "ghost"}
+          size="sm"
+          className={cn(
+            "shrink-0",
+            commercialTermsActive &&
+              "bg-[var(--tr1-navy)] text-white hover:bg-[var(--tr1-navy-soft)] hover:text-white",
+          )}
+        >
+          <Link
+            aria-current={commercialTermsActive ? "page" : undefined}
+            href={commercialTermsHref(pharmacyId)}
+          >
+            Conditions commerciales
+          </Link>
+        </Button>
       </nav>
 
       <nav
@@ -138,6 +161,21 @@ export function PharmacySectionNav({ pharmacyId, activeTab }: PharmacySectionNav
                   </SheetClose>
                 );
               })}
+              <SheetClose asChild>
+                <Link
+                  aria-current={commercialTermsActive ? "page" : undefined}
+                  href={commercialTermsHref(pharmacyId)}
+                  className={cn(
+                    "flex min-h-12 items-center justify-between rounded-xl border px-4 text-sm font-semibold transition-colors",
+                    commercialTermsActive
+                      ? "border-[var(--tr1-navy)] bg-[var(--tr1-navy)] text-white"
+                      : "border-[var(--tr1-line-strong)] bg-white text-[var(--tr1-navy)] active:bg-muted",
+                  )}
+                >
+                  Conditions commerciales
+                  <span aria-hidden="true">›</span>
+                </Link>
+              </SheetClose>
             </div>
           </SheetContent>
         </Sheet>
