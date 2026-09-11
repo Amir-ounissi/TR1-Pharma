@@ -15,6 +15,7 @@ import {
   isHubSpotFieldMappingEntity,
   normalizeHubSpotFieldMapping,
 } from "@/lib/integrations/hubspot/mapping-profile";
+import { reconcileHubSpotConnectionAfterActivation } from "@/lib/integrations/hubspot/reconciliation";
 import { assertActiveBrandCapability } from "@/lib/saas/server";
 
 const uuid = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
@@ -81,12 +82,25 @@ export async function saveConnectorConnectionFormAction(formData: FormData): Pro
 export async function setConnectorStatusFormAction(formData: FormData): Promise<void> {
   const connectionId = uuid.parse(formData.get("connectionId"));
   const status = connectionStatus.parse(formData.get("status"));
-  const { supabase } = await requireConnectorAdmin();
+  const { supabase, brand } = await requireConnectorAdmin();
+  const { data: connection, error: connectionError } = await supabase
+    .from("connector_connections")
+    .select("id,provider")
+    .eq("id", connectionId)
+    .eq("brand_id", brand.id)
+    .is("archived_at", null)
+    .maybeSingle();
+  if (connectionError || !connection) throw new Error(connectionError?.message || "Connecteur introuvable.");
+
   const { error } = await supabase.rpc("set_connector_connection_status", {
     target_connection_id: connectionId,
     target_status: status,
   });
   if (error) throw new Error(error.message);
+
+  if (status === "active" && connection.provider === "hubspot") {
+    await reconcileHubSpotConnectionAfterActivation(brand.id, connectionId);
+  }
   revalidatePath("/dashboard/connectors");
 }
 

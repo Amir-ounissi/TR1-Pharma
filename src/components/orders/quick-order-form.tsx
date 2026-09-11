@@ -7,6 +7,7 @@ import {
   searchOrderPharmaciesAction,
   type OrderPharmacySearchResult,
 } from "@/app/(protected)/dashboard/orders/actions";
+import { getOrderPharmacyPricingAction } from "@/app/(protected)/dashboard/orders/pricing-actions";
 import { ActionFeedback } from "@/components/reference/action-feedback";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,12 @@ type ProductOption = {
   taxRate?: number | null;
   unitsPerCase?: number | null;
   minimumOrderQuantity?: number | null;
+};
+
+type FreeUnitsRule = {
+  paidQuantity: number;
+  freeQuantity: number;
+  label: string;
 };
 
 export type QuickOrderItem = {
@@ -63,12 +70,20 @@ function money(value: number) {
   }).format(value);
 }
 
+function freeQuantityFor(quantity: number, rule: FreeUnitsRule | null) {
+  if (!rule || quantity <= 0) return 0;
+  return Math.floor(quantity / rule.paidQuantity) * rule.freeQuantity;
+}
+
 function PharmacyAutocomplete({
   initialPharmacy,
   onSelectionChange,
 }: {
   initialPharmacy?: OrderPharmacySearchResult;
-  onSelectionChange: (changedFromInitial: boolean) => void;
+  onSelectionChange: (
+    changedFromInitial: boolean,
+    pharmacy?: OrderPharmacySearchResult,
+  ) => void;
 }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<OrderPharmacySearchResult[]>([]);
@@ -100,7 +115,7 @@ function PharmacyAutocomplete({
         placeholder="Nom, ville, CIP ou SIRET…"
         autoComplete="off"
         onChange={(event) => {
-          if (selected) onSelectionChange(Boolean(initialPharmacy));
+          if (selected) onSelectionChange(Boolean(initialPharmacy), undefined);
           setSelected(undefined);
           void search(event.target.value);
         }}
@@ -139,6 +154,7 @@ function PharmacyAutocomplete({
                     initialPharmacy &&
                       result.brandPharmacyId !== initialPharmacy.brandPharmacyId,
                   ),
+                  result,
                 );
               }}
             >
@@ -163,6 +179,9 @@ export function QuickOrderForm({
   lastOrderItems = [],
   initialProductId,
   initialOrderType = "other",
+  initialDiscountRate = null,
+  initialPotential = null,
+  initialFreeUnitsRule = null,
   isAgent = false,
 }: {
   products: ProductOption[];
@@ -170,24 +189,42 @@ export function QuickOrderForm({
   lastOrderItems?: QuickOrderItem[];
   initialProductId?: string;
   initialOrderType?: string;
+  initialDiscountRate?: number | null;
+  initialPotential?: string | null;
+  initialFreeUnitsRule?: FreeUnitsRule | null;
   isAgent?: boolean;
 }) {
   const [state, action, pending] = useActionState(createOrderAction, {});
   const initialProduct = products.find((product) => product.id === initialProductId);
   const initialMinimum = Math.max(1, initialProduct?.minimumOrderQuantity ?? 1);
+  const [defaultDiscountRate, setDefaultDiscountRate] = useState<number | null>(
+    initialDiscountRate,
+  );
+  const [potential, setPotential] = useState<string | null>(initialPotential);
+  const [freeUnitsRule, setFreeUnitsRule] = useState<FreeUnitsRule | null>(
+    initialFreeUnitsRule,
+  );
+  const [pricingLoading, setPricingLoading] = useState(false);
   const [lines, setLines] = useState<DraftLine[]>(() => [
     {
       key: "line-1",
       productId: initialProduct?.id ?? "",
       quantity: initialProduct ? initialMinimum : 1,
-      freeQuantity: 0,
+      freeQuantity: initialProduct
+        ? freeQuantityFor(initialMinimum, initialFreeUnitsRule)
+        : 0,
       unitPriceHt:
         initialProduct?.price == null ? "" : String(initialProduct.price),
-      discountRate: "",
+      discountRate:
+        initialDiscountRate == null ? "" : String(initialDiscountRate),
     },
   ]);
   const [orderType, setOrderType] = useState(initialOrderType);
   const [initialContextChanged, setInitialContextChanged] = useState(false);
+
+  function defaultDiscountValue() {
+    return defaultDiscountRate == null ? "" : String(defaultDiscountRate);
+  }
 
   function addLine() {
     setLines((current) => [
@@ -198,7 +235,7 @@ export function QuickOrderForm({
         quantity: 1,
         freeQuantity: 0,
         unitPriceHt: "",
-        discountRate: "",
+        discountRate: defaultDiscountValue(),
       },
     ]);
   }
@@ -211,14 +248,22 @@ export function QuickOrderForm({
     );
   }
 
+  function updateLineQuantity(index: number, quantity: number) {
+    updateLine(index, {
+      quantity,
+      freeQuantity: freeQuantityFor(quantity, freeUnitsRule),
+    });
+  }
+
   function selectProduct(index: number, productId: string) {
     const product = products.find((item) => item.id === productId);
+    const quantity = Math.max(1, product?.minimumOrderQuantity ?? 1);
     updateLine(index, {
       productId,
-      quantity: Math.max(1, product?.minimumOrderQuantity ?? 1),
-      freeQuantity: 0,
+      quantity,
+      freeQuantity: freeQuantityFor(quantity, freeUnitsRule),
       unitPriceHt: product?.price == null ? "" : String(product.price),
-      discountRate: "",
+      discountRate: defaultDiscountValue(),
     });
   }
 
@@ -229,13 +274,36 @@ export function QuickOrderForm({
         key: `last-${index}-${item.productId}`,
         productId: item.productId,
         quantity: Math.max(1, Number(item.quantity)),
-        freeQuantity: Math.max(0, Number(item.freeQuantity ?? 0)),
+        freeQuantity:
+          freeUnitsRule == null
+            ? Math.max(0, Number(item.freeQuantity ?? 0))
+            : freeQuantityFor(Math.max(1, Number(item.quantity)), freeUnitsRule),
         unitPriceHt: String(item.unitPriceHt ?? ""),
         discountRate:
-          item.discountRate == null ? "" : String(item.discountRate),
+          item.discountRate == null ? defaultDiscountValue() : String(item.discountRate),
       })),
     );
     setOrderType("reorder");
+  }
+
+  async function loadPharmacyPricing(pharmacy: OrderPharmacySearchResult) {
+    setPricingLoading(true);
+    try {
+      const pricing = await getOrderPharmacyPricingAction(pharmacy.pharmacyId);
+      setDefaultDiscountRate(pricing.discountRate);
+      setPotential(pricing.potential);
+      setFreeUnitsRule(pricing.freeUnitsRule);
+      setLines((current) =>
+        current.map((line) => ({
+          ...line,
+          discountRate:
+            pricing.discountRate == null ? "" : String(pricing.discountRate),
+          freeQuantity: freeQuantityFor(line.quantity, pricing.freeUnitsRule),
+        })),
+      );
+    } finally {
+      setPricingLoading(false);
+    }
   }
 
   const totalHt = useMemo(
@@ -263,8 +331,13 @@ export function QuickOrderForm({
       <div className="rounded-2xl border bg-muted/20 p-4">
         <PharmacyAutocomplete
           initialPharmacy={initialPharmacy}
-          onSelectionChange={(changed) => {
+          onSelectionChange={(changed, pharmacy) => {
             setInitialContextChanged(changed);
+            if (!pharmacy) {
+              setDefaultDiscountRate(null);
+              setPotential(null);
+              setFreeUnitsRule(null);
+            }
             if (changed) {
               setLines([
                 {
@@ -278,8 +351,24 @@ export function QuickOrderForm({
               ]);
               setOrderType("other");
             }
+            if (pharmacy) void loadPharmacyPricing(pharmacy);
           }}
         />
+        <div className="mt-2 flex flex-wrap gap-2 text-xs">
+          {pricingLoading ? (
+            <span className="text-muted-foreground">Conditions HubSpot…</span>
+          ) : (
+            <>
+              {potential ? <Badge variant="outline">Potentiel {potential}</Badge> : null}
+              {defaultDiscountRate != null ? (
+                <Badge variant="secondary">Remise pharmacie {defaultDiscountRate}%</Badge>
+              ) : null}
+              {freeUnitsRule ? (
+                <Badge variant="secondary">UG {freeUnitsRule.label} à la ligne</Badge>
+              ) : null}
+            </>
+          )}
+        </div>
       </div>
 
       <section className="space-y-3">
@@ -287,7 +376,7 @@ export function QuickOrderForm({
           <div>
             <h2 className="text-lg font-bold text-[var(--tr1-navy)]">Produits</h2>
             <p className="text-xs text-muted-foreground">
-              Choisissez les références et ajustez uniquement les quantités.
+              Prix catalogue, remise pharmacie, TVA et UG client sont préchargés automatiquement quand la condition est structurée.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -343,6 +432,10 @@ export function QuickOrderForm({
                       {product.price != null ? (
                         <Badge variant="secondary">{money(Number(product.price))} HT</Badge>
                       ) : null}
+                      {product.taxRate != null ? (
+                        <Badge variant="outline">TVA {Number(product.taxRate)}%</Badge>
+                      ) : null}
+                      {discount > 0 ? <Badge variant="outline">Remise {discount}%</Badge> : null}
                       {product.unitsPerCase ? (
                         <span>Colisage {product.unitsPerCase}</span>
                       ) : null}
@@ -350,64 +443,75 @@ export function QuickOrderForm({
                         <span>Minimum {product.minimumOrderQuantity}</span>
                       ) : null}
                       {line.freeQuantity > 0 ? (
-                        <span>+{line.freeQuantity} gratuit(s)</span>
+                        <Badge variant="outline">+{line.freeQuantity} UG</Badge>
                       ) : null}
-                      {discount > 0 ? <span>Remise {discount}%</span> : null}
                     </div>
                   ) : null}
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor={`quick-quantity-${index}`}>Quantité</Label>
-                  <div className="flex h-11 items-center overflow-hidden rounded-xl border bg-background">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-11 rounded-none"
-                      disabled={line.quantity <= minimum}
-                      onClick={() =>
-                        updateLine(index, {
-                          quantity: Math.max(minimum, line.quantity - 1),
-                        })
-                      }
-                      aria-label={`Retirer une unité de ${product?.name ?? "la référence"}`}
-                    >
-                      <Minus className="size-4" />
-                    </Button>
+                <div className="grid grid-cols-2 gap-2 sm:flex sm:items-end">
+                  <div className="space-y-2">
+                    <Label htmlFor={`quick-quantity-${index}`}>Quantité</Label>
+                    <div className="flex h-11 items-center overflow-hidden rounded-xl border bg-background">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-11 rounded-none"
+                        disabled={line.quantity <= minimum}
+                        onClick={() =>
+                          updateLineQuantity(index, Math.max(minimum, line.quantity - 1))
+                        }
+                        aria-label={`Retirer une unité de ${product?.name ?? "la référence"}`}
+                      >
+                        <Minus className="size-4" />
+                      </Button>
+                      <Input
+                        id={`quick-quantity-${index}`}
+                        name="quantity"
+                        type="number"
+                        min={minimum}
+                        value={line.quantity}
+                        onChange={(event) =>
+                          updateLineQuantity(
+                            index,
+                            Math.max(minimum, Number(event.target.value) || minimum),
+                          )
+                        }
+                        className="h-11 w-16 rounded-none border-0 text-center font-bold shadow-none focus-visible:ring-0"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-11 rounded-none"
+                        onClick={() => updateLineQuantity(index, line.quantity + 1)}
+                        aria-label={`Ajouter une unité de ${product?.name ?? "la référence"}`}
+                      >
+                        <Plus className="size-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor={`quick-free-quantity-${index}`}>UG</Label>
                     <Input
-                      id={`quick-quantity-${index}`}
-                      name="quantity"
+                      id={`quick-free-quantity-${index}`}
+                      name="freeQuantity"
                       type="number"
-                      min={minimum}
-                      value={line.quantity}
+                      min="0"
+                      step="1"
+                      value={line.freeQuantity}
                       onChange={(event) =>
                         updateLine(index, {
-                          quantity: Math.max(
-                            minimum,
-                            Number(event.target.value) || minimum,
-                          ),
+                          freeQuantity: Math.max(0, Number(event.target.value) || 0),
                         })
                       }
-                      className="h-11 w-16 rounded-none border-0 text-center font-bold shadow-none focus-visible:ring-0"
+                      className="h-11 w-full min-w-16 text-center font-bold"
                     />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-11 rounded-none"
-                      onClick={() =>
-                        updateLine(index, { quantity: line.quantity + 1 })
-                      }
-                      aria-label={`Ajouter une unité de ${product?.name ?? "la référence"}`}
-                    >
-                      <Plus className="size-4" />
-                    </Button>
                   </div>
                 </div>
               </div>
 
-              <input type="hidden" name="freeQuantity" value={line.freeQuantity} />
               <input type="hidden" name="discountRate" value={line.discountRate} />
 
               {!isAgent || !line.unitPriceHt ? (
@@ -435,6 +539,7 @@ export function QuickOrderForm({
               <div className="mt-3 flex items-center justify-between gap-3 border-t pt-3 text-sm">
                 <span className="text-muted-foreground">
                   {lineTotal == null ? "Prix à compléter" : money(lineTotal)}
+                  {line.freeQuantity > 0 ? ` · ${line.freeQuantity} UG conditions client` : ""}
                 </span>
                 {lines.length > 1 ? (
                   <Button
