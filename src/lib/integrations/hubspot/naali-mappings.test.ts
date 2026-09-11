@@ -90,4 +90,37 @@ describe("Naali HubSpot order mapping", () => {
 
     expect(mapped.lineItems[0]?.properties.hs_tax_rate_group_id).toBe("115989351");
   });
+
+  it("classifies Naali UG as client commercial conditions in HubSpot", () => {
+    const mapped = mapOrderToHubSpot({
+      id: "order-ug",
+      orderNumber: "CMD-UG",
+      status: "pending",
+      orderDate: "2026-09-11T09:00:00.000Z",
+      netAmountHt: 442.1,
+      currency: "EUR",
+      lines: [{
+        id: "line-ug",
+        productId: "product-ug",
+        productExternalId: "172418389203",
+        freeProductExternalId: "hubspot-ug-product",
+        name: "Gommes Anti Stress x60",
+        sku: "1antistress60",
+        quantity: 24,
+        freeQuantity: 4,
+        unitPriceHt: 28.34,
+        discountPercent: 35,
+        vatRate: 5.5,
+      }],
+    }, NAALI_HUBSPOT_CONFIGURATION);
+
+    expect(mapped.lineItems[1]?.properties).toMatchObject({
+      type_de_produit_naali: "UG",
+      primary_product_id: "172418389203",
+      quantity: "4",
+      price: "0",
+      hs_tax_rate_group_id: "115989351",
+      test_type_dug: "conditions commerciale client",
+    });
+  });
 });
