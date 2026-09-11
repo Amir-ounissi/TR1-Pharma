@@ -27,6 +27,16 @@ function percentage(value: number | null | undefined) {
   return value;
 }
 
+function taxRateGroupId(vatRate: number | null | undefined, config: HubSpotBrandConfiguration) {
+  if (vatRate === null || vatRate === undefined) return null;
+  if (!Number.isFinite(vatRate) || vatRate < 0) throw new Error("Invalid VAT rate");
+  const groupId = config.order.taxRateGroupIds?.[decimal(vatRate)] ?? null;
+  if (config.properties.lineItem.taxRateGroupId && !groupId) {
+    throw new Error(`HubSpot tax rate group missing for VAT ${decimal(vatRate)}%`);
+  }
+  return groupId;
+}
+
 function externalRecord(id: string, map: HubSpotPropertyMap, properties: Record<string, string>): HubSpotMappedRecord {
   if (!id.trim()) throw new Error("TR1 record ID is required for HubSpot sync");
   if (map.externalId) properties[map.externalId] = id;
@@ -84,6 +94,7 @@ function mapPaidLine(line: HubSpotOrderLineSyncInput, config: HubSpotBrandConfig
   set(properties, map.quantity, line.quantity);
   set(properties, map.unitPriceHt, decimal(unitPrice));
   set(properties, map.vatRate, line.vatRate === null || line.vatRate === undefined ? null : decimal(line.vatRate));
+  set(properties, map.taxRateGroupId, taxRateGroupId(line.vatRate, config));
 
   if (config.order.linePricingMode === "unit_price_with_discount") {
     set(properties, map.discountPercent, discount === null ? null : decimal(discount));
@@ -110,6 +121,7 @@ function mapFreeLine(line: HubSpotOrderLineSyncInput, freeQuantity: number, conf
   set(properties, map.quantity, freeQuantity);
   set(properties, map.unitPriceHt, "0");
   set(properties, map.vatRate, line.vatRate === null || line.vatRate === undefined ? null : decimal(line.vatRate));
+  set(properties, map.taxRateGroupId, taxRateGroupId(line.vatRate, config));
   set(properties, map.isFreeUnit, "true");
   return externalRecord(`${line.id}:free`, map, properties);
 }
