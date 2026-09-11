@@ -3,12 +3,25 @@ import "server-only";
 import type { ConnectorEntityType } from "@/lib/connectors";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { HubSpotClient, type HubSpotClientMode } from "./client";
-import { assertHubSpotBrandConfiguration, type HubSpotMeetingSyncInput, type HubSpotNoteSyncInput, type HubSpotOrderSyncInput } from "./model";
-import { NAALI_HUBSPOT_CONFIGURATION, resolveNaaliHubSpotOrderRoute } from "./naali";
+import {
+  resolveHubSpotMappedValue,
+  type HubSpotMappingTransforms,
+} from "./mapping-profile";
+import { loadHubSpotRuntimeProfile } from "./mapping-profile-runtime";
+import type {
+  HubSpotBrandConfiguration,
+  HubSpotNoteSyncInput,
+  HubSpotOrderSyncInput,
+} from "./model";
+import {
+  NAALI_HUBSPOT_CONFIGURATION,
+  resolveNaaliHubSpotOrderRoute,
+  resolveNaaliHubSpotOrderType,
+} from "./naali";
+import { syncNaaliHubSpotVisitAfterPersistence } from "./naali-visit-runtime";
 import {
   syncHubSpotNote,
   syncHubSpotOrder,
-  syncHubSpotVisit,
   type HubSpotExternalLinkStore,
   type HubSpotSyncEvent,
   type HubSpotSyncJournal,
@@ -39,29 +52,23 @@ function configuredMode(connection: HubSpotConnection) {
 function syncMode(connection: HubSpotConnection): HubSpotClientMode {
   const requested = process.env.TR1_HUBSPOT_MODE?.trim().toLowerCase();
   const configured = configuredMode(connection);
-
   if (requested === "dry_run") return "dry_run";
   if (!requested && configured === "dry_run") return "dry_run";
-
-  const connectionWriteEnabled = connection.configuration?.write_enabled === true;
   if (
     requested === "write"
     && configured === "write"
-    && connectionWriteEnabled
+    && connection.configuration?.write_enabled === true
     && process.env.TR1_HUBSPOT_WRITE_ENABLED === "true"
   ) {
     return "write";
   }
-
   return "disabled";
 }
 
 function accessToken(connection: HubSpotConnection, mode: HubSpotClientMode) {
   if (mode !== "write") return null;
   const reference = connection.credential_reference?.trim();
-  if (reference && /^[A-Z][A-Z0-9_]*$/.test(reference)) {
-    return process.env[reference] ?? null;
-  }
+  if (reference && /^[A-Z][A-Z0-9_]*$/.test(reference)) return process.env[reference] ?? null;
   return process.env.HUBSPOT_ACCESS_TOKEN ?? null;
 }
 
@@ -69,7 +76,11 @@ function safeError(error: unknown) {
   return error instanceof Error ? error.message.slice(0, 500) : "Unknown HubSpot runtime error";
 }
 
-async function findConnection(admin: ReturnType<typeof createAdminClient>, brandId: string, entityType: HubSpotRuntimeEntity) {
+async function findConnection(
+  admin: ReturnType<typeof createAdminClient>,
+  brandId: string,
+  entityType: HubSpotRuntimeEntity,
+) {
   const { data: connection, error: connectionError } = await admin
     .from("connector_connections")
     .select("id,base_url,credential_reference,configuration")
@@ -93,7 +104,6 @@ async function findConnection(admin: ReturnType<typeof createAdminClient>, brand
     .maybeSingle();
   if (mappingError) throw mappingError;
   if (!mapping) return null;
-
   return connection as HubSpotConnection;
 }
 
@@ -139,7 +149,6 @@ function searchedExternalId(search: HubSpotSearchResponse, label: string) {
   if (total !== 1 || results.length !== 1) {
     throw new Error(`Expected exactly one HubSpot product for ${label}; found ${total}`);
   }
-
   const rawExternalId = results[0]?.id;
   const externalId = typeof rawExternalId === "number" && Number.isFinite(rawExternalId)
     ? String(rawExternalId)
@@ -162,9 +171,7 @@ async function resolveHubSpotProductExternalId(options: {
   if (existing) return existing;
 
   const sku = options.sku?.trim();
-  if (!sku) {
-    throw new Error(`HubSpot product mapping missing for TR1 product ${tr1ProductId}, and no SKU is available for exact lookup`);
-  }
+  if (!sku) throw new Error(`HubSpot product mapping missing for TR1 product ${tr1ProductId}, and no SKU is available for exact lookup`);
   if (client.getMode() !== "write") {
     throw new Error(`HubSpot product mapping missing for TR1 product ${tr1ProductId} (${sku}); dry-run will not query the provider`);
   }
@@ -175,17 +182,14 @@ async function resolveHubSpotProductExternalId(options: {
   if (!skuProperty || !productTypeProperty) throw new Error("HubSpot product catalog properties are not configured");
 
   const searched = await client.searchObjects<HubSpotSearchResponse>(NAALI_HUBSPOT_CONFIGURATION.objects.products, {
-    filterGroups: [{
-      filters: [
-        { propertyName: skuProperty, operator: "EQ", value: sku },
-        { propertyName: productTypeProperty, operator: "EQ", value: "Normal" },
-      ],
-    }],
+    filterGroups: [{ filters: [
+      { propertyName: skuProperty, operator: "EQ", value: sku },
+      { propertyName: productTypeProperty, operator: "EQ", value: "Normal" },
+    ] }],
     properties: [skuProperty, productTypeProperty],
     limit: 2,
   });
   const externalId = searchedExternalId(searched.data ?? {}, `normal SKU ${sku}`);
-
   await saveExternalIdFor(admin, connectionId, "products", tr1ProductId, externalId);
   return externalId;
 }
@@ -199,25 +203,19 @@ async function resolveHubSpotFreeProductExternalId(options: {
   if (client.getMode() !== "write") {
     throw new Error(`HubSpot UG catalog mapping missing for ${productLabel}; dry-run will not query the provider`);
   }
-
   const productMap = NAALI_HUBSPOT_CONFIGURATION.properties.product;
   const productTypeProperty = productMap.productType;
   const primaryProductProperty = productMap.primaryProductExternalId;
-  if (!productTypeProperty || !primaryProductProperty) {
-    throw new Error("HubSpot UG catalog properties are not configured");
-  }
+  if (!productTypeProperty || !primaryProductProperty) throw new Error("HubSpot UG catalog properties are not configured");
 
   const searched = await client.searchObjects<HubSpotSearchResponse>(NAALI_HUBSPOT_CONFIGURATION.objects.products, {
-    filterGroups: [{
-      filters: [
-        { propertyName: productTypeProperty, operator: "EQ", value: "UG" },
-        { propertyName: primaryProductProperty, operator: "EQ", value: normalProductExternalId },
-      ],
-    }],
+    filterGroups: [{ filters: [
+      { propertyName: productTypeProperty, operator: "EQ", value: "UG" },
+      { propertyName: primaryProductProperty, operator: "EQ", value: normalProductExternalId },
+    ] }],
     properties: [productTypeProperty, primaryProductProperty, "name"],
     limit: 2,
   });
-
   return searchedExternalId(searched.data ?? {}, `UG linked to ${productLabel} (${normalProductExternalId})`);
 }
 
@@ -360,6 +358,8 @@ async function withRuntime(
     admin: ReturnType<typeof createAdminClient>;
     client: HubSpotClient;
     connection: HubSpotConnection;
+    config: HubSpotBrandConfiguration;
+    transforms: HubSpotMappingTransforms;
     links: HubSpotExternalLinkStore;
     journal: HubSpotSyncJournal;
   }) => Promise<void>,
@@ -368,7 +368,7 @@ async function withRuntime(
   const connection = await findConnection(admin, brandId, entityType);
   if (!connection) return;
 
-  assertHubSpotBrandConfiguration(NAALI_HUBSPOT_CONFIGURATION);
+  const profile = await loadHubSpotRuntimeProfile(admin, connection.id, entityType, NAALI_HUBSPOT_CONFIGURATION);
   const mode = syncMode(connection);
   const client = new HubSpotClient({
     mode,
@@ -380,14 +380,14 @@ async function withRuntime(
   const journal = createJournal(admin, runId, connection.id, entityType);
 
   try {
-    await execute({ admin, client, connection, links, journal });
+    await execute({ admin, client, connection, config: profile.config, transforms: profile.transforms, links, journal });
     await closeRun(admin, runId, "succeeded");
   } catch (error) {
     const message = safeError(error);
     try {
       await closeRun(admin, runId, "failed", message);
     } catch {
-      // The business write already succeeded; a connector journal failure must remain isolated.
+      // The TR1 write already succeeded; connector journal failures stay isolated.
     }
     throw error;
   }
@@ -403,16 +403,16 @@ async function bestEffort(label: string, task: () => Promise<void>) {
 
 export async function syncHubSpotOrderAfterPersistence(brandId: string, orderId: string) {
   await bestEffort(`order:${orderId}`, async () => {
-    await withRuntime(brandId, "orders", async ({ admin, client, connection, links, journal }) => {
+    await withRuntime(brandId, "orders", async ({ admin, client, connection, config, transforms, links, journal }) => {
       const { data: order, error: orderError } = await admin
         .from("orders")
-        .select("id,brand_id,pharmacy_id,order_number,external_order_id,order_status,order_date,net_amount_ht,tax_amount,total_ttc,currency_code,source_user_id,created_by")
+        .select("id,brand_id,pharmacy_id,order_number,external_order_id,order_status,order_date,order_type,net_amount_ht,tax_amount,total_ttc,currency_code,source_user_id,created_by")
         .eq("id", orderId)
         .eq("brand_id", brandId)
         .is("archived_at", null)
         .maybeSingle();
       if (orderError) throw orderError;
-      if (!order || !NAALI_HUBSPOT_CONFIGURATION.order.syncStatuses.includes(String(order.order_status))) return;
+      if (!order || !config.order.syncStatuses.includes(String(order.order_status))) return;
 
       const { data: items, error: itemsError } = await admin
         .from("order_items")
@@ -423,17 +423,14 @@ export async function syncHubSpotOrderAfterPersistence(brandId: string, orderId:
 
       const ownerTr1UserId = order.source_user_id || order.created_by ? String(order.source_user_id || order.created_by) : null;
       if (!ownerTr1UserId) throw new Error(`TR1 order ${orderId} has no source user for HubSpot ownership and routing`);
-
       const ownerExternalId = await externalIdFor(admin, connection.id, "users", ownerTr1UserId);
-      if (!ownerExternalId) {
-        throw new Error(`HubSpot owner mapping missing for TR1 user ${ownerTr1UserId}`);
-      }
+      if (!ownerExternalId) throw new Error(`HubSpot owner mapping missing for TR1 user ${ownerTr1UserId}`);
 
       const roleKey = await roleKeyForOrderUser(admin, brandId, ownerTr1UserId);
       const route = resolveNaaliHubSpotOrderRoute(roleKey);
-
       const productMappings = new Map<string, string>();
       const freeProductMappings = new Map<string, string>();
+
       for (const item of items ?? []) {
         if (!item.product_id) throw new Error(`TR1 order item ${item.id} has no product_id for HubSpot catalog linkage`);
         const tr1ProductId = String(item.product_id);
@@ -448,7 +445,6 @@ export async function syncHubSpotOrderAfterPersistence(brandId: string, orderId:
           });
           productMappings.set(tr1ProductId, productExternalId);
         }
-
         if (Number(item.free_quantity ?? 0) > 0 && !freeProductMappings.has(tr1ProductId)) {
           const freeProductExternalId = await resolveHubSpotFreeProductExternalId({
             client,
@@ -459,11 +455,17 @@ export async function syncHubSpotOrderAfterPersistence(brandId: string, orderId:
         }
       }
 
+      const orderType = order.order_type ? String(order.order_type) : null;
       const payload: HubSpotOrderSyncInput = {
         id: String(order.id),
         orderNumber: String(order.order_number || order.external_order_id || order.id),
         status: String(order.order_status),
         orderDate: String(order.order_date),
+        orderTypeValue: resolveHubSpotMappedValue(
+          transforms.orderTypeValues,
+          orderType,
+          resolveNaaliHubSpotOrderType(orderType),
+        ),
         netAmountHt: Number(order.net_amount_ht),
         taxAmount: Number(order.tax_amount),
         amountTtc: Number(order.total_ttc),
@@ -478,9 +480,7 @@ export async function syncHubSpotOrderAfterPersistence(brandId: string, orderId:
           if (!productExternalId) throw new Error(`HubSpot product mapping missing for TR1 product ${tr1ProductId}`);
           const freeQuantity = Number(item.free_quantity ?? 0);
           const freeProductExternalId = freeQuantity > 0 ? freeProductMappings.get(tr1ProductId) : null;
-          if (freeQuantity > 0 && !freeProductExternalId) {
-            throw new Error(`HubSpot UG product mapping missing for TR1 product ${tr1ProductId}`);
-          }
+          if (freeQuantity > 0 && !freeProductExternalId) throw new Error(`HubSpot UG product mapping missing for TR1 product ${tr1ProductId}`);
           return {
             id: String(item.id),
             productId: tr1ProductId,
@@ -500,65 +500,18 @@ export async function syncHubSpotOrderAfterPersistence(brandId: string, orderId:
         ? await externalIdFor(admin, connection.id, "pharmacies", String(order.pharmacy_id))
         : null;
 
-      await syncHubSpotOrder({
-        client,
-        config: NAALI_HUBSPOT_CONFIGURATION,
-        order: payload,
-        pharmacyExternalId,
-        links,
-        journal,
-      });
+      await syncHubSpotOrder({ client, config, order: payload, pharmacyExternalId, links, journal });
     });
   });
 }
 
 export async function syncHubSpotVisitAfterPersistence(brandId: string, visitId: string) {
-  await bestEffort(`visit:${visitId}`, async () => {
-    await withRuntime(brandId, "visits", async ({ admin, client, connection, links, journal }) => {
-      const { data: visit, error: visitError } = await admin
-        .from("field_visits")
-        .select("id,pharmacy_id,status,title,scheduled_start_at,scheduled_end_at,actual_start_at,actual_end_at")
-        .eq("id", visitId)
-        .is("archived_at", null)
-        .maybeSingle();
-      if (visitError) throw visitError;
-      if (!visit || visit.status !== "completed") return;
-
-      const { data: relation, error: relationError } = await admin
-        .from("brand_pharmacies")
-        .select("id")
-        .eq("brand_id", brandId)
-        .eq("pharmacy_id", visit.pharmacy_id)
-        .is("archived_at", null)
-        .limit(1)
-        .maybeSingle();
-      if (relationError) throw relationError;
-      if (!relation) return;
-
-      const payload: HubSpotMeetingSyncInput = {
-        id: String(visit.id),
-        title: String(visit.title || "Visite terrain"),
-        startAt: String(visit.actual_start_at || visit.scheduled_start_at),
-        endAt: (visit.actual_end_at || visit.scheduled_end_at) ? String(visit.actual_end_at || visit.scheduled_end_at) : null,
-        outcome: "COMPLETED",
-      };
-      const pharmacyExternalId = await externalIdFor(admin, connection.id, "pharmacies", String(visit.pharmacy_id));
-
-      await syncHubSpotVisit({
-        client,
-        config: NAALI_HUBSPOT_CONFIGURATION,
-        visit: payload,
-        pharmacyExternalId,
-        links,
-        journal,
-      });
-    });
-  });
+  await syncNaaliHubSpotVisitAfterPersistence(brandId, visitId);
 }
 
 export async function syncHubSpotNoteAfterPersistence(brandId: string, interactionId: string) {
   await bestEffort(`note:${interactionId}`, async () => {
-    await withRuntime(brandId, "notes", async ({ admin, client, connection, links, journal }) => {
+    await withRuntime(brandId, "notes", async ({ admin, client, connection, config, links, journal }) => {
       const { data: interaction, error: interactionError } = await admin
         .from("interactions")
         .select("id,brand_id,brand_pharmacy_id,subject,notes,occurred_at,interaction_type")
@@ -593,14 +546,7 @@ export async function syncHubSpotNoteAfterPersistence(brandId: string, interacti
         ? await externalIdFor(admin, connection.id, "pharmacies", pharmacyId)
         : null;
 
-      await syncHubSpotNote({
-        client,
-        config: NAALI_HUBSPOT_CONFIGURATION,
-        note: payload,
-        pharmacyExternalId,
-        links,
-        journal,
-      });
+      await syncHubSpotNote({ client, config, note: payload, pharmacyExternalId, links, journal });
     });
   });
 }
