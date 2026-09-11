@@ -22,6 +22,12 @@ create index if not exists brand_pharmacy_commercial_terms_brand_idx
 
 alter table public.brand_pharmacy_commercial_terms enable row level security;
 
+-- Commercial terms are intentionally edited only through server actions using
+-- the service role. Keep browser roles off this table and grant the server the
+-- CRUD privileges required by the pricing resolver and override actions.
+revoke all on table public.brand_pharmacy_commercial_terms from anon, authenticated;
+grant select, insert, update, delete on table public.brand_pharmacy_commercial_terms to service_role;
+
 comment on table public.brand_pharmacy_commercial_terms is
   'Manual TR1 overrides for brand-specific pharmacy commercial conditions. Effective pricing falls back to HubSpot when an override is absent.';
 
