@@ -39,7 +39,6 @@ export function PharmacyCommercialTerms({
   const [ugPaidQuantity, setUgPaidQuantity] = useState("");
   const [ugFreeQuantity, setUgFreeQuantity] = useState("");
   const [note, setNote] = useState("");
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -65,14 +64,9 @@ export function PharmacyCommercialTerms({
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
-    void getPharmacyCommercialTermsAction(pharmacyId)
-      .then((next) => {
-        if (active) applyPricing(next);
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+    void getPharmacyCommercialTermsAction(pharmacyId).then((next) => {
+      if (active) applyPricing(next);
+    });
     return () => {
       active = false;
     };
@@ -129,7 +123,7 @@ export function PharmacyCommercialTerms({
     }
   }
 
-  if (loading || !pricing) {
+  if (!pricing) {
     return <p className="text-sm text-muted-foreground">Chargement des conditions commerciales…</p>;
   }
 
