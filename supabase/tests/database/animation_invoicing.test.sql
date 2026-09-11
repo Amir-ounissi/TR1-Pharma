@@ -2,7 +2,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(9);
+select plan(11);
 
 select ok(
   to_regclass('public.animation_invoices') is not null,
@@ -53,6 +53,22 @@ select ok(
       and pg_get_constraintdef(oid) like '%invoice%'
   ),
   'mission evidence accepts invoice PDFs as a dedicated evidence kind'
+);
+
+select ok(
+  exists (
+    select 1
+    from pg_trigger
+    where tgrelid = 'public.animation_invoices'::regclass
+      and tgname = 'validate_animation_invoice'
+      and not tgisinternal
+  ),
+  'invoice rows require the validated animation closeout contract'
+);
+
+select ok(
+  (select prosecdef from pg_proc where oid = 'private.can_access_mission_object(text)'::regprocedure),
+  'private mission-object access remains a security-definer boundary'
 );
 
 select * from finish();
