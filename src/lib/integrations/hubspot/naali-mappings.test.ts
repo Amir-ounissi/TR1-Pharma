@@ -66,4 +66,28 @@ describe("Naali HubSpot order mapping", () => {
 
     expect(mapped.deal.properties.type_de_commande).toBe("Réassort");
   });
+
+  it("writes the Naali tax-rate group for a 5.5% order line", () => {
+    const mapped = mapOrderToHubSpot({
+      id: "order-tax",
+      orderNumber: "CMD-TAX",
+      status: "pending",
+      orderDate: "2026-09-11T09:00:00.000Z",
+      netAmountHt: 100,
+      currency: "EUR",
+      lines: [{
+        id: "line-1",
+        productId: "product-1",
+        productExternalId: "hubspot-product-1",
+        name: "Produit test",
+        sku: "sku-test",
+        quantity: 6,
+        unitPriceHt: 10,
+        discountPercent: 35,
+        vatRate: 5.5,
+      }],
+    }, NAALI_HUBSPOT_CONFIGURATION);
+
+    expect(mapped.lineItems[0]?.properties.hs_tax_rate_group_id).toBe("115989351");
+  });
 });
