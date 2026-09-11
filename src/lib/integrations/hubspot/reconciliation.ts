@@ -94,7 +94,18 @@ async function syncNaaliCatalog(brandId: string, connectionId: string) {
         { propertyName: "hs_status", operator: "EQ", value: "active" },
       ],
     }],
-    properties: ["name", "description", "hs_sku", "hs_price_eur", "code_ean", "pvc", "hs_status", "type_de_produit_naali"],
+    properties: [
+      "name",
+      "description",
+      "hs_sku",
+      "hs_price_eur",
+      "code_ean",
+      "pvc",
+      "quantity_rule_minimum",
+      "quantity_rule_increment",
+      "hs_status",
+      "type_de_produit_naali",
+    ],
     limit: 200,
   });
 
@@ -109,10 +120,12 @@ async function syncNaaliCatalog(brandId: string, connectionId: string) {
     const wholesalePriceHt = number(properties.hs_price_eur);
     const retailPriceTtc = number(properties.pvc);
     const description = text(properties.description);
+    const minimumOrderQuantity = number(properties.quantity_rule_minimum);
+    const unitsPerCase = number(properties.quantity_rule_increment);
 
     const { data: existing, error: existingError } = await admin
       .from("products")
-      .select("id,retail_price_ttc,tax_rate")
+      .select("id,retail_price_ttc,tax_rate,minimum_order_quantity,units_per_case")
       .eq("brand_id", brandId)
       .eq("sku", sku)
       .limit(1)
@@ -130,6 +143,8 @@ async function syncNaaliCatalog(brandId: string, connectionId: string) {
           wholesale_price_ht: wholesalePriceHt,
           retail_price_ttc: retailPriceTtc ?? existing.retail_price_ttc,
           tax_rate: existing.tax_rate ?? 5.5,
+          minimum_order_quantity: minimumOrderQuantity ?? existing.minimum_order_quantity,
+          units_per_case: unitsPerCase ?? existing.units_per_case,
           is_active: true,
           discontinued_at: null,
           updated_at: new Date().toISOString(),
@@ -150,6 +165,8 @@ async function syncNaaliCatalog(brandId: string, connectionId: string) {
           wholesale_price_ht: wholesalePriceHt,
           retail_price_ttc: retailPriceTtc,
           tax_rate: 5.5,
+          minimum_order_quantity: minimumOrderQuantity,
+          units_per_case: unitsPerCase,
           is_active: true,
         })
         .select("id")
