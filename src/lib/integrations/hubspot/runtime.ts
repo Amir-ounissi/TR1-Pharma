@@ -3,7 +3,8 @@ import "server-only";
 import type { ConnectorEntityType } from "@/lib/connectors";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { HubSpotClient, type HubSpotClientMode } from "./client";
-import { assertHubSpotBrandConfiguration, type HubSpotMeetingSyncInput, type HubSpotNoteSyncInput, type HubSpotOrderSyncInput } from "./model";
+import { applyHubSpotFieldMapping } from "./mapping-profile";
+import { assertHubSpotBrandConfiguration, type HubSpotBrandConfiguration, type HubSpotMeetingSyncInput, type HubSpotNoteSyncInput, type HubSpotOrderSyncInput } from "./model";
 import { NAALI_HUBSPOT_CONFIGURATION, resolveNaaliHubSpotOrderRoute } from "./naali";
 import {
   syncHubSpotNote,
@@ -21,6 +22,7 @@ type HubSpotConnection = {
   base_url: string | null;
   credential_reference: string | null;
   configuration: Record<string, unknown> | null;
+  hubspotConfig: HubSpotBrandConfiguration;
 };
 
 type HubSpotSearchResponse = {
@@ -84,7 +86,7 @@ async function findConnection(admin: ReturnType<typeof createAdminClient>, brand
 
   const { data: mapping, error: mappingError } = await admin
     .from("connector_entity_mappings")
-    .select("id")
+    .select("id,mapping_profile_id")
     .eq("connection_id", connection.id)
     .eq("entity_type", entityType)
     .eq("is_enabled", true)
@@ -94,7 +96,24 @@ async function findConnection(admin: ReturnType<typeof createAdminClient>, brand
   if (mappingError) throw mappingError;
   if (!mapping) return null;
 
-  return connection as HubSpotConnection;
+  let fieldMapping: Record<string, unknown> | null = null;
+  if (mapping.mapping_profile_id) {
+    const { data: profile, error: profileError } = await admin
+      .from("data_mapping_profiles")
+      .select("mapping")
+      .eq("id", mapping.mapping_profile_id)
+      .eq("brand_id", brandId)
+      .eq("entity_type", entityType)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (profileError) throw profileError;
+    if (profile?.mapping && typeof profile.mapping === "object" && !Array.isArray(profile.mapping)) {
+      fieldMapping = profile.mapping as Record<string, unknown>;
+    }
+  }
+
+  const hubspotConfig = applyHubSpotFieldMapping(NAALI_HUBSPOT_CONFIGURATION, entityType, fieldMapping);
+  return { ...(connection as Omit<HubSpotConnection, "hubspotConfig">), hubspotConfig } as HubSpotConnection;
 }
 
 async function externalIdFor(
@@ -360,6 +379,7 @@ async function withRuntime(
     admin: ReturnType<typeof createAdminClient>;
     client: HubSpotClient;
     connection: HubSpotConnection;
+    config: HubSpotBrandConfiguration;
     links: HubSpotExternalLinkStore;
     journal: HubSpotSyncJournal;
   }) => Promise<void>,
@@ -368,7 +388,8 @@ async function withRuntime(
   const connection = await findConnection(admin, brandId, entityType);
   if (!connection) return;
 
-  assertHubSpotBrandConfiguration(NAALI_HUBSPOT_CONFIGURATION);
+  const config = connection.hubspotConfig;
+  assertHubSpotBrandConfiguration(config);
   const mode = syncMode(connection);
   const client = new HubSpotClient({
     mode,
@@ -380,7 +401,7 @@ async function withRuntime(
   const journal = createJournal(admin, runId, connection.id, entityType);
 
   try {
-    await execute({ admin, client, connection, links, journal });
+    await execute({ admin, client, connection, config, links, journal });
     await closeRun(admin, runId, "succeeded");
   } catch (error) {
     const message = safeError(error);
@@ -403,7 +424,7 @@ async function bestEffort(label: string, task: () => Promise<void>) {
 
 export async function syncHubSpotOrderAfterPersistence(brandId: string, orderId: string) {
   await bestEffort(`order:${orderId}`, async () => {
-    await withRuntime(brandId, "orders", async ({ admin, client, connection, links, journal }) => {
+    await withRuntime(brandId, "orders", async ({ admin, client, connection, config, links, journal }) => {
       const { data: order, error: orderError } = await admin
         .from("orders")
         .select("id,brand_id,pharmacy_id,order_number,external_order_id,order_status,order_date,net_amount_ht,tax_amount,total_ttc,currency_code,source_user_id,created_by")
@@ -412,7 +433,7 @@ export async function syncHubSpotOrderAfterPersistence(brandId: string, orderId:
         .is("archived_at", null)
         .maybeSingle();
       if (orderError) throw orderError;
-      if (!order || !NAALI_HUBSPOT_CONFIGURATION.order.syncStatuses.includes(String(order.order_status))) return;
+      if (!order || !config.order.syncStatuses.includes(String(order.order_status))) return;
 
       const { data: items, error: itemsError } = await admin
         .from("order_items")
@@ -502,7 +523,7 @@ export async function syncHubSpotOrderAfterPersistence(brandId: string, orderId:
 
       await syncHubSpotOrder({
         client,
-        config: NAALI_HUBSPOT_CONFIGURATION,
+        config,
         order: payload,
         pharmacyExternalId,
         links,
@@ -514,7 +535,7 @@ export async function syncHubSpotOrderAfterPersistence(brandId: string, orderId:
 
 export async function syncHubSpotVisitAfterPersistence(brandId: string, visitId: string) {
   await bestEffort(`visit:${visitId}`, async () => {
-    await withRuntime(brandId, "visits", async ({ admin, client, connection, links, journal }) => {
+    await withRuntime(brandId, "visits", async ({ admin, client, connection, config, links, journal }) => {
       const { data: visit, error: visitError } = await admin
         .from("field_visits")
         .select("id,pharmacy_id,status,title,scheduled_start_at,scheduled_end_at,actual_start_at,actual_end_at")
@@ -546,7 +567,7 @@ export async function syncHubSpotVisitAfterPersistence(brandId: string, visitId:
 
       await syncHubSpotVisit({
         client,
-        config: NAALI_HUBSPOT_CONFIGURATION,
+        config,
         visit: payload,
         pharmacyExternalId,
         links,
@@ -558,7 +579,7 @@ export async function syncHubSpotVisitAfterPersistence(brandId: string, visitId:
 
 export async function syncHubSpotNoteAfterPersistence(brandId: string, interactionId: string) {
   await bestEffort(`note:${interactionId}`, async () => {
-    await withRuntime(brandId, "notes", async ({ admin, client, connection, links, journal }) => {
+    await withRuntime(brandId, "notes", async ({ admin, client, connection, config, links, journal }) => {
       const { data: interaction, error: interactionError } = await admin
         .from("interactions")
         .select("id,brand_id,brand_pharmacy_id,subject,notes,occurred_at,interaction_type")
@@ -595,7 +616,7 @@ export async function syncHubSpotNoteAfterPersistence(brandId: string, interacti
 
       await syncHubSpotNote({
         client,
-        config: NAALI_HUBSPOT_CONFIGURATION,
+        config,
         note: payload,
         pharmacyExternalId,
         links,
