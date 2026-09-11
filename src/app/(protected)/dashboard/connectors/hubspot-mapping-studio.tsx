@@ -106,7 +106,7 @@ export function HubSpotMappingStudio({
                     <tbody>
                       {definitions.map((definition) => {
                         const savedValue = saved[definition.key];
-                        const value = typeof savedValue === "string" ? savedValue : defaults[definition.key] ?? "";
+                        const value = savedValue === null ? "" : typeof savedValue === "string" ? savedValue : defaults[definition.key] ?? "";
                         return (
                           <tr key={definition.key} className="border-b last:border-0">
                             <td className="py-3 pr-4 align-top">
