@@ -9,10 +9,19 @@ import { Button } from "@/components/ui/button";
 import { getBrandContexts, requireCompletedOnboarding } from "@/lib/auth";
 import { isoToParisLocal } from "@/lib/agenda";
 
-export default async function NewAgendaVisitPage() {
-  const [{ supabase }, contexts] = await Promise.all([
+export default async function NewAgendaVisitPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    pharmacy?: string | string[];
+    brand?: string | string[];
+    objective?: string | string[];
+  }>;
+}) {
+  const [{ supabase }, contexts, params] = await Promise.all([
     requireCompletedOnboarding(),
     getBrandContexts(),
+    searchParams,
   ]);
 
   if (!contexts.some((context) => context.role === "agent")) {
@@ -58,6 +67,9 @@ export default async function NewAgendaVisitPage() {
   const currentTime = new Date();
   const defaultStartDate = new Date(currentTime.getTime() + 60 * 60_000);
   const defaultStart = isoToParisLocal(defaultStartDate.toISOString()).slice(0, 16);
+  const requestedPharmacyId = typeof params.pharmacy === "string" ? params.pharmacy : undefined;
+  const requestedBrandId = typeof params.brand === "string" ? params.brand : undefined;
+  const requestedObjective = typeof params.objective === "string" ? params.objective : undefined;
 
   return (
     <main className="mx-auto max-w-2xl space-y-5 pb-[calc(2rem+env(safe-area-inset-bottom))]">
@@ -90,6 +102,9 @@ export default async function NewAgendaVisitPage() {
           left.label.localeCompare(right.label, "fr"),
         )}
         defaultStart={defaultStart}
+        defaultPharmacyId={requestedPharmacyId}
+        defaultBrandId={requestedBrandId}
+        defaultObjective={requestedObjective}
       />
     </main>
   );
