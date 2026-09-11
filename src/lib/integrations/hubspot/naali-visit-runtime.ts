@@ -2,6 +2,8 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { HubSpotClient, type HubSpotClientMode } from "./client";
+import { resolveHubSpotMappedValue } from "./mapping-profile";
+import { loadHubSpotRuntimeProfile } from "./mapping-profile-runtime";
 import { assertHubSpotBrandConfiguration, type HubSpotMeetingSyncInput } from "./model";
 import { NAALI_HUBSPOT_CONFIGURATION, resolveNaaliHubSpotVisitType } from "./naali";
 import {
@@ -130,7 +132,14 @@ export async function syncNaaliHubSpotVisitAfterPersistence(brandId: string, vis
     if (mappingError) throw mappingError;
     if (!mapping) return;
 
-    assertHubSpotBrandConfiguration(NAALI_HUBSPOT_CONFIGURATION);
+    const profile = await loadHubSpotRuntimeProfile(
+      admin,
+      String(connection.id),
+      "visits",
+      NAALI_HUBSPOT_CONFIGURATION,
+    );
+    assertHubSpotBrandConfiguration(profile.config);
+
     const typedConnection = connection as HubSpotConnection;
     const mode = syncMode(typedConnection);
     const client = new HubSpotClient({
@@ -235,6 +244,14 @@ export async function syncNaaliHubSpotVisitAfterPersistence(brandId: string, vis
         .order("occurred_at", { ascending: true });
       if (notesError) throw notesError;
 
+      const visitKind = String(visit.visit_kind);
+      const activityType = resolveHubSpotMappedValue(
+        profile.transforms.visitTypeValues,
+        visitKind,
+        resolveNaaliHubSpotVisitType(visitKind),
+      );
+      if (!activityType) throw new Error(`HubSpot activity type missing for TR1 visit kind ${visitKind}`);
+
       const payload: HubSpotMeetingSyncInput = {
         id: String(visit.id),
         title: String(visit.title || "Visite terrain"),
@@ -242,13 +259,13 @@ export async function syncNaaliHubSpotVisitAfterPersistence(brandId: string, vis
         endAt: (visit.actual_end_at || visit.scheduled_end_at) ? String(visit.actual_end_at || visit.scheduled_end_at) : null,
         outcome: "COMPLETED",
         ownerExternalId,
-        activityType: resolveNaaliHubSpotVisitType(String(visit.visit_kind)),
+        activityType,
         body: formatMeetingBody(visit.notes, notes),
       };
 
       await syncHubSpotVisit({
         client,
-        config: NAALI_HUBSPOT_CONFIGURATION,
+        config: profile.config,
         visit: payload,
         pharmacyExternalId,
         links,
