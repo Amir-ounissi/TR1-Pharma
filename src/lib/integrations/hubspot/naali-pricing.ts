@@ -93,7 +93,7 @@ function parseFreeUnitsRule(value: string | null | undefined): NaaliFreeUnitsRul
   return { paidQuantity, freeQuantity, label: `${paidQuantity}+${freeQuantity}` };
 }
 
-function freeUnitsRuleFromLeadStatus(value: string | null | undefined): NaaliFreeUnitsRule | null {
+export function resolveNaaliFreeUnitsRuleFromLeadStatus(value: string | null | undefined): NaaliFreeUnitsRule | null {
   const normalized = value?.trim().toLowerCase();
   if (!normalized) return null;
   if (normalized === "client ambassadeur") {
@@ -115,6 +115,14 @@ function emptyPricing(): NaaliPharmacyPricing {
     freeUnitsSource: null,
     overrideNote: null,
   };
+}
+
+function manualRule(override: { ug_paid_quantity?: unknown; ug_free_quantity?: unknown } | null | undefined) {
+  if (override?.ug_paid_quantity == null || override?.ug_free_quantity == null) return null;
+  const paidQuantity = Number(override.ug_paid_quantity);
+  const freeQuantity = Number(override.ug_free_quantity);
+  if (!Number.isInteger(paidQuantity) || paidQuantity <= 0 || !Number.isInteger(freeQuantity) || freeQuantity < 0) return null;
+  return { paidQuantity, freeQuantity, label: `${paidQuantity}+${freeQuantity}` } satisfies NaaliFreeUnitsRule;
 }
 
 export async function getNaaliHubSpotPharmacyPricing(brandId: string, pharmacyId: string): Promise<NaaliPharmacyPricing> {
@@ -140,6 +148,10 @@ export async function getNaaliHubSpotPharmacyPricing(brandId: string, pharmacyId
     : { data: null, error: null };
   if (overrideError) throw overrideError;
 
+  const manualFreeUnitsRule = manualRule(override);
+  const manualDiscount = override?.discount_rate == null ? null : Number(override.discount_rate);
+  const overrideNote = override?.note?.trim() || null;
+
   const { data: connection, error: connectionError } = await admin
     .from("connector_connections")
     .select("id,base_url,credential_reference,configuration,status")
@@ -150,21 +162,13 @@ export async function getNaaliHubSpotPharmacyPricing(brandId: string, pharmacyId
     .limit(1)
     .maybeSingle();
   if (connectionError || !connection) {
-    const manualRule =
-      override?.ug_paid_quantity != null && override?.ug_free_quantity != null
-        ? {
-            paidQuantity: Number(override.ug_paid_quantity),
-            freeQuantity: Number(override.ug_free_quantity),
-            label: `${Number(override.ug_paid_quantity)}+${Number(override.ug_free_quantity)}`,
-          }
-        : null;
     return {
       ...empty,
-      discountRate: override?.discount_rate == null ? null : Number(override.discount_rate),
-      freeUnitsRule: manualRule,
-      discountSource: override?.discount_rate == null ? null : "tr1_override",
-      freeUnitsSource: manualRule ? "tr1_override" : null,
-      overrideNote: override?.note?.trim() || null,
+      discountRate: manualDiscount,
+      freeUnitsRule: manualFreeUnitsRule,
+      discountSource: manualDiscount == null ? null : "tr1_override",
+      freeUnitsSource: manualFreeUnitsRule ? "tr1_override" : null,
+      overrideNote,
     };
   }
 
@@ -172,21 +176,13 @@ export async function getNaaliHubSpotPharmacyPricing(brandId: string, pharmacyId
   const mode = syncMode(typedConnection);
   const token = accessToken(typedConnection, mode);
   if (mode !== "write" || !token) {
-    const manualRule =
-      override?.ug_paid_quantity != null && override?.ug_free_quantity != null
-        ? {
-            paidQuantity: Number(override.ug_paid_quantity),
-            freeQuantity: Number(override.ug_free_quantity),
-            label: `${Number(override.ug_paid_quantity)}+${Number(override.ug_free_quantity)}`,
-          }
-        : null;
     return {
       ...empty,
-      discountRate: override?.discount_rate == null ? null : Number(override.discount_rate),
-      freeUnitsRule: manualRule,
-      discountSource: override?.discount_rate == null ? null : "tr1_override",
-      freeUnitsSource: manualRule ? "tr1_override" : null,
-      overrideNote: override?.note?.trim() || null,
+      discountRate: manualDiscount,
+      freeUnitsRule: manualFreeUnitsRule,
+      discountSource: manualDiscount == null ? null : "tr1_override",
+      freeUnitsSource: manualFreeUnitsRule ? "tr1_override" : null,
+      overrideNote,
     };
   }
 
@@ -199,7 +195,16 @@ export async function getNaaliHubSpotPharmacyPricing(brandId: string, pharmacyId
     .maybeSingle();
 
   const companyId = link?.external_id || relation?.external_id;
-  if (!companyId) return empty;
+  if (!companyId) {
+    return {
+      ...empty,
+      discountRate: manualDiscount,
+      freeUnitsRule: manualFreeUnitsRule,
+      discountSource: manualDiscount == null ? null : "tr1_override",
+      freeUnitsSource: manualFreeUnitsRule ? "tr1_override" : null,
+      overrideNote,
+    };
+  }
 
   const client = new HubSpotClient({
     mode,
@@ -211,31 +216,23 @@ export async function getNaaliHubSpotPharmacyPricing(brandId: string, pharmacyId
   );
   const properties = response.data?.properties;
   const hubSpotDiscount = parsePercentage(properties?.remise_sur_facture_appliquee);
-  const leadStatusRule = freeUnitsRuleFromLeadStatus(properties?.hs_lead_status);
+  const leadStatusRule = resolveNaaliFreeUnitsRuleFromLeadStatus(properties?.hs_lead_status);
   const explicitFieldRule = parseFreeUnitsRule(properties?.unites_gratuites);
-  const manualRule =
-    override?.ug_paid_quantity != null && override?.ug_free_quantity != null
-      ? {
-          paidQuantity: Number(override.ug_paid_quantity),
-          freeQuantity: Number(override.ug_free_quantity),
-          label: `${Number(override.ug_paid_quantity)}+${Number(override.ug_free_quantity)}`,
-        }
-      : null;
 
   return {
-    discountRate: override?.discount_rate == null ? hubSpotDiscount : Number(override.discount_rate),
+    discountRate: manualDiscount ?? hubSpotDiscount,
     potential: properties?.potentiel?.trim() || null,
     leadStatus: properties?.hs_lead_status?.trim() || null,
-    freeUnitsRule: manualRule ?? leadStatusRule ?? explicitFieldRule,
-    discountSource: override?.discount_rate == null ? (hubSpotDiscount == null ? null : "hubspot") : "tr1_override",
-    freeUnitsSource: manualRule
+    freeUnitsRule: manualFreeUnitsRule ?? leadStatusRule ?? explicitFieldRule,
+    discountSource: manualDiscount == null ? (hubSpotDiscount == null ? null : "hubspot") : "tr1_override",
+    freeUnitsSource: manualFreeUnitsRule
       ? "tr1_override"
       : leadStatusRule
         ? "hubspot_lead_status"
         : explicitFieldRule
           ? "hubspot_field"
           : null,
-    overrideNote: override?.note?.trim() || null,
+    overrideNote,
   };
 }
 
