@@ -166,6 +166,7 @@ export function CommercialTermsManager() {
               {pricing.freeUnitsRule ? <Badge variant="secondary">UG {pricing.freeUnitsRule.label} à la ligne</Badge> : null}
               {sourceLabel(pricing.freeUnitsSource) ? <Badge variant="outline">Source UG · {sourceLabel(pricing.freeUnitsSource)}</Badge> : null}
               {pricing.discountSource === "tr1_override" ? <Badge variant="outline">Remise · TR1 manuel</Badge> : null}
+              {pricing.discountSource === "hubspot" ? <Badge variant="outline">Remise · HubSpot</Badge> : null}
             </div>
           </div>
 
