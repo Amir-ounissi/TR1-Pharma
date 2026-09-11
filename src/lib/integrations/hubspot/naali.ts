@@ -102,6 +102,7 @@ export const NAALI_HUBSPOT_CONFIGURATION: HubSpotBrandConfiguration = {
       unitPriceHt: "price",
       discountPercent: "hs_discount_percentage",
       taxRateGroupId: "hs_tax_rate_group_id",
+      freeUnitReason: "test_type_dug",
     },
     meeting: {
       name: "hs_meeting_title",
@@ -128,6 +129,7 @@ export const NAALI_HUBSPOT_CONFIGURATION: HubSpotBrandConfiguration = {
     linePricingMode: "unit_price_with_discount",
     freeUnitsMode: "separate_line",
     freeUnitNamePrefix: "UG",
+    freeUnitReasonValue: "conditions commerciale client",
     taxRateGroupIds: {
       "2": "115968336",
       "2.1": "115991071",
