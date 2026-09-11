@@ -5,6 +5,7 @@ import {
   saveConnectorMappingFormAction,
   setConnectorStatusFormAction,
 } from "./actions";
+import { HubSpotMappingStudio } from "./hubspot-mapping-studio";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -71,7 +72,7 @@ function dateTime(value: string | null) {
 }
 
 function entityLabel(value: string) {
-  return ({ pharmacies: "Pharmacies", contacts: "Contacts", products: "Produits", orders: "Commandes" } as Record<string, string>)[value] ?? value;
+  return ({ pharmacies: "Pharmacies", contacts: "Contacts", products: "Produits", orders: "Commandes", visits: "Visites", notes: "Notes" } as Record<string, string>)[value] ?? value;
 }
 
 export default async function ConnectorsPage() {
@@ -207,6 +208,8 @@ export default async function ConnectorsPage() {
                       <Button size="sm" type="submit">Ajouter le mapping</Button>
                     </form>
                   </div>
+
+                  {connection.provider === "hubspot" ? <HubSpotMappingStudio connectionId={connection.id} mappings={connectionMappings} /> : null}
                 </div>
               );
             }) : <p className="py-10 text-center text-sm text-muted-foreground">Créez une première connexion pour préparer les échanges de données.</p>}
