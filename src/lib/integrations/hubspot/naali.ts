@@ -25,6 +25,8 @@ const NAALI_HUBSPOT_VISIT_TYPES: Record<string, string> = {
   client_visit: "Visite client",
   prospecting: "Visite prospection",
   relationship: "Rendez-vous client",
+  training: "Formation",
+  other: "Visite client",
   merchandising: "Visite client",
   sell_out: "Visite client",
 };
