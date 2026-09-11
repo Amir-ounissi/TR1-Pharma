@@ -122,7 +122,7 @@ begin
 
   if mission_record.id is null
      or mission_record.mission_type <> 'animation'::public.mission_type
-     or mission_record.animation_parent_request_id is null
+     or mission_record.scheduled_start_at is null
      or mission_record.assigned_user_id is distinct from actor
   then
     raise exception 'Animation unavailable for invoicing' using errcode='42501';
@@ -327,7 +327,7 @@ grant execute on function public.mark_animation_invoice_paid(uuid) to authentica
 comment on table public.animation_invoices is
   'Invoice tracking for completed facilitator animation days. TR1 records approval/payment status but does not execute payments.';
 comment on function public.submit_animation_invoice(uuid,uuid,text,numeric,numeric) is
-  'Submits or resubmits a facilitator PDF invoice for one completed dated animation.';
+  'Submits or resubmits a facilitator PDF invoice for one completed, dated animation.';
 comment on function public.review_animation_invoice(uuid,text,text) is
   'Allows the animation requester/manager, brand admin or TR1 to approve or reject a submitted invoice.';
 comment on function public.mark_animation_invoice_paid(uuid) is
