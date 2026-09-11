@@ -1,6 +1,9 @@
+import Link from "next/link";
+import { SlidersHorizontal } from "lucide-react";
 import { redirect } from "next/navigation";
 import { QuickOrderForm } from "@/components/orders/quick-order-form";
 import { QuickOrderEntryModes } from "@/components/orders/quick-order-entry-modes";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
 import type { OrderPharmacySearchResult } from "@/app/(protected)/dashboard/orders/actions";
@@ -154,16 +157,23 @@ export default async function NewOrderPage({
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div>
-        <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--tr1-orange)]">
-          Terrain
-        </p>
-        <h1 className="text-2xl font-black text-[var(--tr1-navy)]">
-          Nouvelle commande
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Sélectionnez les références, ajustez les quantités et envoyez.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--tr1-orange)]">
+            Terrain
+          </p>
+          <h1 className="text-2xl font-black text-[var(--tr1-navy)]">
+            Nouvelle commande
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Sélectionnez les références, ajustez les quantités et envoyez.
+          </p>
+        </div>
+        <Button asChild variant="outline">
+          <Link href="/dashboard/orders/commercial-terms">
+            <SlidersHorizontal className="size-4" /> Conditions commerciales
+          </Link>
+        </Button>
       </div>
 
       <Card className="overflow-hidden">
