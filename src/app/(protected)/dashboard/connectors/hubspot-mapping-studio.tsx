@@ -10,6 +10,7 @@ import {
   TR1_VISIT_KIND_KEYS,
   buildHubSpotRuntimeProfile,
 } from "@/lib/integrations/hubspot/mapping-profile";
+import type { HubSpotPropertyMap } from "@/lib/integrations/hubspot/model";
 import {
   NAALI_HUBSPOT_CONFIGURATION,
   resolveNaaliHubSpotOrderType,
@@ -217,8 +218,8 @@ function MappingForm({
   title: string;
   description: string;
   enabled: boolean;
-  fields: readonly (readonly [string, string, string, boolean])[];
-  propertyMap: Record<string, string | undefined>;
+  fields: readonly (readonly [keyof HubSpotPropertyMap, string, string, boolean])[];
+  propertyMap: HubSpotPropertyMap;
   children: React.ReactNode;
 }) {
   return (
