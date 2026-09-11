@@ -451,7 +451,7 @@ export async function syncNaaliClientPharmacies(brandId: string, connectionId: s
 
     let after: string | null = null;
     do {
-      const response = await client.searchObjects<HubSpotSearchPage>("companies", {
+      const response: { data: HubSpotSearchPage | null } = await client.searchObjects<HubSpotSearchPage>("companies", {
         filterGroups: [{
           filters: [
             { propertyName: "hubspot_owner_id", operator: "EQ", value: ownerExternalId },
@@ -478,7 +478,7 @@ export async function syncNaaliClientPharmacies(brandId: string, connectionId: s
       for (const remote of response.data?.results ?? []) {
         await upsertNaaliClientPharmacy({ admin, brandId, connectionId, tr1UserId, remote, result });
       }
-      const nextAfter = response.data?.paging?.next?.after;
+      const nextAfter: string | number | undefined = response.data?.paging?.next?.after;
       after = nextAfter === undefined || nextAfter === null ? null : String(nextAfter);
     } while (after);
   }
