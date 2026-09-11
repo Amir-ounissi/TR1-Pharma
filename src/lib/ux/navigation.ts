@@ -25,8 +25,16 @@ const agentItems: NavigationItem[] = [
   { href: "/dashboard/agent/more", label: "Plus", icon: "menu" },
 ];
 
+const agentMobileItems: NavigationItem[] = [
+  { href: "/dashboard/agent", label: "Ma journée", shortLabel: "Aujourd’hui", icon: "sun", capability: "agent_day" },
+  { href: "/dashboard/agenda", label: "Agenda", shortLabel: "Agenda", icon: "calendar", capability: "core_crm" },
+  { href: "/dashboard/pharmacies", label: "Pharmacies", icon: "building", capability: "core_crm" },
+  { href: "/dashboard/orders", label: "Mes commandes", shortLabel: "Commandes", icon: "clipboard", capability: "orders" },
+  { href: "/dashboard/agent/more", label: "Plus", icon: "menu" },
+];
+
 const agentMoreItems: NavigationItem[] = [
-  { href: "/dashboard/agenda", label: "Agenda", icon: "calendar", capability: "core_crm" },
+  { href: "/dashboard/agent/performance", label: "Ma performance", shortLabel: "Performance", icon: "chart", capability: "performance" },
   { href: "/dashboard/products", label: "Produits", icon: "boxes", capability: "core_crm" },
   { href: "/dashboard/missions", label: "Missions", icon: "calendar", capability: "missions" },
   { href: "/dashboard/tasks", label: "Tâches", icon: "clipboard", capability: "core_crm" },
@@ -156,7 +164,7 @@ export function getAgentMoreItems(enabledCapabilities?: readonly SaasCapability[
 }
 
 export function getMobileAgentNavigationItems(enabledCapabilities?: readonly SaasCapability[]) {
-  return filterItems(agentItems, enabledCapabilities);
+  return filterItems(agentMobileItems, enabledCapabilities);
 }
 
 export function getNavigationItems(
