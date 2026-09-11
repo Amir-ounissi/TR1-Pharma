@@ -93,6 +93,8 @@ function parseFreeUnitsRule(value: string | null | undefined): NaaliFreeUnitsRul
   return { paidQuantity, freeQuantity, label: `${paidQuantity}+${freeQuantity}` };
 }
 
+// Naali encodes the negotiated UG tier in the company Lead Status.
+// These labels were verified against the connected HubSpot portal.
 export function resolveNaaliFreeUnitsRuleFromLeadStatus(value: string | null | undefined): NaaliFreeUnitsRule | null {
   const normalized = value?.trim().toLowerCase();
   if (!normalized) return null;
