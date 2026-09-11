@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarPlus, ClipboardPlus, MapPin, Megaphone, ShoppingCart } from "lucide-react";
+import { CalendarPlus, ClipboardPlus, MapPin, ShoppingCart } from "lucide-react";
 import { AgentDayExperience, type AgentNextVisit, type AgentTodayData } from "@/components/agent/agent-day-experience";
 import {
   AgentMultibrandOverview,
@@ -11,7 +11,6 @@ import { DashboardTracker } from "@/components/agent/dashboard-tracker";
 import { StockAlertsPanel } from "@/components/agent/stock-alerts-panel";
 import { TerrainActivityFeed, type TerrainImpact } from "@/components/agent/terrain-activity-feed";
 import { OfflineDayPreloader } from "@/components/pwa/offline-day-preloader";
-import { QuickActions } from "@/components/ux/quick-actions";
 import { buildGoogleMapsUrl, buildWazeUrl } from "@/lib/agent-experience";
 import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
 import { parisBusinessDate } from "@/lib/business-date";
@@ -133,7 +132,7 @@ export default async function AgentPage({
       ? { href: "/dashboard/tasks", label: "Planifier une relance", description: "Créer une prochaine action", icon: CalendarPlus }
       : null,
     saas.capabilities.has("core_crm")
-      ? { href: "/dashboard/pharmacies", label: "Ouvrir une pharmacie", description: "Consulter le référentiel", icon: MapPin }
+      ? { href: "/dashboard/pharmacies", label: "Consulter une pharmacie", description: "Retrouver un compte et son suivi", icon: MapPin }
       : null,
     saas.capabilities.has("missions")
       ? { href: "/dashboard/reports", label: "Saisir un compte rendu", description: "Finaliser une visite", icon: ClipboardPlus }
@@ -184,7 +183,7 @@ export default async function AgentPage({
   });
 
   return (
-    <main className="mx-auto min-w-0 max-w-6xl space-y-6 overflow-x-hidden pb-[calc(2rem+env(safe-area-inset-bottom))]">
+    <main className="agent-day-home mx-auto min-w-0 max-w-6xl space-y-6 overflow-x-hidden pb-[calc(2rem+env(safe-area-inset-bottom))]">
       <OfflineDayPreloader
         snapshot={{
           version: 1,
@@ -208,42 +207,34 @@ export default async function AgentPage({
         day={multibrandDay}
         nextVisit={multibrandNextVisit}
         visits={overviewVisits}
+        firstName={firstName}
+        dayLabel={dayLabel}
+        canPlanVisit={saas.capabilities.has("core_crm")}
+        canRequestAnimation={saas.capabilities.has("missions")}
       />
-
-      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-        {saas.capabilities.has("core_crm") ? (
-          <Link
-            href="/dashboard/agenda/new"
-            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-[0.45rem] bg-[var(--tr1-orange)] px-4 py-3 font-mono text-sm font-black uppercase tracking-[0.02em] text-white shadow-sm transition active:translate-y-px sm:w-fit"
-          >
-            <CalendarPlus className="size-5" aria-hidden="true" />
-            Ajouter une visite
-          </Link>
-        ) : null}
-        {saas.capabilities.has("missions") ? (
-          <Link
-            href="/dashboard/missions/new?mode=animation"
-            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-[0.45rem] border border-[var(--tr1-navy)] bg-white px-4 py-3 font-mono text-sm font-black uppercase tracking-[0.02em] text-[var(--tr1-navy)] shadow-sm transition active:translate-y-px sm:w-fit"
-          >
-            <Megaphone className="size-5" aria-hidden="true" />
-            Demander une animation
-          </Link>
-        ) : null}
-      </div>
 
       <section className="space-y-4 border-t pt-6" aria-labelledby="active-brand-execution-title">
         <div>
-          <p className="font-mono text-[0.62rem] font-black uppercase tracking-[0.16em] text-[var(--tr1-orange)]">Exécution de la carte active</p>
-          <h2 id="active-brand-execution-title" className="mt-1 text-xl font-black text-[var(--tr1-navy)]">{brand.name}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Les actions transactionnelles restent attribuées à cette marque tant que le workflow multimarque d’exécution n’est pas finalisé.
-          </p>
+          <h2 id="active-brand-execution-title" className="text-lg font-semibold text-[var(--tr1-navy)]">Actions pour {brand.name}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Ces actions concernent {brand.name}. Pour travailler pour une autre marque, utilisez « Marque active » en haut de l’écran.</p>
+          {selectedBrand && selectedBrand.id !== brand.id ? <p className="mt-2 rounded-lg border border-orange-200 bg-orange-50 p-3 text-sm text-[#8b3c16]">Votre journée affiche {selectedBrand.name} ; les actions ci-dessous concernent {brand.name}.</p> : null}
         </div>
-        {quickActions.length ? <QuickActions className="hidden sm:grid" actions={quickActions} /> : null}
+        {quickActions.length ? (
+          <nav aria-label={`Actions pour ${brand.name}`} className="grid gap-3 sm:grid-cols-2">
+            {quickActions.map((action) => (
+              <Link key={action.href} href={action.href} className="flex min-h-20 items-center gap-3 rounded-xl border bg-white/60 p-4 transition hover:border-[var(--tr1-orange)] hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-navy)]">
+                <action.icon className="size-5 shrink-0 text-[var(--tr1-navy)]" aria-hidden="true" />
+                <span><span className="block text-base font-semibold">{action.label}</span><span className="mt-1 block text-sm text-muted-foreground">{action.description}</span></span>
+              </Link>
+            ))}
+          </nav>
+        ) : null}
         <StockAlertsPanel alerts={stockAlerts} />
         {saas.capabilities.has("missions") ? <TerrainActivityFeed impacts={(recentImpactResult.data ?? []) as TerrainImpact[]} /> : null}
-        <div className="agent-home-focus min-w-0">
+        <div className="min-w-0">
           <AgentDayExperience
+            showDayLists={false}
+            showQuickActions={false}
             brandId={brand.id}
             userId={userId}
             day={day}
@@ -256,16 +247,11 @@ export default async function AgentPage({
       </section>
 
       <style>{`
-        .agent-home-focus section[aria-labelledby="reorder-opportunities-title"] {
-          display: none;
-        }
-        .agent-home-focus section[aria-label="Aujourd’hui"] > :first-child {
-          display: none;
-        }
-        @media (min-width: 1280px) {
-          .agent-home-focus section[aria-label="Aujourd’hui"] {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-          }
+        .tr1-product-da main.agent-day-home h1,
+        .tr1-product-da main.agent-day-home h2 {
+          font-family: var(--font-sans);
+          text-transform: none;
+          letter-spacing: -0.025em;
         }
       `}</style>
     </main>

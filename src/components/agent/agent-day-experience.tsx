@@ -51,6 +51,8 @@ export function AgentDayExperience({
   opportunities,
   wazeUrl,
   mapsUrl,
+  showDayLists = true,
+  showQuickActions = true,
 }: {
   brandId: string;
   userId: string;
@@ -59,6 +61,8 @@ export function AgentDayExperience({
   opportunities: CommercialHealthRow[];
   wazeUrl: string;
   mapsUrl: string;
+  showDayLists?: boolean;
+  showQuickActions?: boolean;
 }) {
   const [activeVisit, setActiveVisit] = useState<ActiveVisit | null>(null);
   const [finishing, setFinishing] = useState(false);
@@ -174,7 +178,7 @@ export function AgentDayExperience({
         </section>
       ) : null}
 
-      <section className={`grid gap-4 md:grid-cols-2 xl:grid-cols-4 ${activeVisit ? "opacity-70" : ""}`} aria-label="Aujourd’hui">
+      {showDayLists ? <section className={`grid gap-4 md:grid-cols-2 xl:grid-cols-4 ${activeVisit ? "opacity-70" : ""}`} aria-label="Aujourd’hui">
         <DayList title="En retard" icon={<AlertTriangle />} count={overdue.length} emptyTitle="Aucun retard" emptyDetail="Votre suivi est à jour.">
           {overdue.map((task) => {
             const timing = formatActionTiming(task.due_at);
@@ -190,14 +194,14 @@ export function AgentDayExperience({
         <DayList title="Rapports à terminer" icon={<ClipboardCheck />} count={day.reports.length} emptyTitle="Tous les comptes rendus sont traités" emptyDetail="Aucun brouillon ou correctif en attente.">
           {day.reports.map((report) => <DayLink key={report.id} href={`/dashboard/missions/${report.mission_id}`} title={presentationText(report.title)} detail={presentationLabel(report.report_status)} />)}
         </DayList>
-      </section>
+      </section> : null}
 
-      <QuickActions className="sm:hidden" actions={[
+      {showQuickActions ? <QuickActions className="sm:hidden" actions={[
         { href: "/dashboard/orders/new", label: "Créer une commande", description: "Saisir une commande terrain", icon: ShoppingCart },
         { href: "/dashboard/tasks", label: "Planifier une relance", description: "Créer une prochaine action", icon: CalendarPlus },
         { href: "/dashboard/pharmacies", label: "Ouvrir une pharmacie", description: "Consulter le référentiel", icon: MapPin },
         { href: "/dashboard/reports", label: "Saisir un compte rendu", description: "Finaliser une visite", icon: ClipboardPlus },
-      ]} />
+      ]} /> : null}
 
       {!activeVisit && visit ? (
         <QuickReportCard brandPharmacyId={visit.brand_pharmacy_id} pharmacyId={visit.pharmacy_id} draftScope={draftScope} commercialStatus={visit.status} lastOrderAt={visit.last_order_at} />

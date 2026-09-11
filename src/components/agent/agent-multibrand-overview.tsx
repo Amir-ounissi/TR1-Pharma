@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, CalendarDays, CheckCircle2, ClipboardCheck, MapPin, Tags } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AlertTriangle, ArrowRight, CalendarDays, CalendarPlus, CheckCircle2, ClipboardCheck, MapPin, Megaphone, Route } from "lucide-react";
+import { getVisitProgress, visitStatusLabel } from "@/lib/agent-day-progress";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import type { BrandContext } from "@/lib/auth";
 import { presentationLabel, presentationText } from "@/lib/presentation";
 
@@ -192,15 +192,16 @@ function taskTiming(task: AgentMultibrandTask) {
 }
 
 function BrandBadge({ name }: { name: string }) {
-  return <Badge variant="outline" className="border-[var(--tr1-border)] bg-white/70 text-[var(--tr1-navy)]">{name}</Badge>;
+  return <span className="inline-flex rounded-full border border-[var(--tr1-border)] bg-white/70 px-2.5 py-1 text-xs font-medium text-[var(--tr1-navy)]">{name}</span>;
 }
 
 function ScopeFilter({ brands, selectedBrandId }: { brands: BrandContext[]; selectedBrandId: string | null }) {
   return (
-    <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Filtrer par marque">
+    <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Marques affichées dans la journée">
       <Link
         href="/dashboard/agent"
-        className={`shrink-0 rounded-full border px-3 py-2 text-sm font-semibold transition ${selectedBrandId === null ? "border-[var(--tr1-navy)] bg-[var(--tr1-navy)] text-white" : "bg-background text-[var(--tr1-navy)]"}`}
+        aria-current={selectedBrandId === null ? "page" : undefined}
+        className={`inline-flex min-h-11 shrink-0 items-center rounded-full border px-4 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-navy)] focus-visible:ring-offset-2 text-sm font-semibold transition ${selectedBrandId === null ? "border-[var(--tr1-navy)] bg-[var(--tr1-navy)] text-white" : "bg-background text-[var(--tr1-navy)]"}`}
       >
         Toutes mes marques
       </Link>
@@ -208,7 +209,8 @@ function ScopeFilter({ brands, selectedBrandId }: { brands: BrandContext[]; sele
         <Link
           key={brand.id}
           href={`/dashboard/agent?brand=${brand.id}`}
-          className={`shrink-0 rounded-full border px-3 py-2 text-sm font-semibold transition ${selectedBrandId === brand.id ? "border-[var(--tr1-navy)] bg-[var(--tr1-navy)] text-white" : "bg-background text-[var(--tr1-navy)]"}`}
+          aria-current={selectedBrandId === brand.id ? "page" : undefined}
+          className={`inline-flex min-h-11 shrink-0 items-center rounded-full border px-4 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-navy)] focus-visible:ring-offset-2 text-sm font-semibold transition ${selectedBrandId === brand.id ? "border-[var(--tr1-navy)] bg-[var(--tr1-navy)] text-white" : "bg-background text-[var(--tr1-navy)]"}`}
         >
           {brand.name}
         </Link>
@@ -223,12 +225,20 @@ export function AgentMultibrandOverview({
   day,
   nextVisit,
   visits,
+  firstName,
+  dayLabel,
+  canPlanVisit,
+  canRequestAnimation,
 }: {
   brands: BrandContext[];
   selectedBrandId: string | null;
   day: AgentMultibrandDay;
   nextVisit: AgentMultibrandNextVisit | null;
   visits: AgentMultibrandVisitSummary[];
+  firstName: string;
+  dayLabel: string;
+  canPlanVisit: boolean;
+  canRequestAnimation: boolean;
 }) {
   const priorityActions: PriorityAction[] = [
     ...day.tasks.map((task) => ({
@@ -256,204 +266,181 @@ export function AgentMultibrandOverview({
       reason: followUp.reason,
     })),
   ]
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 5);
+    .sort((a, b) => b.score - a.score);
   const totalPriorityActions = day.tasks.length + day.follow_ups.length;
-  const remainingPriorityActions = Math.max(0, totalPriorityActions - priorityActions.length);
   const selectedBrand = brands.find((brand) => brand.id === selectedBrandId) ?? null;
 
+  const progress = getVisitProgress(visits);
+  const firstAction = priorityActions[0];
+  const firstReport = day.reports[0];
+  const nextVisitHref = nextVisit
+    ? `/dashboard/agenda?date=${new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(nextVisit.scheduled_at))}`
+    : "/dashboard/agenda";
+  const primary = firstAction
+    ? { title: firstAction.title, detail: `${firstAction.pharmacyName} · ${firstAction.brandName}`, href: firstAction.href, label: "Consulter cette priorité" }
+    : firstReport
+      ? { title: "Finalisez votre compte rendu", detail: `${firstReport.pharmacy_name} · ${firstReport.brand_name}`, href: `/dashboard/missions/${firstReport.mission_id}`, label: "Compléter le compte rendu" }
+      : nextVisit
+        ? { title: "Préparez votre prochaine visite", detail: `${nextVisit.name} · ${formatDateTime(nextVisit.scheduled_at)}`, href: nextVisitHref, label: "Voir la visite dans l’agenda" }
+        : { title: "Préparez votre prochaine visite", detail: "Aucune visite planifiée. Retrouvez votre agenda pour organiser la suite.", href: canPlanVisit ? "/dashboard/agenda/new" : "/dashboard/agenda", label: canPlanVisit ? "Planifier une visite" : "Consulter mon agenda" };
+
+  function actionRow(action: PriorityAction) {
+    return (
+      <Link key={action.key} href={action.href} className="group block rounded-xl border p-4 transition hover:border-[var(--tr1-orange)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-navy)]">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <BrandBadge name={action.brandName} />
+          {action.timing ? <span className={`text-sm font-semibold ${action.overdue ? "text-[#a74413]" : "text-muted-foreground"}`}>{action.timing}</span> : null}
+        </div>
+        <p className="mt-2 break-words text-base font-semibold text-[var(--tr1-navy)]">{action.pharmacyName}</p>
+        <p className="mt-1 text-sm text-muted-foreground">{action.title}{action.city ? ` · ${action.city}` : ""}</p>
+        {action.reason ? <p className="mt-1 text-sm text-muted-foreground">{action.reason}</p> : null}
+        <span className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-[var(--tr1-navy)]">Consulter <ArrowRight className="size-4" aria-hidden="true" /></span>
+      </Link>
+    );
+  }
+
   return (
-    <section className="space-y-4" aria-labelledby="multibrand-day-title">
-      <div className="space-y-3">
+    <section className="space-y-6" aria-labelledby="multibrand-day-title">
+      <header className="space-y-4">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="font-mono text-[0.65rem] font-black uppercase tracking-[0.18em] text-[var(--tr1-orange)]">Bureau commercial</p>
-            <h1 id="multibrand-day-title" className="mt-1 text-2xl font-black tracking-tight text-[var(--tr1-navy)] sm:text-3xl">
-              Aujourd’hui
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {selectedBrand ? `Vue filtrée · ${selectedBrand.name}` : "Votre journée, toutes cartes réunies."}
-            </p>
+            <p className="text-sm font-medium capitalize text-muted-foreground">Bonjour {firstName} · {dayLabel}</p>
+            <h1 id="multibrand-day-title" className="mt-1 break-words text-3xl font-bold tracking-tight text-[var(--tr1-navy)] sm:text-4xl">Aujourd’hui</h1>
+            <p className="mt-2 text-base text-muted-foreground">Ma journée · {selectedBrand?.name ?? "Toutes mes marques"}</p>
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Tags className="size-4" aria-hidden="true" />
-            {brands.length} carte{brands.length > 1 ? "s" : ""} connectée{brands.length > 1 ? "s" : ""}
-          </div>
+          <p className="text-sm text-muted-foreground">{brands.length} marque{brands.length > 1 ? "s" : ""} disponible{brands.length > 1 ? "s" : ""}</p>
         </div>
         <ScopeFilter brands={brands} selectedBrandId={selectedBrandId} />
+      </header>
+
+      <section aria-labelledby="next-step-title" className="rounded-2xl bg-[var(--tr1-navy)] p-5 text-white sm:p-7">
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-[#ffb67e]">Votre prochaine étape</p>
+            <h2 id="next-step-title" className="mt-2 break-words text-2xl font-semibold leading-tight">{primary.title}</h2>
+            <p className="mt-2 break-words text-base leading-relaxed text-slate-200">{primary.detail}</p>
+            {nextVisit && !firstAction && !firstReport ? (
+              <div className="mt-3 space-y-2">
+                <p className="text-sm text-slate-200">{nextVisit.address}</p>
+                {nextVisit.objective ? <p className="text-sm text-slate-200">Objectif : {nextVisit.objective}</p> : null}
+                <div className="flex flex-wrap gap-2">{nextVisit.brands.map((brand) => <BrandBadge key={brand.brand_id} name={brand.brand_name} />)}</div>
+              </div>
+            ) : null}
+          </div>
+          <Link href={primary.href} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-[#ffb67e] px-5 py-3 text-center text-base font-semibold text-[#142033] transition hover:bg-[#ffc99f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--tr1-navy)]">
+            {nextVisit || firstAction || firstReport ? <ArrowRight className="size-5 shrink-0" aria-hidden="true" /> : <CalendarPlus className="size-5 shrink-0" aria-hidden="true" />}
+            {primary.label}
+          </Link>
+        </div>
+      </section>
+
+      <div className="flex flex-wrap gap-x-6 gap-y-3 rounded-xl border bg-white/60 px-4 py-3 text-sm" aria-label="État du suivi">
+        <span className="inline-flex items-center gap-2"><Route className="size-4" aria-hidden="true" />{progress.planned ? `${progress.planned} visite${progress.planned > 1 ? "s" : ""} au programme` : "Aucune visite aujourd’hui"}</span>
+        <span className="inline-flex items-center gap-2">{totalPriorityActions ? <AlertTriangle className="size-4 text-[#a74413]" aria-hidden="true" /> : <CheckCircle2 className="size-4 text-[var(--tr1-success)]" aria-hidden="true" />}{totalPriorityActions ? `${totalPriorityActions} priorité${totalPriorityActions > 1 ? "s" : ""} à consulter` : "Aucune action prioritaire"}</span>
+        <span className="inline-flex items-center gap-2"><ClipboardCheck className="size-4" aria-hidden="true" />{day.reports.length ? `${day.reports.length} compte${day.reports.length > 1 ? "s" : ""} rendu${day.reports.length > 1 ? "s" : ""} à terminer` : "Aucun compte rendu en attente"}</span>
       </div>
 
-      {nextVisit ? (
-        <Card className="overflow-hidden border-[var(--tr1-border)] bg-[var(--tr1-ivory)]">
-          <div className="h-1 bg-[var(--tr1-orange)]" />
-          <CardHeader className="pb-3">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p className="font-mono text-[0.62rem] font-black uppercase tracking-[0.16em] text-[var(--tr1-orange)]">Prochaine visite</p>
-                <CardTitle className="mt-1 text-xl font-black text-[var(--tr1-navy)]">{nextVisit.name}</CardTitle>
-                <p className="mt-1 text-sm text-muted-foreground">{nextVisit.address}</p>
+      <div className={`grid items-start gap-6 ${priorityActions.length || day.reports.length ? "lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]" : ""}`}>
+        <div className="min-w-0 space-y-5">
+          <Card className="rounded-xl">
+            <CardHeader>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-lg font-semibold">Mon programme</h2>
+                <Link href="/dashboard/agenda" className="inline-flex min-h-11 items-center gap-2 rounded-md px-2 text-sm font-semibold hover:underline focus-visible:ring-2">Voir l’agenda <ArrowRight className="size-4" aria-hidden="true" /></Link>
               </div>
-              <div className="text-right">
-                <p className="font-mono text-sm font-black text-[var(--tr1-navy)]">{formatDateTime(nextVisit.scheduled_at)}</p>
-                <Badge variant="secondary" className="mt-1">{presentationLabel(nextVisit.status)}</Badge>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-wrap gap-2">
-              {nextVisit.brands.map((brand) => <BrandBadge key={brand.brand_id} name={brand.brand_name} />)}
-            </div>
-            <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Objectif commun</p>
-                <p className="mt-1 text-sm font-medium text-[var(--tr1-navy)]">{nextVisit.objective || nextVisit.title || "Suivi commercial"}</p>
-              </div>
-              <Link href="/dashboard/agenda" className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[var(--tr1-navy)] px-4 text-sm font-semibold text-white">
-                <MapPin className="size-4" aria-hidden="true" />
-                Ouvrir la visite
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card className="border-dashed">
-          <CardContent className="flex items-start gap-3 py-5">
-            <CheckCircle2 className="mt-0.5 size-5 text-[var(--tr1-success)]" aria-hidden="true" />
-            <div>
-              <p className="font-semibold text-[var(--tr1-navy)]">Aucune prochaine visite planifiée.</p>
-              <p className="mt-1 text-sm text-muted-foreground">La journée reste disponible pour les relances et la prospection.</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            </CardHeader>
+            <CardContent>
+              {visits.length ? (
+                <ol className="divide-y">
+                  {visits.map((visit) => (
+                    <li key={visit.id}>
+                      <Link href={visit.href} className="flex min-h-16 items-start gap-3 rounded-md py-4 transition hover:bg-muted/30 focus-visible:ring-2">
+                        <time dateTime={visit.startAt} className="w-12 shrink-0 text-sm font-semibold tabular-nums">{formatTime(visit.startAt)}</time>
+                        <div className="min-w-0 flex-1">
+                          <p className="break-words text-base font-semibold">{visit.pharmacyName}</p>
+                          {visit.city ? <p className="mt-1 text-sm text-muted-foreground">{visit.city}</p> : null}
+                          <div className="mt-2 flex flex-wrap gap-1.5">{visit.brandNames.map((name) => <BrandBadge key={`${visit.id}:${name}`} name={name} />)}</div>
+                          <p className="mt-2 text-sm text-muted-foreground">{visitStatusLabel(visit.status)}</p>
+                        </div>
+                        <ArrowRight className="size-4 shrink-0" aria-hidden="true" />
+                      </Link>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <div className="flex items-start gap-3 pb-2">
+                  <CalendarDays className="mt-1 size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                  <div><p className="text-base font-medium">Aucune visite planifiée aujourd’hui</p><p className="mt-1 text-sm leading-relaxed text-muted-foreground">Ajoutez un rendez-vous depuis votre agenda.</p></div>
+                </div>
+              )}
+              {canPlanVisit && (nextVisit || firstAction || firstReport) ? <Link href="/dashboard/agenda/new" className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-lg border px-4 text-sm font-semibold hover:bg-muted/30 focus-visible:ring-2"><CalendarPlus className="size-4" aria-hidden="true" />Ajouter une visite</Link> : null}
+            </CardContent>
+          </Card>
 
-      <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--tr1-blue)]">Ma tournée du jour</p>
-                <CardTitle className="mt-1 text-lg">Une pharmacie, une étape</CardTitle>
-              </div>
-              <Badge variant="secondary">{visits.length}</Badge>
+          {nextVisit && (firstAction || firstReport) ? (
+            <div className="rounded-xl border bg-white/60 p-4">
+              <p className="text-sm text-muted-foreground">Prochaine visite · {formatDateTime(nextVisit.scheduled_at)}</p>
+              <p className="mt-1 text-base font-semibold">{nextVisit.name}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{nextVisit.address}</p>
+              <Link href={nextVisitHref} className="mt-2 inline-flex min-h-11 items-center gap-2 text-sm font-semibold hover:underline focus-visible:ring-2"><MapPin className="size-4" aria-hidden="true" />Voir dans l’agenda</Link>
             </div>
-          </CardHeader>
-          <CardContent>
-            {visits.length ? (
-              <div className="divide-y">
-                {visits.map((visit) => (
-                  <Link key={visit.id} href={visit.href} className="flex min-h-16 items-start gap-3 py-3 transition hover:bg-muted/30">
-                    <div className="w-12 shrink-0 pt-0.5 font-mono text-sm font-black text-[var(--tr1-navy)]">{formatTime(visit.startAt)}</div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-semibold text-[var(--tr1-navy)]">{visit.pharmacyName}</p>
-                        {visit.city ? <span className="text-xs text-muted-foreground">{visit.city}</span> : null}
-                      </div>
-                      <div className="mt-1 flex flex-wrap gap-1.5">
-                        {visit.brandNames.map((name) => <BrandBadge key={`${visit.id}:${name}`} name={name} />)}
-                      </div>
-                    </div>
-                    <ArrowRight className="mt-1 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+          ) : null}
+
+          {progress.planned > 0 ? (
+            <section className="rounded-xl border bg-white/60 p-5" aria-labelledby="day-progress-title">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 id="day-progress-title" className="text-base font-semibold">Votre progression du jour</h2>
+                <span className="text-sm font-semibold tabular-nums">{progress.completed} / {progress.planned} visites réalisées</span>
+              </div>
+              <div role="progressbar" aria-label="Visites réalisées aujourd’hui" aria-valuenow={progress.completed} aria-valuemin={0} aria-valuemax={progress.planned} aria-valuetext={`${progress.completed} visites réalisées sur ${progress.planned} programmées`} className="mt-4 h-2.5 overflow-hidden rounded-full bg-[var(--tr1-border)]">
+                <div className="h-full rounded-full bg-[var(--tr1-success)] transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${progress.percent}%` }} />
+              </div>
+              <p className="mt-3 text-sm text-muted-foreground">{progress.completed === progress.planned ? "Toutes les visites au programme ont été réalisées." : "La progression suit les visites marquées comme terminées."}{progress.missed ? ` ${progress.missed} non effectuée${progress.missed > 1 ? "s" : ""}.` : ""}</p>
+            </section>
+          ) : null}
+        </div>
+
+        {priorityActions.length || day.reports.length ? (
+          <div className="min-w-0 space-y-5">
+            {priorityActions.length ? (
+              <section className="space-y-3" aria-labelledby="day-priorities-title">
+                <h2 id="day-priorities-title" className="text-lg font-semibold">Mes priorités <span className="text-muted-foreground">· {totalPriorityActions}</span></h2>
+                {priorityActions.slice(0, 3).map(actionRow)}
+                {priorityActions.length > 3 ? <details className="rounded-xl border bg-white/60 p-3"><summary className="min-h-11 cursor-pointer rounded-md py-2.5 text-sm font-semibold focus-visible:ring-2">Voir les {priorityActions.length - 3} autres priorités</summary><div className="mt-3 space-y-3">{priorityActions.slice(3).map(actionRow)}</div></details> : null}
+              </section>
+            ) : null}
+            {day.reports.length ? (
+              <section className="space-y-3" aria-labelledby="day-reports-title">
+                <h2 id="day-reports-title" className="text-lg font-semibold">Comptes rendus à terminer</h2>
+                {day.reports.map((report) => (
+                  <Link key={report.id} href={`/dashboard/missions/${report.mission_id}`} className="block rounded-xl border bg-white/60 p-4 hover:bg-white focus-visible:ring-2">
+                    <BrandBadge name={report.brand_name} />
+                    <p className="mt-2 text-base font-semibold">{report.pharmacy_name}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{presentationText(report.title)} · {presentationLabel(report.report_status)}</p>
+                    <span className="mt-3 inline-flex min-h-6 items-center gap-2 text-sm font-semibold">Compléter <ArrowRight className="size-4" aria-hidden="true" /></span>
                   </Link>
                 ))}
-              </div>
-            ) : (
-              <p className="py-3 text-sm text-muted-foreground">Aucune visite terrain planifiée aujourd’hui.</p>
-            )}
-          </CardContent>
-        </Card>
-
-        <div className="grid gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="size-4 text-[var(--tr1-orange)]" aria-hidden="true" />
-                  <CardTitle className="text-base">Actions prioritaires</CardTitle>
-                </div>
-                <Badge variant="secondary">{totalPriorityActions} à traiter</Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {priorityActions.map((action) => (
-                <Link key={action.key} href={action.href} className="block rounded-lg border px-3 py-2.5 transition hover:bg-muted/30">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-semibold leading-5 text-[var(--tr1-navy)]">{action.title}</p>
-                    <BrandBadge name={action.brandName} />
-                  </div>
-                  <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                    {action.pharmacyName}{action.city ? ` · ${action.city}` : ""}
-                  </p>
-                  {(action.timing || action.reason) ? (
-                    <p className="mt-1 flex min-w-0 items-center gap-1.5 text-xs">
-                      {action.timing ? (
-                        <span className={action.overdue ? "shrink-0 font-semibold text-[var(--tr1-orange)]" : "shrink-0 font-semibold text-[var(--tr1-navy)]"}>
-                          {action.timing}
-                        </span>
-                      ) : null}
-                      {action.timing && action.reason ? <span className="text-muted-foreground">·</span> : null}
-                      {action.reason ? <span className="truncate text-muted-foreground">{action.reason}</span> : null}
-                    </p>
-                  ) : null}
-                </Link>
-              ))}
-              {!priorityActions.length ? <p className="py-2 text-sm text-muted-foreground">Aucune action prioritaire.</p> : null}
-              {remainingPriorityActions > 0 ? (
-                <Link href="/dashboard/tasks" className="flex min-h-9 items-center justify-between rounded-lg px-1 text-sm font-semibold text-[var(--tr1-navy)] hover:underline">
-                  Voir les {remainingPriorityActions} autres actions
-                  <ArrowRight className="size-4" aria-hidden="true" />
-                </Link>
-              ) : null}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <ClipboardCheck className="size-4 text-[var(--tr1-blue)]" aria-hidden="true" />
-                  <CardTitle className="text-base">À finaliser</CardTitle>
-                </div>
-                <Badge variant="secondary">{day.reports.length}</Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {day.reports.slice(0, 4).map((report) => (
-                <Link key={report.id} href={`/dashboard/missions/${report.mission_id}`} className="flex items-center justify-between gap-3 rounded-lg border p-3 transition hover:bg-muted/30">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-[var(--tr1-navy)]">{presentationText(report.title)}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">{report.pharmacy_name} · {presentationLabel(report.report_status)}</p>
-                  </div>
-                  <BrandBadge name={report.brand_name} />
-                </Link>
-              ))}
-              {!day.reports.length ? <p className="py-2 text-sm text-muted-foreground">Aucun compte rendu en attente.</p> : null}
-            </CardContent>
-          </Card>
-        </div>
+              </section>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       {day.missions.length ? (
-        <Card>
-          <CardHeader className="pb-2">
-            <div className="flex items-center gap-2">
-              <CalendarDays className="size-4 text-[var(--tr1-blue)]" aria-hidden="true" />
-              <CardTitle className="text-base">Missions du jour</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="grid gap-2 md:grid-cols-2">
-            {day.missions.slice(0, 6).map((mission) => (
-              <Link key={mission.id} href={`/dashboard/missions/${mission.id}`} className="rounded-lg border p-3 transition hover:bg-muted/30">
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-sm font-semibold text-[var(--tr1-navy)]">{presentationText(mission.title)}</p>
-                  <BrandBadge name={mission.brand_name} />
-                </div>
-                <p className="mt-1 text-xs text-muted-foreground">{formatTime(mission.scheduled_start_at)} · {mission.pharmacy_name}</p>
+        <section className="space-y-3" aria-labelledby="day-missions-title">
+          <h2 id="day-missions-title" className="text-lg font-semibold">Missions du jour</h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {day.missions.map((mission) => (
+              <Link key={mission.id} href={`/dashboard/missions/${mission.id}`} className="rounded-xl border bg-white/60 p-4 hover:bg-white focus-visible:ring-2">
+                <BrandBadge name={mission.brand_name} />
+                <p className="mt-2 text-base font-semibold">{presentationText(mission.title)}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{formatTime(mission.scheduled_start_at)} · {mission.pharmacy_name}</p>
               </Link>
             ))}
-          </CardContent>
-        </Card>
+          </div>
+        </section>
       ) : null}
+      {canRequestAnimation ? <Link href="/dashboard/missions/new?mode=animation" className="inline-flex min-h-11 items-center gap-2 rounded-lg border bg-white/60 px-4 text-sm font-semibold hover:bg-white focus-visible:ring-2"><Megaphone className="size-4" aria-hidden="true" />Demander une animation</Link> : null}
     </section>
   );
 }
