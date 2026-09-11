@@ -11,11 +11,31 @@ type HubSpotConnection = {
   configuration: Record<string, unknown> | null;
 };
 
-type HubSpotCatalogSearch = {
+type HubSpotSearchPage = {
   results?: Array<{
     id?: string | number;
     properties?: Record<string, unknown>;
   }>;
+  paging?: {
+    next?: {
+      after?: string | number;
+    };
+  };
+};
+
+export type NaaliClientPharmacySyncResult = {
+  owners: number;
+  seen: number;
+  createdPharmacies: number;
+  updatedPharmacies: number;
+  createdBrandRelations: number;
+  updatedBrandRelations: number;
+  potentialCounts: {
+    prioritaire: number;
+    secondaire: number;
+    nonPrioritaire: number;
+    unknown: number;
+  };
 };
 
 function configuredMode(connection: HubSpotConnection) {
@@ -58,6 +78,29 @@ function number(value: unknown) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function cleanHubSpotPharmacyName(rawName: string, cip: string | null) {
+  if (cip) {
+    const marker = ` - ${cip} - `;
+    const markerIndex = rawName.lastIndexOf(marker);
+    if (markerIndex > 0) return rawName.slice(0, markerIndex).trim();
+  }
+  return rawName.replace(/\s+-\s+\d{5,8}\s+-\s+\d{4,5}\s*$/, "").trim();
+}
+
+function potentialMapping(value: unknown) {
+  const potential = text(value)?.toLocaleLowerCase("fr-FR") ?? "";
+  if (potential === "prioritaires") {
+    return { potentialLevel: "high" as const, priorityLevel: "high" as const, bucket: "prioritaire" as const };
+  }
+  if (potential === "secondaires") {
+    return { potentialLevel: "medium" as const, priorityLevel: "normal" as const, bucket: "secondaire" as const };
+  }
+  if (potential === "non prioritaires") {
+    return { potentialLevel: "low" as const, priorityLevel: "low" as const, bucket: "nonPrioritaire" as const };
+  }
+  return { potentialLevel: "unknown" as const, priorityLevel: "normal" as const, bucket: "unknown" as const };
+}
+
 async function activeConnection(brandId: string, connectionId: string) {
   const admin = createAdminClient();
   const { data, error } = await admin
@@ -74,20 +117,28 @@ async function activeConnection(brandId: string, connectionId: string) {
   return { admin, connection: data as HubSpotConnection };
 }
 
-async function syncNaaliCatalog(brandId: string, connectionId: string) {
+async function hubSpotClientForActiveConnection(brandId: string, connectionId: string) {
   const runtime = await activeConnection(brandId, connectionId);
-  if (!runtime) return;
-  const { admin, connection } = runtime;
+  if (!runtime) return null;
+  const { connection } = runtime;
   const mode = syncMode(connection);
   const token = accessToken(connection, mode);
-  if (mode !== "write" || !token) return;
+  if (mode !== "write" || !token) return null;
+  return {
+    ...runtime,
+    client: new HubSpotClient({
+      mode,
+      accessToken: token,
+      baseUrl: connection.base_url ?? undefined,
+    }),
+  };
+}
 
-  const client = new HubSpotClient({
-    mode,
-    accessToken: token,
-    baseUrl: connection.base_url ?? undefined,
-  });
-  const response = await client.searchObjects<HubSpotCatalogSearch>("products", {
+async function syncNaaliCatalog(brandId: string, connectionId: string) {
+  const runtime = await hubSpotClientForActiveConnection(brandId, connectionId);
+  if (!runtime) return;
+  const { admin, client } = runtime;
+  const response = await client.searchObjects<HubSpotSearchPage>("products", {
     filterGroups: [{
       filters: [
         { propertyName: "type_de_produit_naali", operator: "EQ", value: "Normal" },
@@ -188,6 +239,253 @@ async function syncNaaliCatalog(brandId: string, connectionId: string) {
   }
 }
 
+async function findExistingPharmacy(options: {
+  admin: ReturnType<typeof createAdminClient>;
+  brandId: string;
+  externalId: string;
+  cip: string | null;
+}) {
+  const { admin, brandId, externalId, cip } = options;
+  const { data: brandRelation, error: brandError } = await admin
+    .from("brand_pharmacies")
+    .select("id,pharmacy_id,archived_at")
+    .eq("brand_id", brandId)
+    .eq("external_id", externalId)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (brandError) throw brandError;
+  if (brandRelation?.pharmacy_id) {
+    return { pharmacyId: String(brandRelation.pharmacy_id), brandRelationId: String(brandRelation.id) };
+  }
+
+  if (cip) {
+    const { data: pharmacy, error: pharmacyError } = await admin
+      .from("pharmacies")
+      .select("id")
+      .eq("cip_code", cip)
+      .limit(1)
+      .maybeSingle();
+    if (pharmacyError) throw pharmacyError;
+    if (pharmacy?.id) return { pharmacyId: String(pharmacy.id), brandRelationId: null };
+  }
+
+  const { data: pharmacyByExternalId, error: externalError } = await admin
+    .from("pharmacies")
+    .select("id")
+    .eq("external_id", externalId)
+    .is("archived_at", null)
+    .limit(1)
+    .maybeSingle();
+  if (externalError) throw externalError;
+  if (pharmacyByExternalId?.id) return { pharmacyId: String(pharmacyByExternalId.id), brandRelationId: null };
+  return null;
+}
+
+async function upsertNaaliClientPharmacy(options: {
+  admin: ReturnType<typeof createAdminClient>;
+  brandId: string;
+  connectionId: string;
+  tr1UserId: string;
+  remote: NonNullable<HubSpotSearchPage["results"]>[number];
+  result: NaaliClientPharmacySyncResult;
+}) {
+  const { admin, brandId, connectionId, tr1UserId, remote, result } = options;
+  const properties = remote.properties ?? {};
+  const externalId = remote.id === undefined || remote.id === null ? null : String(remote.id);
+  const rawName = text(properties.name);
+  if (!externalId || !rawName) return;
+
+  const cip = text(properties.cip);
+  const name = cleanHubSpotPharmacyName(rawName, cip) || rawName;
+  const latitude = number(properties.latitude);
+  const longitude = number(properties.longitude);
+  const hasCoordinates = latitude !== null && longitude !== null;
+  const potential = potentialMapping(properties.potentiel);
+  result.potentialCounts[potential.bucket] += 1;
+  result.seen += 1;
+
+  const existing = await findExistingPharmacy({ admin, brandId, externalId, cip });
+  let pharmacyId: string;
+  if (existing) {
+    pharmacyId = existing.pharmacyId;
+    const pharmacyUpdate: Record<string, unknown> = {
+      legal_name: name,
+      trade_name: name,
+      external_id: externalId,
+      is_active: true,
+      archived_at: null,
+      updated_at: new Date().toISOString(),
+    };
+    for (const [column, value] of [
+      ["cip_code", cip],
+      ["postal_code", text(properties.zip)],
+      ["city", text(properties.city)],
+      ["address_line_1", text(properties.address)],
+      ["address_line_2", text(properties.address2)],
+      ["phone", text(properties.phone)],
+    ] as const) {
+      if (value !== null) pharmacyUpdate[column] = value;
+    }
+    if (hasCoordinates) {
+      pharmacyUpdate.latitude = latitude;
+      pharmacyUpdate.longitude = longitude;
+      pharmacyUpdate.geocoding_status = "resolved";
+      pharmacyUpdate.geocoded_at = new Date().toISOString();
+      pharmacyUpdate.geocoding_source = "hubspot";
+    }
+    const { error } = await admin.from("pharmacies").update(pharmacyUpdate).eq("id", pharmacyId);
+    if (error) throw error;
+    result.updatedPharmacies += 1;
+  } else {
+    const { data: inserted, error } = await admin
+      .from("pharmacies")
+      .insert({
+        legal_name: name,
+        trade_name: name,
+        cip_code: cip,
+        postal_code: text(properties.zip),
+        city: text(properties.city),
+        address_line_1: text(properties.address),
+        address_line_2: text(properties.address2),
+        phone: text(properties.phone),
+        latitude: hasCoordinates ? latitude : null,
+        longitude: hasCoordinates ? longitude : null,
+        geocoding_status: hasCoordinates ? "resolved" : "pending",
+        geocoded_at: hasCoordinates ? new Date().toISOString() : null,
+        geocoding_source: hasCoordinates ? "hubspot" : null,
+        external_id: externalId,
+        is_active: true,
+      })
+      .select("id")
+      .single();
+    if (error || !inserted) throw error ?? new Error(`Unable to create pharmacy for HubSpot company ${externalId}`);
+    pharmacyId = String(inserted.id);
+    result.createdPharmacies += 1;
+  }
+
+  let relationId = existing?.brandRelationId ?? null;
+  if (!relationId) {
+    const { data: relation, error } = await admin
+      .from("brand_pharmacies")
+      .select("id,archived_at")
+      .eq("brand_id", brandId)
+      .eq("pharmacy_id", pharmacyId)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    relationId = relation?.id ? String(relation.id) : null;
+  }
+
+  const relationValues = {
+    commercial_status: "active",
+    activity_status: "active",
+    potential_level: potential.potentialLevel,
+    priority_level: potential.priorityLevel,
+    source: "brand_existing_client",
+    source_details: "HubSpot Naali — client synchronisé",
+    current_agent_user_id: tr1UserId,
+    external_id: externalId,
+    archived_at: null,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (relationId) {
+    const { error } = await admin
+      .from("brand_pharmacies")
+      .update(relationValues)
+      .eq("id", relationId)
+      .eq("brand_id", brandId);
+    if (error) throw error;
+    result.updatedBrandRelations += 1;
+  } else {
+    const { error } = await admin.from("brand_pharmacies").insert({
+      brand_id: brandId,
+      pharmacy_id: pharmacyId,
+      ...relationValues,
+    });
+    if (error) throw error;
+    result.createdBrandRelations += 1;
+  }
+
+  const { error: linkError } = await admin.rpc("upsert_connector_external_link", {
+    target_connection_id: connectionId,
+    target_entity_type: "pharmacies",
+    target_external_id: externalId,
+    target_tr1_record_id: pharmacyId,
+    target_external_updated_at: null,
+    target_tr1_updated_at: null,
+    target_sync_hash: null,
+  });
+  if (linkError) throw linkError;
+}
+
+export async function syncNaaliClientPharmacies(brandId: string, connectionId: string) {
+  const runtime = await hubSpotClientForActiveConnection(brandId, connectionId);
+  if (!runtime) throw new Error("Active HubSpot write connection unavailable");
+  const { admin, client } = runtime;
+  const result: NaaliClientPharmacySyncResult = {
+    owners: 0,
+    seen: 0,
+    createdPharmacies: 0,
+    updatedPharmacies: 0,
+    createdBrandRelations: 0,
+    updatedBrandRelations: 0,
+    potentialCounts: { prioritaire: 0, secondaire: 0, nonPrioritaire: 0, unknown: 0 },
+  };
+
+  const { data: ownerLinks, error: ownerError } = await admin
+    .from("connector_external_links")
+    .select("external_id,tr1_record_id")
+    .eq("connection_id", connectionId)
+    .eq("entity_type", "users");
+  if (ownerError) throw ownerError;
+  if (!ownerLinks?.length) throw new Error("No HubSpot owner mapping is configured for this connection");
+
+  for (const ownerLink of ownerLinks) {
+    const ownerExternalId = text(ownerLink.external_id);
+    const tr1UserId = text(ownerLink.tr1_record_id);
+    if (!ownerExternalId || !tr1UserId) continue;
+    result.owners += 1;
+
+    let after: string | null = null;
+    do {
+      const response = await client.searchObjects<HubSpotSearchPage>("companies", {
+        filterGroups: [{
+          filters: [
+            { propertyName: "hubspot_owner_id", operator: "EQ", value: ownerExternalId },
+            { propertyName: "client_naali", operator: "EQ", value: "true" },
+          ],
+        }],
+        properties: [
+          "name",
+          "cip",
+          "zip",
+          "city",
+          "address",
+          "address2",
+          "phone",
+          "latitude",
+          "longitude",
+          "potentiel",
+          "hs_lead_status",
+          "remise_sur_facture_appliquee",
+        ],
+        limit: 200,
+        ...(after ? { after } : {}),
+      });
+      for (const remote of response.data?.results ?? []) {
+        await upsertNaaliClientPharmacy({ admin, brandId, connectionId, tr1UserId, remote, result });
+      }
+      const nextAfter = response.data?.paging?.next?.after;
+      after = nextAfter === undefined || nextAfter === null ? null : String(nextAfter);
+    } while (after);
+  }
+
+  return result;
+}
+
 function statusOf(data: unknown) {
   if (!data || typeof data !== "object" || Array.isArray(data)) return null;
   const status = (data as Record<string, unknown>).status;
@@ -209,8 +507,7 @@ async function replayOrdersCreatedWhilePaused(brandId: string, connectionId: str
   if (!activation) return;
   const pause = (logs ?? []).find((log) =>
     new Date(log.created_at).getTime() < new Date(activation.created_at).getTime() &&
-    statusOf(log.old_data) === "active" &&
-    statusOf(log.new_data) === "paused",
+    statusOf(log.old_data) === "active" && statusOf(log.new_data) === "paused",
   );
   if (!pause) return;
 
@@ -257,5 +554,6 @@ async function replayOrdersCreatedWhilePaused(brandId: string, connectionId: str
 
 export async function reconcileHubSpotConnectionAfterActivation(brandId: string, connectionId: string) {
   await syncNaaliCatalog(brandId, connectionId);
+  await syncNaaliClientPharmacies(brandId, connectionId);
   await replayOrdersCreatedWhilePaused(brandId, connectionId);
 }
