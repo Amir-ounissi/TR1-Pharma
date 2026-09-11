@@ -22,7 +22,7 @@ export default async function AnimationInvoicePage({
     supabase
       .from("missions")
       .select(
-        "id,brand_id,mission_type,status,title,requested_by,managed_by,assigned_user_id,animation_parent_request_id,cost_actual_ht,cost_estimated_ht,provider_cost_ht,travel_cost_ht,scheduled_start_at",
+        "id,brand_id,mission_type,status,title,requested_by,managed_by,assigned_user_id,cost_actual_ht,cost_estimated_ht,provider_cost_ht,travel_cost_ht,scheduled_start_at",
       )
       .eq("id", id)
       .eq("brand_id", brand.id)
@@ -42,7 +42,7 @@ export default async function AnimationInvoicePage({
   const isBrandAdmin = role === "brand_admin";
   const isAssigned = mission.assigned_user_id === userId;
   const isFacilitator = role === "facilitator";
-  const isDatedAnimation = Boolean(mission.animation_parent_request_id);
+  const isDatedAnimation = Boolean(mission.scheduled_start_at);
   const invoiceStatus = invoice?.status ?? null;
 
   const canSubmit =
@@ -92,8 +92,8 @@ export default async function AnimationInvoicePage({
 
       {!isDatedAnimation ? (
         <div className="rounded-xl border bg-muted/30 p-4 text-sm text-muted-foreground">
-          Cette demande regroupe plusieurs jours d’animation. La facturation se
-          fait depuis chaque journée planifiée, après sa réalisation.
+          Cette demande d’animation n’est pas encore planifiée. La facturation
+          sera disponible une fois une journée réalisée et clôturée.
         </div>
       ) : null}
 
