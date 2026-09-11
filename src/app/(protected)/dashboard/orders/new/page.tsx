@@ -4,6 +4,7 @@ import { QuickOrderEntryModes } from "@/components/orders/quick-order-entry-mode
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
 import type { OrderPharmacySearchResult } from "@/app/(protected)/dashboard/orders/actions";
+import { getNaaliHubSpotPharmacyDiscount } from "@/lib/integrations/hubspot/naali-pricing";
 import { activeBrandHasCapability } from "@/lib/saas/server";
 
 type SearchParams = Promise<{ pharmacy?: string; product?: string }>;
@@ -75,6 +76,10 @@ export default async function NewOrderPage({
       }
     : undefined;
 
+  const initialDiscountRate = initialRelation
+    ? await getNaaliHubSpotPharmacyDiscount(brand.id, initialRelation.pharmacy_id)
+    : null;
+
   const productOptions = (products ?? []).map((item) => ({
     id: item.id,
     name: item.name,
@@ -140,6 +145,7 @@ export default async function NewOrderPage({
       initialOrderType={
         initialRelation ? (lastOrderItems.length ? "reorder" : "initial") : "other"
       }
+      initialDiscountRate={initialDiscountRate}
       isAgent={isAgent}
     />
   );
