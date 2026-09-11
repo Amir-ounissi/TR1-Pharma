@@ -7,6 +7,7 @@ import {
   searchOrderPharmaciesAction,
   type OrderPharmacySearchResult,
 } from "@/app/(protected)/dashboard/orders/actions";
+import { getOrderPharmacyPricingAction } from "@/app/(protected)/dashboard/orders/pricing-actions";
 import { ActionFeedback } from "@/components/reference/action-feedback";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -68,7 +69,10 @@ function PharmacyAutocomplete({
   onSelectionChange,
 }: {
   initialPharmacy?: OrderPharmacySearchResult;
-  onSelectionChange: (changedFromInitial: boolean) => void;
+  onSelectionChange: (
+    changedFromInitial: boolean,
+    pharmacy?: OrderPharmacySearchResult,
+  ) => void;
 }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<OrderPharmacySearchResult[]>([]);
@@ -100,7 +104,7 @@ function PharmacyAutocomplete({
         placeholder="Nom, ville, CIP ou SIRET…"
         autoComplete="off"
         onChange={(event) => {
-          if (selected) onSelectionChange(Boolean(initialPharmacy));
+          if (selected) onSelectionChange(Boolean(initialPharmacy), undefined);
           setSelected(undefined);
           void search(event.target.value);
         }}
@@ -139,6 +143,7 @@ function PharmacyAutocomplete({
                     initialPharmacy &&
                       result.brandPharmacyId !== initialPharmacy.brandPharmacyId,
                   ),
+                  result,
                 );
               }}
             >
@@ -163,6 +168,7 @@ export function QuickOrderForm({
   lastOrderItems = [],
   initialProductId,
   initialOrderType = "other",
+  initialDiscountRate = null,
   isAgent = false,
 }: {
   products: ProductOption[];
@@ -170,11 +176,16 @@ export function QuickOrderForm({
   lastOrderItems?: QuickOrderItem[];
   initialProductId?: string;
   initialOrderType?: string;
+  initialDiscountRate?: number | null;
   isAgent?: boolean;
 }) {
   const [state, action, pending] = useActionState(createOrderAction, {});
   const initialProduct = products.find((product) => product.id === initialProductId);
   const initialMinimum = Math.max(1, initialProduct?.minimumOrderQuantity ?? 1);
+  const [defaultDiscountRate, setDefaultDiscountRate] = useState<number | null>(
+    initialDiscountRate,
+  );
+  const [pricingLoading, setPricingLoading] = useState(false);
   const [lines, setLines] = useState<DraftLine[]>(() => [
     {
       key: "line-1",
@@ -183,11 +194,16 @@ export function QuickOrderForm({
       freeQuantity: 0,
       unitPriceHt:
         initialProduct?.price == null ? "" : String(initialProduct.price),
-      discountRate: "",
+      discountRate:
+        initialDiscountRate == null ? "" : String(initialDiscountRate),
     },
   ]);
   const [orderType, setOrderType] = useState(initialOrderType);
   const [initialContextChanged, setInitialContextChanged] = useState(false);
+
+  function defaultDiscountValue() {
+    return defaultDiscountRate == null ? "" : String(defaultDiscountRate);
+  }
 
   function addLine() {
     setLines((current) => [
@@ -198,7 +214,7 @@ export function QuickOrderForm({
         quantity: 1,
         freeQuantity: 0,
         unitPriceHt: "",
-        discountRate: "",
+        discountRate: defaultDiscountValue(),
       },
     ]);
   }
@@ -218,7 +234,7 @@ export function QuickOrderForm({
       quantity: Math.max(1, product?.minimumOrderQuantity ?? 1),
       freeQuantity: 0,
       unitPriceHt: product?.price == null ? "" : String(product.price),
-      discountRate: "",
+      discountRate: defaultDiscountValue(),
     });
   }
 
@@ -232,10 +248,27 @@ export function QuickOrderForm({
         freeQuantity: Math.max(0, Number(item.freeQuantity ?? 0)),
         unitPriceHt: String(item.unitPriceHt ?? ""),
         discountRate:
-          item.discountRate == null ? "" : String(item.discountRate),
+          item.discountRate == null ? defaultDiscountValue() : String(item.discountRate),
       })),
     );
     setOrderType("reorder");
+  }
+
+  async function loadPharmacyPricing(pharmacy: OrderPharmacySearchResult) {
+    setPricingLoading(true);
+    try {
+      const pricing = await getOrderPharmacyPricingAction(pharmacy.pharmacyId);
+      setDefaultDiscountRate(pricing.discountRate);
+      setLines((current) =>
+        current.map((line) => ({
+          ...line,
+          discountRate:
+            pricing.discountRate == null ? "" : String(pricing.discountRate),
+        })),
+      );
+    } finally {
+      setPricingLoading(false);
+    }
   }
 
   const totalHt = useMemo(
@@ -263,8 +296,11 @@ export function QuickOrderForm({
       <div className="rounded-2xl border bg-muted/20 p-4">
         <PharmacyAutocomplete
           initialPharmacy={initialPharmacy}
-          onSelectionChange={(changed) => {
+          onSelectionChange={(changed, pharmacy) => {
             setInitialContextChanged(changed);
+            if (!pharmacy) {
+              setDefaultDiscountRate(null);
+            }
             if (changed) {
               setLines([
                 {
@@ -278,8 +314,16 @@ export function QuickOrderForm({
               ]);
               setOrderType("other");
             }
+            if (pharmacy) void loadPharmacyPricing(pharmacy);
           }}
         />
+        <div className="mt-2 flex flex-wrap gap-2 text-xs">
+          {pricingLoading ? (
+            <span className="text-muted-foreground">Conditions HubSpot…</span>
+          ) : defaultDiscountRate != null ? (
+            <Badge variant="secondary">Remise pharmacie {defaultDiscountRate}%</Badge>
+          ) : null}
+        </div>
       </div>
 
       <section className="space-y-3">
@@ -287,7 +331,7 @@ export function QuickOrderForm({
           <div>
             <h2 className="text-lg font-bold text-[var(--tr1-navy)]">Produits</h2>
             <p className="text-xs text-muted-foreground">
-              Choisissez les références et ajustez uniquement les quantités.
+              Prix catalogue, remise pharmacie et TVA sont préchargés automatiquement.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -343,6 +387,10 @@ export function QuickOrderForm({
                       {product.price != null ? (
                         <Badge variant="secondary">{money(Number(product.price))} HT</Badge>
                       ) : null}
+                      {product.taxRate != null ? (
+                        <Badge variant="outline">TVA {Number(product.taxRate)}%</Badge>
+                      ) : null}
+                      {discount > 0 ? <Badge variant="outline">Remise {discount}%</Badge> : null}
                       {product.unitsPerCase ? (
                         <span>Colisage {product.unitsPerCase}</span>
                       ) : null}
@@ -352,7 +400,6 @@ export function QuickOrderForm({
                       {line.freeQuantity > 0 ? (
                         <span>+{line.freeQuantity} gratuit(s)</span>
                       ) : null}
-                      {discount > 0 ? <span>Remise {discount}%</span> : null}
                     </div>
                   ) : null}
                 </div>
