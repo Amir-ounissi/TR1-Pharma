@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 export type AnimationInvoice = {
   id: string;
+  attachment_id?: string;
   invoice_number: string;
   amount_ht: number | string;
   vat_amount: number | string;
@@ -44,6 +45,7 @@ function euro(value: number | string) {
 export function AnimationInvoiceCard({
   missionId,
   invoice,
+  invoiceUrl,
   canSubmit,
   canReview,
   canMarkPaid,
@@ -51,6 +53,7 @@ export function AnimationInvoiceCard({
 }: {
   missionId: string;
   invoice: AnimationInvoice | null;
+  invoiceUrl: string | null;
   canSubmit: boolean;
   canReview: boolean;
   canMarkPaid: boolean;
@@ -100,6 +103,18 @@ export function AnimationInvoiceCard({
             <p><span className="text-muted-foreground">HT : </span><strong>{euro(invoice.amount_ht)}</strong></p>
             <p><span className="text-muted-foreground">TVA : </span>{euro(invoice.vat_amount)}</p>
             <p><span className="text-muted-foreground">TTC : </span><strong>{euro(invoice.amount_ttc)}</strong></p>
+            {invoiceUrl ? (
+              <p className="sm:col-span-2">
+                <a
+                  href={invoiceUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-semibold text-[var(--tr1-navy)] underline underline-offset-4"
+                >
+                  Ouvrir la facture PDF
+                </a>
+              </p>
+            ) : null}
             <p className="sm:col-span-2 text-xs text-muted-foreground">
               Transmise le {new Date(invoice.submitted_at).toLocaleString("fr-FR")}
               {invoice.paid_at ? ` · Paiement enregistré le ${new Date(invoice.paid_at).toLocaleString("fr-FR")}` : ""}
