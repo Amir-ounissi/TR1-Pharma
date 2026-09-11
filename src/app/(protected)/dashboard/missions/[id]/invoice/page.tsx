@@ -30,13 +30,30 @@ export default async function AnimationInvoicePage({
     supabase
       .from("animation_invoices")
       .select(
-        "id,invoice_number,amount_ht,vat_amount,amount_ttc,status,review_note,submitted_at,reviewed_at,paid_at,facilitator_user_id",
+        "id,attachment_id,invoice_number,amount_ht,vat_amount,amount_ttc,status,review_note,submitted_at,reviewed_at,paid_at,facilitator_user_id",
       )
       .eq("mission_id", id)
       .maybeSingle(),
   ]);
 
   if (!mission || mission.mission_type !== "animation") notFound();
+
+  let invoiceUrl: string | null = null;
+  if (invoice?.attachment_id) {
+    const { data: attachment } = await supabase
+      .from("mission_attachments")
+      .select("object_path")
+      .eq("id", invoice.attachment_id)
+      .eq("mission_id", id)
+      .maybeSingle();
+
+    if (attachment?.object_path) {
+      const { data: signed } = await supabase.storage
+        .from("mission-evidence")
+        .createSignedUrl(attachment.object_path, 900);
+      invoiceUrl = signed?.signedUrl ?? null;
+    }
+  }
 
   const isTr1 = role === "tr1_manager" || role === "super_admin";
   const isBrandAdmin = role === "brand_admin";
@@ -100,6 +117,7 @@ export default async function AnimationInvoicePage({
       <AnimationInvoiceCard
         missionId={id}
         invoice={(invoice as AnimationInvoice | null) ?? null}
+        invoiceUrl={invoiceUrl}
         canSubmit={canSubmit}
         canReview={canReview}
         canMarkPaid={canMarkPaid}
