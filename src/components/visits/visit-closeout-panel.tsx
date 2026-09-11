@@ -33,6 +33,8 @@ export function VisitCloseoutPanel({
   const router = useRouter();
   const [startState, startAction, starting] = useActionState(startFieldVisitAction, emptyState);
   const [closeState, closeAction, closing] = useActionState(closeFieldVisitAction, emptyState);
+  const startFormId = `visit-start-${visitId}`;
+  const closeFormId = `visit-close-${visitId}`;
 
   useEffect(() => {
     if (startState.success || closeState.success) router.refresh();
@@ -40,7 +42,7 @@ export function VisitCloseoutPanel({
 
   if (status === "completed" || closeout) {
     return (
-      <section className="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5">
+      <section id="visit-execution" className="scroll-mt-24 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5">
         <div className="flex items-start gap-3">
           <CheckCircle2 className="mt-0.5 size-5 text-emerald-700" />
           <div className="min-w-0">
@@ -61,25 +63,36 @@ export function VisitCloseoutPanel({
 
   if (["planned", "confirmed"].includes(status)) {
     return (
-      <section className="rounded-2xl border bg-white p-5 shadow-sm">
+      <section id="visit-execution" className="scroll-mt-24 rounded-2xl border bg-white p-5 shadow-sm">
         <h2 className="font-bold text-[var(--tr1-navy)]">Exécuter la visite</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Démarrez la visite au moment d’entrer en pharmacie. TR1 distinguera ainsi une visite planifiée d’une visite réellement exécutée.
         </p>
-        <form action={startAction} className="mt-4">
+        <form id={startFormId} action={startAction} className="mt-4">
           <input type="hidden" name="visitId" value={visitId} />
           {startState.error ? <Feedback tone="error">{startState.error}</Feedback> : null}
-          <Button disabled={starting} className="w-full sm:w-auto">
+          <Button disabled={starting} className="hidden min-h-11 sm:inline-flex">
             <Play className="size-4" />
             {starting ? "Démarrage…" : "Démarrer la visite"}
           </Button>
         </form>
+        <MobilePrimaryBar>
+          <Button
+            type="submit"
+            form={startFormId}
+            disabled={starting}
+            className="min-h-12 w-full touch-manipulation text-sm"
+          >
+            <Play className="size-5" />
+            {starting ? "Démarrage…" : "Démarrer la visite"}
+          </Button>
+        </MobilePrimaryBar>
       </section>
     );
   }
 
   return (
-    <section className="rounded-2xl border bg-white p-5 shadow-sm">
+    <section id="visit-execution" className="scroll-mt-24 rounded-2xl border bg-white p-5 shadow-sm">
       <div className="flex items-start gap-3">
         <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-orange-50">
           <Sparkles className="size-4 text-[var(--tr1-orange)]" />
@@ -92,7 +105,7 @@ export function VisitCloseoutPanel({
         </div>
       </div>
 
-      <form action={closeAction} className="mt-5 space-y-4">
+      <form id={closeFormId} action={closeAction} className="mt-5 space-y-4">
         <input type="hidden" name="visitId" value={visitId} />
         <input type="hidden" name="inputMode" value="manual" />
 
@@ -101,7 +114,7 @@ export function VisitCloseoutPanel({
 
         <div>
           <Label className="mb-1.5">Résultat</Label>
-          <select name="outcome" defaultValue="no_order" className="h-10 w-full rounded-md border bg-background px-3 text-sm">
+          <select name="outcome" defaultValue="no_order" className="min-h-11 w-full rounded-md border bg-background px-3 text-sm">
             <option value="order_taken">Commande prise</option>
             <option value="no_order">Pas de commande</option>
             <option value="follow_up">À relancer</option>
@@ -116,22 +129,23 @@ export function VisitCloseoutPanel({
             name="summary"
             required
             rows={5}
+            className="min-h-32 text-base sm:text-sm"
             placeholder="Ex. Référencement validé sur 3 références. Équipe formée. Revoir la pharmacie après les premières sorties."
           />
         </div>
 
         <details className="rounded-xl border px-4 py-3">
-          <summary className="cursor-pointer text-sm font-semibold text-[var(--tr1-navy)]">
+          <summary className="min-h-11 cursor-pointer touch-manipulation py-2 text-sm font-semibold text-[var(--tr1-navy)]">
             Planifier la prochaine visite
           </summary>
           <div className="mt-4 space-y-3">
             <div>
               <Label className="mb-1.5">Date et heure</Label>
-              <Input type="datetime-local" name="nextVisitAt" />
+              <Input type="datetime-local" name="nextVisitAt" className="min-h-11" />
             </div>
             <div>
               <Label className="mb-1.5">Objectif de la prochaine visite</Label>
-              <Textarea name="nextObjective" rows={3} placeholder="Optionnel" />
+              <Textarea name="nextObjective" rows={3} className="text-base sm:text-sm" placeholder="Optionnel" />
             </div>
             <p className="text-xs text-muted-foreground">
               Si une date est renseignée, TR1 crée directement une vraie visite dans l’Agenda — pas une simple tâche.
@@ -139,12 +153,32 @@ export function VisitCloseoutPanel({
           </div>
         </details>
 
-        <Button disabled={closing} className="w-full sm:w-auto">
+        <Button disabled={closing} className="hidden min-h-11 sm:inline-flex">
           <CheckCircle2 className="size-4" />
           {closing ? "Clôture…" : "Clôturer la visite"}
         </Button>
       </form>
+
+      <MobilePrimaryBar>
+        <Button
+          type="submit"
+          form={closeFormId}
+          disabled={closing}
+          className="min-h-12 w-full touch-manipulation text-sm"
+        >
+          <CheckCircle2 className="size-5" />
+          {closing ? "Clôture…" : "Clôturer la visite"}
+        </Button>
+      </MobilePrimaryBar>
     </section>
+  );
+}
+
+function MobilePrimaryBar({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-30 border-t border-[var(--tr1-line-strong)] bg-[var(--tr1-ivory)]/96 p-3 shadow-[0_-8px_26px_rgb(14_29_49/0.08)] backdrop-blur-xl sm:hidden">
+      {children}
+    </div>
   );
 }
 
