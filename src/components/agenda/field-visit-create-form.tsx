@@ -23,19 +23,32 @@ export type VisitPharmacyOption = {
 export function FieldVisitCreateForm({
   pharmacies,
   defaultStart,
+  defaultPharmacyId,
+  defaultBrandId,
+  defaultObjective,
 }: {
   pharmacies: VisitPharmacyOption[];
   defaultStart: string;
+  defaultPharmacyId?: string;
+  defaultBrandId?: string;
+  defaultObjective?: string;
 }) {
+  const initialPharmacy =
+    pharmacies.find((item) => item.id === defaultPharmacyId) ?? pharmacies[0];
   const [state, action, pending] = useActionState(
     createFieldVisitAction,
     {} as { error?: string; success?: string },
   );
-  const [pharmacyId, setPharmacyId] = useState(pharmacies[0]?.id ?? "");
+  const [pharmacyId, setPharmacyId] = useState(initialPharmacy?.id ?? "");
   const [title, setTitle] = useState(
-    pharmacies[0] ? `Visite · ${pharmacies[0].label}` : "Visite terrain",
+    initialPharmacy ? `Visite · ${initialPharmacy.label}` : "Visite terrain",
   );
   const selected = pharmacies.find((item) => item.id === pharmacyId);
+  const selectedDefaultBrandId = selected?.brands.some(
+    (brand) => brand.brandId === defaultBrandId,
+  )
+    ? defaultBrandId
+    : selected?.brands[0]?.brandId;
 
   if (!pharmacies.length) {
     return (
@@ -91,13 +104,16 @@ export function FieldVisitCreateForm({
       <div className="space-y-2">
         <Label>Marque concernée</Label>
         <div className="grid gap-2">
-          {selected?.brands.map((brand, index) => (
-            <label className="flex min-h-10 items-center gap-3 rounded-md border px-3 text-sm" key={brand.relationId}>
+          {selected?.brands.map((brand) => (
+            <label
+              className="flex min-h-10 items-center gap-3 rounded-md border px-3 text-sm"
+              key={`${pharmacyId}:${brand.relationId}`}
+            >
               <input
                 type="checkbox"
                 name="brandPharmacyId"
                 value={brand.relationId}
-                defaultChecked={index === 0}
+                defaultChecked={brand.brandId === selectedDefaultBrandId}
               />
               <span className="min-w-0 truncate">{brand.brandName}</span>
             </label>
@@ -143,7 +159,12 @@ export function FieldVisitCreateForm({
 
       <div className="space-y-2">
         <Label htmlFor="visit-objective">Objectif</Label>
-        <Textarea id="visit-objective" name="objective" placeholder="Ex. présenter la nouveauté, contrôler le stock, obtenir un réassort…" />
+        <Textarea
+          id="visit-objective"
+          name="objective"
+          defaultValue={defaultObjective}
+          placeholder="Ex. présenter la nouveauté, contrôler le stock, obtenir un réassort…"
+        />
       </div>
 
       <div className="space-y-2">

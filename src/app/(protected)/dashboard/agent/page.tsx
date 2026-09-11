@@ -12,6 +12,7 @@ import { StockAlertsPanel } from "@/components/agent/stock-alerts-panel";
 import { TerrainActivityFeed, type TerrainImpact } from "@/components/agent/terrain-activity-feed";
 import { OfflineDayPreloader } from "@/components/pwa/offline-day-preloader";
 import { buildGoogleMapsUrl, buildWazeUrl } from "@/lib/agent-experience";
+import { addCalendarDays } from "@/lib/agenda";
 import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
 import { parisBusinessDate } from "@/lib/business-date";
 import { requireActiveBrandCapability } from "@/lib/saas/server";
@@ -74,12 +75,14 @@ export default async function AgentPage({
   const brandFilter = selectedBrand?.id ?? null;
 
   const today = parisBusinessDate();
+  const planningHorizon = addCalendarDays(today, 90);
   const now = new Date();
   const [
     { data: agenda },
     { data: nextVisit },
     recentImpactResult,
     multibrandFieldAgendaResult,
+    upcomingFieldAgendaResult,
     activeFieldAgendaResult,
     stockAlerts,
     multibrandDayResult,
@@ -93,6 +96,11 @@ export default async function AgentPage({
     supabase.rpc("get_my_field_agenda", {
       start_date: today,
       end_date: today,
+      brand_filter: brandFilter,
+    }),
+    supabase.rpc("get_my_field_agenda", {
+      start_date: today,
+      end_date: planningHorizon,
       brand_filter: brandFilter,
     }),
     supabase.rpc("get_my_field_agenda", {
@@ -113,6 +121,7 @@ export default async function AgentPage({
   ]);
 
   if (multibrandFieldAgendaResult.error) throw new Error(multibrandFieldAgendaResult.error.message);
+  if (upcomingFieldAgendaResult.error) throw new Error(upcomingFieldAgendaResult.error.message);
   if (activeFieldAgendaResult.error) throw new Error(activeFieldAgendaResult.error.message);
   if (multibrandDayResult.error) throw new Error(multibrandDayResult.error.message);
   if (multibrandNextVisitResult.error) throw new Error(multibrandNextVisitResult.error.message);
@@ -144,6 +153,7 @@ export default async function AgentPage({
   );
   const overviewVisits: AgentMultibrandVisitSummary[] = multibrandFieldVisits.map((event) => ({
     id: event.source_id,
+    pharmacyId: event.pharmacy_id as string,
     pharmacyName: event.pharmacy_name || event.title,
     city: event.city,
     startAt: event.start_at,
@@ -151,6 +161,21 @@ export default async function AgentPage({
     status: event.status,
     brandNames: event.brand_names ?? [],
     href: event.detail_url || "/dashboard/agenda",
+  }));
+
+  const upcomingFieldVisits = ((upcomingFieldAgendaResult.data ?? []) as FieldAgendaEvent[]).filter(
+    (event) => event.ownership === "mine" && event.source_kind === "field_visit" && Boolean(event.pharmacy_id),
+  );
+  const plannedVisits: AgentMultibrandVisitSummary[] = upcomingFieldVisits.map((event) => ({
+    id: event.source_id,
+    pharmacyId: event.pharmacy_id as string,
+    pharmacyName: event.pharmacy_name || event.title,
+    city: event.city,
+    startAt: event.start_at,
+    endAt: event.end_at || null,
+    status: event.status,
+    brandNames: event.brand_names ?? [],
+    href: event.detail_url || `/dashboard/agenda?date=${event.start_at.slice(0, 10)}`,
   }));
 
   const activeFieldVisits = ((activeFieldAgendaResult.data ?? []) as FieldAgendaEvent[]).filter(
@@ -207,6 +232,7 @@ export default async function AgentPage({
         day={multibrandDay}
         nextVisit={multibrandNextVisit}
         visits={overviewVisits}
+        plannedVisits={plannedVisits}
         firstName={firstName}
         dayLabel={dayLabel}
         canPlanVisit={saas.capabilities.has("core_crm")}
