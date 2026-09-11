@@ -5,6 +5,7 @@ import {
   saveConnectorMappingFormAction,
   setConnectorStatusFormAction,
 } from "./actions";
+import { HubSpotMappingStudio } from "./hubspot-mapping-studio";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -51,7 +52,16 @@ type Mapping = {
   is_enabled: boolean;
 };
 
-type MappingProfile = { id: string; entity_type: string; name: string; source_system: string };
+type MappingProfile = {
+  id: string;
+  entity_type: string;
+  name: string;
+  source_system: string;
+  mapping: Record<string, unknown>;
+  transforms: Record<string, unknown>;
+  version: number;
+};
+
 type SyncRun = {
   id: string;
   connection_id: string;
@@ -71,7 +81,15 @@ function dateTime(value: string | null) {
 }
 
 function entityLabel(value: string) {
-  return ({ pharmacies: "Pharmacies", contacts: "Contacts", products: "Produits", orders: "Commandes" } as Record<string, string>)[value] ?? value;
+  return ({
+    pharmacies: "Pharmacies",
+    contacts: "Contacts",
+    products: "Produits",
+    orders: "Commandes",
+    visits: "Visites",
+    notes: "Notes",
+    users: "Utilisateurs",
+  } as Record<string, string>)[value] ?? value;
 }
 
 export default async function ConnectorsPage() {
@@ -90,7 +108,7 @@ export default async function ConnectorsPage() {
       .order("updated_at", { ascending: false }),
     supabase
       .from("data_mapping_profiles")
-      .select("id,entity_type,name,source_system")
+      .select("id,entity_type,name,source_system,mapping,transforms,version")
       .eq("brand_id", brand.id)
       .eq("is_active", true)
       .order("name"),
@@ -207,6 +225,14 @@ export default async function ConnectorsPage() {
                       <Button size="sm" type="submit">Ajouter le mapping</Button>
                     </form>
                   </div>
+
+                  {connection.provider === "hubspot" ? (
+                    <HubSpotMappingStudio
+                      connectionStatus={connection.status}
+                      mappings={connectionMappings}
+                      profiles={profiles}
+                    />
+                  ) : null}
                 </div>
               );
             }) : <p className="py-10 text-center text-sm text-muted-foreground">Créez une première connexion pour préparer les échanges de données.</p>}

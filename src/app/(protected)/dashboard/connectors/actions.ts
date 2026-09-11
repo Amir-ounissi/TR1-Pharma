@@ -10,6 +10,11 @@ import {
   isSafeConnectorConfiguration,
   normalizeConnectorBaseUrl,
 } from "@/lib/connectors";
+import {
+  HUBSPOT_FIELD_DEFINITIONS,
+  isHubSpotFieldMappingEntity,
+  normalizeHubSpotFieldMapping,
+} from "@/lib/integrations/hubspot/mapping-profile";
 import { assertActiveBrandCapability } from "@/lib/saas/server";
 
 const uuid = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
@@ -120,5 +125,68 @@ export async function saveConnectorMappingFormAction(formData: FormData): Promis
     target_is_enabled: enabled,
   });
   if (error) throw new Error(error.message);
+  revalidatePath("/dashboard/connectors");
+}
+
+export async function saveHubSpotFieldMappingProfileAction(formData: FormData): Promise<void> {
+  const connectorMappingId = uuid.parse(formData.get("connectorMappingId"));
+  const rawEntityType = String(formData.get("entityType") ?? "").trim();
+  if (!isHubSpotFieldMappingEntity(rawEntityType)) {
+    throw new Error("Cet objet n’est pas encore pris en charge par le Mapping Studio HubSpot.");
+  }
+
+  const submitted: Record<string, unknown> = {};
+  for (const definition of HUBSPOT_FIELD_DEFINITIONS[rawEntityType]) {
+    const value = String(formData.get(`field:${definition.key}`) ?? "").trim();
+    submitted[definition.key] = value || null;
+  }
+  const fieldMapping = normalizeHubSpotFieldMapping(rawEntityType, submitted);
+
+  const { supabase, brand } = await requireConnectorAdmin();
+  const { data: mapping, error: mappingError } = await supabase
+    .from("connector_entity_mappings")
+    .select("id,connection_id,entity_type,external_object,direction,mapping_profile_id,conflict_strategy,cursor_field,is_enabled")
+    .eq("id", connectorMappingId)
+    .eq("brand_id", brand.id)
+    .maybeSingle();
+  if (mappingError) throw new Error(mappingError.message);
+  if (!mapping || mapping.entity_type !== rawEntityType) throw new Error("Mapping connecteur introuvable.");
+
+  const { data: connection, error: connectionError } = await supabase
+    .from("connector_connections")
+    .select("id,provider")
+    .eq("id", mapping.connection_id)
+    .eq("brand_id", brand.id)
+    .is("archived_at", null)
+    .maybeSingle();
+  if (connectionError) throw new Error(connectionError.message);
+  if (!connection || connection.provider !== "hubspot") throw new Error("Ce mapping n’appartient pas à une connexion HubSpot.");
+
+  const { data: profileId, error: profileError } = await supabase.rpc("save_data_mapping_profile", {
+    target_brand_id: brand.id,
+    target_profile_id: mapping.mapping_profile_id,
+    target_name: `HubSpot · ${rawEntityType}`,
+    target_entity_type: rawEntityType,
+    target_source_system: `hubspot_${mapping.external_object}`,
+    target_mapping: fieldMapping,
+    target_transforms: {},
+    target_is_default: false,
+  });
+  if (profileError) throw new Error(profileError.message);
+  if (!profileId) throw new Error("Le profil de mapping HubSpot n’a pas pu être créé.");
+
+  const { error: attachError } = await supabase.rpc("save_connector_entity_mapping", {
+    target_connection_id: mapping.connection_id,
+    target_mapping_id: mapping.id,
+    target_entity_type: rawEntityType,
+    target_external_object: mapping.external_object,
+    target_direction: mapping.direction,
+    target_mapping_profile_id: String(profileId),
+    target_conflict_strategy: mapping.conflict_strategy,
+    target_cursor_field: mapping.cursor_field,
+    target_is_enabled: mapping.is_enabled,
+  });
+  if (attachError) throw new Error(attachError.message);
+
   revalidatePath("/dashboard/connectors");
 }
