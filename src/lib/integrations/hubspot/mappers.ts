@@ -122,6 +122,7 @@ function mapFreeLine(line: HubSpotOrderLineSyncInput, freeQuantity: number, conf
   set(properties, map.unitPriceHt, "0");
   set(properties, map.vatRate, line.vatRate === null || line.vatRate === undefined ? null : decimal(line.vatRate));
   set(properties, map.taxRateGroupId, taxRateGroupId(line.vatRate, config));
+  set(properties, map.freeUnitReason, config.order.freeUnitReasonValue);
   set(properties, map.isFreeUnit, "true");
   return externalRecord(`${line.id}:free`, map, properties);
 }
