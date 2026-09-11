@@ -39,6 +39,15 @@ describe("HubSpot field mapping profiles", () => {
     expect(noteConfig.properties.meeting.body).toBe("hs_meeting_body");
   });
 
+  it("removes a HubSpot property when the admin leaves its mapping blank", () => {
+    const config = applyHubSpotFieldMapping(NAALI_HUBSPOT_CONFIGURATION, "visits", {
+      "meeting.internalNotes": null,
+    });
+
+    expect(config.properties.meeting.internalNotes).toBeUndefined();
+    expect(NAALI_HUBSPOT_CONFIGURATION.properties.meeting.internalNotes).toBe("hs_internal_meeting_notes");
+  });
+
   it("rejects unsupported keys and unsafe HubSpot property names", () => {
     expect(() => normalizeHubSpotFieldMapping("visits", { "meeting.unknown": "foo" })).toThrow(/Unsupported/);
     expect(() => normalizeHubSpotFieldMapping("visits", { "meeting.body": "bad field name" })).toThrow(/Invalid/);
