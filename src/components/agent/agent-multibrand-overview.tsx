@@ -195,9 +195,9 @@ function BrandBadge({ name }: { name: string }) {
 function ScopeFilter({ brands, selectedBrandId }: { brands: BrandContext[]; selectedBrandId: string | null }) {
   return (
     <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Marques affichées dans la journée">
-      <Link href="/dashboard/agent" aria-current={selectedBrandId === null ? "page" : undefined} className={`inline-flex min-h-11 shrink-0 items-center rounded-full border px-4 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-navy)] focus-visible:ring-offset-2 text-sm font-semibold transition ${selectedBrandId === null ? "border-[var(--tr1-navy)] bg-[var(--tr1-navy)] text-white" : "bg-background text-[var(--tr1-navy)]"}`}>Toutes mes marques</Link>
+      <Link href="/dashboard/agent" aria-current={selectedBrandId === null ? "page" : undefined} className={`inline-flex min-h-11 shrink-0 touch-manipulation items-center rounded-full border px-4 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-navy)] focus-visible:ring-offset-2 text-sm font-semibold transition active:scale-[0.98] ${selectedBrandId === null ? "border-[var(--tr1-navy)] bg-[var(--tr1-navy)] text-white" : "bg-background text-[var(--tr1-navy)]"}`}>Toutes mes marques</Link>
       {brands.map((brand) => (
-        <Link key={brand.id} href={`/dashboard/agent?brand=${brand.id}`} aria-current={selectedBrandId === brand.id ? "page" : undefined} className={`inline-flex min-h-11 shrink-0 items-center rounded-full border px-4 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-navy)] focus-visible:ring-offset-2 text-sm font-semibold transition ${selectedBrandId === brand.id ? "border-[var(--tr1-navy)] bg-[var(--tr1-navy)] text-white" : "bg-background text-[var(--tr1-navy)]"}`}>{brand.name}</Link>
+        <Link key={brand.id} href={`/dashboard/agent?brand=${brand.id}`} aria-current={selectedBrandId === brand.id ? "page" : undefined} className={`inline-flex min-h-11 shrink-0 touch-manipulation items-center rounded-full border px-4 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-navy)] focus-visible:ring-offset-2 text-sm font-semibold transition active:scale-[0.98] ${selectedBrandId === brand.id ? "border-[var(--tr1-navy)] bg-[var(--tr1-navy)] text-white" : "bg-background text-[var(--tr1-navy)]"}`}>{brand.name}</Link>
       ))}
     </div>
   );
@@ -286,24 +286,33 @@ export function AgentMultibrandOverview({
     const planningHref = `/dashboard/agenda/new?${params.toString()}`;
 
     return (
-      <article key={action.key} className="rounded-xl border bg-white/60 p-4 transition hover:border-[var(--tr1-orange)] hover:bg-white">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <BrandBadge name={action.brandName} />
-          {action.timing ? <span className={`text-sm font-semibold ${action.overdue ? "text-[#a74413]" : "text-muted-foreground"}`}>{action.timing}</span> : null}
-        </div>
-        <p className="mt-2 break-words text-base font-semibold text-[var(--tr1-navy)]">{action.pharmacyName}</p>
-        <p className="mt-1 text-sm text-muted-foreground">{action.title}{action.city ? ` · ${action.city}` : ""}</p>
-        {action.reason ? <p className="mt-1 text-sm text-muted-foreground">{action.reason}</p> : null}
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          {canPlanVisit ? (
-            <Link href={existingVisit?.href || planningHref} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[var(--tr1-navy)] px-3.5 py-2 text-sm font-semibold text-white transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-navy)] focus-visible:ring-offset-2">
-              <CalendarPlus className="size-4" aria-hidden="true" />
-              {existingVisit ? "Voir la visite" : "Planifier une visite"}
-            </Link>
-          ) : null}
-          <Link href={action.href} className="inline-flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-[var(--tr1-navy)] hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-navy)]">
-            Consulter <ArrowRight className="size-4" aria-hidden="true" />
-          </Link>
+      <article key={action.key} className="relative overflow-hidden rounded-xl border bg-white/60 p-4 transition active:scale-[0.995] hover:border-[var(--tr1-orange)] hover:bg-white">
+        <Link
+          href={action.href}
+          aria-label={`Ouvrir ${action.pharmacyName} — ${action.title}`}
+          className="absolute inset-0 z-0 touch-manipulation rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-orange)] focus-visible:ring-inset"
+        >
+          <span className="sr-only">Ouvrir la priorité</span>
+        </Link>
+        <div className="pointer-events-none relative z-10">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <BrandBadge name={action.brandName} />
+            {action.timing ? <span className={`text-sm font-semibold ${action.overdue ? "text-[#a74413]" : "text-muted-foreground"}`}>{action.timing}</span> : null}
+          </div>
+          <p className="mt-2 break-words text-base font-semibold text-[var(--tr1-navy)]">{action.pharmacyName}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{action.title}{action.city ? ` · ${action.city}` : ""}</p>
+          {action.reason ? <p className="mt-1 text-sm text-muted-foreground">{action.reason}</p> : null}
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {canPlanVisit ? (
+              <Link href={existingVisit?.href || planningHref} className="pointer-events-auto relative z-20 inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-lg bg-[var(--tr1-navy)] px-3.5 py-2 text-sm font-semibold text-white transition active:scale-[0.98] hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-navy)] focus-visible:ring-offset-2">
+                <CalendarPlus className="size-4" aria-hidden="true" />
+                {existingVisit ? "Voir la visite" : "Planifier une visite"}
+              </Link>
+            ) : null}
+            <span className="inline-flex min-h-11 items-center gap-2 px-2 py-2 text-sm font-semibold text-[var(--tr1-navy)]">
+              Ouvrir la fiche <ArrowRight className="size-4" aria-hidden="true" />
+            </span>
+          </div>
         </div>
       </article>
     );
@@ -323,7 +332,11 @@ export function AgentMultibrandOverview({
         <ScopeFilter brands={brands} selectedBrandId={selectedBrandId} />
       </header>
 
-      <section aria-labelledby="next-step-title" className="rounded-2xl bg-[var(--tr1-navy)] p-5 text-white sm:p-7">
+      <Link
+        href={primary.href}
+        aria-labelledby="next-step-title"
+        className="block touch-manipulation rounded-2xl bg-[var(--tr1-navy)] p-5 text-white shadow-sm transition active:scale-[0.995] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-orange)] focus-visible:ring-offset-2 sm:p-7"
+      >
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-[#ffb67e]">Votre prochaine étape</p>
@@ -337,12 +350,12 @@ export function AgentMultibrandOverview({
               </div>
             ) : null}
           </div>
-          <Link href={primary.href} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-[#ffb67e] px-5 py-3 text-center text-base font-semibold text-[#142033] transition hover:bg-[#ffc99f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--tr1-navy)]">
+          <span className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-[#ffb67e] px-5 py-3 text-center text-base font-semibold text-[#142033] transition group-hover:bg-[#ffc99f]">
             {nextVisit || firstAction || firstReport ? <ArrowRight className="size-5 shrink-0" aria-hidden="true" /> : <CalendarPlus className="size-5 shrink-0" aria-hidden="true" />}
             {primary.label}
-          </Link>
+          </span>
         </div>
-      </section>
+      </Link>
 
       <div className="flex flex-wrap gap-x-6 gap-y-3 rounded-xl border bg-white/60 px-4 py-3 text-sm" aria-label="État du suivi">
         <span className="inline-flex items-center gap-2"><Route className="size-4" aria-hidden="true" />{progress.planned ? `${progress.planned} visite${progress.planned > 1 ? "s" : ""} au programme` : "Aucune visite aujourd’hui"}</span>
@@ -356,7 +369,7 @@ export function AgentMultibrandOverview({
             <CardHeader>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h2 className="text-lg font-semibold">Mon programme</h2>
-                <Link href="/dashboard/agenda" className="inline-flex min-h-11 items-center gap-2 rounded-md px-2 text-sm font-semibold hover:underline focus-visible:ring-2">Voir l’agenda <ArrowRight className="size-4" aria-hidden="true" /></Link>
+                <Link href="/dashboard/agenda" className="inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-md px-2 text-sm font-semibold hover:underline focus-visible:ring-2">Voir l’agenda <ArrowRight className="size-4" aria-hidden="true" /></Link>
               </div>
             </CardHeader>
             <CardContent>
@@ -364,7 +377,7 @@ export function AgentMultibrandOverview({
                 <ol className="divide-y">
                   {visits.map((visit) => (
                     <li key={visit.id}>
-                      <Link href={visit.href} className="flex min-h-16 items-start gap-3 rounded-md py-4 transition hover:bg-muted/30 focus-visible:ring-2">
+                      <Link href={visit.href} className="flex min-h-[4.75rem] touch-manipulation items-start gap-3 rounded-md py-4 transition active:bg-muted/50 hover:bg-muted/30 focus-visible:ring-2">
                         <time dateTime={visit.startAt} className="w-12 shrink-0 text-sm font-semibold tabular-nums">{formatTime(visit.startAt)}</time>
                         <div className="min-w-0 flex-1">
                           <p className="break-words text-base font-semibold">{visit.pharmacyName}</p>
@@ -372,7 +385,7 @@ export function AgentMultibrandOverview({
                           <div className="mt-2 flex flex-wrap gap-1.5">{visit.brandNames.map((name) => <BrandBadge key={`${visit.id}:${name}`} name={name} />)}</div>
                           <p className="mt-2 text-sm text-muted-foreground">{visitStatusLabel(visit.status)}</p>
                         </div>
-                        <ArrowRight className="size-4 shrink-0" aria-hidden="true" />
+                        <ArrowRight className="mt-1 size-4 shrink-0" aria-hidden="true" />
                       </Link>
                     </li>
                   ))}
@@ -396,13 +409,13 @@ export function AgentMultibrandOverview({
               </CardHeader>
               <CardContent className="grid gap-2 sm:grid-cols-2">
                 {canPlanVisit ? (
-                  <Link href="/dashboard/agenda/new" className="flex min-h-14 items-center gap-3 rounded-xl border bg-white px-4 py-3 text-sm font-semibold transition hover:border-[var(--tr1-orange)] hover:bg-orange-50/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-navy)]">
+                  <Link href="/dashboard/agenda/new" className="flex min-h-14 touch-manipulation items-center gap-3 rounded-xl border bg-white px-4 py-3 text-sm font-semibold transition active:scale-[0.99] hover:border-[var(--tr1-orange)] hover:bg-orange-50/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-navy)]">
                     <CalendarPlus className="size-5 text-[var(--tr1-navy)]" aria-hidden="true" />
                     Planifier une visite
                   </Link>
                 ) : null}
                 {canRequestAnimation ? (
-                  <Link href="/dashboard/missions/new?mode=animation" className="flex min-h-14 items-center gap-3 rounded-xl border bg-white px-4 py-3 text-sm font-semibold transition hover:border-[var(--tr1-orange)] hover:bg-orange-50/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-navy)]">
+                  <Link href="/dashboard/missions/new?mode=animation" className="flex min-h-14 touch-manipulation items-center gap-3 rounded-xl border bg-white px-4 py-3 text-sm font-semibold transition active:scale-[0.99] hover:border-[var(--tr1-orange)] hover:bg-orange-50/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-navy)]">
                     <Megaphone className="size-5 text-[var(--tr1-navy)]" aria-hidden="true" />
                     Demander une animation
                   </Link>
@@ -412,12 +425,12 @@ export function AgentMultibrandOverview({
           ) : null}
 
           {nextVisit && (firstAction || firstReport) ? (
-            <div className="rounded-xl border bg-white/60 p-4">
+            <Link href={nextVisitHref} className="block touch-manipulation rounded-xl border bg-white/60 p-4 transition active:scale-[0.995] hover:border-[var(--tr1-orange)] hover:bg-white focus-visible:ring-2">
               <p className="text-sm text-muted-foreground">Prochaine visite · {formatDateTime(nextVisit.scheduled_at)}</p>
               <p className="mt-1 text-base font-semibold">{nextVisit.name}</p>
               <p className="mt-1 text-sm text-muted-foreground">{nextVisit.address}</p>
-              <Link href={nextVisitHref} className="mt-2 inline-flex min-h-11 items-center gap-2 text-sm font-semibold hover:underline focus-visible:ring-2"><MapPin className="size-4" aria-hidden="true" />Voir dans l’agenda</Link>
-            </div>
+              <span className="mt-2 inline-flex min-h-11 items-center gap-2 text-sm font-semibold"><MapPin className="size-4" aria-hidden="true" />Voir dans l’agenda</span>
+            </Link>
           ) : null}
 
           {progress.planned > 0 ? (
@@ -440,18 +453,18 @@ export function AgentMultibrandOverview({
               <section className="space-y-3" aria-labelledby="day-priorities-title">
                 <h2 id="day-priorities-title" className="text-lg font-semibold">Mes priorités <span className="text-muted-foreground">· {totalPriorityActions}</span></h2>
                 {priorityActions.slice(0, 3).map(actionRow)}
-                {priorityActions.length > 3 ? <details className="rounded-xl border bg-white/60 p-3"><summary className="min-h-11 cursor-pointer rounded-md py-2.5 text-sm font-semibold focus-visible:ring-2">Voir les {priorityActions.length - 3} autres priorités</summary><div className="mt-3 space-y-3">{priorityActions.slice(3).map(actionRow)}</div></details> : null}
+                {priorityActions.length > 3 ? <details className="rounded-xl border bg-white/60 p-3"><summary className="min-h-11 cursor-pointer touch-manipulation rounded-md py-2.5 text-sm font-semibold focus-visible:ring-2">Voir les {priorityActions.length - 3} autres priorités</summary><div className="mt-3 space-y-3">{priorityActions.slice(3).map(actionRow)}</div></details> : null}
               </section>
             ) : null}
             {day.reports.length ? (
               <section className="space-y-3" aria-labelledby="day-reports-title">
                 <h2 id="day-reports-title" className="text-lg font-semibold">Comptes rendus à terminer</h2>
                 {day.reports.map((report) => (
-                  <Link key={report.id} href={`/dashboard/missions/${report.mission_id}`} className="block rounded-xl border bg-white/60 p-4 hover:bg-white focus-visible:ring-2">
+                  <Link key={report.id} href={`/dashboard/missions/${report.mission_id}`} className="block touch-manipulation rounded-xl border bg-white/60 p-4 transition active:scale-[0.995] hover:bg-white focus-visible:ring-2">
                     <BrandBadge name={report.brand_name} />
                     <p className="mt-2 text-base font-semibold">{report.pharmacy_name}</p>
                     <p className="mt-1 text-sm text-muted-foreground">{presentationText(report.title)} · {presentationLabel(report.report_status)}</p>
-                    <span className="mt-3 inline-flex min-h-6 items-center gap-2 text-sm font-semibold">Compléter <ArrowRight className="size-4" aria-hidden="true" /></span>
+                    <span className="mt-3 inline-flex min-h-11 items-center gap-2 text-sm font-semibold">Compléter <ArrowRight className="size-4" aria-hidden="true" /></span>
                   </Link>
                 ))}
               </section>
@@ -465,7 +478,7 @@ export function AgentMultibrandOverview({
           <h2 id="day-missions-title" className="text-lg font-semibold">Missions du jour</h2>
           <div className="grid gap-3 sm:grid-cols-2">
             {day.missions.map((mission) => (
-              <Link key={mission.id} href={`/dashboard/missions/${mission.id}`} className="rounded-xl border bg-white/60 p-4 hover:bg-white focus-visible:ring-2">
+              <Link key={mission.id} href={`/dashboard/missions/${mission.id}`} className="touch-manipulation rounded-xl border bg-white/60 p-4 transition active:scale-[0.995] hover:bg-white focus-visible:ring-2">
                 <BrandBadge name={mission.brand_name} />
                 <p className="mt-2 text-base font-semibold">{presentationText(mission.title)}</p>
                 <p className="mt-1 text-sm text-muted-foreground">{formatTime(mission.scheduled_start_at)} · {mission.pharmacy_name}</p>
