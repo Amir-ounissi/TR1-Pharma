@@ -10,6 +10,7 @@ export const MAX_ORDER_SCAN_PAGES = 6;
 export const MAX_ORDER_SCAN_TOTAL_SIZE = 12 * 1024 * 1024;
 export const ORDER_DOCUMENT_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 export const DEFAULT_ORDER_EXTRACTION_MODEL = "gpt-5-mini";
+export const DEFAULT_ORDER_REPAIR_MODEL = "gpt-5.6-terra";
 const orderDocumentImageTypes = new Set<string>(ORDER_DOCUMENT_IMAGE_TYPES);
 
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
@@ -177,12 +178,17 @@ export function estimateOrderScanCostUsd(model: string, usage: OpenAIUsage | und
   return Math.round(cost * 1_000_000_000) / 1_000_000_000;
 }
 
-function getReasoningConfig(model: string): { effort: "minimal" | "none" } | undefined {
+function getReasoningConfig(
+  model: string,
+  attempt: "initial" | "repair",
+): { effort: "minimal" | "none" | "medium" } | undefined {
   const normalizedModel = model.startsWith("openai/") ? model.slice("openai/".length) : model;
   if (normalizedModel === "gpt-5" || normalizedModel === "gpt-5-mini" || normalizedModel.startsWith("gpt-5-mini-")) {
     return { effort: "minimal" };
   }
-  if (normalizedModel.startsWith("gpt-5.6-")) return { effort: "none" };
+  if (normalizedModel.startsWith("gpt-5.6-")) {
+    return { effort: attempt === "repair" ? "medium" : "none" };
+  }
   return undefined;
 }
 
@@ -212,6 +218,19 @@ function resolveExtractionProvider(): ExtractionProvider | null {
   }
 
   return null;
+}
+
+function resolveRepairProvider(provider: ExtractionProvider): ExtractionProvider {
+  const requestedModel = process.env.OPENAI_PDF_ORDER_REPAIR_MODEL ?? DEFAULT_ORDER_REPAIR_MODEL;
+  const model = provider.source === "vercel_ai_gateway"
+    ? requestedModel.includes("/") ? requestedModel : `openai/${requestedModel}`
+    : requestedModel.startsWith("openai/") ? requestedModel.slice("openai/".length) : requestedModel;
+
+  return {
+    ...provider,
+    model,
+    pricingModel: requestedModel.startsWith("openai/") ? requestedModel.slice("openai/".length) : requestedModel,
+  };
 }
 
 function logOrderScanUsage(usage: OrderScanUsage) {
@@ -271,7 +290,7 @@ async function requestStructuredExtraction(params: {
   prompt: string;
 }) {
   const { provider, documentInputs, files, fetcher, usageSink, attempt, prompt } = params;
-  const reasoning = getReasoningConfig(provider.model);
+  const reasoning = getReasoningConfig(provider.model, attempt);
   const startedAt = Date.now();
   const response = await fetcher(provider.endpoint, {
     method: "POST",
@@ -367,8 +386,9 @@ export async function extractOrderDocuments(
       issues: initialQuality.issues,
     });
 
+    const repairProvider = resolveRepairProvider(provider);
     const repaired = await requestStructuredExtraction({
-      provider,
+      provider: repairProvider,
       documentInputs,
       files,
       fetcher,
@@ -380,7 +400,8 @@ export async function extractOrderDocuments(
 
     if (repairedQuality.reliable) {
       console.info("[order_scan_quality] Automatic repair succeeded", {
-        model: provider.model,
+        model: repairProvider.model,
+        initialModel: provider.model,
         lineCount: repairedQuality.lineCount,
         calculatedHt: repairedQuality.calculatedHt,
       });
@@ -388,8 +409,9 @@ export async function extractOrderDocuments(
     }
 
     console.error("[order_scan_error] Extraction remained inconsistent after automatic repair", {
-      provider: provider.source,
-      model: provider.model,
+      provider: repairProvider.source,
+      model: repairProvider.model,
+      initialModel: provider.model,
       lineCount: repairedQuality.lineCount,
       calculatedHt: repairedQuality.calculatedHt,
       issueCount: repairedQuality.issues.length,

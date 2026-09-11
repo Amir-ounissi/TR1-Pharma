@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_ORDER_EXTRACTION_MODEL,
+  DEFAULT_ORDER_REPAIR_MODEL,
   estimateOrderScanCostUsd,
   extractPdfOrder,
   PdfOrderImportError,
@@ -12,9 +13,12 @@ const originalPreviewKey = process.env.OPEN_API_PREVIEW_KEY;
 const originalGatewayKey = process.env.AI_GATEWAY_API_KEY;
 const originalOidcToken = process.env.VERCEL_OIDC_TOKEN;
 const originalModel = process.env.OPENAI_PDF_ORDER_MODEL;
+const originalRepairModel = process.env.OPENAI_PDF_ORDER_REPAIR_MODEL;
 const extracted = { orderNumber: "PDF-42", orderDate: "2026-09-02", pharmacy: { name: "Pharmacie Centre", siret: null, cip: null, finess: null, address: null, postalCode: "75001" }, lines: [{ label: "Produit", sku: "SKU", ean: null, quantity: 2, unitPriceHt: 10, discountRate: null }], totalHt: 20, totalTtc: null, warnings: [] };
 
-function restoreEnv(name: "OPENAI_API_KEY" | "OPEN_API_PREVIEW_KEY" | "AI_GATEWAY_API_KEY" | "VERCEL_OIDC_TOKEN" | "OPENAI_PDF_ORDER_MODEL", value: string | undefined) {
+type EnvName = "OPENAI_API_KEY" | "OPEN_API_PREVIEW_KEY" | "AI_GATEWAY_API_KEY" | "VERCEL_OIDC_TOKEN" | "OPENAI_PDF_ORDER_MODEL" | "OPENAI_PDF_ORDER_REPAIR_MODEL";
+
+function restoreEnv(name: EnvName, value: string | undefined) {
   if (value === undefined) delete process.env[name];
   else process.env[name] = value;
 }
@@ -25,6 +29,7 @@ afterEach(() => {
   restoreEnv("AI_GATEWAY_API_KEY", originalGatewayKey);
   restoreEnv("VERCEL_OIDC_TOKEN", originalOidcToken);
   restoreEnv("OPENAI_PDF_ORDER_MODEL", originalModel);
+  restoreEnv("OPENAI_PDF_ORDER_REPAIR_MODEL", originalRepairModel);
   vi.restoreAllMocks();
 });
 
@@ -95,8 +100,9 @@ describe("order document extraction", () => {
     expect(JSON.stringify(usageSink.mock.calls[0][0])).not.toContain("PDF-42");
   });
 
-  it("automatically re-reads the same document when the first extraction does not reconcile", async () => {
+  it("escalates an inconsistent first pass to Terra without anchoring on the bad rows", async () => {
     process.env.OPENAI_API_KEY = "key";
+    delete process.env.OPENAI_PDF_ORDER_REPAIR_MODEL;
     const usageSink = vi.fn();
     const inconsistent = {
       ...extracted,
@@ -115,8 +121,34 @@ describe("order document extraction", () => {
     expect(fetcher).toHaveBeenCalledTimes(2);
     expect(usageSink.mock.calls.map((call) => call[0].attempt)).toEqual(["initial", "repair"]);
     const repairBody = JSON.parse(fetcher.mock.calls[1][1].body);
-    expect(repairBody.input[0].content[0].text).toContain("première lecture n'est pas suffisamment fiable");
+    expect(repairBody).toMatchObject({
+      model: DEFAULT_ORDER_REPAIR_MODEL,
+      reasoning: { effort: "medium" },
+    });
+    expect(repairBody.input[0].content[0].text).toContain("sans réutiliser la liste de lignes");
     expect(repairBody.input[0].content[0].text).toContain("total HT recalculé");
+    expect(repairBody.input[0].content[0].text).not.toContain('"orderNumber":"PDF-42"');
+    expect(usageSink).toHaveBeenCalledWith(expect.objectContaining({
+      model: DEFAULT_ORDER_REPAIR_MODEL,
+      attempt: "repair",
+    }));
+  });
+
+  it("honors an explicit stronger repair model override", async () => {
+    process.env.OPENAI_API_KEY = "key";
+    process.env.OPENAI_PDF_ORDER_REPAIR_MODEL = "gpt-5.6-sol";
+    const inconsistent = {
+      ...extracted,
+      lines: [{ ...extracted.lines[0], quantity: 1 }],
+      totalHt: 20,
+    };
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ output_text: JSON.stringify(inconsistent) }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ output_text: JSON.stringify(extracted) }), { status: 200 }));
+
+    await extractPdfOrder(new File(["pdf"], "order.pdf", { type: "application/pdf" }), fetcher);
+    const repairBody = JSON.parse(fetcher.mock.calls[1][1].body);
+    expect(repairBody).toMatchObject({ model: "gpt-5.6-sol", reasoning: { effort: "medium" } });
   });
 
   it("blocks a still-incoherent extraction instead of showing a potentially false order", async () => {
@@ -152,6 +184,29 @@ describe("order document extraction", () => {
     const body = JSON.parse(fetcher.mock.calls[0][1].body);
     expect(body).toMatchObject({ model: `openai/${DEFAULT_ORDER_EXTRACTION_MODEL}`, reasoning: { effort: "minimal" } });
     expect(usageSink).toHaveBeenCalledWith(expect.objectContaining({ model: `openai/${DEFAULT_ORDER_EXTRACTION_MODEL}` }));
+  });
+
+  it("uses the stronger repair model through AI Gateway as well", async () => {
+    delete process.env.OPENAI_API_KEY;
+    delete process.env.OPEN_API_PREVIEW_KEY;
+    delete process.env.AI_GATEWAY_API_KEY;
+    process.env.VERCEL_OIDC_TOKEN = "oidc-token";
+    delete process.env.OPENAI_PDF_ORDER_REPAIR_MODEL;
+    const inconsistent = {
+      ...extracted,
+      lines: [{ ...extracted.lines[0], quantity: 1 }],
+      totalHt: 20,
+    };
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ output_text: JSON.stringify(inconsistent) }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ output_text: JSON.stringify(extracted) }), { status: 200 }));
+
+    await extractPdfOrder(new File(["pdf"], "order.pdf", { type: "application/pdf" }), fetcher);
+    const repairBody = JSON.parse(fetcher.mock.calls[1][1].body);
+    expect(repairBody).toMatchObject({
+      model: `openai/${DEFAULT_ORDER_REPAIR_MODEL}`,
+      reasoning: { effort: "medium" },
+    });
   });
 
   it("does not double-count reasoning tokens in the estimated output cost", () => {

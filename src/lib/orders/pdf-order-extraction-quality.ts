@@ -74,13 +74,22 @@ export function buildPdfOrderRepairPrompt(
   extraction: PdfOrderExtraction,
   issues: string[],
 ) {
+  const printedTotals = [
+    extraction.totalHt != null ? `- total HT candidat lu sur le document : ${extraction.totalHt.toFixed(2)} €` : null,
+    extraction.totalVat != null ? `- TVA totale candidate : ${extraction.totalVat.toFixed(2)} €` : null,
+    extraction.totalTtc != null ? `- total TTC candidat : ${extraction.totalTtc.toFixed(2)} €` : null,
+  ].filter((value): value is string => Boolean(value));
+
   return [
-    "La première lecture n'est pas suffisamment fiable. Relis le document depuis zéro et renvoie une extraction corrigée.",
-    "Ne modifie jamais un chiffre uniquement pour forcer le total : retrouve la bonne colonne et la bonne ligne dans le document.",
-    "Contrôles qui ont échoué :",
+    "La première lecture n'est pas suffisamment fiable. Relis le PDF depuis zéro, visuellement, sans réutiliser la liste de lignes de la première lecture.",
+    "La première extraction peut avoir inventé des quantités positives sur des références simplement présentes au catalogue : ne lui fais pas confiance.",
+    "Repars des lignes physiques du tableau et conserve uniquement celles où une quantité commandée positive ou des UG positives sont réellement imprimées dans la bonne colonne.",
+    "Pour chaque ligne payante, vérifie séparément Désignation, Qté Cmde, Qté UG, Prix Achat/brut, Remise et Prix Net. Ne décale jamais une cellule depuis la ligne voisine.",
+    "Une référence avec prix mais sans Qté Cmde ni UG n'est pas commandée et doit être ignorée.",
+    "Ne modifie jamais un chiffre uniquement pour forcer le total : le total imprimé sert seulement de contrôle final.",
+    "Contrôles déterministes qui ont échoué :",
     ...issues.map((issue) => `- ${issue}`),
-    "Première lecture à ne pas recopier aveuglément :",
-    JSON.stringify(extraction),
-    "Avant de répondre, recalcule mentalement le total HT à partir des quantités payantes, prix HT avant remise et remises. Les UG ne contribuent jamais au CA HT.",
+    ...(printedTotals.length ? ["Repères financiers à revérifier directement sur le document :", ...printedTotals] : []),
+    "Avant de répondre, recompte le nombre de lignes réellement commandées puis recalcule le HT à partir des quantités payantes, prix HT avant remise et remises. Les UG ne contribuent jamais au CA HT.",
   ].join("\n");
 }
