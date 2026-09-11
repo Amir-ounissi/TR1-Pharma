@@ -30,24 +30,23 @@ export default async function AgendaPage({ searchParams }:{ searchParams:Promise
     grouped.get(relation.pharmacy_id)?.brands.push({ relationId: relation.id, brandId: relation.brand_id, brandName: brand?.name || "Marque" });
   }
 
-  const pharmacyUrl = (pharmacyId: string | null, eventBrandIds: string[], visitId?: string) => {
+  const pharmacyUrl = (pharmacyId: string | null, eventBrandIds: string[]) => {
     if (!pharmacyId) return null;
     const option = grouped.get(pharmacyId);
     if (!option) return null;
     const relation = option.brands.find((item) => eventBrandIds.includes(item.brandId)) ?? option.brands[0];
     if (!relation) return null;
-    return `/dashboard/pharmacies/open/${relation.relationId}${visitId ? `?visit=${visitId}` : ""}`;
+    return `/dashboard/pharmacies/open/${relation.relationId}`;
   };
 
   const agendaEvents = ((agenda ?? []) as AgendaEvent[]).map((event) => {
+    if (event.source_kind === "field_visit") {
+      return { ...event, detail_url: `/dashboard/visits/${event.source_id}` };
+    }
     if (facilitatorOnly && event.source_kind === "mission") {
       return { ...event, detail_url: `/dashboard/field/missions/${event.source_id}` };
     }
-    const direct = pharmacyUrl(
-      event.pharmacy_id,
-      event.brand_ids,
-      event.source_kind === "field_visit" ? event.source_id : undefined,
-    );
+    const direct = pharmacyUrl(event.pharmacy_id, event.brand_ids);
     return direct ? { ...event, detail_url: direct } : event;
   });
 

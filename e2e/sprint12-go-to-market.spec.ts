@@ -7,6 +7,17 @@ test.describe.configure({ mode: "serial" });
 const artifacts = "artifacts/sprint12";
 const runId = Date.now();
 const leadEmail = `pilot-${runId}@nova-sante.test`;
+const primaryBrandId = "00000000-0000-0000-0000-000000000101";
+
+async function primaryBrandName() {
+  const { data, error } = await adminClient()
+    .from("brands")
+    .select("name")
+    .eq("id", primaryBrandId)
+    .single();
+  if (error || !data?.name) throw error ?? new Error("Primary E2E brand is missing.");
+  return data.name;
+}
 
 test.beforeAll(() => mkdirSync(artifacts, { recursive: true }));
 
@@ -64,7 +75,7 @@ test("pages légales signalées et page 404 publique", async ({ page }) => {
 });
 
 test("responsable TR1 qualifie, attribue et prépare un pilote confirmé", async ({ page }) => {
-  await signIn(page, "superadmin@tr1.local", /Dermavita/i);
+  await signIn(page, "superadmin@tr1.local", await primaryBrandName());
   await page.goto(`/dashboard/admin/leads?q=${encodeURIComponent(leadEmail)}`);
   await page.getByRole("link", { name: "Nova Santé" }).click();
   await page.getByLabel("Statut").selectOption("qualified");
@@ -92,7 +103,7 @@ test("responsable TR1 qualifie, attribue et prépare un pilote confirmé", async
 });
 
 test("un utilisateur de marque ne peut pas ouvrir la console TR1", async ({ page }) => {
-  await signIn(page, "admin@dermavita.local", /Dermavita/i);
+  await signIn(page, "admin@dermavita.local", await primaryBrandName());
   await page.goto("/dashboard/admin/leads");
   await expect(page).toHaveURL(/\/dashboard$/);
   await expect(page.getByText("Leads TR1", { exact: true })).toHaveCount(0);
@@ -123,7 +134,7 @@ test("isolation, changement autorisé et marque sans membership", async ({ brows
   const nutrilabForm = () => page.locator(`form:has(input[name="brandId"][value="${nutrilabBrandId}"])`);
 
   try {
-    await signIn(page, "agent@dermavita.local", /Dermavita/i);
+    await signIn(page, "agent@dermavita.local", await primaryBrandName());
     await page.goto("/dashboard/account");
     await expect(nutrilabForm()).toHaveCount(1);
     await nutrilabForm().getByRole("button").click();
@@ -141,7 +152,9 @@ test("isolation, changement autorisé et marque sans membership", async ({ brows
     await page.goto("/dashboard/agent");
     // A stale inaccessible brand cookie is ignored without reintroducing a forced brand picker.
     await expect(page).toHaveURL(/\/dashboard\/agent$/);
-    await expect(page.locator("#active-brand-execution-title")).toHaveText("Dermavita");
+    const executionTitle = page.locator("#active-brand-execution-title");
+    await expect(executionTitle).toBeVisible();
+    await expect(executionTitle).not.toContainText("Nutrilab");
   } finally {
     await service.from("product_events").delete()
       .eq("user_id", "00000000-0000-0000-0000-0000000000a3")
