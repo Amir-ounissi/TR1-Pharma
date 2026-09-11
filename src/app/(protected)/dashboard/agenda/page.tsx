@@ -1,4 +1,4 @@
-import { AgendaPlanner, type AgendaEvent, type BacklogItem, type PharmacyOption } from "@/components/agenda/agenda-planner";
+import { AgendaPlanner, type AgendaEvent, type PharmacyOption } from "@/components/agenda/agenda-planner";
 import { getBrandContexts, requireCompletedOnboarding } from "@/lib/auth";
 import { addCalendarDays, mondayOfWeek, parseCalendarDate, todayInParis } from "@/lib/agenda";
 
@@ -16,13 +16,11 @@ export default async function AgendaPage({ searchParams }:{ searchParams:Promise
   const end = view === "week" ? addCalendarDays(date, 6) : date;
   const brandIds = contexts.map((context) => context.id);
   const facilitatorOnly = contexts.length > 0 && contexts.every((context) => context.role === "facilitator");
-  const [{ data: agenda, error: agendaError }, { data: backlog, error: backlogError }, { data: relations }] = await Promise.all([
+  const [{ data: agenda, error: agendaError }, { data: relations }] = await Promise.all([
     supabase.rpc("get_my_field_agenda", { start_date: date, end_date: end, brand_filter: null }),
-    supabase.rpc("get_my_unplanned_agenda_items", { brand_filter: null }),
     brandIds.length ? supabase.from("brand_pharmacies").select("id,brand_id,pharmacy_id,brands(name),pharmacies(trade_name,legal_name,city)").in("brand_id", brandIds).is("archived_at", null) : Promise.resolve({ data: [] }),
   ]);
   if (agendaError) throw new Error(agendaError.message);
-  if (backlogError) throw new Error(backlogError.message);
 
   const grouped = new Map<string, PharmacyOption>();
   for (const relation of relations ?? []) {
@@ -53,13 +51,26 @@ export default async function AgendaPage({ searchParams }:{ searchParams:Promise
     return direct ? { ...event, detail_url: direct } : event;
   });
 
-  const backlogItems = ((backlog ?? []) as BacklogItem[]).map((item) => {
-    if (facilitatorOnly && item.source_kind === "mission") {
-      return { ...item, detail_url: `/dashboard/field/missions/${item.source_id}` };
-    }
-    const direct = pharmacyUrl(item.pharmacy_id, [item.brand_id]);
-    return direct ? { ...item, detail_url: direct } : item;
-  });
-
-  return <AgendaPlanner date={date} today={today} view={view} events={agendaEvents} backlog={backlogItems} brands={contexts.map(({ id, name }) => ({ id, name }))} pharmacies={[...grouped.values()]} canCreateVisit={contexts.some((context) => context.role === "agent")} />;
+  return (
+    <div className="agenda-page-without-backlog">
+      <style>{`
+        .agenda-page-without-backlog main + aside {
+          display: none !important;
+        }
+        .agenda-page-without-backlog div:has(> main + aside) {
+          grid-template-columns: minmax(0, 1fr) !important;
+        }
+      `}</style>
+      <AgendaPlanner
+        date={date}
+        today={today}
+        view={view}
+        events={agendaEvents}
+        backlog={[]}
+        brands={contexts.map(({ id, name }) => ({ id, name }))}
+        pharmacies={[...grouped.values()]}
+        canCreateVisit={contexts.some((context) => context.role === "agent")}
+      />
+    </div>
+  );
 }
