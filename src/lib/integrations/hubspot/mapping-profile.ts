@@ -76,15 +76,23 @@ export function defaultHubSpotFieldMapping(
 export function normalizeHubSpotFieldMapping(
   entityType: HubSpotFieldMappingEntity,
   mapping: Record<string, unknown>,
-): Record<string, string> {
+): Record<string, string | null> {
   const allowed = new Set(HUBSPOT_FIELD_DEFINITIONS[entityType].map((definition) => definition.key));
-  const normalized: Record<string, string> = {};
+  const normalized: Record<string, string | null> = {};
 
   for (const [key, rawValue] of Object.entries(mapping)) {
     if (!allowed.has(key)) throw new Error(`Unsupported HubSpot mapping field: ${key}`);
-    if (rawValue === null || rawValue === undefined || rawValue === "") continue;
+    if (rawValue === null || rawValue === "") {
+      normalized[key] = null;
+      continue;
+    }
+    if (rawValue === undefined) continue;
     if (typeof rawValue !== "string") throw new Error(`Invalid HubSpot property for ${key}`);
     const value = rawValue.trim();
+    if (!value) {
+      normalized[key] = null;
+      continue;
+    }
     if (!SAFE_HUBSPOT_PROPERTY.test(value)) throw new Error(`Invalid HubSpot property for ${key}`);
     normalized[key] = value;
   }
@@ -115,8 +123,10 @@ export function applyHubSpotFieldMapping(
   };
 
   for (const definition of HUBSPOT_FIELD_DEFINITIONS[entityType]) {
+    if (!(definition.key in mapping)) continue;
     const value = mapping[definition.key];
-    if (value) config.properties[definition.group][definition.property] = value;
+    if (value === null) delete config.properties[definition.group][definition.property];
+    else if (value) config.properties[definition.group][definition.property] = value;
   }
 
   return config;
