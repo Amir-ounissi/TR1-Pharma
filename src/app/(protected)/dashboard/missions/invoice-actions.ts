@@ -83,8 +83,12 @@ export async function submitAnimationInvoiceAction(
   });
 
   if (error) {
-    await supabase.from("mission_attachments").delete().eq("id", attachment.id);
+    // Keep the storage policy usable while the attachment is still active,
+    // remove the object first, then archive its metadata through the existing RPC.
     await supabase.storage.from("mission-evidence").remove([objectPath]);
+    await supabase.rpc("archive_mission_attachment", {
+      target_attachment_id: attachment.id,
+    });
     return { error: error.message };
   }
 
