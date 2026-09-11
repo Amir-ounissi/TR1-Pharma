@@ -8,8 +8,9 @@ export default async function AgendaPage({ searchParams }:{ searchParams:Promise
     requireCompletedOnboarding(),
     getBrandContexts(),
   ]);
-  const requested = params.date ?? todayInParis();
-  const safeDate = parseCalendarDate(requested) ? requested : todayInParis();
+  const today = todayInParis();
+  const requested = params.date ?? today;
+  const safeDate = parseCalendarDate(requested) ? requested : today;
   const view = params.view === "week" ? "week" : "day";
   const date = view === "week" ? mondayOfWeek(safeDate) : safeDate;
   const end = view === "week" ? addCalendarDays(date, 6) : date;
@@ -60,5 +61,5 @@ export default async function AgendaPage({ searchParams }:{ searchParams:Promise
     return direct ? { ...item, detail_url: direct } : item;
   });
 
-  return <AgendaPlanner date={date} view={view} events={agendaEvents} backlog={backlogItems} brands={contexts.map(({ id, name }) => ({ id, name }))} pharmacies={[...grouped.values()]} canCreateVisit={contexts.some((context) => context.role === "agent")} />;
+  return <AgendaPlanner date={date} today={today} view={view} events={agendaEvents} backlog={backlogItems} brands={contexts.map(({ id, name }) => ({ id, name }))} pharmacies={[...grouped.values()]} canCreateVisit={contexts.some((context) => context.role === "agent")} />;
 }
