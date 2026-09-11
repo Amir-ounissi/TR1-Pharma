@@ -72,7 +72,7 @@ test("scénario 4 — Mobile Agent", async ({ page }) => {
   await page.goto("/dashboard/agent");
   const mobileNav = page.getByRole("navigation", { name: "Navigation mobile" });
   await expect(mobileNav).toBeVisible();
-  await expect(mobileNav.getByText("Accueil", { exact: true })).toBeVisible();
+  await expect(mobileNav.getByText("Aujourd’hui", { exact: true })).toBeVisible();
   await expect(mobileNav.locator('a[href="/dashboard/agent/more"]')).toBeVisible();
   await expect(mobileNav.locator('a[href="/dashboard/orders"]')).toBeVisible();
   await expect(mobileNav.locator('a[href="/dashboard/agent/performance"]')).toBeVisible();
