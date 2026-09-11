@@ -107,6 +107,7 @@ export type AgentMultibrandNextVisit = {
 
 export type AgentMultibrandVisitSummary = {
   id: string;
+  pharmacyId: string;
   pharmacyName: string;
   city: string | null;
   startAt: string;
@@ -121,7 +122,9 @@ type PriorityAction = {
   href: string;
   score: number;
   title: string;
+  brandId: string;
   brandName: string;
+  pharmacyId: string;
   pharmacyName: string;
   city: string | null;
   timing: string | null;
@@ -179,15 +182,9 @@ function followUpActionLabel(followUp: AgentMultibrandFollowUp) {
 }
 
 function taskTiming(task: AgentMultibrandTask) {
-  if (task.days_overdue > 0) {
-    return `Retard ${task.days_overdue} j`;
-  }
-  if (task.due_state === "today") {
-    return "Aujourd’hui";
-  }
-  if (task.due_state === "unscheduled") {
-    return "À planifier";
-  }
+  if (task.days_overdue > 0) return `Retard ${task.days_overdue} j`;
+  if (task.due_state === "today") return "Aujourd’hui";
+  if (task.due_state === "unscheduled") return "À programmer";
   return task.due_at ? formatDateTime(task.due_at) : null;
 }
 
@@ -198,22 +195,9 @@ function BrandBadge({ name }: { name: string }) {
 function ScopeFilter({ brands, selectedBrandId }: { brands: BrandContext[]; selectedBrandId: string | null }) {
   return (
     <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Marques affichées dans la journée">
-      <Link
-        href="/dashboard/agent"
-        aria-current={selectedBrandId === null ? "page" : undefined}
-        className={`inline-flex min-h-11 shrink-0 items-center rounded-full border px-4 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-navy)] focus-visible:ring-offset-2 text-sm font-semibold transition ${selectedBrandId === null ? "border-[var(--tr1-navy)] bg-[var(--tr1-navy)] text-white" : "bg-background text-[var(--tr1-navy)]"}`}
-      >
-        Toutes mes marques
-      </Link>
+      <Link href="/dashboard/agent" aria-current={selectedBrandId === null ? "page" : undefined} className={`inline-flex min-h-11 shrink-0 items-center rounded-full border px-4 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-navy)] focus-visible:ring-offset-2 text-sm font-semibold transition ${selectedBrandId === null ? "border-[var(--tr1-navy)] bg-[var(--tr1-navy)] text-white" : "bg-background text-[var(--tr1-navy)]"}`}>Toutes mes marques</Link>
       {brands.map((brand) => (
-        <Link
-          key={brand.id}
-          href={`/dashboard/agent?brand=${brand.id}`}
-          aria-current={selectedBrandId === brand.id ? "page" : undefined}
-          className={`inline-flex min-h-11 shrink-0 items-center rounded-full border px-4 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-navy)] focus-visible:ring-offset-2 text-sm font-semibold transition ${selectedBrandId === brand.id ? "border-[var(--tr1-navy)] bg-[var(--tr1-navy)] text-white" : "bg-background text-[var(--tr1-navy)]"}`}
-        >
-          {brand.name}
-        </Link>
+        <Link key={brand.id} href={`/dashboard/agent?brand=${brand.id}`} aria-current={selectedBrandId === brand.id ? "page" : undefined} className={`inline-flex min-h-11 shrink-0 items-center rounded-full border px-4 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-navy)] focus-visible:ring-offset-2 text-sm font-semibold transition ${selectedBrandId === brand.id ? "border-[var(--tr1-navy)] bg-[var(--tr1-navy)] text-white" : "bg-background text-[var(--tr1-navy)]"}`}>{brand.name}</Link>
       ))}
     </div>
   );
@@ -225,6 +209,7 @@ export function AgentMultibrandOverview({
   day,
   nextVisit,
   visits,
+  plannedVisits,
   firstName,
   dayLabel,
   canPlanVisit,
@@ -235,6 +220,7 @@ export function AgentMultibrandOverview({
   day: AgentMultibrandDay;
   nextVisit: AgentMultibrandNextVisit | null;
   visits: AgentMultibrandVisitSummary[];
+  plannedVisits: AgentMultibrandVisitSummary[];
   firstName: string;
   dayLabel: string;
   canPlanVisit: boolean;
@@ -246,7 +232,9 @@ export function AgentMultibrandOverview({
       href: `/dashboard/pharmacies/${task.brand_pharmacy_id}?tab=activity`,
       score: task.action_score,
       title: taskActionLabel(task),
+      brandId: task.brand_id,
       brandName: task.brand_name,
+      pharmacyId: task.pharmacy_id,
       pharmacyName: task.pharmacy_name,
       city: task.city,
       timing: taskTiming(task),
@@ -258,18 +246,18 @@ export function AgentMultibrandOverview({
       href: `/dashboard/pharmacies/${followUp.brand_pharmacy_id}?tab=activity`,
       score: followUp.action_score,
       title: followUpActionLabel(followUp),
+      brandId: followUp.brand_id,
       brandName: followUp.brand_name,
+      pharmacyId: followUp.pharmacy_id,
       pharmacyName: followUp.pharmacy_name,
       city: followUp.city,
       timing: null,
       overdue: false,
       reason: followUp.reason,
     })),
-  ]
-    .sort((a, b) => b.score - a.score);
+  ].sort((a, b) => b.score - a.score);
   const totalPriorityActions = day.tasks.length + day.follow_ups.length;
   const selectedBrand = brands.find((brand) => brand.id === selectedBrandId) ?? null;
-
   const progress = getVisitProgress(visits);
   const firstAction = priorityActions[0];
   const firstReport = day.reports[0];
@@ -285,8 +273,20 @@ export function AgentMultibrandOverview({
         : { title: "Préparez votre prochaine visite", detail: "Aucune visite planifiée. Retrouvez votre agenda pour organiser la suite.", href: canPlanVisit ? "/dashboard/agenda/new" : "/dashboard/agenda", label: canPlanVisit ? "Planifier une visite" : "Consulter mon agenda" };
 
   function actionRow(action: PriorityAction) {
+    const existingVisit = plannedVisits.find(
+      (visit) =>
+        visit.pharmacyId === action.pharmacyId &&
+        !["completed", "cancelled", "canceled", "missed"].includes(visit.status.toLowerCase()),
+    );
+    const params = new URLSearchParams({
+      pharmacy: action.pharmacyId,
+      brand: action.brandId,
+      objective: action.title,
+    });
+    const planningHref = `/dashboard/agenda/new?${params.toString()}`;
+
     return (
-      <Link key={action.key} href={action.href} className="group block rounded-xl border p-4 transition hover:border-[var(--tr1-orange)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-navy)]">
+      <article key={action.key} className="rounded-xl border bg-white/60 p-4 transition hover:border-[var(--tr1-orange)] hover:bg-white">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <BrandBadge name={action.brandName} />
           {action.timing ? <span className={`text-sm font-semibold ${action.overdue ? "text-[#a74413]" : "text-muted-foreground"}`}>{action.timing}</span> : null}
@@ -294,8 +294,18 @@ export function AgentMultibrandOverview({
         <p className="mt-2 break-words text-base font-semibold text-[var(--tr1-navy)]">{action.pharmacyName}</p>
         <p className="mt-1 text-sm text-muted-foreground">{action.title}{action.city ? ` · ${action.city}` : ""}</p>
         {action.reason ? <p className="mt-1 text-sm text-muted-foreground">{action.reason}</p> : null}
-        <span className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-[var(--tr1-navy)]">Consulter <ArrowRight className="size-4" aria-hidden="true" /></span>
-      </Link>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          {canPlanVisit ? (
+            <Link href={existingVisit?.href || planningHref} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[var(--tr1-navy)] px-3.5 py-2 text-sm font-semibold text-white transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-navy)] focus-visible:ring-offset-2">
+              <CalendarPlus className="size-4" aria-hidden="true" />
+              {existingVisit ? "Voir la visite" : "Planifier une visite"}
+            </Link>
+          ) : null}
+          <Link href={action.href} className="inline-flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-[var(--tr1-navy)] hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-navy)]">
+            Consulter <ArrowRight className="size-4" aria-hidden="true" />
+          </Link>
+        </div>
+      </article>
     );
   }
 
@@ -323,7 +333,7 @@ export function AgentMultibrandOverview({
               <div className="mt-3 space-y-2">
                 <p className="text-sm text-slate-200">{nextVisit.address}</p>
                 {nextVisit.objective ? <p className="text-sm text-slate-200">Objectif : {nextVisit.objective}</p> : null}
-                <div className="flex flex-wrap gap-2">{nextVisit.brands.map((brand) => <BrandBadge key={brand.brand_id} name={brand.brand_name} />)}</div>
+                <div className="flex flex-wrap gap-2">{nextVisit.brands.map((visitBrand) => <BrandBadge key={visitBrand.brand_id} name={visitBrand.brand_name} />)}</div>
               </div>
             ) : null}
           </div>
@@ -373,9 +383,33 @@ export function AgentMultibrandOverview({
                   <div><p className="text-base font-medium">Aucune visite planifiée aujourd’hui</p><p className="mt-1 text-sm leading-relaxed text-muted-foreground">Ajoutez un rendez-vous depuis votre agenda.</p></div>
                 </div>
               )}
-              {canPlanVisit && (nextVisit || firstAction || firstReport) ? <Link href="/dashboard/agenda/new" className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-lg border px-4 text-sm font-semibold hover:bg-muted/30 focus-visible:ring-2"><CalendarPlus className="size-4" aria-hidden="true" />Ajouter une visite</Link> : null}
             </CardContent>
           </Card>
+
+          {(canPlanVisit || canRequestAnimation) ? (
+            <Card className="rounded-xl">
+              <CardHeader>
+                <div>
+                  <h2 className="text-lg font-semibold">Actions rapides</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">Les actions terrain les plus fréquentes, sans détour.</p>
+                </div>
+              </CardHeader>
+              <CardContent className="grid gap-2 sm:grid-cols-2">
+                {canPlanVisit ? (
+                  <Link href="/dashboard/agenda/new" className="flex min-h-14 items-center gap-3 rounded-xl border bg-white px-4 py-3 text-sm font-semibold transition hover:border-[var(--tr1-orange)] hover:bg-orange-50/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-navy)]">
+                    <CalendarPlus className="size-5 text-[var(--tr1-navy)]" aria-hidden="true" />
+                    Planifier une visite
+                  </Link>
+                ) : null}
+                {canRequestAnimation ? (
+                  <Link href="/dashboard/missions/new?mode=animation" className="flex min-h-14 items-center gap-3 rounded-xl border bg-white px-4 py-3 text-sm font-semibold transition hover:border-[var(--tr1-orange)] hover:bg-orange-50/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-navy)]">
+                    <Megaphone className="size-5 text-[var(--tr1-navy)]" aria-hidden="true" />
+                    Demander une animation
+                  </Link>
+                ) : null}
+              </CardContent>
+            </Card>
+          ) : null}
 
           {nextVisit && (firstAction || firstReport) ? (
             <div className="rounded-xl border bg-white/60 p-4">
@@ -440,7 +474,6 @@ export function AgentMultibrandOverview({
           </div>
         </section>
       ) : null}
-      {canRequestAnimation ? <Link href="/dashboard/missions/new?mode=animation" className="inline-flex min-h-11 items-center gap-2 rounded-lg border bg-white/60 px-4 text-sm font-semibold hover:bg-white focus-visible:ring-2"><Megaphone className="size-4" aria-hidden="true" />Demander une animation</Link> : null}
     </section>
   );
 }
