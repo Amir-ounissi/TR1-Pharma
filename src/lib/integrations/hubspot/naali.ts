@@ -21,6 +21,10 @@ const NAALI_INTERNAL_ORDER_ROLES = new Set([
   "brand_direction",
 ]);
 
+const NAALI_COMMERCIAL_HUBSPOT_OWNER_IDS = new Set([
+  "727665403", // Amir Ounissi
+]);
+
 const NAALI_HUBSPOT_VISIT_TYPES: Record<string, string> = {
   client_visit: "Visite client",
   prospecting: "Visite prospection",
@@ -36,7 +40,12 @@ const NAALI_HUBSPOT_ORDER_TYPES: Record<string, string> = {
   restock: "Réassort",
 };
 
-export function resolveNaaliHubSpotOrderRoute(roleKey: string) {
+export function resolveNaaliHubSpotOrderRoute(roleKey: string, ownerExternalId?: string | null) {
+  const normalizedOwner = ownerExternalId?.trim();
+  if (normalizedOwner && NAALI_COMMERCIAL_HUBSPOT_OWNER_IDS.has(normalizedOwner)) {
+    return NAALI_HUBSPOT_ORDER_ROUTES.commercial;
+  }
+
   const normalized = roleKey.trim().toLowerCase();
   if (normalized === "agent") return NAALI_HUBSPOT_ORDER_ROUTES.agent;
   if (NAALI_INTERNAL_ORDER_ROLES.has(normalized)) return NAALI_HUBSPOT_ORDER_ROUTES.commercial;
