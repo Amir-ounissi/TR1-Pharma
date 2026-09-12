@@ -365,12 +365,29 @@ export function MobileQuickOrderForm({
               <span className="text-muted-foreground">Conditions client…</span>
             ) : (
               <>
-                {potential ? <Badge variant="outline">{potential}</Badge> : null}
+                {potential ? (
+                  <Badge
+                    variant="outline"
+                    className="border-[var(--tr1-orange)]/35 bg-[var(--tr1-orange)]/10 text-[var(--tr1-orange)]"
+                  >
+                    {potential}
+                  </Badge>
+                ) : null}
                 {defaultDiscountRate != null ? (
-                  <Badge variant="secondary">Remise {defaultDiscountRate}%</Badge>
+                  <Badge
+                    variant="outline"
+                    className="border-[var(--tr1-blue)]/35 bg-[var(--tr1-blue)]/10 text-[var(--tr1-blue)]"
+                  >
+                    Remise {defaultDiscountRate}%
+                  </Badge>
                 ) : null}
                 {freeUnitsRule ? (
-                  <Badge variant="secondary">UG {freeUnitsRule.label}</Badge>
+                  <Badge
+                    variant="outline"
+                    className="border-[var(--tr1-success)]/35 bg-[var(--tr1-success)]/10 text-[var(--tr1-success)]"
+                  >
+                    UG {freeUnitsRule.label}
+                  </Badge>
                 ) : null}
               </>
             )}
@@ -384,12 +401,14 @@ export function MobileQuickOrderForm({
                 Références
               </p>
               <h2 className="text-lg font-black text-[var(--tr1-navy)]">
-                {lines.length ? `${lines.length} sélectionnée${lines.length > 1 ? "s" : ""}` : "Choisir les produits"}
+                {lines.length
+                  ? `${lines.length} sélectionnée${lines.length > 1 ? "s" : ""}`
+                  : "Choisir les produits"}
               </h2>
             </div>
             <Button
               type="button"
-              className="h-11 rounded-xl"
+              className="h-11 rounded-xl bg-[var(--tr1-orange)] text-white hover:bg-[var(--tr1-orange)]/90"
               onClick={openProductPicker}
             >
               <PackagePlus className="size-4" />
@@ -401,7 +420,7 @@ export function MobileQuickOrderForm({
             <Button
               type="button"
               variant="outline"
-              className="h-11 w-full rounded-xl"
+              className="h-11 w-full rounded-xl border-[var(--tr1-line-strong)] bg-background text-[var(--tr1-navy)]"
               onClick={resumeLastOrder}
             >
               <RotateCcw className="size-4" /> Reprendre la dernière commande
@@ -412,12 +431,16 @@ export function MobileQuickOrderForm({
             <button
               type="button"
               onClick={openProductPicker}
-              className="flex min-h-28 w-full items-center justify-center rounded-2xl border border-dashed border-[var(--tr1-line-strong)] bg-muted/15 px-5 text-center"
+              className="flex min-h-28 w-full items-center justify-center rounded-2xl border border-dashed border-[var(--tr1-orange)]/40 bg-[var(--tr1-orange)]/5 px-5 text-center"
             >
               <span>
                 <PackagePlus className="mx-auto mb-2 size-6 text-[var(--tr1-orange)]" />
-                <span className="block font-semibold text-[var(--tr1-navy)]">Sélectionner plusieurs références</span>
-                <span className="mt-1 block text-xs text-muted-foreground">Touchez les produits puis validez une seule fois.</span>
+                <span className="block font-semibold text-[var(--tr1-navy)]">
+                  Sélectionner plusieurs références
+                </span>
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  Touchez les produits puis validez une seule fois.
+                </span>
               </span>
             </button>
           ) : null}
@@ -434,7 +457,10 @@ export function MobileQuickOrderForm({
               : null;
 
             return (
-              <article key={line.key} className="overflow-hidden rounded-2xl border bg-background shadow-sm">
+              <article
+                key={line.key}
+                className="overflow-hidden rounded-2xl border bg-background shadow-sm"
+              >
                 <input type="hidden" name="productId" value={line.productId} />
                 <input type="hidden" name="discountRate" value={line.discountRate} />
                 <div className="flex items-start gap-3 border-b bg-muted/15 p-3.5">
@@ -442,23 +468,52 @@ export function MobileQuickOrderForm({
                     {index + 1}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h3 className="text-[0.95rem] font-black leading-tight text-[var(--tr1-navy)]">{product.name}</h3>
+                    <h3 className="text-[0.95rem] font-black leading-tight text-[var(--tr1-navy)]">
+                      {product.name}
+                    </h3>
                     <p className="mt-1 truncate font-mono text-[0.66rem] text-muted-foreground">
-                      {[product.detail, product.ean ? `EAN ${product.ean}` : null].filter(Boolean).join(" · ")}
+                      {[product.detail, product.ean ? `EAN ${product.ean}` : null]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </p>
                     <div className="mt-2 flex flex-wrap gap-1.5">
-                      {product.price != null ? <Badge variant="secondary">{money(Number(product.price))} HT</Badge> : null}
-                      {discount > 0 ? <Badge variant="outline">-{discount}%</Badge> : null}
-                      {line.freeQuantity > 0 ? <Badge variant="outline">+{line.freeQuantity} UG</Badge> : null}
+                      {product.price != null ? (
+                        <Badge
+                          variant="outline"
+                          className="border-[var(--tr1-line-strong)] bg-[var(--tr1-ivory-deep)]/70 text-[var(--tr1-navy)]"
+                        >
+                          {money(Number(product.price))} HT
+                        </Badge>
+                      ) : null}
+                      {discount > 0 ? (
+                        <Badge
+                          variant="outline"
+                          className="border-[var(--tr1-blue)]/35 bg-[var(--tr1-blue)]/10 text-[var(--tr1-blue)]"
+                        >
+                          REM. {discount}%
+                        </Badge>
+                      ) : null}
+                      {line.freeQuantity > 0 ? (
+                        <Badge
+                          variant="outline"
+                          className="border-[var(--tr1-success)]/35 bg-[var(--tr1-success)]/10 text-[var(--tr1-success)]"
+                        >
+                          +{line.freeQuantity} UG
+                        </Badge>
+                      ) : null}
                     </div>
                   </div>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="-mr-1 -mt-1 size-10 shrink-0 rounded-xl text-muted-foreground"
+                    className="-mr-1 -mt-1 size-10 shrink-0 rounded-xl text-muted-foreground hover:bg-[var(--tr1-danger)]/10 hover:text-[var(--tr1-danger)] active:bg-[var(--tr1-danger)]/15 active:text-[var(--tr1-danger)]"
                     aria-label={`Retirer ${product.name}`}
-                    onClick={() => setLines((current) => current.filter((_, lineIndex) => lineIndex !== index))}
+                    onClick={() =>
+                      setLines((current) =>
+                        current.filter((_, lineIndex) => lineIndex !== index),
+                      )
+                    }
                   >
                     <Trash2 className="size-4" />
                   </Button>
@@ -473,9 +528,14 @@ export function MobileQuickOrderForm({
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="h-12 w-12 rounded-none"
+                          className="h-12 w-12 rounded-none text-[var(--tr1-navy)]"
                           disabled={line.quantity <= minimum}
-                          onClick={() => updateLineQuantity(index, Math.max(minimum, line.quantity - increment))}
+                          onClick={() =>
+                            updateLineQuantity(
+                              index,
+                              Math.max(minimum, line.quantity - increment),
+                            )
+                          }
                           aria-label={`Retirer ${increment} unités de ${product.name}`}
                         >
                           <Minus className="size-4" />
@@ -487,15 +547,22 @@ export function MobileQuickOrderForm({
                           step={increment}
                           inputMode="numeric"
                           value={line.quantity}
-                          onChange={(event) => updateLineQuantity(index, Math.max(minimum, Number(event.target.value) || minimum))}
-                          className="h-12 min-w-0 flex-1 rounded-none border-0 px-1 text-center text-lg font-black shadow-none focus-visible:ring-0"
+                          onChange={(event) =>
+                            updateLineQuantity(
+                              index,
+                              Math.max(minimum, Number(event.target.value) || minimum),
+                            )
+                          }
+                          className="h-12 min-w-0 flex-1 rounded-none border-0 px-1 text-center text-lg font-black text-[var(--tr1-navy)] shadow-none focus-visible:ring-0"
                         />
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="h-12 w-12 rounded-none"
-                          onClick={() => updateLineQuantity(index, line.quantity + increment)}
+                          className="h-12 w-12 rounded-none text-[var(--tr1-orange)]"
+                          onClick={() =>
+                            updateLineQuantity(index, line.quantity + increment)
+                          }
                           aria-label={`Ajouter ${increment} unités de ${product.name}`}
                         >
                           <Plus className="size-4" />
@@ -506,7 +573,7 @@ export function MobileQuickOrderForm({
                       </p>
                     </div>
                     <div>
-                      <Label className="text-xs">UG</Label>
+                      <Label className="text-xs text-[var(--tr1-success)]">UG</Label>
                       <Input
                         name="freeQuantity"
                         type="number"
@@ -514,37 +581,54 @@ export function MobileQuickOrderForm({
                         step="1"
                         inputMode="numeric"
                         value={line.freeQuantity}
-                        onChange={(event) => updateLine(index, { freeQuantity: Math.max(0, Number(event.target.value) || 0) })}
-                        className="mt-1.5 h-12 rounded-xl text-center text-lg font-black"
+                        onChange={(event) =>
+                          updateLine(index, {
+                            freeQuantity: Math.max(
+                              0,
+                              Number(event.target.value) || 0,
+                            ),
+                          })
+                        }
+                        className="mt-1.5 h-12 rounded-xl border-[var(--tr1-success)]/30 bg-[var(--tr1-success)]/5 text-center text-lg font-black text-[var(--tr1-success)] focus-visible:ring-[var(--tr1-success)]/25"
                       />
                     </div>
                   </div>
 
                   {!isAgent || !line.unitPriceHt ? (
                     <div className="mt-3">
-                      <Label className="text-xs">{isAgent ? "Prix HT nécessaire" : "Prix unitaire HT"}</Label>
+                      <Label className="text-xs">
+                        {isAgent ? "Prix HT nécessaire" : "Prix unitaire HT"}
+                      </Label>
                       <Input
                         name="unitPriceHt"
                         type="number"
                         min="0"
                         step="0.01"
                         value={line.unitPriceHt}
-                        onChange={(event) => updateLine(index, { unitPriceHt: event.target.value })}
+                        onChange={(event) =>
+                          updateLine(index, { unitPriceHt: event.target.value })
+                        }
                         required
                         className="mt-1.5 h-11 rounded-xl"
                       />
                     </div>
                   ) : (
-                    <input type="hidden" name="unitPriceHt" value={line.unitPriceHt} />
+                    <input
+                      type="hidden"
+                      name="unitPriceHt"
+                      value={line.unitPriceHt}
+                    />
                   )}
 
-                  <div className="mt-3 flex items-center justify-between border-t pt-3">
+                  <div className="mt-3 flex items-end justify-between gap-3 border-t pt-3">
                     <span className="text-xs text-muted-foreground">
                       {product.unitsPerCase ? `Colisage ${product.unitsPerCase}` : ""}
-                      {product.taxRate != null ? `${product.unitsPerCase ? " · " : ""}TVA ${Number(product.taxRate)}%` : ""}
+                      {product.taxRate != null
+                        ? `${product.unitsPerCase ? " · " : ""}TVA ${Number(product.taxRate)}%`
+                        : ""}
                     </span>
-                    <strong className="text-sm text-[var(--tr1-navy)]">
-                      {lineTotal == null ? "Prix à compléter" : money(lineTotal)}
+                    <strong className="text-base font-black text-[var(--tr1-navy)]">
+                      {lineTotal == null ? "Prix à compléter" : `${money(lineTotal)} HT`}
                     </strong>
                   </div>
                 </div>
@@ -554,19 +638,31 @@ export function MobileQuickOrderForm({
         </section>
 
         <details className="rounded-2xl border bg-muted/15 p-3.5">
-          <summary className="cursor-pointer font-semibold text-[var(--tr1-navy)]">Détails de commande</summary>
-          <p className="mt-1 text-xs text-muted-foreground">À ouvrir seulement si nécessaire.</p>
+          <summary className="cursor-pointer font-semibold text-[var(--tr1-navy)]">
+            Détails de commande
+          </summary>
+          <p className="mt-1 text-xs text-muted-foreground">
+            À ouvrir seulement si nécessaire.
+          </p>
           <div className="mt-4 grid gap-3">
             <div className="space-y-2">
               <Label htmlFor="mobile-order-date">Date de commande</Label>
-              <Input id="mobile-order-date" name="orderDate" type="datetime-local" defaultValue={localDateTimeNow()} required />
+              <Input
+                id="mobile-order-date"
+                name="orderDate"
+                type="datetime-local"
+                defaultValue={localDateTimeNow()}
+                required
+              />
             </div>
 
             {!isAgent ? (
               <div className="space-y-2">
                 <Label htmlFor="mobile-order-status">Statut</Label>
                 <Select name="orderStatus" defaultValue="confirmed">
-                  <SelectTrigger id="mobile-order-status" className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectTrigger id="mobile-order-status" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="draft">Brouillon</SelectItem>
                     <SelectItem value="confirmed">Validée</SelectItem>
@@ -577,36 +673,87 @@ export function MobileQuickOrderForm({
 
             <div className="space-y-2">
               <Label htmlFor="mobile-order-type">Type demandé</Label>
-              <Select name="orderType" value={orderType} onValueChange={setOrderType}>
-                <SelectTrigger id="mobile-order-type" className="w-full"><SelectValue /></SelectTrigger>
+              <Select
+                name="orderType"
+                value={orderType}
+                onValueChange={setOrderType}
+              >
+                <SelectTrigger id="mobile-order-type" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  {["initial", "reorder", "complementary", "replacement", "sample", "return", "credit_note", "other"].map((value) => (
-                    <SelectItem key={value} value={value}>{uiLabel(value)}</SelectItem>
+                  {[
+                    "initial",
+                    "reorder",
+                    "complementary",
+                    "replacement",
+                    "sample",
+                    "return",
+                    "credit_note",
+                    "other",
+                  ].map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {uiLabel(value)}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="space-y-2"><Label>Référence externe</Label><Input name="externalOrderId" /></div>
-            <div className="space-y-2"><Label>Numéro de commande</Label><Input name="orderNumber" /></div>
-            <div className="space-y-2"><Label>Port HT</Label><Input name="shippingAmountHt" type="number" min="0" step="0.01" defaultValue="0" required /></div>
-            <div className="space-y-2"><Label>Notes</Label><Textarea name="notes" rows={3} /></div>
+            <div className="space-y-2">
+              <Label>Référence externe</Label>
+              <Input name="externalOrderId" />
+            </div>
+            <div className="space-y-2">
+              <Label>Numéro de commande</Label>
+              <Input name="orderNumber" />
+            </div>
+            <div className="space-y-2">
+              <Label>Port HT</Label>
+              <Input
+                name="shippingAmountHt"
+                type="number"
+                min="0"
+                step="0.01"
+                defaultValue="0"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Notes</Label>
+              <Textarea name="notes" rows={3} />
+            </div>
           </div>
         </details>
 
-        <div className="sticky bottom-[calc(4.6rem+env(safe-area-inset-bottom))] z-20 rounded-2xl border bg-background/96 p-3 shadow-xl backdrop-blur">
+        <div className="sticky bottom-[calc(4.6rem+env(safe-area-inset-bottom))] z-20 rounded-2xl border border-[var(--tr1-navy)]/15 bg-background/96 p-3 shadow-xl backdrop-blur">
           <div className="mb-2.5 flex items-end justify-between gap-3">
             <div>
-              <p className="font-black text-[var(--tr1-navy)]">{money(totalHt)} HT</p>
-              <p className="text-xs text-muted-foreground">{lines.length} réf. · {totalUnits} unités</p>
+              <p className="text-lg font-black text-[var(--tr1-navy)]">
+                {money(totalHt)} HT
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {lines.length} réf. · {totalUnits} unités
+              </p>
             </div>
-            {freeUnitsRule ? <Badge variant="secondary">UG {freeUnitsRule.label}</Badge> : null}
+            {freeUnitsRule ? (
+              <Badge
+                variant="outline"
+                className="border-[var(--tr1-success)]/35 bg-[var(--tr1-success)]/10 text-[var(--tr1-success)]"
+              >
+                UG {freeUnitsRule.label}
+              </Badge>
+            ) : null}
           </div>
           <Button
             disabled={pending || lines.length === 0}
             className="h-12 w-full rounded-xl bg-[var(--tr1-navy)] text-white hover:bg-[var(--tr1-navy-soft)]"
           >
-            {pending ? "Enregistrement…" : isAgent ? "Envoyer à la marque" : "Créer la commande"}
+            {pending
+              ? "Enregistrement…"
+              : isAgent
+                ? "Envoyer à la marque"
+                : "Créer la commande"}
           </Button>
         </div>
       </form>
@@ -616,9 +763,13 @@ export function MobileQuickOrderForm({
           <div className="flex h-full flex-col">
             <SheetHeader className="border-b px-4 pb-3 pt-4 text-left">
               <div className="pr-8">
-                <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--tr1-orange)]">Catalogue</p>
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--tr1-orange)]">
+                  Catalogue
+                </p>
                 <SheetTitle className="mt-1 text-xl">Choisir les références</SheetTitle>
-                <p className="mt-1 text-sm text-muted-foreground">Touchez plusieurs produits puis validez une fois.</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Touchez plusieurs produits puis validez une fois.
+                </p>
               </div>
             </SheetHeader>
 
@@ -633,10 +784,29 @@ export function MobileQuickOrderForm({
                 />
               </div>
               <div className="mt-2 flex items-center justify-between gap-2">
-                <span className="text-xs font-semibold text-muted-foreground">{pickerSelection.length} sélectionnée{pickerSelection.length > 1 ? "s" : ""}</span>
+                <span className="text-xs font-semibold text-muted-foreground">
+                  {pickerSelection.length} sélectionnée
+                  {pickerSelection.length > 1 ? "s" : ""}
+                </span>
                 <div className="flex gap-1">
-                  <Button type="button" size="sm" variant="ghost" onClick={() => setPickerSelection(products.map((product) => product.id))}>Tout</Button>
-                  <Button type="button" size="sm" variant="ghost" onClick={() => setPickerSelection([])}>Effacer</Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() =>
+                      setPickerSelection(products.map((product) => product.id))
+                    }
+                  >
+                    Tout
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setPickerSelection([])}
+                  >
+                    Effacer
+                  </Button>
                 </div>
               </div>
             </div>
@@ -657,23 +827,42 @@ export function MobileQuickOrderForm({
                           : "border-[var(--tr1-line-strong)] bg-background active:bg-muted",
                       )}
                     >
-                      <span className={cn(
-                        "mt-0.5 grid size-6 shrink-0 place-items-center rounded-lg border",
-                        selected
-                          ? "border-[var(--tr1-orange)] bg-[var(--tr1-orange)] text-white"
-                          : "border-[var(--tr1-line-strong)] bg-background",
-                      )}>
+                      <span
+                        className={cn(
+                          "mt-0.5 grid size-6 shrink-0 place-items-center rounded-lg border",
+                          selected
+                            ? "border-[var(--tr1-orange)] bg-[var(--tr1-orange)] text-white"
+                            : "border-[var(--tr1-line-strong)] bg-background",
+                        )}
+                      >
                         {selected ? <Check className="size-4" /> : null}
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block font-black leading-tight text-[var(--tr1-navy)]">{product.name}</span>
+                        <span className="block font-black leading-tight text-[var(--tr1-navy)]">
+                          {product.name}
+                        </span>
                         <span className="mt-1 block truncate font-mono text-[0.65rem] text-muted-foreground">
-                          {[product.detail, product.ean ? `EAN ${product.ean}` : null].filter(Boolean).join(" · ")}
+                          {[product.detail, product.ean ? `EAN ${product.ean}` : null]
+                            .filter(Boolean)
+                            .join(" · ")}
                         </span>
                         <span className="mt-2 flex flex-wrap gap-1.5 text-xs">
-                          {product.price != null ? <Badge variant="secondary">{money(Number(product.price))} HT</Badge> : null}
-                          {product.unitsPerCase ? <Badge variant="outline">x{product.unitsPerCase}</Badge> : null}
-                          {product.minimumOrderQuantity ? <span className="self-center text-muted-foreground">min. {product.minimumOrderQuantity}</span> : null}
+                          {product.price != null ? (
+                            <Badge
+                              variant="outline"
+                              className="border-[var(--tr1-line-strong)] bg-[var(--tr1-ivory-deep)]/70 text-[var(--tr1-navy)]"
+                            >
+                              {money(Number(product.price))} HT
+                            </Badge>
+                          ) : null}
+                          {product.unitsPerCase ? (
+                            <Badge variant="outline">x{product.unitsPerCase}</Badge>
+                          ) : null}
+                          {product.minimumOrderQuantity ? (
+                            <span className="self-center text-muted-foreground">
+                              min. {product.minimumOrderQuantity}
+                            </span>
+                          ) : null}
                         </span>
                       </span>
                     </button>
@@ -681,13 +870,20 @@ export function MobileQuickOrderForm({
                 })}
               </div>
               {!filteredProducts.length ? (
-                <p className="py-10 text-center text-sm text-muted-foreground">Aucune référence trouvée.</p>
+                <p className="py-10 text-center text-sm text-muted-foreground">
+                  Aucune référence trouvée.
+                </p>
               ) : null}
             </div>
 
             <div className="absolute inset-x-0 bottom-0 border-t bg-background/96 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur">
-              <Button type="button" className="h-12 w-full rounded-xl" onClick={applyProductSelection}>
-                Valider {pickerSelection.length} référence{pickerSelection.length > 1 ? "s" : ""}
+              <Button
+                type="button"
+                className="h-12 w-full rounded-xl bg-[var(--tr1-orange)] text-white hover:bg-[var(--tr1-orange)]/90"
+                onClick={applyProductSelection}
+              >
+                Valider {pickerSelection.length} référence
+                {pickerSelection.length > 1 ? "s" : ""}
               </Button>
             </div>
           </div>
