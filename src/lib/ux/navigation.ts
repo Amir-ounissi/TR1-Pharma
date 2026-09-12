@@ -44,18 +44,12 @@ const agentMoreItems: NavigationItem[] = [
 ];
 
 const managerItems: NavigationItem[] = [
-  { href: "/dashboard/executive", label: "Cockpit Direction", shortLabel: "Cockpit", icon: "layout", capability: "executive_cockpit" },
-  { href: "/dashboard/forecast", label: "Forecast", shortLabel: "Forecast", icon: "chart", capability: "forecast" },
-  { href: "/dashboard/pharma-360", label: "Pharma 360", shortLabel: "Pharma 360", icon: "building", capability: "pharma_360" },
-  { href: "/dashboard/kam-groups", label: "KAM Groupements", shortLabel: "Groupements", icon: "network", capability: "kam_groups" },
-  { href: "/dashboard/trade", label: "Trade Marketing", shortLabel: "Trade", icon: "target", capability: "trade_marketing" },
-  { href: "/dashboard/sell-out", label: "Sell-out", icon: "chart", capability: "sell_out" },
-  { href: "/dashboard/commercial-health", label: "Priorités", shortLabel: "Priorités", icon: "target", capability: "next_best_action" },
-  { href: "/dashboard/providers", label: "Prestataires", shortLabel: "Prestataires", icon: "users", capability: "multi_provider" },
-  { href: "/dashboard/pharmacies", label: "Pharmacies", icon: "building", capability: "core_crm" },
+  { href: "/dashboard", label: "Vue d’ensemble", shortLabel: "Accueil", icon: "layout" },
+  { href: "/dashboard/network/commercial", label: "Performance & prévisions", shortLabel: "Performance", icon: "chart", capability: "performance" },
+  { href: "/dashboard/pharmacies", label: "Réseau pharmacies", shortLabel: "Réseau", icon: "building", capability: "core_crm" },
+  { href: "/dashboard/missions", label: "Équipe & terrain", shortLabel: "Terrain", icon: "users", capability: "missions" },
+  { href: "/dashboard/commercial-health", label: "Plan d’action", shortLabel: "Actions", icon: "target", capability: "next_best_action" },
   { href: "/dashboard/orders", label: "Commandes", icon: "clipboard", capability: "orders" },
-  { href: "/dashboard/missions", label: "Missions", icon: "calendar", capability: "missions" },
-  { href: "/dashboard/network/commercial", label: "Performance", icon: "chart", capability: "performance" },
 ];
 
 const directionItems: NavigationItem[] = [
@@ -143,11 +137,6 @@ export function getNavigationSections(
   const sections: NavigationSection[] = [
     { label: "Pilotage", items: managerItems },
   ];
-
-  const validationItems: NavigationItem[] = [];
-  if (["brand_admin", "tr1_manager", "super_admin"].includes(role)) validationItems.push({ href: "/dashboard/missions/proposals", label: "Propositions à valider", icon: "target", capability: "missions" });
-  if (role === "tr1_manager" || role === "super_admin") validationItems.push({ href: "/dashboard/reports", label: "Rapports à valider", icon: "file", capability: "missions" });
-  if (validationItems.length) sections.push({ label: "Validation", items: validationItems });
 
   if (family === "admin") {
     sections.push({
