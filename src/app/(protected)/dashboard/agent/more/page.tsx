@@ -50,7 +50,7 @@ export default async function AgentMorePage() {
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             {quickActions.map((action) => (
-              <Link href={action.href} key={action.label}>
+              <Link href={action.href} key={action.label} prefetch={false}>
                 <Card className="h-full transition hover:border-[var(--tr1-orange)]">
                   <CardContent className="flex h-full gap-3 p-4">
                     <span className="grid size-10 shrink-0 place-items-center rounded-md bg-muted">
@@ -72,7 +72,7 @@ export default async function AgentMorePage() {
         <h2 className="text-lg font-semibold" id="agent-more-tools">Outils</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           {getAgentMoreItems(capabilities).map((item) => (
-            <Link href={item.href} key={item.href}>
+            <Link href={item.href} key={item.href} prefetch={false}>
               <Card className="h-full transition hover:border-[var(--tr1-orange)]">
                 <CardContent className="flex items-center gap-3 p-5">
                   <span className="grid size-10 place-items-center rounded-md bg-muted">

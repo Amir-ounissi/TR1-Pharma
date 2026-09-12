@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { MoreHorizontal } from "lucide-react";
 import { AiVisitClose } from "@/components/agent/ai-visit-close";
 import { Button } from "@/components/ui/button";
@@ -44,9 +45,11 @@ function commercialTermsHref(pharmacyId: string) {
 }
 
 export function PharmacySectionNav({ pharmacyId, activeTab }: PharmacySectionNavProps) {
+  const router = useRouter();
   const commercialTermsActive = activeTab === "commercial_terms";
   const moreActive =
     commercialTermsActive || MORE_TABS.some(([value]) => value === activeTab);
+  const warmRoute = (target: string) => () => router.prefetch(target);
 
   return (
     <>
@@ -58,6 +61,7 @@ export function PharmacySectionNav({ pharmacyId, activeTab }: PharmacySectionNav
       >
         {ALL_TABS.map(([value, label]) => {
           const active = activeTab === value;
+          const target = href(pharmacyId, value);
           return (
             <Button
               key={value}
@@ -69,7 +73,14 @@ export function PharmacySectionNav({ pharmacyId, activeTab }: PharmacySectionNav
                 active && "bg-[var(--tr1-navy)] text-white hover:bg-[var(--tr1-navy-soft)] hover:text-white",
               )}
             >
-              <Link aria-current={active ? "page" : undefined} href={href(pharmacyId, value)}>
+              <Link
+                aria-current={active ? "page" : undefined}
+                href={target}
+                prefetch={false}
+                onPointerEnter={warmRoute(target)}
+                onPointerDown={warmRoute(target)}
+                onFocus={warmRoute(target)}
+              >
                 {label}
               </Link>
             </Button>
@@ -88,6 +99,10 @@ export function PharmacySectionNav({ pharmacyId, activeTab }: PharmacySectionNav
           <Link
             aria-current={commercialTermsActive ? "page" : undefined}
             href={commercialTermsHref(pharmacyId)}
+            prefetch={false}
+            onPointerEnter={warmRoute(commercialTermsHref(pharmacyId))}
+            onPointerDown={warmRoute(commercialTermsHref(pharmacyId))}
+            onFocus={warmRoute(commercialTermsHref(pharmacyId))}
           >
             Conditions commerciales
           </Link>
@@ -100,11 +115,15 @@ export function PharmacySectionNav({ pharmacyId, activeTab }: PharmacySectionNav
       >
         {PRIMARY_TABS.map(([value, label]) => {
           const active = activeTab === value;
+          const target = href(pharmacyId, value);
           return (
             <Link
               key={value}
               aria-current={active ? "page" : undefined}
-              href={href(pharmacyId, value)}
+              href={target}
+              prefetch={false}
+              onPointerDown={warmRoute(target)}
+              onFocus={warmRoute(target)}
               className={cn(
                 "flex min-h-11 min-w-0 items-center justify-center rounded-lg px-1.5 text-center font-mono text-[0.64rem] font-bold uppercase leading-tight transition-colors",
                 active
@@ -143,11 +162,15 @@ export function PharmacySectionNav({ pharmacyId, activeTab }: PharmacySectionNav
             <div className="grid gap-2 pb-2">
               {MORE_TABS.map(([value, label]) => {
                 const active = activeTab === value;
+                const target = href(pharmacyId, value);
                 return (
                   <SheetClose key={value} asChild>
                     <Link
                       aria-current={active ? "page" : undefined}
-                      href={href(pharmacyId, value)}
+                      href={target}
+                      prefetch={false}
+                      onPointerDown={warmRoute(target)}
+                      onFocus={warmRoute(target)}
                       className={cn(
                         "flex min-h-12 items-center justify-between rounded-xl border px-4 text-sm font-semibold transition-colors",
                         active
@@ -165,6 +188,9 @@ export function PharmacySectionNav({ pharmacyId, activeTab }: PharmacySectionNav
                 <Link
                   aria-current={commercialTermsActive ? "page" : undefined}
                   href={commercialTermsHref(pharmacyId)}
+                  prefetch={false}
+                  onPointerDown={warmRoute(commercialTermsHref(pharmacyId))}
+                  onFocus={warmRoute(commercialTermsHref(pharmacyId))}
                   className={cn(
                     "flex min-h-12 items-center justify-between rounded-xl border px-4 text-sm font-semibold transition-colors",
                     commercialTermsActive
