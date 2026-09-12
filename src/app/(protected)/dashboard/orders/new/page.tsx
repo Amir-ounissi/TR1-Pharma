@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { SlidersHorizontal } from "lucide-react";
 import { redirect } from "next/navigation";
+import { MobileQuickOrderForm } from "@/components/orders/mobile-quick-order-form";
 import { QuickOrderForm } from "@/components/orders/quick-order-form";
 import { QuickOrderEntryModes } from "@/components/orders/quick-order-entry-modes";
 import { Button } from "@/components/ui/button";
@@ -87,6 +88,7 @@ export default async function NewOrderPage({
     id: item.id,
     name: item.name,
     detail: item.sku,
+    ean: item.ean,
     price: item.wholesale_price_ht,
     taxRate: item.tax_rate,
     unitsPerCase: item.units_per_case,
@@ -139,20 +141,31 @@ export default async function NewOrderPage({
     ? productOptions.find((option) => option.id === product)
     : undefined;
 
+  const sharedOrderProps = {
+    products: productOptions,
+    initialPharmacy,
+    lastOrderItems,
+    initialProductId: prioritizedProduct?.id,
+    initialOrderType: initialRelation
+      ? lastOrderItems.length
+        ? "reorder"
+        : "initial"
+      : "other",
+    initialDiscountRate: initialPricing.discountRate,
+    initialPotential: initialPricing.potential,
+    initialFreeUnitsRule: initialPricing.freeUnitsRule,
+    isAgent,
+  };
+
   const quickOrderForm = (
-    <QuickOrderForm
-      products={productOptions}
-      initialPharmacy={initialPharmacy}
-      lastOrderItems={lastOrderItems}
-      initialProductId={prioritizedProduct?.id}
-      initialOrderType={
-        initialRelation ? (lastOrderItems.length ? "reorder" : "initial") : "other"
-      }
-      initialDiscountRate={initialPricing.discountRate}
-      initialPotential={initialPricing.potential}
-      initialFreeUnitsRule={initialPricing.freeUnitsRule}
-      isAgent={isAgent}
-    />
+    <>
+      <div className="md:hidden">
+        <MobileQuickOrderForm {...sharedOrderProps} />
+      </div>
+      <div className="hidden md:block">
+        <QuickOrderForm {...sharedOrderProps} />
+      </div>
+    </>
   );
 
   return (
@@ -166,21 +179,23 @@ export default async function NewOrderPage({
             Nouvelle commande
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Sélectionnez les références, ajustez les quantités et envoyez.
+            Sélectionnez plusieurs références, ajustez les quantités et envoyez.
           </p>
         </div>
-        <Button asChild variant="outline">
-          <Link href="/dashboard/orders/commercial-terms">
-            <SlidersHorizontal className="size-4" /> Conditions commerciales
-          </Link>
-        </Button>
+        {initialRelation ? (
+          <Button asChild variant="outline" className="hidden sm:inline-flex">
+            <Link href={`/dashboard/pharmacies/${initialRelation.id}/commercial-terms`}>
+              <SlidersHorizontal className="size-4" /> Conditions commerciales
+            </Link>
+          </Button>
+        ) : null}
       </div>
 
       <Card className="overflow-hidden">
-        <CardHeader className="border-b bg-muted/20 pb-4">
+        <CardHeader className="hidden border-b bg-muted/20 pb-4 md:flex">
           <CardTitle>Prendre une commande</CardTitle>
         </CardHeader>
-        <CardContent className="p-3 sm:p-6">
+        <CardContent className="p-0 md:p-6">
           {pdfImportEnabled ? (
             <QuickOrderEntryModes isAgent={isAgent} manual={quickOrderForm} />
           ) : (
