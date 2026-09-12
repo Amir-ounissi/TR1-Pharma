@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  AlertTriangle,
   CalendarDays,
   Camera,
   ChevronRight,
@@ -36,6 +37,43 @@ type RelationRow = {
   pharmacy_id: string;
 };
 
+type OverdueVisit = {
+  id: string;
+  scheduled_start_at: string;
+  scheduled_end_at: string | null;
+  title: string;
+  status: string;
+  pharmacy_id: string;
+  pharmacies:
+    | {
+        trade_name: string | null;
+        legal_name: string | null;
+        city: string | null;
+      }
+    | {
+        trade_name: string | null;
+        legal_name: string | null;
+        city: string | null;
+      }[]
+    | null;
+};
+
+type OverdueVisitLink = {
+  visit_id: string;
+  brand_id: string;
+  brand_pharmacy_id: string | null;
+  field_visits: OverdueVisit | OverdueVisit[] | null;
+};
+
+type OverdueVisitCard = {
+  id: string;
+  brandPharmacyId: string;
+  scheduledStartAt: string;
+  scheduledEndAt: string | null;
+  pharmacyName: string;
+  city: string | null;
+};
+
 const CLOSED_STATUSES = new Set([
   "completed",
   "cancelled",
@@ -46,6 +84,16 @@ const CLOSED_STATUSES = new Set([
 
 function time(value: string) {
   return new Intl.DateTimeFormat("fr-FR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Paris",
+  }).format(new Date(value));
+}
+
+function dateTime(value: string) {
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "short",
     hour: "2-digit",
     minute: "2-digit",
     timeZone: "Europe/Paris",
@@ -126,18 +174,33 @@ export default async function FieldPage() {
   }
 
   const today = todayInParis();
-  const { data: agenda, error } = await supabase.rpc("get_my_field_agenda", {
-    start_date: today,
-    end_date: today,
-    brand_filter: null,
-  });
+  const brandIds = contexts.map((context) => context.id);
+  const nowIso = new Date().toISOString();
+  const [{ data: agenda, error }, overdueResult] = await Promise.all([
+    supabase.rpc("get_my_field_agenda", {
+      start_date: today,
+      end_date: today,
+      brand_filter: null,
+    }),
+    brandIds.length
+      ? supabase
+          .from("field_visit_brands")
+          .select("visit_id,brand_id,brand_pharmacy_id,field_visits!inner(id,status,scheduled_start_at,scheduled_end_at,title,pharmacy_id,owner_user_id,archived_at,pharmacies(trade_name,legal_name,city))")
+          .in("brand_id", brandIds)
+          .eq("field_visits.owner_user_id", userId)
+          .eq("field_visits.status", "in_progress")
+          .is("field_visits.archived_at", null)
+          .lt("field_visits.scheduled_end_at", nowIso)
+          .limit(30)
+      : Promise.resolve({ data: [] as OverdueVisitLink[], error: null }),
+  ]);
   if (error) throw new Error(error.message);
+  if (overdueResult.error) throw new Error(overdueResult.error.message);
 
   const events = ((agenda ?? []) as FieldAgendaEvent[]).filter(
     (event) => event.ownership === "mine" && Boolean(event.pharmacy_id),
   );
   const pharmacyIds = [...new Set(events.flatMap((event) => event.pharmacy_id ? [event.pharmacy_id] : []))];
-  const brandIds = contexts.map((context) => context.id);
   const { data: relations } = pharmacyIds.length && brandIds.length
     ? await supabase
         .from("brand_pharmacies")
@@ -154,10 +217,41 @@ export default async function FieldPage() {
         event.brand_ids.includes(relation.brand_id),
     ) ?? (relations ?? []).find((relation) => relation.pharmacy_id === event.pharmacy_id);
 
+  const activeEvents = events.filter(
+    (event) => Date.parse(event.end_at) >= Date.now(),
+  );
   const nextEvent =
-    events.find((event) => event.status === "in_progress") ??
-    events.find((event) => !CLOSED_STATUSES.has(event.status)) ??
+    activeEvents.find((event) => event.status === "in_progress") ??
+    activeEvents.find((event) => !CLOSED_STATUSES.has(event.status)) ??
     null;
+
+  const overdueVisits = ((overdueResult.data ?? []) as unknown as OverdueVisitLink[])
+    .flatMap((link): OverdueVisitCard[] => {
+      const visit = Array.isArray(link.field_visits)
+        ? link.field_visits[0]
+        : link.field_visits;
+      if (!visit || !link.brand_pharmacy_id) return [];
+      const pharmacy = Array.isArray(visit.pharmacies)
+        ? visit.pharmacies[0]
+        : visit.pharmacies;
+      return [{
+        id: visit.id,
+        brandPharmacyId: link.brand_pharmacy_id,
+        scheduledStartAt: visit.scheduled_start_at,
+        scheduledEndAt: visit.scheduled_end_at,
+        pharmacyName: pharmacy?.trade_name || pharmacy?.legal_name || visit.title || "Pharmacie",
+        city: pharmacy?.city ?? null,
+      }];
+    })
+    .filter(
+      (visit, index, all) => all.findIndex((item) => item.id === visit.id) === index,
+    )
+    .sort(
+      (left, right) =>
+        Date.parse(right.scheduledEndAt || right.scheduledStartAt) -
+        Date.parse(left.scheduledEndAt || left.scheduledStartAt),
+    )
+    .slice(0, 3);
 
   const pharmacyHref = (event: FieldAgendaEvent) => {
     const relation = relationFor(event);
@@ -187,6 +281,45 @@ export default async function FieldPage() {
           <Link href="/dashboard/orders/scan"><Camera className="size-5" />Scanner commande</Link>
         </Button>
       </div>
+
+      {overdueVisits.length ? (
+        <section className="rounded-2xl border border-amber-200 bg-amber-50/70 p-3.5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wide text-amber-900">
+                <AlertTriangle className="size-4" />À régulariser
+              </p>
+              <p className="mt-1 text-sm text-amber-950/80">
+                {overdueVisits.length === 1
+                  ? "Une visite semble terminée mais n’a pas été clôturée."
+                  : "Des visites semblent terminées mais n’ont pas été clôturées."}
+              </p>
+            </div>
+            <Badge variant="outline" className="border-amber-300 bg-white text-amber-900">
+              {overdueVisits.length}
+            </Badge>
+          </div>
+          <div className="mt-3 space-y-2">
+            {overdueVisits.map((visit) => (
+              <Card key={visit.id} className="border-amber-200 bg-white shadow-none">
+                <CardContent className="flex flex-col gap-3 p-3.5 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-[var(--tr1-navy)]">{visit.pharmacyName}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {dateTime(visit.scheduledStartAt)}{visit.city ? ` · ${visit.city}` : ""}
+                    </p>
+                  </div>
+                  <Button asChild size="sm" className="shrink-0">
+                    <Link href={`/dashboard/pharmacies/open/${visit.brandPharmacyId}?visit=${visit.id}`}>
+                      Clôturer la visite
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {nextEvent ? (
         <section>
