@@ -330,7 +330,7 @@ function PerformanceFranceMap({
           <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-[#8d9297]" />Pharmacie : objectif non défini</span>
           <span className="flex items-center gap-1.5"><span className="size-3 rounded-full border-2 border-amber-600 bg-transparent" />Action ouverte</span>
         </div>
-        <div className="relative min-h-[38rem] flex-1 overflow-hidden bg-[#fdf8f1]">
+        <div className="relative aspect-[21/16] w-full overflow-hidden bg-[#fdf8f1]">
           <svg
             aria-label="Carte de performance du réseau"
             className="absolute inset-0 h-full w-full"
