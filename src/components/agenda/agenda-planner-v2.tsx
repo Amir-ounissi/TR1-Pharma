@@ -375,12 +375,14 @@ export function AgendaPlanner({
         <ActionPanel date={date} actions={dayActions} backlog={backlog} />
       </div>
 
-      <VisitSheet
-        pharmacies={pharmacies}
-        open={visitOpen}
-        onOpenChange={setVisitOpen}
-        defaultStart={visitStart}
-      />
+      {visitOpen ? (
+        <VisitSheet
+          pharmacies={pharmacies}
+          open={visitOpen}
+          onOpenChange={setVisitOpen}
+          defaultStart={visitStart}
+        />
+      ) : null}
 
       {moveFeedback ? (
         <div className="fixed bottom-5 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-xl border bg-[var(--tr1-navy)] px-4 py-3 text-sm text-white shadow-xl">
