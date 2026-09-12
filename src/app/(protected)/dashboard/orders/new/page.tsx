@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { SlidersHorizontal } from "lucide-react";
 import { redirect } from "next/navigation";
-import { MobileQuickOrderForm } from "@/components/orders/mobile-quick-order-form";
-import { QuickOrderForm } from "@/components/orders/quick-order-form";
+import { ResponsiveQuickOrderForm } from "@/components/orders/responsive-quick-order-form";
 import { QuickOrderEntryModes } from "@/components/orders/quick-order-entry-modes";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -157,16 +156,7 @@ export default async function NewOrderPage({
     isAgent,
   };
 
-  const quickOrderForm = (
-    <>
-      <div className="md:hidden">
-        <MobileQuickOrderForm {...sharedOrderProps} />
-      </div>
-      <div className="hidden md:block">
-        <QuickOrderForm {...sharedOrderProps} />
-      </div>
-    </>
-  );
+  const quickOrderForm = <ResponsiveQuickOrderForm {...sharedOrderProps} />;
 
   return (
     <div className="space-y-4 sm:space-y-6">
