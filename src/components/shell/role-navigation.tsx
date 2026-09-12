@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { NavigationIcon } from "@/components/shell/navigation-icons";
 import type { SaasCapability } from "@/lib/saas/capabilities";
 import { cn } from "@/lib/utils";
@@ -19,6 +19,7 @@ export function RoleNavigation({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
 
   return (
     <nav aria-label="Navigation principale" className="space-y-7">
@@ -30,6 +31,7 @@ export function RoleNavigation({
           <div className="space-y-1">
             {section.items.map((item) => {
               const active = isNavigationItemActive(pathname, item.href);
+              const warmRoute = () => router.prefetch(item.href);
               return (
                 <Link
                   aria-current={active ? "page" : undefined}
@@ -40,6 +42,10 @@ export function RoleNavigation({
                   )}
                   href={item.href}
                   key={item.href}
+                  prefetch={false}
+                  onPointerEnter={warmRoute}
+                  onPointerDown={warmRoute}
+                  onFocus={warmRoute}
                   onClick={onNavigate}
                 >
                   <NavigationIcon className={cn("size-[1.05rem]", active ? "text-[var(--tr1-orange)]" : "text-sidebar-foreground/52 group-hover:text-sidebar-foreground")} name={item.icon} />
