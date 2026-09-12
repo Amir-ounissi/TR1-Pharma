@@ -7,6 +7,14 @@ import type { SaasCapability } from "@/lib/saas/capabilities";
 import { cn } from "@/lib/utils";
 import { getNavigationSections, isNavigationItemActive, type NavigationScope } from "@/lib/ux/navigation";
 
+const performanceMapItem = {
+  href: "/dashboard/network/performance-map",
+  label: "Carte de performance",
+  shortLabel: "Carte",
+  icon: "map",
+  capability: "performance" as const,
+};
+
 export function RoleNavigation({
   role,
   scope = "tenant",
@@ -20,10 +28,22 @@ export function RoleNavigation({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const sections = getNavigationSections(role, scope, capabilities).map((section) => {
+    const performanceIndex = section.items.findIndex((item) => item.href === "/dashboard/network/commercial");
+    if (performanceIndex < 0 || section.items.some((item) => item.href === performanceMapItem.href)) return section;
+    return {
+      ...section,
+      items: [
+        ...section.items.slice(0, performanceIndex + 1),
+        performanceMapItem,
+        ...section.items.slice(performanceIndex + 1),
+      ],
+    };
+  });
 
   return (
     <nav aria-label="Navigation principale" className="space-y-7">
-      {getNavigationSections(role, scope, capabilities).map((section) => (
+      {sections.map((section) => (
         <section key={section.label} aria-labelledby={`nav-${section.label}`}>
           <p id={`nav-${section.label}`} className="mb-2.5 px-3 font-mono text-[0.57rem] font-bold uppercase tracking-[0.18em] text-sidebar-foreground/42">
             {section.label}
