@@ -218,7 +218,7 @@ export default async function FieldPage() {
     ) ?? (relations ?? []).find((relation) => relation.pharmacy_id === event.pharmacy_id);
 
   const activeEvents = events.filter(
-    (event) => Date.parse(event.end_at) >= Date.now(),
+    (event) => Date.parse(event.end_at) >= Date.parse(nowIso),
   );
   const nextEvent =
     activeEvents.find((event) => event.status === "in_progress") ??
