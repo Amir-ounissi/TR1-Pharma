@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   AlertTriangle,
   Building2,
@@ -62,7 +62,11 @@ export function PerformanceMap({
   const sortedPharmacies = useMemo(() => {
     const rows = [...dataset.pharmacies];
     if (tableSort === "revenue") return rows.sort((a, b) => b.revenueHt - a.revenueHt);
-    if (tableSort === "alerts") return rows.sort((a, b) => b.overdueAlerts - a.overdueAlerts || b.openAlerts - a.openAlerts || b.priorityScore - a.priorityScore);
+    if (tableSort === "alerts") {
+      return rows.sort(
+        (a, b) => b.overdueAlerts - a.overdueAlerts || b.openAlerts - a.openAlerts || b.priorityScore - a.priorityScore,
+      );
+    }
     if (tableSort === "name") return rows.sort((a, b) => a.name.localeCompare(b.name, "fr"));
     return rows.sort((a, b) => b.priorityScore - a.priorityScore || b.revenueHt - a.revenueHt);
   }, [dataset.pharmacies, tableSort]);
@@ -70,8 +74,18 @@ export function PerformanceMap({
   return (
     <div className="space-y-4">
       <section className="grid gap-px overflow-hidden rounded-xl border border-[var(--tr1-line-strong)] bg-[var(--tr1-line-strong)] sm:grid-cols-2 xl:grid-cols-6">
-        <Metric icon={CircleDollarSign} label={dataset.productScopeLabel ? `CA · ${dataset.productScopeLabel}` : "CA facturé HT"} value={formatCurrency(dataset.metrics.revenueHt)} detail={`${dataset.from} → ${dataset.to}`} />
-        <Metric icon={Target} label="Atteinte objectif" value={dataset.metrics.objectiveComparable ? formatPercent(dataset.metrics.objectiveAttainment) : "Non comparable"} detail={dataset.metrics.objectiveComparable ? "Objectif du périmètre sélectionné" : "Filtres plus fins que l’objectif défini"} />
+        <Metric
+          icon={CircleDollarSign}
+          label={dataset.productScopeLabel ? `CA · ${dataset.productScopeLabel}` : "CA facturé HT"}
+          value={formatCurrency(dataset.metrics.revenueHt)}
+          detail={`${formatDate(dataset.from)} → ${formatDate(dataset.to)}`}
+        />
+        <Metric
+          icon={Target}
+          label="Atteinte objectif"
+          value={dataset.metrics.objectiveComparable ? formatPercent(dataset.metrics.objectiveAttainment) : "Non comparable"}
+          detail={dataset.metrics.objectiveComparable ? "Objectif du périmètre sélectionné" : "Filtres plus fins que l’objectif défini"}
+        />
         <Metric icon={Building2} label="Pharmacies actives" value={formatNumber(dataset.metrics.activePharmacies)} detail="Dans le périmètre affiché" />
         <Metric icon={MapPinned} label="Implantations" value={formatNumber(dataset.metrics.implantations)} detail="Sur la période" />
         <Metric icon={TrendingUp} label="Taux de réassort" value={formatPercent(dataset.metrics.reorderRate)} detail="Pharmacies commandantes avec ≥1 réassort" />
@@ -79,7 +93,7 @@ export function PerformanceMap({
       </section>
 
       <section className="grid min-h-[42rem] gap-3 xl:grid-cols-[17rem_minmax(0,1fr)_20rem]">
-        <FilterPanel filters={filters} options={options} />
+        <FilterPanel from={dataset.from} to={dataset.to} filters={filters} options={options} />
         <PerformanceFranceMap
           pharmacies={dataset.pharmacies}
           territories={dataset.territories}
@@ -134,10 +148,14 @@ export function PerformanceMap({
               </TableHeader>
               <TableBody>
                 {sortedPharmacies.map((pharmacy) => (
-                  <TableRow key={pharmacy.id} className="cursor-pointer" onClick={() => {
-                    setSelectedPharmacyId(pharmacy.id);
-                    setSelectedTerritoryId(null);
-                  }}>
+                  <TableRow
+                    key={pharmacy.id}
+                    className="cursor-pointer"
+                    onClick={() => {
+                      setSelectedPharmacyId(pharmacy.id);
+                      setSelectedTerritoryId(null);
+                    }}
+                  >
                     <TableCell>
                       <p className="font-medium">{pharmacy.name}</p>
                       <p className="text-xs text-muted-foreground">{[pharmacy.postalCode, pharmacy.city].filter(Boolean).join(" ") || "—"}</p>
@@ -150,7 +168,13 @@ export function PerformanceMap({
                     <TableCell>{formatNumber(pharmacy.reorders)}</TableCell>
                     <TableCell>{pharmacy.healthStatusLabel}</TableCell>
                     <TableCell><span className="text-muted-foreground">Non défini</span></TableCell>
-                    <TableCell>{pharmacy.openAlerts ? <span className="font-semibold text-amber-700">{pharmacy.openAlerts}{pharmacy.overdueAlerts ? ` · ${pharmacy.overdueAlerts} en retard` : ""}</span> : "—"}</TableCell>
+                    <TableCell>
+                      {pharmacy.openAlerts ? (
+                        <span className="font-semibold text-amber-700">
+                          {pharmacy.openAlerts}{pharmacy.overdueAlerts ? ` · ${pharmacy.overdueAlerts} en retard` : ""}
+                        </span>
+                      ) : "—"}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -162,7 +186,17 @@ export function PerformanceMap({
   );
 }
 
-function FilterPanel({ filters, options }: { filters: PerformanceMapFilters; options: PerformanceMapFilterOptions }) {
+function FilterPanel({
+  from,
+  to,
+  filters,
+  options,
+}: {
+  from: string;
+  to: string;
+  filters: PerformanceMapFilters;
+  options: PerformanceMapFilterOptions;
+}) {
   return (
     <details className="group h-fit rounded-xl border border-[var(--tr1-line-strong)] bg-[var(--card)]" open>
       <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 [&::-webkit-details-marker]:hidden">
@@ -171,8 +205,8 @@ function FilterPanel({ filters, options }: { filters: PerformanceMapFilters; opt
       </summary>
       <form action="/dashboard/network/performance-map" className="space-y-3 border-t border-[var(--tr1-line)] p-3">
         <div className="grid grid-cols-2 gap-2">
-          <Field label="Du"><input className={fieldClass} defaultValue={filtersFromDocument("from")} name="from" type="date" /></Field>
-          <Field label="Au"><input className={fieldClass} defaultValue={filtersFromDocument("to")} name="to" type="date" /></Field>
+          <Field label="Du"><input className={fieldClass} defaultValue={from} name="from" type="date" /></Field>
+          <Field label="Au"><input className={fieldClass} defaultValue={to} name="to" type="date" /></Field>
         </div>
         <label className="relative block">
           <span className="sr-only">Rechercher</span>
@@ -186,28 +220,41 @@ function FilterPanel({ filters, options }: { filters: PerformanceMapFilters; opt
           <span className="font-mono text-[0.55rem] font-bold uppercase tracking-[0.1em] text-muted-foreground">Produit / gamme</span>
           <select className={fieldClass} name="product" defaultValue={filters.product ?? "all"}>
             <option value="all">Tous les produits</option>
-            {options.families.length ? <optgroup label="Gammes">{options.families.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</optgroup> : null}
-            <optgroup label="Produits">{options.products.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</optgroup>
+            {options.families.length ? (
+              <optgroup label="Gammes">
+                {options.families.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </optgroup>
+            ) : null}
+            <optgroup label="Produits">
+              {options.products.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </optgroup>
           </select>
         </label>
         <SelectField label="Statut pharmacie" name="status" value={filters.status} options={options.statuses} allLabel="Tous les statuts" />
         <SelectField label="Potentiel" name="potential" value={filters.potential} options={options.potentials} allLabel="Tous les potentiels" />
         <SelectField label="Priorité" name="priority" value={filters.priority} options={options.priorities} allLabel="Toutes les priorités" />
-        <input type="hidden" name="from" value={filtersFromDocument("from")} />
-        <input type="hidden" name="to" value={filtersFromDocument("to")} />
         <Button className="w-full" type="submit">Appliquer</Button>
-        <Button asChild className="w-full" type="button" variant="ghost"><Link href="/dashboard/network/performance-map"><RotateCcw className="size-3.5" />Réinitialiser</Link></Button>
+        <Button asChild className="w-full" type="button" variant="ghost">
+          <Link href="/dashboard/network/performance-map"><RotateCcw className="size-3.5" />Réinitialiser</Link>
+        </Button>
       </form>
     </details>
   );
 }
 
-function filtersFromDocument(name: "from" | "to") {
-  if (typeof window === "undefined") return "";
-  return new URLSearchParams(window.location.search).get(name) ?? "";
-}
-
-function SelectField({ label, name, value, options, allLabel }: { label: string; name: string; value: string | null; options: Array<{ value: string; label: string }>; allLabel: string }) {
+function SelectField({
+  label,
+  name,
+  value,
+  options,
+  allLabel,
+}: {
+  label: string;
+  name: string;
+  value: string | null;
+  options: Array<{ value: string; label: string }>;
+  allLabel: string;
+}) {
   return (
     <label className="block space-y-1">
       <span className="font-mono text-[0.55rem] font-bold uppercase tracking-[0.1em] text-muted-foreground">{label}</span>
@@ -219,8 +266,13 @@ function SelectField({ label, name, value, options, allLabel }: { label: string;
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <label className="block space-y-1"><span className="font-mono text-[0.55rem] font-bold uppercase tracking-[0.1em] text-muted-foreground">{label}</span>{children}</label>;
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label className="block space-y-1">
+      <span className="font-mono text-[0.55rem] font-bold uppercase tracking-[0.1em] text-muted-foreground">{label}</span>
+      {children}
+    </label>
+  );
 }
 
 const fieldClass = "h-10 w-full rounded-md border border-[var(--tr1-line-strong)] bg-white px-3 text-sm";
@@ -253,10 +305,19 @@ function PerformanceFranceMap({
     name: feature.properties.nom,
     d: featureToPath(feature, viewport),
   })), [viewport]);
-  const points = useMemo(() => spreadPoints(pharmacies.filter((pharmacy) => pharmacy.latitude != null && pharmacy.longitude != null).map((pharmacy) => ({
-    pharmacy,
-    point: projectCoordinate({ latitude: pharmacy.latitude!, longitude: pharmacy.longitude! }, viewport, MAP_WIDTH, MAP_HEIGHT),
-  }))), [pharmacies, viewport]);
+  const points = useMemo(() => spreadPoints(
+    pharmacies
+      .filter((pharmacy) => pharmacy.latitude != null && pharmacy.longitude != null)
+      .map((pharmacy) => ({
+        pharmacy,
+        point: projectCoordinate(
+          { latitude: pharmacy.latitude!, longitude: pharmacy.longitude! },
+          viewport,
+          MAP_WIDTH,
+          MAP_HEIGHT,
+        ),
+      })),
+  ), [pharmacies, viewport]);
 
   return (
     <Card className="min-h-[42rem] overflow-hidden py-0">
@@ -270,7 +331,12 @@ function PerformanceFranceMap({
           <span className="flex items-center gap-1.5"><span className="size-3 rounded-full border-2 border-amber-600 bg-transparent" />Action ouverte</span>
         </div>
         <div className="relative min-h-[38rem] flex-1 overflow-hidden bg-[#fdf8f1]">
-          <svg aria-label="Carte de performance du réseau" className="absolute inset-0 h-full w-full" preserveAspectRatio="xMidYMid meet" viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}>
+          <svg
+            aria-label="Carte de performance du réseau"
+            className="absolute inset-0 h-full w-full"
+            preserveAspectRatio="xMidYMid meet"
+            viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}
+          >
             <g stroke="#d6c8b7" strokeWidth="0.8">
               {paths.map((path) => {
                 const territory = territoryByDepartment.get(path.code);
@@ -307,14 +373,26 @@ function PerformanceFranceMap({
               );
             })}
           </div>
-          {!pharmacies.length ? <div className="absolute inset-0 grid place-items-center p-8 text-center text-sm text-muted-foreground">Aucune pharmacie ne correspond aux filtres sélectionnés.</div> : null}
+          {!pharmacies.length ? (
+            <div className="absolute inset-0 grid place-items-center p-8 text-center text-sm text-muted-foreground">
+              Aucune pharmacie ne correspond aux filtres sélectionnés.
+            </div>
+          ) : null}
         </div>
       </CardContent>
     </Card>
   );
 }
 
-function DetailPanel({ dataset, pharmacy, territory }: { dataset: PerformanceMapDataset; pharmacy: PerformanceMapPharmacy | null; territory: PerformanceMapTerritory | null }) {
+function DetailPanel({
+  dataset,
+  pharmacy,
+  territory,
+}: {
+  dataset: PerformanceMapDataset;
+  pharmacy: PerformanceMapPharmacy | null;
+  territory: PerformanceMapTerritory | null;
+}) {
   const defaultStart = useMemo(() => {
     const date = new Date(Date.now() + 24 * 60 * 60 * 1000);
     date.setMinutes(0, 0, 0);
@@ -340,7 +418,9 @@ function DetailPanel({ dataset, pharmacy, territory }: { dataset: PerformanceMap
           <div className="rounded-lg border border-[var(--tr1-line)] bg-muted/35 p-3">
             <p className="font-mono text-[0.55rem] font-bold uppercase tracking-[0.1em] text-muted-foreground">Atteinte d’objectif pharmacie</p>
             <p className="mt-1 font-semibold text-[var(--tr1-navy)]">Non définie</p>
-            <p className="mt-1 text-xs text-muted-foreground">Les objectifs TR1 sont actuellement définis au niveau marque, secteur ou commercial. Aucun score pharmacie n’est extrapolé.</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Les objectifs TR1 sont actuellement définis au niveau marque, secteur ou commercial. Aucun score pharmacie n’est extrapolé.
+            </p>
           </div>
           <Datum label="Secteur" value={pharmacy.territoryName ?? "Sans secteur"} />
           <Datum label="Commercial" value={pharmacy.agentName ?? "Non affectée"} />
@@ -361,7 +441,9 @@ function DetailPanel({ dataset, pharmacy, territory }: { dataset: PerformanceMap
             />
           ) : null}
           <details className="rounded-xl border border-[var(--tr1-line)] bg-background p-3">
-            <summary className="flex cursor-pointer items-center gap-2 font-semibold text-[var(--tr1-navy)]"><CalendarPlus className="size-4" />Planifier une visite</summary>
+            <summary className="flex cursor-pointer items-center gap-2 font-semibold text-[var(--tr1-navy)]">
+              <CalendarPlus className="size-4" />Planifier une visite
+            </summary>
             <div className="mt-3">
               <FieldVisitCreateForm
                 defaultBrandId={dataset.brandId}
@@ -377,7 +459,9 @@ function DetailPanel({ dataset, pharmacy, territory }: { dataset: PerformanceMap
               />
             </div>
           </details>
-          <Button asChild className="w-full" variant="outline"><Link href={`/dashboard/pharmacies/${pharmacy.id}`}>Ouvrir la fiche pharmacie</Link></Button>
+          <Button asChild className="w-full" variant="outline">
+            <Link href={`/dashboard/pharmacies/${pharmacy.id}`}>Ouvrir la fiche pharmacie</Link>
+          </Button>
         </CardContent>
       </Card>
     );
@@ -389,11 +473,17 @@ function DetailPanel({ dataset, pharmacy, territory }: { dataset: PerformanceMap
         <CardHeader>
           <p className="font-mono text-[0.6rem] font-black uppercase tracking-[0.12em] text-[var(--tr1-orange)]">Secteur</p>
           <CardTitle>{territory.name}</CardTitle>
-          <p className="text-sm text-muted-foreground">{territory.departmentCodes.length ? `Départements ${territory.departmentCodes.join(", ")}` : "Départements non configurés"}</p>
+          <p className="text-sm text-muted-foreground">
+            {territory.departmentCodes.length ? `Départements ${territory.departmentCodes.join(", ")}` : "Départements non configurés"}
+          </p>
         </CardHeader>
         <CardContent className="space-y-3">
           <Datum label="Atteinte objectif" value={formatPercent(territory.objectiveAttainment)} />
-          {territory.objectiveMetricLabel ? <p className="text-xs text-muted-foreground">Objectif lu : {territory.objectiveMetricLabel}</p> : <p className="text-xs text-muted-foreground">Aucun objectif secteur comparable sur la période.</p>}
+          {territory.objectiveMetricLabel ? (
+            <p className="text-xs text-muted-foreground">Objectif lu : {territory.objectiveMetricLabel}</p>
+          ) : (
+            <p className="text-xs text-muted-foreground">Aucun objectif secteur comparable sur la période.</p>
+          )}
           <div className="grid grid-cols-2 gap-2">
             <Datum label="CA période" value={formatCurrency(territory.revenueHt)} />
             <Datum label="Pharmacies" value={formatNumber(territory.pharmacyCount)} />
@@ -418,10 +508,24 @@ function DetailPanel({ dataset, pharmacy, territory }: { dataset: PerformanceMap
   );
 }
 
-function Metric({ icon: Icon, label, value, detail, accent = false }: { icon: typeof Users; label: string; value: string; detail: string; accent?: boolean }) {
+function Metric({
+  icon: Icon,
+  label,
+  value,
+  detail,
+  accent = false,
+}: {
+  icon: typeof Users;
+  label: string;
+  value: string;
+  detail: string;
+  accent?: boolean;
+}) {
   return (
     <article className="flex min-w-0 items-center gap-3 bg-[var(--card)] px-3 py-3">
-      <span className={`grid size-8 shrink-0 place-items-center rounded-md border border-[var(--tr1-line)] bg-white/75 ${accent ? "text-amber-700" : "text-[var(--tr1-orange)]"}`}><Icon className="size-3.5" /></span>
+      <span className={`grid size-8 shrink-0 place-items-center rounded-md border border-[var(--tr1-line)] bg-white/75 ${accent ? "text-amber-700" : "text-[var(--tr1-orange)]"}`}>
+        <Icon className="size-3.5" />
+      </span>
       <div className="min-w-0">
         <p className="truncate font-mono text-xl font-black tracking-[-0.06em] text-[var(--tr1-navy)]">{value}</p>
         <p className="truncate font-mono text-[0.52rem] font-black uppercase tracking-[0.1em] text-muted-foreground">{label}</p>
@@ -432,7 +536,12 @@ function Metric({ icon: Icon, label, value, detail, accent = false }: { icon: ty
 }
 
 function Datum({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-lg border border-[var(--tr1-line)] bg-white/60 p-2.5"><p className="font-mono text-[0.52rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">{label}</p><p className="mt-1 text-sm font-semibold text-[var(--tr1-navy)]">{value}</p></div>;
+  return (
+    <div className="rounded-lg border border-[var(--tr1-line)] bg-white/60 p-2.5">
+      <p className="font-mono text-[0.52rem] font-bold uppercase tracking-[0.08em] text-muted-foreground">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-[var(--tr1-navy)]">{value}</p>
+    </div>
+  );
 }
 
 function LegendSwatch({ fill, label }: { fill: string; label: string }) {
@@ -458,6 +567,10 @@ function formatPercent(value: number | null) {
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(value);
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "short" }).format(new Date(`${value}T00:00:00.000Z`));
 }
 
 function spreadPoints(source: Array<{ pharmacy: PerformanceMapPharmacy; point: { x: number; y: number } }>) {
