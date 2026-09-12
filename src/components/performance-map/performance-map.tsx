@@ -393,12 +393,7 @@ function DetailPanel({
   pharmacy: PerformanceMapPharmacy | null;
   territory: PerformanceMapTerritory | null;
 }) {
-  const defaultStart = useMemo(() => {
-    const date = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    date.setMinutes(0, 0, 0);
-    const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-    return local.toISOString().slice(0, 16);
-  }, []);
+  const defaultStart = `${shiftDate(dataset.to, 1)}T09:00`;
 
   if (pharmacy) {
     return (
@@ -571,6 +566,12 @@ function formatNumber(value: number) {
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "short" }).format(new Date(`${value}T00:00:00.000Z`));
+}
+
+function shiftDate(value: string, days: number) {
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day + days));
+  return date.toISOString().slice(0, 10);
 }
 
 function spreadPoints(source: Array<{ pharmacy: PerformanceMapPharmacy; point: { x: number; y: number } }>) {
