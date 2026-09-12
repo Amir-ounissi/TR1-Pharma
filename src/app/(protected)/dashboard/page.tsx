@@ -177,10 +177,10 @@ export default async function DashboardPage() {
   return (
     <main className="space-y-6">
       <CommercialEventTracker eventName="manager_commercial_dashboard_viewed" />
-      <PageHeader eyebrow={`Pilotage commercial · ${brand.name}`} title="Je constate, je comprends, j’agis" description="Le dashboard reste orienté décision: objectifs clés, alertes prioritaires, activité terrain et comptes à traiter." tone="dark" />
+      <PageHeader eyebrow={`Vue d’ensemble · ${brand.name}`} title="Où en est la marque, et où agir maintenant ?" description="Votre briefing commercial : trajectoire, santé du réseau, écarts majeurs et décisions prioritaires." tone="dark" />
 
       <section aria-labelledby="objective-title" className="space-y-3">
-        <SectionHeader id="objective-title" title="Objectifs principaux" description="Lecture commerciale sur les 30 derniers jours." action={<Button asChild variant="outline"><Link href="/dashboard/network?view=overview">Ouvrir Performance <ArrowRight /></Link></Button>} />
+        <SectionHeader id="objective-title" title="1. Ma trajectoire" description="Résultats, objectifs et projection sur les 30 derniers jours." action={<Button asChild variant="outline"><Link href="/dashboard/network/commercial">Analyser la performance <ArrowRight /></Link></Button>} />
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {topObjectives.length ? topObjectives.map((objective) => (
             <Card key={objective.metric_key}>
@@ -207,9 +207,29 @@ export default async function DashboardPage() {
         </div>
       </section>
 
+      <section aria-labelledby="network-health-title" className="space-y-3">
+        <SectionHeader id="network-health-title" title="2. La santé de mon réseau" description="Les indicateurs qui montrent si la marque progresse réellement en pharmacie." action={<Button asChild variant="outline"><Link href="/dashboard/pharmacies">Ouvrir le réseau <ArrowRight /></Link></Button>} />
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            ["Pharmacies actives", formatCompactNumber(metrics.active_pharmacies), "Comptes actifs sur la période"],
+            ["Implantations", formatCompactNumber(metrics.implantations), "Nouveaux comptes ouverts"],
+            ["Premier réassort", formatCompactPercent(metrics.first_reorder_rate), "Transformation après implantation"],
+            ["Comptes à risque", formatCompactNumber(metrics.at_risk_accounts), "Comptes qui demandent une action"],
+          ].map(([label, value, detail]) => (
+            <Card key={label}>
+              <CardContent className="pt-5">
+                <p className="font-mono text-2xl font-black tracking-[-0.05em] text-[var(--tr1-navy)]">{value}</p>
+                <p className="mt-2 text-sm font-semibold">{label}</p>
+                <p className="text-xs text-muted-foreground">{detail}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+
       <section aria-labelledby="now-title" className="space-y-3">
-        <SectionHeader id="now-title" title="À traiter maintenant" description="Les signaux les plus urgents de votre réseau." action={<Button asChild variant="outline"><Link href="/dashboard/commercial-health">Voir toutes les priorités <ArrowRight /></Link></Button>} />
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <SectionHeader id="now-title" title="3. Les écarts à examiner" description="Les signaux qui expliquent où la trajectoire se dégrade." action={<Button asChild variant="outline"><Link href="/dashboard/network/commercial">Comprendre les écarts <ArrowRight /></Link></Button>} />
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {actions.map((action) => (
             <Link key={action.label} href={`/dashboard/commercial-health?filter=${action.filter}`} className="rounded-[0.45rem] border border-[var(--tr1-line)] bg-card p-4 transition hover:border-[var(--tr1-orange)]/55 hover:bg-white/45">
               <div className="flex items-center justify-between"><action.icon className={`size-4 ${action.tone}`} /><strong className="font-mono text-2xl tracking-[-0.07em]">{action.value}</strong></div>
@@ -221,18 +241,18 @@ export default async function DashboardPage() {
 
       <section className="grid gap-4 xl:grid-cols-[1.4fr_.6fr]">
         <Card>
-          <CardHeader className="flex-row items-center justify-between"><CardTitle>Comptes prioritaires</CardTitle><Badge variant="secondary">Score explicable</Badge></CardHeader>
+          <CardHeader className="flex-row items-center justify-between"><div><CardTitle>4. Les décisions à prendre</CardTitle><p className="mt-1 text-sm text-muted-foreground">Chaque priorité indique la raison et ouvre l’action suivante.</p></div><Badge variant="secondary">5 priorités max.</Badge></CardHeader>
           <CardContent className="space-y-3">
             {rows.length ? rows.map((row) => (
               <Link key={row.brand_pharmacy_id} href={`/dashboard/pharmacies/${row.brand_pharmacy_id}`} className="flex min-h-16 items-center justify-between gap-4 rounded-[0.4rem] border border-[var(--tr1-line)] p-3 hover:bg-white/45">
-                <div><p className="font-semibold">{row.pharmacy_name}</p><p className="text-sm text-muted-foreground">{presentationLabel(row.health_status)} · {row.recommendation}</p></div>
-                <span className="shrink-0 rounded-[0.25rem] bg-[#0f2740] px-3 py-1 font-mono text-xs font-bold text-white">{row.priority_score}</span>
+                <div><p className="font-semibold">{row.pharmacy_name}</p><p className="text-sm text-muted-foreground"><span className="font-medium text-foreground">Pourquoi :</span> {presentationLabel(row.health_status)} · {row.recommendation}</p></div>
+                <div className="flex shrink-0 items-center gap-2"><span className="rounded-[0.25rem] bg-[#0f2740] px-3 py-1 font-mono text-xs font-bold text-white">{row.priority_score}</span><ArrowRight className="size-4 text-[var(--tr1-orange)]" /></div>
               </Link>
             )) : <p className="py-8 text-center text-muted-foreground">Aucune urgence commerciale détectée.</p>}
           </CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle>Activité terrain</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Exécution terrain</CardTitle><p className="text-sm text-muted-foreground">Ce qui a réellement été réalisé sur la période.</p></CardHeader>
           <CardContent className="grid grid-cols-2 gap-3">
             {[
               ["Animations", formatCompactNumber(metrics.animations_completed)],
@@ -243,6 +263,7 @@ export default async function DashboardPage() {
               ["Assortiment stratégique", formatCompactPercent(metrics.strategic_distribution_rate)],
             ].map(([label, value]) => <div key={label} className="rounded-[0.35rem] border border-[var(--tr1-line)] bg-transparent p-3"><p className="font-mono text-lg font-black tracking-[-0.05em]">{value}</p><p className="font-mono text-[0.58rem] uppercase tracking-[0.08em] text-muted-foreground">{label}</p></div>)}
           </CardContent>
+          <CardContent className="pt-0"><Button asChild className="w-full" variant="outline"><Link href="/dashboard/missions">Piloter l’équipe & le terrain <ArrowRight /></Link></Button></CardContent>
         </Card>
       </section>
     </main>
