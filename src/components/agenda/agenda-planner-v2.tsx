@@ -92,15 +92,37 @@ const planningFilters = [
   { key: "agenda_block", label: "Créneaux" },
 ] as const;
 
-const slots = Array.from({ length: 28 }, (_, index) => {
-  const totalMinutes = 7 * 60 + index * 30;
-  return {
-    hour: Math.floor(totalMinutes / 60),
-    minute: totalMinutes % 60,
-  };
-});
+const SLOT_MINUTES = 30;
+const SLOT_HEIGHT_PX = 56;
+const GRID_START_MINUTES = 7 * 60;
+const GRID_END_MINUTES = 21 * 60;
+const slots = Array.from(
+  { length: (GRID_END_MINUTES - GRID_START_MINUTES) / SLOT_MINUTES },
+  (_, index) => {
+    const totalMinutes = GRID_START_MINUTES + index * SLOT_MINUTES;
+    return {
+      hour: Math.floor(totalMinutes / 60),
+      minute: totalMinutes % 60,
+    };
+  },
+);
 
 const actionKinds = new Set(["task", "report"]);
+
+type EventPlacement = {
+  startIndex: number;
+  topOffset: number;
+  height: number;
+  visibleStart: number;
+  visibleEnd: number;
+};
+
+type PositionedEvent = {
+  event: AgendaEvent;
+  placement: EventPlacement;
+  lane: number;
+  laneCount: number;
+};
 
 export function AgendaPlanner({
   date,
@@ -491,81 +513,100 @@ function DesktopTimeline({
   onDrop: (event: React.DragEvent, day: string, hour: number, minute: number) => void;
   onAddVisit: (startAt: string) => void;
 }) {
+  const positionedByDay = new Map(days.map((day) => [day, layoutDayEvents(events, day)]));
+
   return (
-    <div className={cn("grid", view === "week" ? "min-w-[66rem] grid-cols-[4.25rem_repeat(7,minmax(8.5rem,1fr))]" : "grid-cols-[4.5rem_minmax(0,1fr)]")}>
-      <div className="border-b bg-slate-50/70" />
-      {days.map((day) => (
-        <div className="border-b border-l bg-slate-50/70 px-2 py-3 text-center" key={day}>
+    <div
+      className={cn(
+        "relative grid",
+        view === "week"
+          ? "min-w-[66rem] grid-cols-[4.25rem_repeat(7,minmax(8.5rem,1fr))]"
+          : "grid-cols-[4.5rem_minmax(0,1fr)]",
+      )}
+      style={{ gridTemplateRows: `auto repeat(${slots.length}, ${SLOT_HEIGHT_PX}px)` }}
+    >
+      <div className="border-b bg-slate-50/70" style={{ gridColumn: 1, gridRow: 1 }} />
+      {days.map((day, dayIndex) => (
+        <div
+          className="border-b border-l bg-slate-50/70 px-2 py-3 text-center"
+          key={day}
+          style={{ gridColumn: dayIndex + 2, gridRow: 1 }}
+        >
           <p className="text-[0.65rem] font-bold uppercase text-muted-foreground">{formatDate(day, { weekday: "short" })}</p>
           <p className="text-sm font-black text-[var(--tr1-navy)]">{formatDate(day, { day: "numeric", month: "short" })}</p>
         </div>
       ))}
-      {slots.map((slot) => (
-        <TimelineSlot
-          key={`${slot.hour}-${slot.minute}`}
-          hour={slot.hour}
-          minute={slot.minute}
-          days={days}
-          events={events}
-          contextEvents={contextEvents}
-          canCreateVisit={canCreateVisit}
-          onDrop={onDrop}
-          onAddVisit={onAddVisit}
-        />
-      ))}
-    </div>
-  );
-}
 
-function TimelineSlot({
-  hour,
-  minute,
-  days,
-  events,
-  contextEvents,
-  canCreateVisit,
-  onDrop,
-  onAddVisit,
-}: {
-  hour: number;
-  minute: number;
-  days: string[];
-  events: AgendaEvent[];
-  contextEvents: AgendaEvent[];
-  canCreateVisit: boolean;
-  onDrop: (event: React.DragEvent, day: string, hour: number, minute: number) => void;
-  onAddVisit: (startAt: string) => void;
-}) {
-  return (
-    <>
-      <div className={cn("border-t px-2 text-right font-mono text-[0.62rem] text-muted-foreground", minute === 0 ? "pt-2" : "pt-1")}>
-        {formatSlot(hour, minute)}
-      </div>
-      {days.map((day) => {
-        const items = events.filter((event) => eventFallsInSlot(event, day, hour, minute));
-        return (
-          <div
-            className={cn("group relative min-h-14 border-l border-t p-1 transition", minute === 30 ? "border-t-dashed" : "", "hover:bg-slate-50/70")}
-            onDragOver={(event) => event.preventDefault()}
-            onDrop={(event) => onDrop(event, day, hour, minute)}
-            key={day}
-          >
-            {items.length ? (
-              items.map((item) => <EventCard event={item} relatedContext={relatedContext(item, contextEvents)} key={item.event_key} />)
-            ) : canCreateVisit ? (
-              <button
-                type="button"
-                onClick={() => onAddVisit(slotLocal(day, hour, minute))}
-                className="absolute inset-1 flex items-center justify-center rounded-lg border border-dashed border-transparent text-[0.68rem] font-semibold text-transparent transition hover:border-[var(--tr1-orange)]/35 hover:bg-orange-50/55 hover:text-[var(--tr1-orange)] focus-visible:border-[var(--tr1-orange)]/50 focus-visible:text-[var(--tr1-orange)]"
-                aria-label={`Ajouter une visite le ${day} à ${formatSlot(hour, minute)}`}
-              >
-                <Plus className="mr-1 size-3" /> Ajouter une visite
-              </button>
-            ) : null}
-          </div>
-        );
-      })}
-    </>
+      {slots.map((slot, slotIndex) => (
+        <div
+          className={cn(
+            "border-t px-2 text-right font-mono text-[0.62rem] text-muted-foreground",
+            slot.minute === 0 ? "pt-2" : "pt-1",
+          )}
+          key={`time-${slot.hour}-${slot.minute}`}
+          style={{ gridColumn: 1, gridRow: slotIndex + 2 }}
+        >
+          {formatSlot(slot.hour, slot.minute)}
+        </div>
+      ))}
+
+      {days.flatMap((day, dayIndex) =>
+        slots.map((slot, slotIndex) => {
+          const occupied = events.some((event) => eventOverlapsSlot(event, day, slot.hour, slot.minute));
+          return (
+            <div
+              className={cn(
+                "group relative border-l border-t transition hover:bg-slate-50/70",
+                slot.minute === 30 && "border-t-dashed",
+              )}
+              key={`${day}-${slot.hour}-${slot.minute}`}
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={(event) => onDrop(event, day, slot.hour, slot.minute)}
+              style={{ gridColumn: dayIndex + 2, gridRow: slotIndex + 2 }}
+            >
+              {!occupied && canCreateVisit ? (
+                <button
+                  type="button"
+                  onClick={() => onAddVisit(slotLocal(day, slot.hour, slot.minute))}
+                  className="absolute inset-1 flex items-center justify-center rounded-lg border border-dashed border-transparent text-[0.68rem] font-semibold text-transparent transition hover:border-[var(--tr1-orange)]/35 hover:bg-orange-50/55 hover:text-[var(--tr1-orange)] focus-visible:border-[var(--tr1-orange)]/50 focus-visible:text-[var(--tr1-orange)]"
+                  aria-label={`Ajouter une visite le ${day} à ${formatSlot(slot.hour, slot.minute)}`}
+                >
+                  <Plus className="mr-1 size-3" /> Ajouter une visite
+                </button>
+              ) : null}
+            </div>
+          );
+        }),
+      )}
+
+      {days.flatMap((day, dayIndex) =>
+        (positionedByDay.get(day) ?? []).map(({ event, placement, lane, laneCount }) => {
+          const width = laneCount > 1 ? `calc(${100 / laneCount}% - 3px)` : undefined;
+          const marginLeft = laneCount > 1 ? `${(lane * 100) / laneCount}%` : undefined;
+          return (
+            <div
+              key={event.event_key}
+              className="z-10 min-w-0 px-1"
+              style={{
+                gridColumn: dayIndex + 2,
+                gridRow: placement.startIndex + 2,
+                alignSelf: "start",
+                height: `${placement.height}px`,
+                marginTop: `${placement.topOffset}px`,
+                width,
+                marginLeft,
+              }}
+            >
+              <EventCard
+                event={event}
+                relatedContext={relatedContext(event, contextEvents)}
+                fillHeight
+              />
+            </div>
+          );
+        }),
+      )}
+    </div>
   );
 }
 
@@ -618,16 +659,20 @@ function MobileWeekTimeline({ days, events, contextEvents, onAddVisit }: { days:
   );
 }
 
-function EventCard({ event, relatedContext }: { event: AgendaEvent; relatedContext: AgendaEvent[] }) {
+function EventCard({ event, relatedContext, fillHeight = false }: { event: AgendaEvent; relatedContext: AgendaEvent[]; fillHeight?: boolean }) {
   const router = useRouter();
   const [rescheduleAt, setRescheduleAt] = useState(isoToParisLocal(event.start_at).slice(0, 16));
   const [saving, startSaving] = useTransition();
   const duration = eventDurationMinutes(event);
+  const compact = fillHeight && duration <= 30;
+  const showTime = !fillHeight || duration >= 45;
+  const showCity = !fillHeight || duration >= 60;
+  const showContext = !fillHeight || duration >= 90;
   const tone = event.source_kind === "field_visit"
-    ? "border-l-[var(--tr1-orange)] bg-orange-50/55"
+    ? "border-l-[var(--tr1-orange)] bg-orange-50/95"
     : event.source_kind === "mission"
-      ? "border-l-blue-500 bg-blue-50/55"
-      : "border-l-slate-400 bg-slate-50";
+      ? "border-l-blue-500 bg-blue-50/95"
+      : "border-l-slate-400 bg-slate-50/95";
 
   return (
     <Sheet>
@@ -640,21 +685,22 @@ function EventCard({ event, relatedContext }: { event: AgendaEvent; relatedConte
             drag.dataTransfer.setData("text/field-visit-start", isoToParisLocal(event.start_at).slice(0, 16));
           }}
           className={cn(
-            "mb-1 w-full rounded-xl border border-[var(--tr1-line)] border-l-4 p-2.5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-orange)]",
+            "w-full rounded-xl border border-[var(--tr1-line)] border-l-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-orange)]",
+            fillHeight ? "h-full min-h-0 overflow-hidden p-2" : "mb-1 p-2.5",
             tone,
             event.draggable && "cursor-grab active:cursor-grabbing",
           )}
         >
-          <div className="flex items-start gap-2">
+          <div className="flex h-full items-start gap-2 overflow-hidden">
             {event.draggable ? <GripVertical className="mt-0.5 size-3.5 shrink-0 text-muted-foreground/60" /> : null}
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 overflow-hidden">
               <div className="flex items-start justify-between gap-2">
-                <strong className="line-clamp-2 text-sm text-[var(--tr1-navy)]">{event.pharmacy_name || event.title}</strong>
+                <strong className={cn("text-sm text-[var(--tr1-navy)]", compact ? "line-clamp-1" : "line-clamp-2")}>{event.pharmacy_name || event.title}</strong>
                 {duration > 0 ? <Badge variant="outline" className="shrink-0">{formatDuration(duration)}</Badge> : null}
               </div>
-              <p className="mt-1 text-xs text-muted-foreground"><Clock3 className="mr-1 inline size-3" />{eventTimeRange(event)}</p>
-              {event.city ? <p className="mt-1 text-xs text-muted-foreground"><MapPin className="mr-1 inline size-3" />{event.city}</p> : null}
-              {relatedContext.length ? <div className="mt-2"><Badge variant="outline"><Sparkles className="mr-1 size-3" />{relatedContext.length === 1 ? "Animation / activité aujourd’hui" : `${relatedContext.length} infos terrain`}</Badge></div> : null}
+              {showTime ? <p className="mt-1 text-xs text-muted-foreground"><Clock3 className="mr-1 inline size-3" />{eventTimeRange(event)}</p> : null}
+              {showCity && event.city ? <p className="mt-1 line-clamp-1 text-xs text-muted-foreground"><MapPin className="mr-1 inline size-3" />{event.city}</p> : null}
+              {showContext && relatedContext.length ? <div className="mt-2"><Badge variant="outline"><Sparkles className="mr-1 size-3" />{relatedContext.length === 1 ? "Animation / activité aujourd’hui" : `${relatedContext.length} infos terrain`}</Badge></div> : null}
             </div>
           </div>
         </button>
@@ -934,14 +980,72 @@ function eventTimeRange(event: AgendaEvent) { return `${eventTime(event.start_at
 function slotLocal(day: string, hour: number, minute: number) { return `${day}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`; }
 function formatSlot(hour: number, minute: number) { return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`; }
 
-function eventFallsInSlot(event: AgendaEvent, day: string, hour: number, minute: number) {
-  const local = isoToParisLocal(event.start_at);
-  if (!local.startsWith(`${day}T`)) return false;
-  const eventHour = Number(local.slice(11, 13));
-  const eventMinute = Number(local.slice(14, 16));
-  const eventTotal = eventHour * 60 + eventMinute;
-  const slotTotal = hour * 60 + minute;
-  return eventTotal >= slotTotal && eventTotal < slotTotal + 30;
+function minutesSinceMidnight(value: string) {
+  const local = isoToParisLocal(value);
+  return Number(local.slice(11, 13)) * 60 + Number(local.slice(14, 16));
+}
+
+function eventPlacement(event: AgendaEvent): EventPlacement | null {
+  const rawStart = minutesSinceMidnight(event.start_at);
+  const rawEnd = rawStart + eventDurationMinutes(event);
+  const visibleStart = Math.max(rawStart, GRID_START_MINUTES);
+  const visibleEnd = Math.min(rawEnd, GRID_END_MINUTES);
+  if (visibleEnd <= visibleStart) return null;
+
+  const fromGridStart = visibleStart - GRID_START_MINUTES;
+  const startIndex = Math.floor(fromGridStart / SLOT_MINUTES);
+  const minuteOffset = fromGridStart % SLOT_MINUTES;
+  const topOffset = (minuteOffset / SLOT_MINUTES) * SLOT_HEIGHT_PX + 4;
+  const visibleDuration = visibleEnd - visibleStart;
+  const height = Math.max(24, (visibleDuration / SLOT_MINUTES) * SLOT_HEIGHT_PX - 8);
+
+  return { startIndex, topOffset, height, visibleStart, visibleEnd };
+}
+
+function eventOverlapsSlot(event: AgendaEvent, day: string, hour: number, minute: number) {
+  if (localDay(event.start_at) !== day) return false;
+  const placement = eventPlacement(event);
+  if (!placement) return false;
+  const slotStart = hour * 60 + minute;
+  const slotEnd = slotStart + SLOT_MINUTES;
+  return placement.visibleStart < slotEnd && placement.visibleEnd > slotStart;
+}
+
+function layoutDayEvents(events: AgendaEvent[], day: string): PositionedEvent[] {
+  const candidates = events
+    .filter((event) => localDay(event.start_at) === day)
+    .map((event) => ({ event, placement: eventPlacement(event) }))
+    .filter((item): item is { event: AgendaEvent; placement: EventPlacement } => item.placement !== null)
+    .sort((a, b) => a.placement.visibleStart - b.placement.visibleStart || a.placement.visibleEnd - b.placement.visibleEnd);
+
+  if (!candidates.length) return [];
+
+  const groups: Array<typeof candidates> = [];
+  let current: typeof candidates = [];
+  let groupEnd = -1;
+
+  for (const candidate of candidates) {
+    if (current.length && candidate.placement.visibleStart >= groupEnd) {
+      groups.push(current);
+      current = [];
+      groupEnd = -1;
+    }
+    current.push(candidate);
+    groupEnd = Math.max(groupEnd, candidate.placement.visibleEnd);
+  }
+  if (current.length) groups.push(current);
+
+  return groups.flatMap((group) => {
+    const laneEnds: number[] = [];
+    const laidOut = group.map((candidate) => {
+      let lane = laneEnds.findIndex((end) => end <= candidate.placement.visibleStart);
+      if (lane === -1) lane = laneEnds.length;
+      laneEnds[lane] = candidate.placement.visibleEnd;
+      return { ...candidate, lane };
+    });
+    const laneCount = Math.max(1, laneEnds.length);
+    return laidOut.map((item) => ({ ...item, laneCount }));
+  });
 }
 
 function eventDurationMinutes(event: AgendaEvent) {
