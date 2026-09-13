@@ -185,15 +185,8 @@ export function PerformanceSlippyMap({
   return (
     <Card className="min-h-[42rem] overflow-hidden py-0">
       <CardContent className="flex h-full flex-col p-0">
-        <div className="border-b border-[var(--tr1-line)] bg-white/80 px-3 py-2 text-[0.64rem] text-muted-foreground">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-            <span className="font-semibold text-[var(--tr1-navy)]">Secteurs</span>
-            <LegendSwatch fill="#dcebe2" label="≥ 100 %" />
-            <LegendSwatch fill="#f6e7cc" label="80–99 %" />
-            <LegendSwatch fill="#f1d6d3" label="< 80 %" />
-            <LegendSwatch fill="#eee8df" label="Sans objectif comparable" />
-          </div>
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-[var(--tr1-line)] pt-1.5">
+        <div className="border-b border-[var(--tr1-line)] bg-white/88 px-3 py-2 text-[0.64rem] text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
             <span className="font-semibold text-[var(--tr1-navy)]">Pharmacies</span>
             <MarkerShapeLegend shape="circle" label="Client" />
             <MarkerShapeLegend shape="diamond" label="Prospect" />
@@ -203,11 +196,18 @@ export function PerformanceSlippyMap({
             <HealthLegend fill="#2f855a" label="Saine" />
             <HealthLegend fill="#d97706" label="À surveiller" />
             <HealthLegend fill="#c2413d" label="À risque" />
-            <HealthLegend fill="#8d9297" label="Dormante / sans signal" />
+            <HealthLegend fill="#8d9297" label="Sans signal" />
             <span className="mx-0.5 h-3 w-px bg-[var(--tr1-line-strong)]" />
-            <AlertLegend tone="open" label="Action ouverte" />
-            <AlertLegend tone="overdue" label="En retard" />
-            <span className="whitespace-nowrap">Taille = priorité</span>
+            <AlertBadgeLegend tone="open" label="Action" />
+            <AlertBadgeLegend tone="overdue" label="Retard" />
+            <span className="whitespace-nowrap font-medium text-[#687483]">Taille = priorité</span>
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-[var(--tr1-line)] pt-1 text-[0.58rem]">
+            <span className="font-semibold text-[var(--tr1-navy)]">Secteurs</span>
+            <LegendSwatch fill="#dcebe2" label="≥ 100 %" />
+            <LegendSwatch fill="#f6e7cc" label="80–99 %" />
+            <LegendSwatch fill="#f1d6d3" label="< 80 %" />
+            <LegendSwatch fill="#eee8df" label="Sans objectif" />
           </div>
         </div>
         <div
@@ -266,7 +266,7 @@ export function PerformanceSlippyMap({
           </svg>
           <div className="pointer-events-none absolute inset-0 z-20">
             {pharmacyPoints.map(({ pharmacy, point }) => {
-              if (point.x < -40 || point.y < -40 || point.x > size.width + 40 || point.y > size.height + 40) return null;
+              if (point.x < -44 || point.y < -44 || point.x > size.width + 44 || point.y > size.height + 44) return null;
               const selected = pharmacy.id === selectedPharmacyId;
               const marker = pharmacyMarkerVisual(pharmacy);
               const markerSize = pharmacyMarkerSize(pharmacy.priorityLevel, selected);
@@ -274,7 +274,7 @@ export function PerformanceSlippyMap({
               return (
                 <button
                   aria-label={`${pharmacy.name} · ${pharmacy.commercialStatusLabel} · ${pharmacy.healthStatusLabel} · priorité ${pharmacy.priorityLevelLabel}${pharmacy.openAlerts ? ` · ${pharmacy.openAlerts} action(s) ouverte(s)` : ""}`}
-                  className={`group pointer-events-auto absolute grid -translate-x-1/2 -translate-y-1/2 place-items-center bg-transparent p-0 transition-transform duration-150 hover:scale-125 focus-visible:scale-125 focus-visible:outline-none ${selected ? "z-30 scale-125" : "z-10"}`}
+                  className={`group pointer-events-auto absolute grid -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-transparent p-0 transition-transform duration-150 hover:scale-110 focus-visible:scale-110 focus-visible:outline-none ${selected ? "z-30 scale-110" : "z-10"}`}
                   key={pharmacy.id}
                   onClick={(event) => {
                     event.stopPropagation();
@@ -283,7 +283,7 @@ export function PerformanceSlippyMap({
                     focusPharmacy(pharmacy);
                   }}
                   style={{
-                    boxShadow: pharmacyMarkerShadow(alertTone, selected),
+                    boxShadow: pharmacyMarkerShadow(selected),
                     height: markerSize,
                     left: point.x,
                     top: point.y,
@@ -293,13 +293,24 @@ export function PerformanceSlippyMap({
                 >
                   <span
                     aria-hidden="true"
-                    className="block h-[74%] w-[74%] border border-white/90 shadow-[0_1px_3px_rgba(7,20,33,.28)]"
+                    className="block h-[88%] w-[88%] border-[1.5px] border-white shadow-[0_2px_5px_rgba(7,20,33,.30)]"
                     style={{
                       backgroundColor: marker.color,
-                      borderRadius: marker.shape === "circle" ? "999px" : marker.shape === "square" ? "22%" : undefined,
+                      borderRadius: marker.shape === "circle" ? "999px" : marker.shape === "square" ? "20%" : undefined,
                       clipPath: markerClipPath(marker.shape),
                     }}
                   />
+                  {alertTone !== "none" ? (
+                    <span
+                      aria-hidden="true"
+                      className="absolute -right-0.5 -top-0.5 block rounded-full border-2 border-white shadow-[0_1px_3px_rgba(7,20,33,.3)]"
+                      style={{
+                        backgroundColor: alertTone === "overdue" ? "#c2413d" : "#e67929",
+                        height: Math.max(7, Math.round(markerSize * 0.32)),
+                        width: Math.max(7, Math.round(markerSize * 0.32)),
+                      }}
+                    />
+                  ) : null}
                   <span className="pointer-events-none absolute left-1/2 top-0 z-50 hidden min-w-[11.5rem] -translate-x-1/2 -translate-y-[calc(100%+0.65rem)] rounded-lg border border-[#0b1e32]/12 bg-white/95 px-2.5 py-2 text-left text-[0.65rem] leading-4 text-[#445265] shadow-[0_10px_28px_rgba(7,20,33,.2)] backdrop-blur group-hover:block group-focus-visible:block">
                     <strong className="block truncate text-[0.7rem] text-[var(--tr1-navy)]">{pharmacy.name}</strong>
                     <span className="block">{pharmacy.commercialStatusLabel} · {pharmacy.healthStatusLabel}</span>
@@ -332,14 +343,14 @@ function LegendSwatch({ fill, label }: { fill: string; label: string }) {
   return <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm border border-black/10" style={{ backgroundColor: fill }} />{label}</span>;
 }
 function MarkerShapeLegend({ shape, label }: { shape: MarkerShape; label: string }) {
-  return <span className="flex items-center gap-1.5"><span className="grid size-3.5 place-items-center"><span className="block size-3 bg-[#0b1e32]" style={{ borderRadius: shape === "circle" ? "999px" : shape === "square" ? "22%" : undefined, clipPath: markerClipPath(shape) }} /></span>{label}</span>;
+  return <span className="flex items-center gap-1.5"><span className="grid size-4 place-items-center"><span className="block size-3.5 bg-[#0b1e32]" style={{ borderRadius: shape === "circle" ? "999px" : shape === "square" ? "20%" : undefined, clipPath: markerClipPath(shape) }} /></span>{label}</span>;
 }
 function HealthLegend({ fill, label }: { fill: string; label: string }) {
-  return <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full border border-white shadow-[0_0_0_1px_rgba(7,20,33,.12)]" style={{ backgroundColor: fill }} />{label}</span>;
+  return <span className="flex items-center gap-1.5"><span className="size-3 rounded-full border border-white shadow-[0_0_0_1px_rgba(7,20,33,.12)]" style={{ backgroundColor: fill }} />{label}</span>;
 }
-function AlertLegend({ tone, label }: { tone: Exclude<AlertTone, "none">; label: string }) {
-  const color = tone === "overdue" ? "#c2413d" : "#d97706";
-  return <span className="flex items-center gap-1.5"><span className="size-3 rounded-full bg-white" style={{ boxShadow: `0 0 0 2px ${color}` }} />{label}</span>;
+function AlertBadgeLegend({ tone, label }: { tone: Exclude<AlertTone, "none">; label: string }) {
+  const color = tone === "overdue" ? "#c2413d" : "#e67929";
+  return <span className="flex items-center gap-1.5"><span className="relative grid size-4 place-items-center"><span className="size-3 rounded-full bg-[#0b1e32]" /><span className="absolute -right-px -top-px size-2 rounded-full border border-white" style={{ backgroundColor: color }} /></span>{label}</span>;
 }
 function territoryFill(value: number | null) {
   if (value == null) return "#eee8df";
@@ -359,8 +370,7 @@ function pharmacyMarkerVisual(pharmacy: PerformanceMapPharmacy): { shape: Marker
   return { shape, color: healthColor(pharmacy.healthStatus) };
 }
 function healthColor(status: string) {
-  if (status === "healthy") return "#2f855a";
-  if (status === "reorder_expected" || status === "awaiting_first_reorder") return "#2563a6";
+  if (status === "healthy" || status === "reorder_expected" || status === "awaiting_first_reorder") return "#2f855a";
   if (status === "reorder_due_soon") return "#d97706";
   if (status === "at_risk" || status === "reorder_overdue") return "#c2413d";
   if (status === "dormant") return "#8d9297";
@@ -369,18 +379,17 @@ function healthColor(status: string) {
 function markerClipPath(shape: MarkerShape) {
   if (shape === "diamond") return "polygon(50% 0, 100% 50%, 50% 100%, 0 50%)";
   if (shape === "triangle") return "polygon(50% 0, 100% 100%, 0 100%)";
-  if (shape === "square") return "inset(0 round 22%)";
+  if (shape === "square") return "inset(0 round 20%)";
   return "circle(50% at 50% 50%)";
 }
 function pharmacyMarkerSize(priority: string, selected: boolean) {
-  const base = priority === "strategic" ? 24 : priority === "high" ? 20 : priority === "low" ? 13 : 16;
+  const base = priority === "strategic" ? 30 : priority === "high" ? 26 : priority === "low" ? 18 : 22;
   return selected ? base + 4 : base;
 }
-function pharmacyMarkerShadow(alertTone: AlertTone, selected: boolean) {
-  const baseShadow = "0 2px 7px rgba(7,20,33,.28)";
-  const alertRing = alertTone === "overdue" ? "0 0 0 3px #c2413d" : alertTone === "open" ? "0 0 0 3px #d97706" : "";
-  const selectedRing = selected ? "0 0 0 6px rgba(230,121,41,.32)" : "";
-  return [alertRing, selectedRing, baseShadow].filter(Boolean).join(", ");
+function pharmacyMarkerShadow(selected: boolean) {
+  const selectedRing = selected ? "0 0 0 5px rgba(230,121,41,.30)" : "";
+  const baseShadow = "0 2px 7px rgba(7,20,33,.24)";
+  return [selectedRing, baseShadow].filter(Boolean).join(", ");
 }
 function formatCompactCurrency(value: number) {
   return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(value);
