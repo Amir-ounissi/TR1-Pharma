@@ -11,12 +11,22 @@ export type PerformanceMapNextAction = {
   dueAt: string;
 };
 
+export type PerformanceMapObjective = {
+  scopeType: "brand" | "territory" | "agent";
+  territoryId: string | null;
+  userId: string | null;
+  metricKey: string;
+  attainmentPercent: number | null;
+  periodStart: string;
+};
+
 export type PerformanceMapPharmacy = {
   id: string;
   pharmacyId: string;
   name: string;
   city: string | null;
   postalCode: string | null;
+  searchText: string;
   latitude: number | null;
   longitude: number | null;
   locationPrecision: "exact" | "department" | "missing";
@@ -24,6 +34,7 @@ export type PerformanceMapPharmacy = {
   territoryName: string | null;
   agentUserId: string | null;
   agentName: string | null;
+  groupId: string | null;
   groupName: string | null;
   commercialStatus: string;
   commercialStatusLabel: string;
@@ -80,6 +91,7 @@ export type PerformanceMapDataset = {
   lastUpdatedAt: string | null;
   productScopeLabel: string | null;
   metrics: PerformanceMapMetrics;
+  objectives: PerformanceMapObjective[];
   pharmacies: PerformanceMapPharmacy[];
   territories: PerformanceMapTerritory[];
 };
