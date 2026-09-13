@@ -26,21 +26,20 @@ test("landing desktop, CTA, preuve produit et capture du lead", async ({ page })
   await expect(page.getByRole("heading", { name: "Du sell-in au sell-out, pilotez chaque action qui fait vendre en pharmacie." })).toBeVisible();
   await expect(page.getByText("TR1 réunit visites commerciales, commandes, animations, formations et suivi du réseau dans un même cockpit terrain. Vos équipes savent où agir. Vous savez ce qui a été fait et ce qui doit suivre.")).toBeVisible();
   await expect(page.getByText("Données de démonstration").first()).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Une pharmacie. Tout son historique terrain. Une prochaine action claire." })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Avant la visite, sachez où aller et pourquoi." })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Après l’implantation, organisez ce qui fera vivre la marque." })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Formez les équipes. Retrouvez ce qui a vraiment été transmis." })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Pendant que le terrain agit, la direction voit où intervenir ensuite." })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "TR1 est né sur le terrain." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Trois métiers.*Un même suivi/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Développez vos comptes." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Activez vos points de vente." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Accompagnez le conseil." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Le terrain avance.*Vous savez où agir/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Né sur le terrain." })).toBeVisible();
   await expect(page.locator("main > section")).toHaveCount(5);
   await expect(page.getByRole("heading", { name: /Une action terrain avance/i })).toHaveCount(0);
   await expect(page.getByText("Essayez une question")).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Demander une démo" })).toHaveCount(3);
 
-  await expect(page.getByText("Ma journée terrain")).toBeVisible();
-  await expect(page.getByText("Dernière commande")).toBeVisible();
-  await expect(page.getByText("Sell-out déclaré")).toBeVisible();
-  await expect(page.getByText("CA observé après intervention")).toBeVisible();
+  await expect(page.getByLabel("Exemple de priorités pour la marque")).toBeVisible();
+  await expect(page.getByText("Quiz, scores et progression", { exact: true })).toBeVisible();
+  await expect(page.getByRole("radiogroup")).toHaveCount(0);
   await page.screenshot({ path: `${artifacts}/landing-desktop.png`, fullPage: true });
 
   await page.getByRole("link", { name: "Demander une démo" }).first().click();
@@ -64,7 +63,7 @@ test("landing mobile reste lisible et sans débordement", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Du sell-in au sell-out, pilotez chaque action qui fait vendre en pharmacie." })).toBeVisible();
   await expect(page.getByRole("button", { name: "Voir les pharmacies en liste" })).toBeVisible();
-  await expect(page.getByText("Ma journée terrain")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Accompagnez le conseil." })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
   await page.screenshot({ path: `${artifacts}/landing-mobile.png`, fullPage: true });
 });
