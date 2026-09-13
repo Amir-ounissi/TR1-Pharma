@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { PerformanceMapZoomEnhancer } from "@/components/performance-map/performance-map-zoom-enhancer";
 import { PwaRuntime } from "@/components/pwa-runtime";
 import "./globals.css";
 import "./mobile-pharmacy-fixes.css";
@@ -47,6 +48,7 @@ export default function RootLayout({
     <html lang="fr">
       <body className="min-h-screen antialiased">
         {children}
+        <PerformanceMapZoomEnhancer />
         <PwaRuntime />
       </body>
     </html>
