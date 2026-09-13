@@ -4,15 +4,16 @@ import { useEffect } from "react";
 
 const MAP_WIDTH = 840;
 const MAP_HEIGHT = 640;
-const MIN_SCALE = 1;
-const MAX_SCALE = 6;
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 7;
 const ZOOM_FACTOR = 1.35;
-const TRANSITION_MS = 220;
+const ANIMATION_MS = 240;
 
-type TransformState = {
-  scale: number;
+type ViewBoxState = {
   x: number;
   y: number;
+  width: number;
+  height: number;
 };
 
 type PointerPoint = {
@@ -22,9 +23,21 @@ type PointerPoint = {
 
 type PinchState = {
   distance: number;
-  contentX: number;
-  contentY: number;
+  viewport: ViewBoxState;
+  anchorX: number;
+  anchorY: number;
+  ratioX: number;
+  ratioY: number;
 };
+
+type MarkerBasePoint = {
+  x: number;
+  y: number;
+  left: string;
+  top: string;
+};
+
+const FULL_VIEW: ViewBoxState = { x: 0, y: 0, width: MAP_WIDTH, height: MAP_HEIGHT };
 
 export function PerformanceMapZoomEnhancer() {
   useEffect(() => {
@@ -70,131 +83,184 @@ function enhancePerformanceMap(svg: SVGSVGElement) {
   );
   if (!markerLayer) return () => undefined;
 
+  const markerBasePoints = new Map<HTMLButtonElement, MarkerBasePoint>();
+  markerLayer.querySelectorAll<HTMLButtonElement>("button").forEach((button) => {
+    const left = parseFloat(button.style.left);
+    const top = parseFloat(button.style.top);
+    if (!Number.isFinite(left) || !Number.isFinite(top)) return;
+    markerBasePoints.set(button, {
+      x: (left / 100) * MAP_WIDTH,
+      y: (top / 100) * MAP_HEIGHT,
+      left: button.style.left,
+      top: button.style.top,
+    });
+  });
+
   const controls = createControls();
   container.appendChild(controls.root);
 
   const originalTouchAction = container.style.touchAction;
   const originalCursor = container.style.cursor;
+  const originalViewBox = svg.getAttribute("viewBox");
   container.style.touchAction = "none";
-  container.style.cursor = "grab";
 
-  let state: TransformState = { scale: MIN_SCALE, x: 0, y: 0 };
+  let viewport: ViewBoxState = { ...FULL_VIEW };
   const pointers = new Map<number, PointerPoint>();
   let pinch: PinchState | null = null;
   let dragLast: PointerPoint | null = null;
   let movedDuringGesture = false;
   let suppressClickUntil = 0;
-  let transitionTimer: number | null = null;
+  let animationFrame: number | null = null;
 
-  const setTransition = (enabled: boolean) => {
-    const value = enabled ? `transform ${TRANSITION_MS}ms cubic-bezier(.2,.8,.2,1)` : "none";
-    svg.style.transition = value;
-    markerLayer.style.transition = value;
-    if (transitionTimer != null) window.clearTimeout(transitionTimer);
-    if (enabled) {
-      transitionTimer = window.setTimeout(() => {
-        svg.style.transition = "none";
-        markerLayer.style.transition = "none";
-        transitionTimer = null;
-      }, TRANSITION_MS);
-    }
-  };
-
-  const clampState = (next: TransformState): TransformState => {
+  const aspectRatio = () => {
     const width = container.clientWidth;
     const height = container.clientHeight;
-    const scale = clamp(next.scale, MIN_SCALE, MAX_SCALE);
-    if (!width || !height || scale <= MIN_SCALE) return { scale: MIN_SCALE, x: 0, y: 0 };
+    return width > 0 && height > 0 ? width / height : MAP_WIDTH / MAP_HEIGHT;
+  };
 
-    const minX = width - width * scale;
-    const minY = height - height * scale;
+  const zoomLevel = (state = viewport) => MAP_WIDTH / state.width;
+
+  const clampViewport = (next: ViewBoxState): ViewBoxState => {
+    const ratio = aspectRatio();
+    const minWidth = MAP_WIDTH / MAX_ZOOM;
+    let width = clamp(next.width, minWidth, MAP_WIDTH);
+    let height = width / ratio;
+
+    if (height > MAP_HEIGHT) {
+      height = MAP_HEIGHT;
+      width = height * ratio;
+    }
+
+    if (width >= MAP_WIDTH - 0.01 && height >= MAP_HEIGHT - 0.01) return { ...FULL_VIEW };
+
     return {
-      scale,
-      x: clamp(next.x, minX, 0),
-      y: clamp(next.y, minY, 0),
+      x: clamp(next.x, 0, MAP_WIDTH - width),
+      y: clamp(next.y, 0, MAP_HEIGHT - height),
+      width,
+      height,
     };
   };
 
-  const render = (next: TransformState, animate = false) => {
-    state = clampState(next);
-    setTransition(animate);
-    const transform = `translate(${state.x}px, ${state.y}px) scale(${state.scale})`;
-    svg.style.transformOrigin = "0 0";
-    markerLayer.style.transformOrigin = "0 0";
-    svg.style.transform = transform;
-    markerLayer.style.transform = transform;
-    controls.scale.textContent = `${Math.round(state.scale * 100)} %`;
-    controls.zoomOut.disabled = state.scale <= MIN_SCALE + 0.001;
-    controls.zoomIn.disabled = state.scale >= MAX_SCALE - 0.001;
-    container.style.cursor = state.scale > MIN_SCALE ? "grab" : "default";
+  const updateMarkers = () => {
+    markerBasePoints.forEach((base, button) => {
+      const left = ((base.x - viewport.x) / viewport.width) * 100;
+      const top = ((base.y - viewport.y) / viewport.height) * 100;
+      button.style.left = `${left}%`;
+      button.style.top = `${top}%`;
+      button.style.visibility = left < -4 || left > 104 || top < -4 || top > 104 ? "hidden" : "visible";
+    });
+  };
+
+  const render = (next: ViewBoxState) => {
+    viewport = clampViewport(next);
+    svg.setAttribute("viewBox", `${viewport.x} ${viewport.y} ${viewport.width} ${viewport.height}`);
+    updateMarkers();
+
+    const zoom = zoomLevel();
+    controls.scale.textContent = `${zoom.toFixed(zoom < 2 ? 1 : 0)}×`;
+    controls.zoomOut.disabled = zoom <= MIN_ZOOM + 0.001;
+    controls.zoomIn.disabled = zoom >= MAX_ZOOM - 0.001;
+    container.style.cursor = zoom > MIN_ZOOM ? "grab" : "default";
+  };
+
+  const animateTo = (target: ViewBoxState) => {
+    if (animationFrame != null) cancelAnimationFrame(animationFrame);
+    const from = { ...viewport };
+    const to = clampViewport(target);
+    const startedAt = performance.now();
+
+    const tick = (now: number) => {
+      const progress = clamp((now - startedAt) / ANIMATION_MS, 0, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      render({
+        x: lerp(from.x, to.x, eased),
+        y: lerp(from.y, to.y, eased),
+        width: lerp(from.width, to.width, eased),
+        height: lerp(from.height, to.height, eased),
+      });
+      if (progress < 1) animationFrame = requestAnimationFrame(tick);
+      else animationFrame = null;
+    };
+
+    animationFrame = requestAnimationFrame(tick);
+  };
+
+  const cancelAnimation = () => {
+    if (animationFrame != null) cancelAnimationFrame(animationFrame);
+    animationFrame = null;
   };
 
   const localPoint = (clientX: number, clientY: number) => {
     const rect = container.getBoundingClientRect();
-    return { x: clientX - rect.left, y: clientY - rect.top };
-  };
-
-  const zoomAround = (targetScale: number, point: PointerPoint, animate = false) => {
-    const scale = clamp(targetScale, MIN_SCALE, MAX_SCALE);
-    const ratio = scale / state.scale;
-    render(
-      {
-        scale,
-        x: point.x - (point.x - state.x) * ratio,
-        y: point.y - (point.y - state.y) * ratio,
-      },
-      animate,
-    );
-  };
-
-  const reset = (animate = true) => render({ scale: MIN_SCALE, x: 0, y: 0 }, animate);
-
-  const focusBaseBounds = (bounds: { x: number; y: number; width: number; height: number }, maxScale = 4.5) => {
-    const width = container.clientWidth;
-    const height = container.clientHeight;
-    if (!width || !height || bounds.width <= 0 || bounds.height <= 0) return;
-
-    const pixelBounds = {
-      x: (bounds.x / MAP_WIDTH) * width,
-      y: (bounds.y / MAP_HEIGHT) * height,
-      width: (bounds.width / MAP_WIDTH) * width,
-      height: (bounds.height / MAP_HEIGHT) * height,
+    return {
+      x: clientX - rect.left,
+      y: clientY - rect.top,
+      width: rect.width,
+      height: rect.height,
     };
-    const padding = 0.72;
-    const targetScale = clamp(
-      Math.min((width * padding) / pixelBounds.width, (height * padding) / pixelBounds.height),
-      1.5,
-      maxScale,
-    );
-    const centerX = pixelBounds.x + pixelBounds.width / 2;
-    const centerY = pixelBounds.y + pixelBounds.height / 2;
-    render(
-      {
-        scale: targetScale,
-        x: width / 2 - centerX * targetScale,
-        y: height / 2 - centerY * targetScale,
-      },
-      true,
-    );
+  };
+
+  const mapPointAtClient = (clientX: number, clientY: number, state = viewport) => {
+    const point = localPoint(clientX, clientY);
+    return {
+      x: state.x + (point.x / Math.max(point.width, 1)) * state.width,
+      y: state.y + (point.y / Math.max(point.height, 1)) * state.height,
+      ratioX: point.x / Math.max(point.width, 1),
+      ratioY: point.y / Math.max(point.height, 1),
+    };
+  };
+
+  const zoomAround = (factor: number, clientX: number, clientY: number, animate = false) => {
+    const anchor = mapPointAtClient(clientX, clientY);
+    const targetWidth = clamp(viewport.width / factor, MAP_WIDTH / MAX_ZOOM, MAP_WIDTH);
+    const targetHeight = targetWidth / aspectRatio();
+    const target = {
+      x: anchor.x - anchor.ratioX * targetWidth,
+      y: anchor.y - anchor.ratioY * targetHeight,
+      width: targetWidth,
+      height: targetHeight,
+    };
+    if (animate) animateTo(target);
+    else render(target);
+  };
+
+  const reset = () => animateTo({ ...FULL_VIEW });
+
+  const fitBounds = (bounds: { x: number; y: number; width: number; height: number }, maxZoom = 5.5) => {
+    const ratio = aspectRatio();
+    const horizontalPadding = Math.max(bounds.width * 0.18, 18);
+    const verticalPadding = Math.max(bounds.height * 0.18, 18);
+    let width = Math.max(bounds.width + horizontalPadding * 2, MAP_WIDTH / maxZoom);
+    let height = Math.max(bounds.height + verticalPadding * 2, MAP_HEIGHT / maxZoom);
+
+    if (width / height > ratio) height = width / ratio;
+    else width = height * ratio;
+
+    width = Math.min(width, MAP_WIDTH);
+    height = Math.min(height, MAP_HEIGHT);
+    const centerX = bounds.x + bounds.width / 2;
+    const centerY = bounds.y + bounds.height / 2;
+
+    animateTo({
+      x: centerX - width / 2,
+      y: centerY - height / 2,
+      width,
+      height,
+    });
   };
 
   const focusPharmacy = (button: HTMLButtonElement) => {
-    const left = parseFloat(button.style.left);
-    const top = parseFloat(button.style.top);
-    if (!Number.isFinite(left) || !Number.isFinite(top)) return;
-    const width = container.clientWidth;
-    const height = container.clientHeight;
-    const baseX = (left / 100) * width;
-    const baseY = (top / 100) * height;
-    const targetScale = Math.max(state.scale, 3.4);
-    render(
-      {
-        scale: targetScale,
-        x: width / 2 - baseX * targetScale,
-        y: height / 2 - baseY * targetScale,
-      },
-      true,
-    );
+    const base = markerBasePoints.get(button);
+    if (!base) return;
+    const ratio = aspectRatio();
+    const width = MAP_WIDTH / 4.4;
+    const height = width / ratio;
+    animateTo({
+      x: base.x - width / 2,
+      y: base.y - height / 2,
+      width,
+      height,
+    });
   };
 
   const focusTerritory = (path: SVGPathElement) => {
@@ -209,32 +275,33 @@ function enhancePerformanceMap(svg: SVGSVGElement) {
 
     const boxes = matchingPaths.map((candidate) => candidate.getBBox());
     if (!boxes.length) return;
+
     const minX = Math.min(...boxes.map((box) => box.x));
     const minY = Math.min(...boxes.map((box) => box.y));
     const maxX = Math.max(...boxes.map((box) => box.x + box.width));
     const maxY = Math.max(...boxes.map((box) => box.y + box.height));
-    focusBaseBounds({ x: minX, y: minY, width: maxX - minX, height: maxY - minY });
+    fitBounds({ x: minX, y: minY, width: maxX - minX, height: maxY - minY });
   };
 
   const onWheel = (event: WheelEvent) => {
     event.preventDefault();
-    setTransition(false);
-    const point = localPoint(event.clientX, event.clientY);
-    const factor = event.deltaY < 0 ? 1.14 : 1 / 1.14;
-    zoomAround(state.scale * factor, point);
+    cancelAnimation();
+    const factor = event.deltaY < 0 ? 1.16 : 1 / 1.16;
+    zoomAround(factor, event.clientX, event.clientY);
   };
 
   const onDoubleClick = (event: MouseEvent) => {
     if ((event.target as Element | null)?.closest('[data-performance-map-zoom-controls="true"]')) return;
     event.preventDefault();
-    zoomAround(state.scale * ZOOM_FACTOR, localPoint(event.clientX, event.clientY), true);
+    zoomAround(ZOOM_FACTOR, event.clientX, event.clientY, true);
   };
 
   const onPointerDown = (event: PointerEvent) => {
     const target = event.target as Element | null;
-    if (target?.closest("button")) return;
+    if (target?.closest('[data-performance-map-zoom-controls="true"]')) return;
+    if (target?.closest("button") && markerLayer.contains(target.closest("button"))) return;
 
-    setTransition(false);
+    cancelAnimation();
     pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
     container.setPointerCapture?.(event.pointerId);
     movedDuringGesture = false;
@@ -242,15 +309,18 @@ function enhancePerformanceMap(svg: SVGSVGElement) {
     if (pointers.size === 1) {
       dragLast = { x: event.clientX, y: event.clientY };
       pinch = null;
-      if (state.scale > MIN_SCALE) container.style.cursor = "grabbing";
+      if (zoomLevel() > MIN_ZOOM) container.style.cursor = "grabbing";
     } else if (pointers.size === 2) {
       const [first, second] = [...pointers.values()];
-      const centerClient = midpoint(first, second);
-      const center = localPoint(centerClient.x, centerClient.y);
+      const center = midpoint(first, second);
+      const anchor = mapPointAtClient(center.x, center.y);
       pinch = {
         distance: distance(first, second),
-        contentX: (center.x - state.x) / state.scale,
-        contentY: (center.y - state.y) / state.scale,
+        viewport: { ...viewport },
+        anchorX: anchor.x,
+        anchorY: anchor.y,
+        ratioX: anchor.ratioX,
+        ratioY: anchor.ratioY,
       };
       dragLast = null;
     }
@@ -266,28 +336,33 @@ function enhancePerformanceMap(svg: SVGSVGElement) {
       event.preventDefault();
       const [first, second] = [...pointers.values()];
       const currentDistance = Math.max(1, distance(first, second));
-      const centerClient = midpoint(first, second);
-      const center = localPoint(centerClient.x, centerClient.y);
-      const nextScale = clamp(state.scale * (currentDistance / Math.max(1, pinch.distance)), MIN_SCALE, MAX_SCALE);
+      const scaleFactor = currentDistance / Math.max(1, pinch.distance);
+      const width = clamp(pinch.viewport.width / scaleFactor, MAP_WIDTH / MAX_ZOOM, MAP_WIDTH);
+      const height = width / aspectRatio();
+      const center = midpoint(first, second);
+      const point = localPoint(center.x, center.y);
+      const ratioX = point.x / Math.max(point.width, 1);
+      const ratioY = point.y / Math.max(point.height, 1);
       render({
-        scale: nextScale,
-        x: center.x - pinch.contentX * nextScale,
-        y: center.y - pinch.contentY * nextScale,
+        x: pinch.anchorX - ratioX * width,
+        y: pinch.anchorY - ratioY * height,
+        width,
+        height,
       });
-      pinch = {
-        distance: currentDistance,
-        contentX: (center.x - state.x) / state.scale,
-        contentY: (center.y - state.y) / state.scale,
-      };
       return;
     }
 
-    if (pointers.size === 1 && dragLast && state.scale > MIN_SCALE) {
+    if (pointers.size === 1 && dragLast && zoomLevel() > MIN_ZOOM) {
       event.preventDefault();
+      const rect = container.getBoundingClientRect();
       const dx = event.clientX - dragLast.x;
       const dy = event.clientY - dragLast.y;
       dragLast = { x: event.clientX, y: event.clientY };
-      render({ ...state, x: state.x + dx, y: state.y + dy });
+      render({
+        ...viewport,
+        x: viewport.x - (dx / Math.max(rect.width, 1)) * viewport.width,
+        y: viewport.y - (dy / Math.max(rect.height, 1)) * viewport.height,
+      });
     }
   };
 
@@ -297,10 +372,10 @@ function enhancePerformanceMap(svg: SVGSVGElement) {
     try {
       container.releasePointerCapture?.(event.pointerId);
     } catch {
-      // Pointer capture can already be released by the browser.
+      // Pointer capture may already have been released by the browser.
     }
 
-    if (movedDuringGesture) suppressClickUntil = window.performance.now() + 250;
+    if (movedDuringGesture) suppressClickUntil = performance.now() + 250;
 
     if (pointers.size === 1) {
       const remaining = [...pointers.values()][0];
@@ -309,12 +384,12 @@ function enhancePerformanceMap(svg: SVGSVGElement) {
     } else if (pointers.size === 0) {
       dragLast = null;
       pinch = null;
-      container.style.cursor = state.scale > MIN_SCALE ? "grab" : "default";
+      container.style.cursor = zoomLevel() > MIN_ZOOM ? "grab" : "default";
     }
   };
 
   const onClickCapture = (event: MouseEvent) => {
-    if (window.performance.now() < suppressClickUntil) {
+    if (performance.now() < suppressClickUntil) {
       event.preventDefault();
       event.stopPropagation();
     }
@@ -333,23 +408,17 @@ function enhancePerformanceMap(svg: SVGSVGElement) {
     if (target instanceof SVGPathElement && target.classList.contains("cursor-pointer")) focusTerritory(target);
   };
 
-  const onResize = () => render(state);
+  const onResize = () => render(viewport);
 
   controls.zoomIn.addEventListener("click", () => {
-    zoomAround(
-      state.scale * ZOOM_FACTOR,
-      { x: container.clientWidth / 2, y: container.clientHeight / 2 },
-      true,
-    );
+    const rect = container.getBoundingClientRect();
+    zoomAround(ZOOM_FACTOR, rect.left + rect.width / 2, rect.top + rect.height / 2, true);
   });
   controls.zoomOut.addEventListener("click", () => {
-    zoomAround(
-      state.scale / ZOOM_FACTOR,
-      { x: container.clientWidth / 2, y: container.clientHeight / 2 },
-      true,
-    );
+    const rect = container.getBoundingClientRect();
+    zoomAround(1 / ZOOM_FACTOR, rect.left + rect.width / 2, rect.top + rect.height / 2, true);
   });
-  controls.reset.addEventListener("click", () => reset(true));
+  controls.reset.addEventListener("click", reset);
 
   container.addEventListener("wheel", onWheel, { passive: false });
   container.addEventListener("dblclick", onDoubleClick);
@@ -361,10 +430,10 @@ function enhancePerformanceMap(svg: SVGSVGElement) {
   container.addEventListener("click", onClick);
   window.addEventListener("resize", onResize);
 
-  render(state);
+  render({ ...FULL_VIEW });
 
   return () => {
-    if (transitionTimer != null) window.clearTimeout(transitionTimer);
+    cancelAnimation();
     container.removeEventListener("wheel", onWheel);
     container.removeEventListener("dblclick", onDoubleClick);
     container.removeEventListener("pointerdown", onPointerDown);
@@ -375,12 +444,13 @@ function enhancePerformanceMap(svg: SVGSVGElement) {
     container.removeEventListener("click", onClick);
     window.removeEventListener("resize", onResize);
     controls.root.remove();
-    svg.style.removeProperty("transform");
-    svg.style.removeProperty("transform-origin");
-    svg.style.removeProperty("transition");
-    markerLayer.style.removeProperty("transform");
-    markerLayer.style.removeProperty("transform-origin");
-    markerLayer.style.removeProperty("transition");
+    if (originalViewBox) svg.setAttribute("viewBox", originalViewBox);
+    else svg.removeAttribute("viewBox");
+    markerBasePoints.forEach((base, button) => {
+      button.style.left = base.left;
+      button.style.top = base.top;
+      button.style.removeProperty("visibility");
+    });
     container.style.touchAction = originalTouchAction;
     container.style.cursor = originalCursor;
   };
@@ -394,9 +464,10 @@ function createControls() {
 
   const zoomIn = controlButton("+", "Zoom avant");
   const zoomOut = controlButton("−", "Zoom arrière");
-  const reset = controlButton("↺", "Réinitialiser le zoom");
+  const reset = controlButton("↺", "Revenir à la France entière");
   const scale = document.createElement("span");
-  scale.className = "grid h-7 min-w-11 place-items-center border-y border-[#0b1e32]/10 px-1 font-mono text-[0.55rem] font-black text-[#667384]";
+  scale.className =
+    "grid h-7 min-w-11 place-items-center border-y border-[#0b1e32]/10 px-1 font-mono text-[0.55rem] font-black text-[#667384]";
   scale.setAttribute("aria-live", "polite");
 
   root.append(zoomIn, scale, zoomOut, reset);
@@ -410,18 +481,22 @@ function controlButton(text: string, label: string) {
   button.setAttribute("aria-label", label);
   button.title = label;
   button.className =
-    "grid size-9 place-items-center bg-white text-lg font-black leading-none text-[#0b1e32] transition hover:bg-[#f6efe5] disabled:cursor-not-allowed disabled:opacity-35";
+    "grid size-9 place-items-center bg-white font-mono text-base font-black text-[#0b1e32] transition hover:bg-[#f5efe4] disabled:cursor-not-allowed disabled:opacity-35";
   return button;
 }
 
-function midpoint(a: PointerPoint, b: PointerPoint) {
-  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-}
-
-function distance(a: PointerPoint, b: PointerPoint) {
-  return Math.hypot(a.x - b.x, a.y - b.y);
-}
-
 function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
+  return Math.min(Math.max(value, min), max);
+}
+
+function lerp(from: number, to: number, progress: number) {
+  return from + (to - from) * progress;
+}
+
+function midpoint(first: PointerPoint, second: PointerPoint) {
+  return { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 };
+}
+
+function distance(first: PointerPoint, second: PointerPoint) {
+  return Math.hypot(second.x - first.x, second.y - first.y);
 }
