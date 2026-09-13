@@ -76,6 +76,13 @@ export function PerformanceSlippyMap({
     feature,
     d: geometryToScreenPath(feature.geometry, camera, size),
   })), [camera, departmentFeatures, size]);
+  const franceMaskPath = useMemo(() => {
+    const width = Math.max(1, size.width);
+    const height = Math.max(1, size.height);
+    const viewport = `M 0 0 H ${width} V ${height} H 0 Z`;
+    const france = overlayDepartments.map(({ d }) => d).filter(Boolean).join(" ");
+    return `${viewport} ${france}`;
+  }, [overlayDepartments, size.height, size.width]);
   const pharmacyPoints = useMemo(() => pharmacies.flatMap((pharmacy) => {
     if (pharmacy.longitude == null || pharmacy.latitude == null) return [];
     return [{
@@ -186,7 +193,7 @@ export function PerformanceSlippyMap({
         </div>
         <div
           aria-label="Carte interactive de performance du réseau"
-          className="relative min-h-[36rem] flex-1 touch-none select-none overflow-hidden bg-[#e8e4dc] cursor-grab active:cursor-grabbing"
+          className="relative min-h-[36rem] flex-1 touch-none select-none overflow-hidden bg-[#f5efe4] cursor-grab active:cursor-grabbing"
           onDoubleClick={onDoubleClick}
           onPointerCancel={finishPointer}
           onPointerDown={onPointerDown}
@@ -211,6 +218,7 @@ export function PerformanceSlippyMap({
             ))}
           </div>
           <svg className="absolute inset-0 z-10 h-full w-full" preserveAspectRatio="none" viewBox={`0 0 ${Math.max(1, size.width)} ${Math.max(1, size.height)}`}>
+            <path d={franceMaskPath} fill="#f5efe4" fillRule="evenodd" pointerEvents="none" />
             {overlayDepartments.map(({ feature, d }) => {
               const territory = territoryByDepartment.get(feature.properties.code);
               const selected = territory?.id === selectedTerritoryId;
