@@ -27,35 +27,28 @@ export function PerformanceMap({ dataset, filters, options }: { dataset: Perform
   const serverNavigationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const deferredSearch = useDeferredValue(localFilters.q.trim().toLocaleLowerCase("fr"));
 
-  const initialTerritory = filters.territory;
-  const initialAgent = filters.agent;
-  const initialGroup = filters.group;
-  const initialProduct = filters.product;
-  const initialStatus = filters.status;
-  const initialPotential = filters.potential;
-  const initialPriority = filters.priority;
-  const initialSearch = filters.q;
-
-  useEffect(() => {
-    setLocalFilters({
-      territory: initialTerritory,
-      agent: initialAgent,
-      group: initialGroup,
-      product: initialProduct,
-      status: initialStatus,
-      potential: initialPotential,
-      priority: initialPriority,
-      q: initialSearch,
-    });
-  }, [initialAgent, initialGroup, initialPotential, initialPriority, initialProduct, initialSearch, initialStatus, initialTerritory]);
-
-  useEffect(() => {
-    setDateDraft({ from: dataset.from, to: dataset.to });
-  }, [dataset.from, dataset.to]);
-
   useEffect(() => () => {
     if (serverNavigationTimer.current) clearTimeout(serverNavigationTimer.current);
   }, []);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      setLocalFilters({
+        territory: nullableParam(params.get("territory")),
+        agent: nullableParam(params.get("agent")),
+        group: nullableParam(params.get("group")),
+        product: nullableParam(params.get("product")),
+        status: nullableParam(params.get("status")),
+        potential: nullableParam(params.get("potential")),
+        priority: nullableParam(params.get("priority")),
+        q: params.get("q") ?? "",
+      });
+      setDateDraft({ from: params.get("from") ?? dataset.from, to: params.get("to") ?? dataset.to });
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [dataset.from, dataset.to]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -131,7 +124,9 @@ export function PerformanceMap({ dataset, filters, options }: { dataset: Perform
   };
 
   const resetFilters = () => {
+    const defaultDates = defaultDateRange();
     setLocalFilters({ territory: null, agent: null, group: null, product: null, status: null, potential: null, priority: null, q: "" });
+    setDateDraft(defaultDates);
     setSelectedPharmacyId(null);
     setSelectedTerritoryId(null);
     startTransition(() => router.replace(pathname, { scroll: false }));
@@ -275,9 +270,20 @@ function findObjective(objectives: PerformanceMapObjective[], scope: Performance
   return matching.find((objective) => objective.metricKey === "revenue_ht") ?? matching[0] ?? null;
 }
 
+function nullableParam(value: string | null) {
+  return value && value !== "all" ? value : null;
+}
+
 function setUrlParam(params: URLSearchParams, name: string, value: string | null) {
   if (value) params.set(name, value);
   else params.delete(name);
+}
+
+function defaultDateRange() {
+  const to = new Date();
+  const from = new Date(to);
+  from.setDate(from.getDate() - 29);
+  return { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) };
 }
 
 function DetailPanel({ dataset, pharmacy, territory }: { dataset: PerformanceMapDataset; pharmacy: PerformanceMapPharmacy | null; territory: PerformanceMapTerritory | null }) {
