@@ -1,36 +1,38 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { LandingAnimationDemo } from "@/components/marketing/landing-animation-demo";
 import { LandingBrandOverview } from "@/components/marketing/landing-brand-overview";
+import { LandingCommercialDemo } from "@/components/marketing/landing-commercial-demo";
 import { LandingPilotageMap } from "@/components/marketing/landing-pilotage-map";
 import { LandingTrainingDemo } from "@/components/marketing/landing-training-demo";
 import { LeadForm } from "@/components/marketing/lead-form";
 import { MarketingPageEvent, MarketingTrackedLink } from "@/components/marketing/marketing-events";
 
 export const metadata: Metadata = {
-  title: "TR1 Pharma | Visites, animations et formations en pharmacie",
+  title: "TR1 Pharma | Du sell-in au sell-out en pharmacie",
   description:
-    "Coordonnez vos commerciaux, animateurs et formateurs. Pilotez les interventions en pharmacie et suivez leurs résultats avec TR1 Pharma.",
+    "Pilotez visites commerciales, animations, formations et prochaines actions dans votre réseau officinal avec TR1 Pharma.",
 };
 
 const commercialPoints = [
-  "Historique, commandes et contexte de la pharmacie.",
-  "Visites, relances et réassorts à suivre.",
-  "Compte rendu et prochaine action depuis le terrain.",
+  "Les pharmacies à voir et la raison de la visite.",
+  "Le contexte, l’historique et les actions en attente.",
+  "Le compte rendu et la prochaine action depuis le téléphone.",
 ] as const;
 
 const animationPoints = [
-  "Intervenant, planning, produits et objectifs.",
-  "Photos, compte rendu et ventes déclarées.",
-  "Coûts, résultats observés et facturation.",
+  "Un brief, un intervenant et un objectif rattachés à la pharmacie.",
+  "Le suivi de réalisation, les preuves terrain et les ventes déclarées.",
+  "Le bilan, les coûts et la suite commerciale à préparer.",
 ] as const;
 
 const trainingPoints = [
-  "Catalogue de modules par marque, gamme ou produit.",
-  "Liste des formations et des participants par pharmacie.",
-  "Quiz ludiques dans TR1, scores et progression.",
+  "Les modules à transmettre aux équipes officinales.",
+  "Les participants et formations suivies par pharmacie.",
+  "Les résultats des quiz et les sujets à renforcer.",
 ] as const;
+
+const executionSteps = ["Commande", "Implantation", "Formation", "Animation", "Réassort", "Résultats"] as const;
 
 export default function LandingPage() {
   return (
@@ -45,7 +47,7 @@ export default function LandingPage() {
               pilotez chaque action qui fait vendre en pharmacie.
             </h1>
             <p className="mx-auto mt-6 max-w-3xl text-base leading-[1.55] text-[var(--tr1-muted)] sm:text-lg">
-              TR1 réunit vos commerciaux, animateurs et formateurs dans un même outil. Identifiez les pharmacies prioritaires, coordonnez les interventions et suivez leurs résultats.
+              TR1 réunit visites commerciales, commandes, animations, formations et suivi du réseau dans un même cockpit terrain. Vos équipes savent où agir. Vous savez ce qui a été fait et ce qui doit suivre.
             </p>
             <div className="mt-7">
               <MarketingTrackedLink
@@ -59,7 +61,7 @@ export default function LandingPage() {
               </MarketingTrackedLink>
             </div>
             <p className="mt-3 text-sm leading-6 text-[var(--tr1-muted)]">
-              30 minutes pour découvrir TR1 et échanger sur votre organisation terrain.
+              30 minutes pour découvrir TR1 à partir de votre organisation terrain.
             </p>
           </div>
 
@@ -71,59 +73,61 @@ export default function LandingPage() {
 
       <section className="scroll-mt-24 border-t border-[var(--tr1-line)] px-5 py-16 lg:px-8 lg:py-20" id="plateforme">
         <div className="mx-auto max-w-7xl">
-          <div className="max-w-3xl">
+          <div className="max-w-4xl">
             <p className="font-mono text-[.66rem] font-black uppercase tracking-[.14em] text-[var(--tr1-orange)]">La plateforme</p>
             <h2 className="mt-4 text-[2rem] font-black leading-[1.08] tracking-[-.03em] sm:text-[2.35rem]">
-              Vos équipes avancent. Votre marque garde le fil.
+              Une pharmacie. Tout son historique terrain. Une prochaine action claire.
             </h2>
-            <p className="mt-5 text-base leading-[1.55] text-[var(--tr1-muted)] sm:text-lg">
-              Chaque visite, animation et formation reste rattachée à la pharmacie, avec son objectif, son intervenant et son suivi.
+            <p className="mt-5 max-w-3xl text-base leading-[1.55] text-[var(--tr1-muted)] sm:text-lg">
+              Chaque information sert à préparer la suivante. Le commercial, l’animateur, le formateur et la marque travaillent autour du même compte pharmacie.
             </p>
           </div>
 
-          <div className="mt-12 space-y-16 lg:space-y-20">
-            <article className="grid items-center gap-8 lg:grid-cols-[.42fr_.58fr] lg:gap-12">
+          <div className="mt-8 overflow-x-auto pb-1">
+            <div className="flex min-w-[760px] items-center rounded-2xl border border-[var(--tr1-line)] bg-white px-4 py-4 shadow-[0_12px_30px_rgba(14,29,49,.04)]">
+              {executionSteps.map((step, index) => (
+                <div className="flex flex-1 items-center" key={step}>
+                  <div className="flex min-w-0 flex-1 items-center gap-2">
+                    <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--tr1-navy)] font-mono text-[.67rem] font-black text-white">{index + 1}</span>
+                    <span className="truncate text-sm font-black text-[var(--tr1-navy)]">{step}</span>
+                  </div>
+                  {index < executionSteps.length - 1 ? <ArrowRight className="mx-2 size-4 shrink-0 text-[var(--tr1-orange)]" aria-hidden="true" /> : null}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-14 space-y-16 lg:space-y-20">
+            <article className="grid items-center gap-8 lg:grid-cols-[.38fr_.62fr] lg:gap-12">
               <div>
                 <p className="font-mono text-[.64rem] font-black uppercase tracking-[.14em] text-[var(--tr1-orange)]">COMMERCIAL</p>
-                <h3 className="mt-3 text-[1.75rem] font-black leading-tight tracking-[-.025em] sm:text-[2rem]">Préparez les visites. Organisez la suite.</h3>
+                <h3 className="mt-3 text-[1.75rem] font-black leading-tight tracking-[-.025em] sm:text-[2rem]">Avant la visite, sachez où aller et pourquoi.</h3>
                 <p className="mt-4 text-base leading-[1.55] text-[var(--tr1-muted)] sm:text-[1.06rem]">
-                  Vos commerciaux retrouvent l’historique et les informations utiles avant chaque visite. Depuis leur téléphone, ils renseignent leur compte rendu, saisissent une commande et préparent la prochaine action.
+                  Une pharmacie n’a pas commandé depuis plusieurs semaines ? Une prochaine action manque ? TR1 fait remonter le contexte utile pour préparer la tournée et éviter de repartir de zéro à chaque visite.
                 </p>
                 <FeatureList items={commercialPoints} />
               </div>
-              <div className="min-w-0 rounded-2xl border border-[var(--tr1-line)] bg-white p-3 shadow-[0_14px_38px_rgba(14,29,49,.06)] sm:p-4">
-                <div className="mb-3 flex items-center justify-between gap-3 px-1">
-                  <p className="text-xs font-bold text-[var(--tr1-muted)]">Fiche pharmacie · démonstration</p>
-                  <span className="rounded-full bg-[var(--tr1-ivory)] px-2.5 py-1 text-[.68rem] font-bold text-[var(--tr1-muted)]">Démonstration</span>
-                </div>
-                <Image
-                  alt="Fiche pharmacie TR1 montrant le dernier échange et la prochaine action"
-                  className="h-auto w-full rounded-xl border border-[var(--tr1-line)]"
-                  height={600}
-                  src="/marketing/pharmacy-account.webp"
-                  width={716}
-                />
-              </div>
+              <LandingCommercialDemo />
             </article>
 
-            <article className="scroll-mt-24 grid items-center gap-8 lg:grid-cols-[.42fr_.58fr] lg:gap-12" id="animations-formations">
+            <article className="scroll-mt-24 grid items-center gap-8 lg:grid-cols-[.38fr_.62fr] lg:gap-12" id="animations-formations">
               <div>
                 <p className="font-mono text-[.64rem] font-black uppercase tracking-[.14em] text-[var(--tr1-orange)]">ANIMATIONS</p>
-                <h3 className="mt-3 text-[1.75rem] font-black leading-tight tracking-[-.025em] sm:text-[2rem]">Du brief au bilan, gardez la main sur vos animations.</h3>
+                <h3 className="mt-3 text-[1.75rem] font-black leading-tight tracking-[-.025em] sm:text-[2rem]">Après l’implantation, organisez ce qui fera vivre la marque.</h3>
                 <p className="mt-4 text-base leading-[1.55] text-[var(--tr1-muted)] sm:text-[1.06rem]">
-                  Coordonnez vos animateurs et prestataires, définissez les objectifs et planifiez les interventions. Retrouvez les comptes rendus, les preuves terrain, les ventes déclarées et le suivi de facturation.
+                  Le commercial déclenche l’animation, l’intervenant reçoit son brief et la marque retrouve le bilan au même endroit. La journée ne disparaît plus dans une chaîne de messages, de photos et de fichiers séparés.
                 </p>
                 <FeatureList items={animationPoints} />
               </div>
               <LandingAnimationDemo />
             </article>
 
-            <article className="grid items-center gap-8 lg:grid-cols-[.42fr_.58fr] lg:gap-12">
+            <article className="grid items-center gap-8 lg:grid-cols-[.38fr_.62fr] lg:gap-12">
               <div>
                 <p className="font-mono text-[.64rem] font-black uppercase tracking-[.14em] text-[var(--tr1-orange)]">FORMATIONS</p>
-                <h3 className="mt-3 text-[1.75rem] font-black leading-tight tracking-[-.025em] sm:text-[2rem]">Sachez qui a été formé et ce qui a été retenu.</h3>
+                <h3 className="mt-3 text-[1.75rem] font-black leading-tight tracking-[-.025em] sm:text-[2rem]">Formez les équipes. Retrouvez ce qui a vraiment été transmis.</h3>
                 <p className="mt-4 text-base leading-[1.55] text-[var(--tr1-muted)] sm:text-[1.06rem]">
-                  Mettez vos modules à disposition des formateurs et suivez les formations réalisées dans chaque pharmacie. Retrouvez les participants, les modules suivis et les résultats des quiz pour identifier les acquis et les sujets à renforcer.
+                  Pour chaque pharmacie, TR1 conserve les participants, les modules suivis et les résultats des quiz. La marque sait où la formation a eu lieu et quels sujets méritent d’être renforcés.
                 </p>
                 <FeatureList items={trainingPoints} />
               </div>
@@ -147,11 +151,11 @@ export default function LandingPage() {
 
       <section className="border-t border-[var(--tr1-line)] bg-white/28 px-5 py-16 lg:px-8 lg:py-20">
         <div className="mx-auto max-w-7xl">
-          <div className="max-w-3xl">
+          <div className="max-w-4xl">
             <p className="font-mono text-[.66rem] font-black uppercase tracking-[.14em] text-[var(--tr1-orange)]">Pilotage de la marque</p>
-            <h2 className="mt-4 text-[2rem] font-black leading-[1.08] tracking-[-.03em] sm:text-[2.35rem]">Décidez de la prochaine action avec une vue d’ensemble.</h2>
-            <p className="mt-5 text-base leading-[1.55] text-[var(--tr1-muted)] sm:text-lg">
-              Rassemblez l’activité commerciale, les interventions et les résultats disponibles pour suivre votre réseau et concentrer vos efforts sur les pharmacies qui en ont besoin.
+            <h2 className="mt-4 text-[2rem] font-black leading-[1.08] tracking-[-.03em] sm:text-[2.35rem]">Pendant que le terrain agit, la direction voit où intervenir ensuite.</h2>
+            <p className="mt-5 max-w-3xl text-base leading-[1.55] text-[var(--tr1-muted)] sm:text-lg">
+              Pharmacies à relancer, interventions à suivre, résultats disponibles : la vue marque rassemble les signaux utiles pour prioriser l’action sans devoir reconstruire l’histoire du réseau.
             </p>
           </div>
 
@@ -160,8 +164,8 @@ export default function LandingPage() {
           </div>
 
           <div className="mt-8 grid gap-6 border-t border-[var(--tr1-line)] pt-7 md:grid-cols-3">
-            <PilotageLegend title="Commercial">Commandes, implantations, réassorts et objectifs.</PilotageLegend>
-            <PilotageLegend title="Animations">Réalisation, ventes déclarées, coûts et évolution du CA après intervention.</PilotageLegend>
+            <PilotageLegend title="Commercial">Commandes, implantations, réassorts et prochaines visites.</PilotageLegend>
+            <PilotageLegend title="Animations">Réalisation, ventes déclarées, coûts et évolution observée après intervention.</PilotageLegend>
             <PilotageLegend title="Formations">Couverture du réseau, participants formés et résultats des quiz.</PilotageLegend>
           </div>
           <p className="mt-5 max-w-3xl text-xs leading-5 text-[var(--tr1-muted)]">
@@ -192,9 +196,9 @@ export default function LandingPage() {
         <div className="mx-auto max-w-7xl">
           <div className="mx-auto max-w-3xl text-center">
             <p className="font-mono text-[.66rem] font-black uppercase tracking-[.14em] text-[var(--tr1-orange)]">Démonstration</p>
-            <h2 className="mt-4 text-[2rem] font-black leading-[1.08] tracking-[-.03em] sm:text-[2.35rem]">Découvrez TR1 à partir de votre organisation terrain.</h2>
+            <h2 className="mt-4 text-[2rem] font-black leading-[1.08] tracking-[-.03em] sm:text-[2.35rem]">Voyez comment TR1 s’adapte à votre organisation terrain.</h2>
             <p className="mx-auto mt-5 max-w-2xl text-base leading-[1.55] text-[var(--tr1-muted)] sm:text-lg">
-              En 30 minutes, échangeons sur votre réseau et parcourons les usages qui vous concernent : suivi commercial, animations, formations et pilotage des résultats.
+              En 30 minutes, partons de votre réseau, de vos équipes et de vos actions actuelles pour voir comment TR1 peut structurer leur suivi du sell-in au sell-out.
             </p>
           </div>
           <div className="mx-auto mt-9 max-w-xl"><LeadForm /></div>
