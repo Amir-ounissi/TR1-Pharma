@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { ArrowRight } from "lucide-react";
+import { LandingPilotageMap } from "@/components/marketing/landing-pilotage-map";
 import { LeadForm } from "@/components/marketing/lead-form";
 import { MarketingPageEvent, MarketingTrackedLink } from "@/components/marketing/marketing-events";
 
@@ -33,25 +34,25 @@ export default function LandingPage() {
     <main className="bg-[var(--tr1-ivory)] text-[var(--tr1-navy)]">
       <MarketingPageEvent event="landing_view" />
 
-      <section className="relative overflow-hidden px-5 pb-20 pt-16 sm:pt-20 lg:px-8 lg:pb-28 lg:pt-24">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-[34rem] bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,.85),transparent_65%)]" />
-        <div className="relative mx-auto max-w-7xl">
-          <div className="mx-auto max-w-5xl text-center">
+      <section className="relative overflow-hidden px-5 pb-16 pt-12 sm:pb-20 sm:pt-16 lg:px-8 lg:pb-24 lg:pt-20">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[42rem] bg-[radial-gradient(circle_at_65%_18%,rgba(182,211,230,.28),transparent_38%),radial-gradient(circle_at_20%_0%,rgba(255,255,255,.92),transparent_55%)]" />
+        <div className="relative mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-[.86fr_1.14fr] lg:gap-4 xl:gap-8">
+          <div className="relative z-10 max-w-[40rem] py-4 lg:py-10">
             <p className="font-mono text-[.68rem] font-black uppercase tracking-[.22em] text-[var(--tr1-orange)]">
               Exécution commerciale terrain
             </p>
 
-            <h1 className="mx-auto mt-6 max-w-5xl text-[3.25rem] font-black leading-[.94] tracking-[-.07em] text-[var(--tr1-navy)] sm:text-6xl lg:text-[5.4rem]">
-              Pilotez votre développement en pharmacie.
+            <h1 className="mt-6 text-[3.15rem] font-black leading-[.94] tracking-[-.07em] text-[var(--tr1-navy)] sm:text-[4rem] lg:text-[4.55rem] xl:text-[5rem]">
+              Le cockpit d’exécution commerciale terrain des marques <span className="text-[var(--tr1-orange)]">en pharmacie.</span>
             </h1>
 
-            <p className="mx-auto mt-7 max-w-3xl text-lg leading-8 text-[var(--tr1-muted)] sm:text-xl sm:leading-9">
-              De l’ouverture d’un compte au réassort, TR1 réunit le management et le terrain dans un même système.
+            <p className="mt-7 max-w-[37rem] text-lg leading-8 text-[var(--tr1-muted)] sm:text-xl sm:leading-9">
+              Planifiez, suivez, prouvez et mesurez chaque action menée dans le réseau officinal. Du sell-in au sell-out, TR1 vous aide à savoir où agir, avec qui et pourquoi.
             </p>
 
-            <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
+            <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <MarketingTrackedLink
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-[var(--tr1-orange)] px-5 text-sm font-black text-white shadow-[0_10px_28px_rgba(234,112,21,.18)] transition hover:-translate-y-0.5 hover:brightness-95"
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-[var(--tr1-navy)] px-5 text-sm font-black text-white shadow-[0_12px_30px_rgba(14,29,49,.16)] transition hover:-translate-y-0.5 hover:bg-[#173a5c]"
                 event="primary_cta_click"
                 href="#diagnostic"
               >
@@ -60,7 +61,7 @@ export default function LandingPage() {
               </MarketingTrackedLink>
 
               <a
-                className="inline-flex min-h-12 items-center justify-center rounded-md border border-[var(--tr1-line-strong)] bg-white/35 px-5 text-sm font-black transition hover:bg-white/65"
+                className="inline-flex min-h-12 items-center justify-center rounded-md border border-[var(--tr1-line-strong)] bg-white/45 px-5 text-sm font-black transition hover:bg-white/75"
                 href="#produit"
               >
                 Voir la plateforme
@@ -70,20 +71,16 @@ export default function LandingPage() {
             <p className="mt-4 text-sm text-[var(--tr1-muted)]">
               Diagnostic et démonstration personnalisée de 30 minutes.
             </p>
+
+            <div className="mt-9 grid max-w-[38rem] gap-3 border-t border-[var(--tr1-line)] pt-6 text-sm sm:grid-cols-3">
+              <p><strong className="block text-[var(--tr1-navy)]">Identifiez</strong><span className="text-[var(--tr1-muted)]">où agir en priorité</span></p>
+              <p><strong className="block text-[var(--tr1-navy)]">Coordonnez</strong><span className="text-[var(--tr1-muted)]">les actions terrain</span></p>
+              <p><strong className="block text-[var(--tr1-navy)]">Mesurez</strong><span className="text-[var(--tr1-muted)]">ce qui se passe ensuite</span></p>
+            </div>
           </div>
 
-          <div className="relative mx-auto mt-14 max-w-6xl sm:mt-16 lg:mt-20">
-            <div className="absolute inset-x-[8%] bottom-[-5%] h-28 rounded-full bg-[var(--tr1-orange)]/10 blur-3xl" />
-            <div className="relative overflow-hidden rounded-[1.4rem] border border-[var(--tr1-line)] bg-[var(--tr1-ivory-deep)] p-2 shadow-[0_30px_90px_rgba(14,29,49,.12)] sm:p-4">
-              <Image
-                alt="Dashboard TR1 Manager présentant objectifs, priorités et actions commerciales"
-                className="w-full rounded-xl"
-                height={600}
-                priority
-                src="/marketing/manager-day.webp"
-                width={716}
-              />
-            </div>
+          <div className="relative -mx-3 sm:mx-0 lg:-mr-8 xl:-mr-12">
+            <LandingPilotageMap />
           </div>
         </div>
       </section>
@@ -239,7 +236,7 @@ export default function LandingPage() {
                 </p>
               </div>
               <div className="mt-10 divide-y divide-white/12 border-y border-white/12">
-                {[['Coût de la mission', 'Suivi'], ['Sell-out déclaré', 'Impact'], ['CA après mission', 'Performance'], ['Résultat / coût engagé', 'Rentabilité']].map(([label, value]) => (
+                {[["Coût de la mission", "Suivi"], ["Sell-out déclaré", "Impact"], ["CA après mission", "Performance"], ["Résultat / coût engagé", "Rentabilité"]].map(([label, value]) => (
                   <div className="flex items-center justify-between gap-4 py-4" key={label}>
                     <span className="text-sm text-white/60">{label}</span><strong className="text-sm">{value}</strong>
                   </div>
