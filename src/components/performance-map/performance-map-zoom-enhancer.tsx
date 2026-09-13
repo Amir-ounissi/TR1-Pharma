@@ -64,7 +64,6 @@ function enhancePerformanceMap(svg: SVGSVGElement) {
   const markerLayer = Array.from(container.children).find(
     (element): element is HTMLElement =>
       element instanceof HTMLElement &&
-      element !== svg &&
       element.classList.contains("pointer-events-none") &&
       element.classList.contains("absolute") &&
       element.classList.contains("inset-0"),
