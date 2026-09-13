@@ -21,6 +21,8 @@ type GeometryFeature = {
 };
 type PointerSnapshot = Point & { id: number };
 type PinchSnapshot = { distance: number; zoom: number; anchor: LngLat };
+type MarkerShape = "circle" | "diamond" | "square" | "triangle";
+type AlertTone = "none" | "open" | "overdue";
 
 export function PerformanceSlippyMap({
   pharmacies,
@@ -183,13 +185,30 @@ export function PerformanceSlippyMap({
   return (
     <Card className="min-h-[42rem] overflow-hidden py-0">
       <CardContent className="flex h-full flex-col p-0">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-[var(--tr1-line)] px-3 py-2 text-[0.66rem] text-muted-foreground">
-          <LegendSwatch fill="#dcebe2" label="Secteur ≥ 100 %" />
-          <LegendSwatch fill="#f6e7cc" label="Secteur 80–99 %" />
-          <LegendSwatch fill="#f1d6d3" label="Secteur < 80 %" />
-          <LegendSwatch fill="#eee8df" label="Sans objectif comparable" />
-          <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full bg-[#8d9297]" />Pharmacie : objectif non défini</span>
-          <span className="flex items-center gap-1.5"><span className="size-3 rounded-full border-2 border-amber-600 bg-transparent" />Action ouverte</span>
+        <div className="border-b border-[var(--tr1-line)] bg-white/80 px-3 py-2 text-[0.64rem] text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <span className="font-semibold text-[var(--tr1-navy)]">Secteurs</span>
+            <LegendSwatch fill="#dcebe2" label="≥ 100 %" />
+            <LegendSwatch fill="#f6e7cc" label="80–99 %" />
+            <LegendSwatch fill="#f1d6d3" label="< 80 %" />
+            <LegendSwatch fill="#eee8df" label="Sans objectif comparable" />
+          </div>
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-[var(--tr1-line)] pt-1.5">
+            <span className="font-semibold text-[var(--tr1-navy)]">Pharmacies</span>
+            <MarkerShapeLegend shape="circle" label="Client" />
+            <MarkerShapeLegend shape="diamond" label="Prospect" />
+            <MarkerShapeLegend shape="square" label="Dormante" />
+            <MarkerShapeLegend shape="triangle" label="Perdue" />
+            <span className="mx-0.5 h-3 w-px bg-[var(--tr1-line-strong)]" />
+            <HealthLegend fill="#2f855a" label="Saine" />
+            <HealthLegend fill="#d97706" label="À surveiller" />
+            <HealthLegend fill="#c2413d" label="À risque" />
+            <HealthLegend fill="#8d9297" label="Dormante / sans signal" />
+            <span className="mx-0.5 h-3 w-px bg-[var(--tr1-line-strong)]" />
+            <AlertLegend tone="open" label="Action ouverte" />
+            <AlertLegend tone="overdue" label="En retard" />
+            <span className="whitespace-nowrap">Taille = priorité</span>
+          </div>
         </div>
         <div
           aria-label="Carte interactive de performance du réseau"
@@ -247,13 +266,15 @@ export function PerformanceSlippyMap({
           </svg>
           <div className="pointer-events-none absolute inset-0 z-20">
             {pharmacyPoints.map(({ pharmacy, point }) => {
-              if (point.x < -30 || point.y < -30 || point.x > size.width + 30 || point.y > size.height + 30) return null;
+              if (point.x < -40 || point.y < -40 || point.x > size.width + 40 || point.y > size.height + 40) return null;
               const selected = pharmacy.id === selectedPharmacyId;
-              const hasAlert = pharmacy.openAlerts > 0;
+              const marker = pharmacyMarkerVisual(pharmacy);
+              const markerSize = pharmacyMarkerSize(pharmacy.priorityLevel, selected);
+              const alertTone: AlertTone = pharmacy.overdueAlerts > 0 ? "overdue" : pharmacy.openAlerts > 0 ? "open" : "none";
               return (
                 <button
-                  aria-label={`${pharmacy.name} · ${pharmacy.healthStatusLabel}${hasAlert ? ` · ${pharmacy.openAlerts} action(s) ouverte(s)` : ""}`}
-                  className={`pointer-events-auto absolute grid -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full shadow-[0_2px_7px_rgba(7,20,33,.28)] transition-transform hover:scale-125 ${hasAlert ? "size-4 border-2 border-amber-600 bg-[#8d9297]" : "size-3.5 border-2 border-white bg-[#8d9297]"} ${selected ? "z-20 ring-4 ring-[var(--tr1-orange)]/35 !bg-[var(--tr1-navy)]" : "z-10"}`}
+                  aria-label={`${pharmacy.name} · ${pharmacy.commercialStatusLabel} · ${pharmacy.healthStatusLabel} · priorité ${pharmacy.priorityLevelLabel}${pharmacy.openAlerts ? ` · ${pharmacy.openAlerts} action(s) ouverte(s)` : ""}`}
+                  className={`group pointer-events-auto absolute grid -translate-x-1/2 -translate-y-1/2 place-items-center bg-transparent p-0 transition-transform duration-150 hover:scale-125 focus-visible:scale-125 focus-visible:outline-none ${selected ? "z-30 scale-125" : "z-10"}`}
                   key={pharmacy.id}
                   onClick={(event) => {
                     event.stopPropagation();
@@ -261,10 +282,31 @@ export function PerformanceSlippyMap({
                     onSelectPharmacy(pharmacy.id);
                     focusPharmacy(pharmacy);
                   }}
-                  style={{ left: point.x, top: point.y }}
-                  title={`${pharmacy.name} — ${pharmacy.healthStatusLabel}`}
+                  style={{
+                    boxShadow: pharmacyMarkerShadow(alertTone, selected),
+                    height: markerSize,
+                    left: point.x,
+                    top: point.y,
+                    width: markerSize,
+                  }}
                   type="button"
-                />
+                >
+                  <span
+                    aria-hidden="true"
+                    className="block h-[74%] w-[74%] border border-white/90 shadow-[0_1px_3px_rgba(7,20,33,.28)]"
+                    style={{
+                      backgroundColor: marker.color,
+                      borderRadius: marker.shape === "circle" ? "999px" : marker.shape === "square" ? "22%" : undefined,
+                      clipPath: markerClipPath(marker.shape),
+                    }}
+                  />
+                  <span className="pointer-events-none absolute left-1/2 top-0 z-50 hidden min-w-[11.5rem] -translate-x-1/2 -translate-y-[calc(100%+0.65rem)] rounded-lg border border-[#0b1e32]/12 bg-white/95 px-2.5 py-2 text-left text-[0.65rem] leading-4 text-[#445265] shadow-[0_10px_28px_rgba(7,20,33,.2)] backdrop-blur group-hover:block group-focus-visible:block">
+                    <strong className="block truncate text-[0.7rem] text-[var(--tr1-navy)]">{pharmacy.name}</strong>
+                    <span className="block">{pharmacy.commercialStatusLabel} · {pharmacy.healthStatusLabel}</span>
+                    <span className="block">Priorité {pharmacy.priorityLevelLabel} · {formatCompactCurrency(pharmacy.revenueHt)}</span>
+                    {pharmacy.overdueAlerts > 0 ? <span className="block font-semibold text-red-700">{pharmacy.overdueAlerts} action(s) en retard</span> : pharmacy.openAlerts > 0 ? <span className="block font-semibold text-amber-700">{pharmacy.openAlerts} action(s) ouverte(s)</span> : null}
+                  </span>
+                </button>
               );
             })}
           </div>
@@ -289,11 +331,59 @@ function MapButton({ label, onClick, children }: { label: string; onClick: () =>
 function LegendSwatch({ fill, label }: { fill: string; label: string }) {
   return <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm border border-black/10" style={{ backgroundColor: fill }} />{label}</span>;
 }
+function MarkerShapeLegend({ shape, label }: { shape: MarkerShape; label: string }) {
+  return <span className="flex items-center gap-1.5"><span className="grid size-3.5 place-items-center"><span className="block size-3 bg-[#0b1e32]" style={{ borderRadius: shape === "circle" ? "999px" : shape === "square" ? "22%" : undefined, clipPath: markerClipPath(shape) }} /></span>{label}</span>;
+}
+function HealthLegend({ fill, label }: { fill: string; label: string }) {
+  return <span className="flex items-center gap-1.5"><span className="size-2.5 rounded-full border border-white shadow-[0_0_0_1px_rgba(7,20,33,.12)]" style={{ backgroundColor: fill }} />{label}</span>;
+}
+function AlertLegend({ tone, label }: { tone: Exclude<AlertTone, "none">; label: string }) {
+  const color = tone === "overdue" ? "#c2413d" : "#d97706";
+  return <span className="flex items-center gap-1.5"><span className="size-3 rounded-full bg-white" style={{ boxShadow: `0 0 0 2px ${color}` }} />{label}</span>;
+}
 function territoryFill(value: number | null) {
   if (value == null) return "#eee8df";
   if (value >= 100) return "#dcebe2";
   if (value >= 80) return "#f6e7cc";
   return "#f1d6d3";
+}
+function pharmacyMarkerVisual(pharmacy: PerformanceMapPharmacy): { shape: MarkerShape; color: string } {
+  const prospectStatuses = new Set(["targeted", "qualified", "contacted", "appointment_scheduled", "offer_sent", "pending_order"]);
+  const shape: MarkerShape = pharmacy.commercialStatus === "lost"
+    ? "triangle"
+    : pharmacy.commercialStatus === "dormant"
+      ? "square"
+      : prospectStatuses.has(pharmacy.commercialStatus)
+        ? "diamond"
+        : "circle";
+  return { shape, color: healthColor(pharmacy.healthStatus) };
+}
+function healthColor(status: string) {
+  if (status === "healthy") return "#2f855a";
+  if (status === "reorder_expected" || status === "awaiting_first_reorder") return "#2563a6";
+  if (status === "reorder_due_soon") return "#d97706";
+  if (status === "at_risk" || status === "reorder_overdue") return "#c2413d";
+  if (status === "dormant") return "#8d9297";
+  return "#b7ada2";
+}
+function markerClipPath(shape: MarkerShape) {
+  if (shape === "diamond") return "polygon(50% 0, 100% 50%, 50% 100%, 0 50%)";
+  if (shape === "triangle") return "polygon(50% 0, 100% 100%, 0 100%)";
+  if (shape === "square") return "inset(0 round 22%)";
+  return "circle(50% at 50% 50%)";
+}
+function pharmacyMarkerSize(priority: string, selected: boolean) {
+  const base = priority === "strategic" ? 24 : priority === "high" ? 20 : priority === "low" ? 13 : 16;
+  return selected ? base + 4 : base;
+}
+function pharmacyMarkerShadow(alertTone: AlertTone, selected: boolean) {
+  const baseShadow = "0 2px 7px rgba(7,20,33,.28)";
+  const alertRing = alertTone === "overdue" ? "0 0 0 3px #c2413d" : alertTone === "open" ? "0 0 0 3px #d97706" : "";
+  const selectedRing = selected ? "0 0 0 6px rgba(230,121,41,.32)" : "";
+  return [alertRing, selectedRing, baseShadow].filter(Boolean).join(", ");
+}
+function formatCompactCurrency(value: number) {
+  return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(value);
 }
 function buildVisibleTiles(camera: Camera, size: ScreenSize) {
   if (!size.width || !size.height) return [];
