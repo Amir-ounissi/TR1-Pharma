@@ -3,11 +3,17 @@
 import { createHash, randomUUID } from "node:crypto";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { leadDeduplicationScope, normalizeLeadInput } from "@/lib/marketing/leads";
+import { leadCaptureSchema, leadDeduplicationScope, normalizeLeadInput } from "@/lib/marketing/leads";
 import { readRuntimeEnvironment } from "@/lib/runtime-environment";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-export type LeadCaptureState = { error?: string; fields?: { fullName?: string; professionalEmail?: string; companyName?: string } };
+type LeadField = "fullName" | "professionalEmail" | "companyName";
+
+export type LeadCaptureState = {
+  error?: string;
+  fields?: { fullName?: string; professionalEmail?: string; companyName?: string };
+  fieldErrors?: Partial<Record<LeadField, string>>;
+};
 
 export async function captureLeadAction(_state: LeadCaptureState, formData: FormData): Promise<LeadCaptureState> {
   const correlationId = randomUUID();
@@ -19,12 +25,22 @@ export async function captureLeadAction(_state: LeadCaptureState, formData: Form
     companyName: String(formData.get("companyName") ?? ""),
     website,
   };
-  let normalized;
-  try {
-    normalized = normalizeLeadInput(fields);
-  } catch {
-    return { error: "Vérifiez les trois champs avant de continuer.", fields };
+
+  const validation = leadCaptureSchema.safeParse(fields);
+  if (!validation.success) {
+    const flattened = validation.error.flatten().fieldErrors;
+    return {
+      error: "Vérifiez les champs indiqués avant de continuer.",
+      fields,
+      fieldErrors: {
+        fullName: flattened.fullName?.[0],
+        professionalEmail: flattened.professionalEmail?.[0],
+        companyName: flattened.companyName?.[0],
+      },
+    };
   }
+
+  const normalized = normalizeLeadInput(fields);
 
   let runtime;
   try {

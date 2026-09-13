@@ -23,31 +23,34 @@ test.beforeAll(() => mkdirSync(artifacts, { recursive: true }));
 
 test("landing desktop, CTA, preuve produit et capture du lead", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Pilotez votre développement en pharmacie." })).toBeVisible();
-  await expect(page.getByText("De l’ouverture d’un compte au réassort, TR1 réunit le management et le terrain dans un même système.")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Savoir où agir aujourd’hui." })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Comprendre chaque pharmacie." })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Donner au terrain la prochaine bonne action." })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Recrutez, planifiez et mesurez vos animations." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Pilotez vos visites, animations et formations en pharmacie." })).toBeVisible();
+  await expect(page.getByText("TR1 réunit vos commerciaux, animateurs et formateurs dans un même outil. Identifiez les pharmacies prioritaires, coordonnez les interventions et suivez leurs résultats.")).toBeVisible();
+  await expect(page.getByText("Données de démonstration").first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Vos équipes avancent. Votre marque garde le fil." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Préparez les visites. Organisez la suite." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Du brief au bilan, gardez la main sur vos animations." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sachez qui a été formé et ce qui a été retenu." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Décidez de la prochaine action avec une vue d’ensemble." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "TR1 est né sur le terrain." })).toBeVisible();
   await expect(page.locator("main > section")).toHaveCount(5);
-  await expect(page.getByRole("link", { name: "Demander une démo" })).toHaveCount(2);
+  await expect(page.getByRole("heading", { name: /Une action terrain avance/i })).toHaveCount(0);
+  await expect(page.getByText("Essayez une question")).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Demander une démo" })).toHaveCount(3);
 
   await page.getByRole("link", { name: "Demander une démo" }).first().click();
   await expect(page.locator("#diagnostic")).toBeInViewport();
-  await expect(page.getByRole("img", { name: "Expérience mobile Agent TR1" })).toBeVisible();
-  await expect(page.getByRole("img", { name: "Planning TR1 des animations, formations et missions terrain" })).toBeVisible();
-  await expect(page.getByText("Performance & rentabilité")).toBeVisible();
+  await expect(page.getByRole("img", { name: "Fiche pharmacie TR1 montrant le dernier échange et la prochaine action" })).toBeVisible();
+  await expect(page.getByText("Sell-out déclaré")).toBeVisible();
+  await expect(page.getByText("CA observé après intervention")).toBeVisible();
   await page.screenshot({ path: `${artifacts}/landing-desktop.png`, fullPage: true });
 
-  await page.getByRole("button", { name: "Découvrir TR1 sur mon réseau officinal" }).click();
-  await expect(page).toHaveURL(/\/#diagnostic$/);
   await expect(page.getByLabel("Nom et prénom")).toHaveAttribute("required", "");
   await page.getByLabel("Nom et prénom").fill("Marie Martin");
   await page.getByLabel("Email professionnel").fill(leadEmail.toUpperCase());
   await page.getByLabel("Marque ou laboratoire").fill("Nova Santé");
-  await page.getByRole("button", { name: "Découvrir TR1 sur mon réseau officinal" }).click();
+  await page.getByRole("button", { name: "Demander une démo" }).click();
   await expect(page).toHaveURL(/\/merci$/);
-  await expect(page.getByRole("heading", { name: /Merci/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Votre demande a bien été envoyée." })).toBeVisible();
   await page.screenshot({ path: `${artifacts}/thank-you-desktop.png`, fullPage: true });
 
   const { data: leads, error } = await adminClient().from("commercial_leads").select("professional_email,status").eq("professional_email", leadEmail);
@@ -58,7 +61,8 @@ test("landing desktop, CTA, preuve produit et capture du lead", async ({ page })
 test("landing mobile reste lisible et sans débordement", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Pilotez votre développement en pharmacie." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Pilotez vos visites, animations et formations en pharmacie." })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Voir les pharmacies en liste" })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
   await page.screenshot({ path: `${artifacts}/landing-mobile.png`, fullPage: true });
 });
