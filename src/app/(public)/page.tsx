@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { LandingActionScenario } from "@/components/marketing/landing-action-scenario";
 import { LandingPilotageMap } from "@/components/marketing/landing-pilotage-map";
 import { LandingTrainingDemo } from "@/components/marketing/landing-training-demo";
 import { LeadForm } from "@/components/marketing/lead-form";
@@ -80,7 +81,29 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="border-y border-[var(--tr1-line)] bg-white/28 px-5 py-20 lg:px-8 lg:py-28" id="pourquoi-tr1">
+      <section className="border-y border-[var(--tr1-line)] bg-white/28 px-5 py-20 lg:px-8 lg:py-28" id="scenario">
+        <div className="mx-auto max-w-7xl">
+          <div className="max-w-4xl">
+            <p className="font-mono text-[.66rem] font-black uppercase tracking-[.2em] text-[var(--tr1-orange)]">Du signal à la prochaine action</p>
+            <h2 className="mt-5 text-4xl font-black leading-[1] tracking-[-.055em] sm:text-5xl lg:text-[3.7rem]">Une action terrain avance, étape par étape.</h2>
+            <p className="mt-6 max-w-3xl text-lg leading-8 text-[var(--tr1-muted)]">Une pharmacie à relancer → une animation planifiée → un bilan disponible. Explorez les trois étapes pour voir comment TR1 garde le fil.</p>
+          </div>
+          <div className="mt-12"><LandingActionScenario /></div>
+          <div className="mt-10 text-center">
+            <MarketingTrackedLink
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-[var(--tr1-orange)] px-5 text-sm font-black text-white shadow-[0_12px_30px_rgba(234,112,21,.18)] transition hover:-translate-y-0.5 hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-navy)] focus-visible:ring-offset-2 motion-reduce:transition-none"
+              event="primary_cta_click"
+              href="#diagnostic"
+              properties={{ placement: "after_scenario" }}
+            >
+              Demander une démo
+              <ArrowRight className="size-4" />
+            </MarketingTrackedLink>
+          </div>
+        </div>
+      </section>
+
+      <section className="px-5 py-20 lg:px-8 lg:py-28" id="pourquoi-tr1">
         <div className="mx-auto max-w-7xl">
           <div className="max-w-4xl">
             <p className="font-mono text-[.66rem] font-black uppercase tracking-[.2em] text-[var(--tr1-orange)]">Pourquoi TR1</p>
@@ -100,7 +123,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="px-5 py-20 lg:px-8 lg:py-28" id="plateforme">
+      <section className="border-t border-[var(--tr1-line)] px-5 py-20 lg:px-8 lg:py-28" id="plateforme">
         <div className="mx-auto max-w-7xl">
           <div className="max-w-4xl">
             <p className="font-mono text-[.66rem] font-black uppercase tracking-[.2em] text-[var(--tr1-orange)]">La plateforme</p>
