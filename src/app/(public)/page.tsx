@@ -39,11 +39,7 @@ export default function LandingPage() {
 
       <section className="px-5 py-10 sm:py-12 lg:px-8 lg:py-14">
         <div className="mx-auto max-w-7xl">
-          <div className="mx-auto max-w-6xl">
-            <LandingPilotageMap />
-          </div>
-
-          <div className="mx-auto mt-10 max-w-4xl text-center sm:mt-12">
+          <div className="mx-auto max-w-4xl text-center">
             <h1 className="text-[2.35rem] font-black leading-[1.02] tracking-[-.04em] sm:text-5xl lg:text-[4rem]">
               <span className="text-[var(--tr1-orange)]">Du sell-in au sell-out,</span>{" "}
               pilotez chaque action qui fait vendre en pharmacie.
@@ -65,6 +61,10 @@ export default function LandingPage() {
             <p className="mt-3 text-sm leading-6 text-[var(--tr1-muted)]">
               30 minutes pour découvrir TR1 et échanger sur votre organisation terrain.
             </p>
+          </div>
+
+          <div className="mx-auto mt-10 max-w-6xl sm:mt-12">
+            <LandingPilotageMap />
           </div>
         </div>
       </section>
