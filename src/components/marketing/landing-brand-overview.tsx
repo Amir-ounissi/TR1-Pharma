@@ -6,6 +6,11 @@ const comedie = demoPharmacies.find((item) => item.id === "comedie-montpellier")
 const prado = demoPharmacies.find((item) => item.id === "prado-marseille")!;
 
 export function LandingBrandOverview() {
+  const sellOut = comedie.animationDetail?.sellOut ?? "Non renseigné";
+  const observedRevenue = comedie.animationDetail?.observedRevenue ?? "Non renseigné";
+  const trainingScore = comedie.formationDetail?.averageScore;
+  const participants = comedie.formationDetail?.participants;
+
   return (
     <div className="rounded-2xl border border-[var(--tr1-line)] bg-white p-4 shadow-[0_16px_42px_rgba(14,29,49,.07)] sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--tr1-line)] pb-4">
@@ -29,9 +34,9 @@ export function LandingBrandOverview() {
         </Panel>
 
         <Panel title="Résultats disponibles">
-          <ResultRow label="Sell-out déclaré" value="24 unités" detail={comedie.name} />
-          <ResultRow label="CA observé après intervention" value="En cours d’observation" detail={comedie.name} />
-          <ResultRow label="Score moyen au quiz" value="91 %" detail={`${comedie.name} · 6 participants`} />
+          <ResultRow label="Sell-out déclaré" value={sellOut} detail={comedie.name} />
+          <ResultRow label="CA observé après intervention" value={observedRevenue} detail={comedie.name} />
+          <ResultRow label="Score moyen au quiz" value={trainingScore == null ? "En attente" : `${trainingScore} %`} detail={`${comedie.name}${participants == null ? "" : ` · ${participants} participants`}`} />
         </Panel>
       </div>
     </div>
