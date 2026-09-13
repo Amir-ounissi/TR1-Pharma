@@ -37,16 +37,18 @@ export default function LandingPage() {
     <main className="bg-[var(--tr1-ivory)] text-[var(--tr1-navy)]">
       <MarketingPageEvent event="landing_view" />
 
-      <section className="px-5 py-12 sm:py-14 lg:px-8 lg:py-16">
-        <div className="mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-[.45fr_.55fr] lg:gap-12">
-          <div className="max-w-[35rem]">
-            <p className="font-mono text-[.68rem] font-black uppercase tracking-[.16em] text-[var(--tr1-orange)]">
-              POUR LES MARQUES ET LABORATOIRES EN PHARMACIE
-            </p>
-            <h1 className="mt-5 text-[2.25rem] font-black leading-[1.04] tracking-[-.035em] sm:text-5xl lg:text-[3.5rem]">
-              Pilotez vos visites, animations et formations en pharmacie.
+      <section className="px-5 py-10 sm:py-12 lg:px-8 lg:py-14">
+        <div className="mx-auto max-w-7xl">
+          <div className="mx-auto max-w-6xl">
+            <LandingPilotageMap />
+          </div>
+
+          <div className="mx-auto mt-10 max-w-4xl text-center sm:mt-12">
+            <h1 className="text-[2.35rem] font-black leading-[1.02] tracking-[-.04em] sm:text-5xl lg:text-[4rem]">
+              <span className="text-[var(--tr1-orange)]">Du sell-in au sell-out,</span>{" "}
+              pilotez chaque action qui fait vendre en pharmacie.
             </h1>
-            <p className="mt-6 max-w-[34rem] text-base leading-[1.55] text-[var(--tr1-muted)] sm:text-lg">
+            <p className="mx-auto mt-6 max-w-3xl text-base leading-[1.55] text-[var(--tr1-muted)] sm:text-lg">
               TR1 réunit vos commerciaux, animateurs et formateurs dans un même outil. Identifiez les pharmacies prioritaires, coordonnez les interventions et suivez leurs résultats.
             </p>
             <div className="mt-7">
@@ -63,10 +65,6 @@ export default function LandingPage() {
             <p className="mt-3 text-sm leading-6 text-[var(--tr1-muted)]">
               30 minutes pour découvrir TR1 et échanger sur votre organisation terrain.
             </p>
-          </div>
-
-          <div className="min-w-0">
-            <LandingPilotageMap />
           </div>
         </div>
       </section>
