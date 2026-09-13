@@ -8,6 +8,7 @@ import type {
   PerformanceMapFilterOptions,
   PerformanceMapFilters,
   PerformanceMapNextAction,
+  PerformanceMapObjective,
   PerformanceMapPharmacy,
 } from "@/lib/performance-map";
 import { formatPerformanceMetric } from "@/lib/performance";
@@ -38,6 +39,7 @@ type DirectoryRow = {
   legal_name: string | null;
   city: string | null;
   postal_code: string | null;
+  search_text: string | null;
   commercial_status: string;
   priority_level: string;
   potential_level: string;
@@ -149,7 +151,7 @@ export default async function PerformanceMapPage({ searchParams }: { searchParam
   const territoryId = nullable(query.territory);
   const agentId = nullable(query.agent);
   const groupId = nullable(query.group);
-  const productScope = nullable(query.product);
+  const requestedProductScope = nullable(query.product);
   const status = nullable(query.status);
   const potential = nullable(query.potential);
   const priority = nullable(query.priority);
@@ -159,6 +161,68 @@ export default async function PerformanceMapPage({ searchParams }: { searchParam
   const role = contexts.find((context) => context.id === brand.id)?.role ?? "brand_user";
   if (!["tr1_manager", "brand_admin", "brand_user", "super_admin"].includes(role)) notFound();
 
+  const loadDirectoryRows = async () => {
+    const rows: DirectoryRow[] = [];
+    for (let offset = 0; ; offset += PAGE_SIZE) {
+      const { data, error } = await supabase
+        .from("brand_pharmacy_directory")
+        .select("id,pharmacy_id,trade_name,legal_name,city,postal_code,search_text,commercial_status,priority_level,potential_level,territory_id,territory_name,current_agent_user_id,agent_name,pharmacy_group_id,pharmacy_group_name,latitude,longitude")
+        .eq("brand_id", brand.id)
+        .is("archived_at", null)
+        .order("trade_name", { ascending: true })
+        .range(offset, offset + PAGE_SIZE - 1);
+      if (error) throw error;
+      const page = (data ?? []) as DirectoryRow[];
+      rows.push(...page);
+      if (page.length < PAGE_SIZE) break;
+    }
+    return rows;
+  };
+
+  const loadPerformanceRows = async () => {
+    const rows: PerformanceRow[] = [];
+    for (let offset = 0; ; offset += PAGE_SIZE) {
+      const { data, error } = await supabase
+        .rpc("get_performance_network", {
+          target_brand_id: brand.id,
+          target_period_start: from,
+          target_period_end: to,
+          target_territory_id: null,
+          target_agent_id: null,
+        })
+        .range(offset, offset + PAGE_SIZE - 1);
+      if (error) throw error;
+      const page = (data ?? []) as PerformanceRow[];
+      rows.push(...page);
+      if (page.length < PAGE_SIZE) break;
+    }
+    return rows;
+  };
+
+  const loadTaskCounts = async () => {
+    const counts = new Map<string, { open: number; overdue: number }>();
+    for (let offset = 0; ; offset += PAGE_SIZE) {
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("brand_pharmacy_id,status")
+        .eq("brand_id", brand.id)
+        .is("archived_at", null)
+        .in("status", ["open", "in_progress", "overdue"])
+        .range(offset, offset + PAGE_SIZE - 1);
+      if (error) throw error;
+      const page = data ?? [];
+      page.forEach((task) => {
+        if (!task.brand_pharmacy_id) return;
+        const current = counts.get(task.brand_pharmacy_id) ?? { open: 0, overdue: 0 };
+        current.open += 1;
+        if (task.status === "overdue") current.overdue += 1;
+        counts.set(task.brand_pharmacy_id, current);
+      });
+      if (page.length < PAGE_SIZE) break;
+    }
+    return counts;
+  };
+
   const [
     { data: territoriesData },
     { data: membershipsData },
@@ -167,6 +231,9 @@ export default async function PerformanceMapPage({ searchParams }: { searchParam
     { data: objectivesData, error: objectivesError },
     { data: nextActionsData },
     { data: lastUpdatedData },
+    directoryRows,
+    performanceRows,
+    taskCounts,
   ] = await Promise.all([
     supabase.from("territories").select("id,name,department_code,department_codes").eq("brand_id", brand.id).is("archived_at", null).order("name"),
     supabase
@@ -182,8 +249,8 @@ export default async function PerformanceMapPage({ searchParams }: { searchParam
       target_filter_start: from,
       target_filter_end: to,
       target_scope_type: null,
-      target_territory_id: territoryId,
-      target_agent_id: agentId,
+      target_territory_id: null,
+      target_agent_id: null,
     }),
     supabase.rpc("get_next_best_actions", {
       target_brand_id: brand.id,
@@ -191,71 +258,18 @@ export default async function PerformanceMapPage({ searchParams }: { searchParam
       target_brand_pharmacy_id: null,
     }),
     supabase.from("brand_pharmacies").select("updated_at").eq("brand_id", brand.id).is("archived_at", null).order("updated_at", { ascending: false }).limit(1).maybeSingle(),
+    loadDirectoryRows(),
+    loadPerformanceRows(),
+    loadTaskCounts(),
   ]);
 
   if (objectivesError) throw objectivesError;
   const territories = (territoriesData ?? []) as TerritoryRow[];
   const products = (productsData ?? []) as ProductRow[];
   const objectives = (objectivesData ?? []) as ObjectiveRow[];
-
-  const directoryRows: DirectoryRow[] = [];
-  for (let offset = 0; ; offset += PAGE_SIZE) {
-    let directoryQuery = supabase
-      .from("brand_pharmacy_directory")
-      .select("id,pharmacy_id,trade_name,legal_name,city,postal_code,commercial_status,priority_level,potential_level,territory_id,territory_name,current_agent_user_id,agent_name,pharmacy_group_id,pharmacy_group_name,latitude,longitude")
-      .eq("brand_id", brand.id)
-      .is("archived_at", null);
-    if (territoryId) directoryQuery = directoryQuery.eq("territory_id", territoryId);
-    if (agentId) directoryQuery = directoryQuery.eq("current_agent_user_id", agentId);
-    if (groupId) directoryQuery = directoryQuery.eq("pharmacy_group_id", groupId);
-    if (status) directoryQuery = directoryQuery.eq("commercial_status", status);
-    if (potential) directoryQuery = directoryQuery.eq("potential_level", potential);
-    if (priority) directoryQuery = directoryQuery.eq("priority_level", priority);
-    if (search) directoryQuery = directoryQuery.ilike("search_text", `%${search}%`);
-    const { data, error } = await directoryQuery.order("trade_name", { ascending: true }).range(offset, offset + PAGE_SIZE - 1);
-    if (error) throw error;
-    const page = (data ?? []) as DirectoryRow[];
-    directoryRows.push(...page);
-    if (page.length < PAGE_SIZE) break;
-  }
-
-  const performanceRows: PerformanceRow[] = [];
-  for (let offset = 0; ; offset += PAGE_SIZE) {
-    const { data, error } = await supabase
-      .rpc("get_performance_network", {
-        target_brand_id: brand.id,
-        target_period_start: from,
-        target_period_end: to,
-        target_territory_id: territoryId,
-        target_agent_id: agentId,
-      })
-      .range(offset, offset + PAGE_SIZE - 1);
-    if (error) throw error;
-    const page = (data ?? []) as PerformanceRow[];
-    performanceRows.push(...page);
-    if (page.length < PAGE_SIZE) break;
-  }
-
-  const taskCounts = new Map<string, { open: number; overdue: number }>();
-  for (let offset = 0; ; offset += PAGE_SIZE) {
-    const { data, error } = await supabase
-      .from("tasks")
-      .select("brand_pharmacy_id,status")
-      .eq("brand_id", brand.id)
-      .is("archived_at", null)
-      .in("status", ["open", "in_progress", "overdue"])
-      .range(offset, offset + PAGE_SIZE - 1);
-    if (error) throw error;
-    const page = data ?? [];
-    page.forEach((task) => {
-      if (!task.brand_pharmacy_id) return;
-      const current = taskCounts.get(task.brand_pharmacy_id) ?? { open: 0, overdue: 0 };
-      current.open += 1;
-      if (task.status === "overdue") current.overdue += 1;
-      taskCounts.set(task.brand_pharmacy_id, current);
-    });
-    if (page.length < PAGE_SIZE) break;
-  }
+  const productIds = resolveProductIds(requestedProductScope, products);
+  const productScope = requestedProductScope && productIds.length ? requestedProductScope : null;
+  const productScopeLabel = resolveProductScopeLabel(productScope, products);
 
   const nextActions = new Map<string, PerformanceMapNextAction>();
   ((nextActionsData ?? []) as NextBestActionRow[]).forEach((row) => nextActions.set(row.brand_pharmacy_id, {
@@ -264,62 +278,56 @@ export default async function PerformanceMapPage({ searchParams }: { searchParam
     dueAt: row.suggested_due_at,
   }));
 
-  const productIds = resolveProductIds(productScope, products);
-  const productScopeLabel = resolveProductScopeLabel(productScope, products);
   const productRollups = new Map<string, ProductRollup>();
 
-  if (productScope) {
-    if (productIds.length) {
-      const facts: PerformanceOrderFact[] = [];
+  if (productScope && productIds.length) {
+    const facts: PerformanceOrderFact[] = [];
+    for (let offset = 0; ; offset += PAGE_SIZE) {
+      const { data, error } = await supabase
+        .from("performance_order_facts")
+        .select("order_id,brand_pharmacy_id,is_initial_order,is_reorder")
+        .eq("brand_id", brand.id)
+        .gte("order_date", `${from}T00:00:00.000Z`)
+        .lt("order_date", `${nextDate(to)}T00:00:00.000Z`)
+        .range(offset, offset + PAGE_SIZE - 1);
+      if (error) throw error;
+      const page = (data ?? []) as PerformanceOrderFact[];
+      facts.push(...page);
+      if (page.length < PAGE_SIZE) break;
+    }
+
+    const factByOrder = new Map(facts.map((fact) => [fact.order_id, fact]));
+    const matchedOrderIds = new Set<string>();
+    for (const orderBatch of chunk(facts.map((fact) => fact.order_id), ORDER_BATCH_SIZE)) {
       for (let offset = 0; ; offset += PAGE_SIZE) {
-        let factsQuery = supabase
-          .from("performance_order_facts")
-          .select("order_id,brand_pharmacy_id,is_initial_order,is_reorder")
+        const { data, error } = await supabase
+          .from("order_items")
+          .select("order_id,line_total_ht")
           .eq("brand_id", brand.id)
-          .gte("order_date", `${from}T00:00:00.000Z`)
-          .lt("order_date", `${nextDate(to)}T00:00:00.000Z`);
-        if (territoryId) factsQuery = factsQuery.eq("territory_id", territoryId);
-        if (agentId) factsQuery = factsQuery.eq("agent_user_id_at_order", agentId);
-        const { data, error } = await factsQuery.range(offset, offset + PAGE_SIZE - 1);
+          .in("order_id", orderBatch)
+          .in("product_id", productIds)
+          .range(offset, offset + PAGE_SIZE - 1);
         if (error) throw error;
-        const page = (data ?? []) as PerformanceOrderFact[];
-        facts.push(...page);
+        const page = (data ?? []) as OrderItemRow[];
+        page.forEach((item) => {
+          const fact = factByOrder.get(item.order_id);
+          if (!fact) return;
+          matchedOrderIds.add(item.order_id);
+          const current = productRollups.get(fact.brand_pharmacy_id) ?? { revenueHt: 0, implantations: 0, reorders: 0 };
+          current.revenueHt += numberValue(item.line_total_ht);
+          productRollups.set(fact.brand_pharmacy_id, current);
+        });
         if (page.length < PAGE_SIZE) break;
       }
-
-      const factByOrder = new Map(facts.map((fact) => [fact.order_id, fact]));
-      const matchedOrderIds = new Set<string>();
-      for (const orderBatch of chunk(facts.map((fact) => fact.order_id), ORDER_BATCH_SIZE)) {
-        for (let offset = 0; ; offset += PAGE_SIZE) {
-          const { data, error } = await supabase
-            .from("order_items")
-            .select("order_id,line_total_ht")
-            .eq("brand_id", brand.id)
-            .in("order_id", orderBatch)
-            .in("product_id", productIds)
-            .range(offset, offset + PAGE_SIZE - 1);
-          if (error) throw error;
-          const page = (data ?? []) as OrderItemRow[];
-          page.forEach((item) => {
-            const fact = factByOrder.get(item.order_id);
-            if (!fact) return;
-            matchedOrderIds.add(item.order_id);
-            const current = productRollups.get(fact.brand_pharmacy_id) ?? { revenueHt: 0, implantations: 0, reorders: 0 };
-            current.revenueHt += numberValue(item.line_total_ht);
-            productRollups.set(fact.brand_pharmacy_id, current);
-          });
-          if (page.length < PAGE_SIZE) break;
-        }
-      }
-      matchedOrderIds.forEach((orderId) => {
-        const fact = factByOrder.get(orderId);
-        if (!fact) return;
-        const current = productRollups.get(fact.brand_pharmacy_id) ?? { revenueHt: 0, implantations: 0, reorders: 0 };
-        if (fact.is_initial_order) current.implantations += 1;
-        if (fact.is_reorder) current.reorders += 1;
-        productRollups.set(fact.brand_pharmacy_id, current);
-      });
     }
+    matchedOrderIds.forEach((orderId) => {
+      const fact = factByOrder.get(orderId);
+      if (!fact) return;
+      const current = productRollups.get(fact.brand_pharmacy_id) ?? { revenueHt: 0, implantations: 0, reorders: 0 };
+      if (fact.is_initial_order) current.implantations += 1;
+      if (fact.is_reorder) current.reorders += 1;
+      productRollups.set(fact.brand_pharmacy_id, current);
+    });
   }
 
   const performanceByPharmacy = new Map(performanceRows.map((row) => [row.brand_pharmacy_id, row]));
@@ -341,6 +349,7 @@ export default async function PerformanceMapPage({ searchParams }: { searchParam
         name: row.trade_name || row.legal_name || "Pharmacie",
         city: row.city,
         postalCode: row.postal_code,
+        searchText: row.search_text ?? [row.trade_name, row.legal_name, row.city, row.postal_code].filter(Boolean).join(" "),
         latitude,
         longitude,
         locationPrecision: exactLatitude != null && exactLongitude != null ? "exact" : approximate ? "department" : "missing",
@@ -348,6 +357,7 @@ export default async function PerformanceMapPage({ searchParams }: { searchParam
         territoryName: row.territory_name,
         agentUserId: row.current_agent_user_id,
         agentName: row.agent_name,
+        groupId: row.pharmacy_group_id,
         groupName: row.pharmacy_group_name,
         commercialStatus: row.commercial_status,
         commercialStatusLabel: labels.commercialStatus[row.commercial_status as keyof typeof labels.commercialStatus] ?? presentationLabel(row.commercial_status),
@@ -374,27 +384,30 @@ export default async function PerformanceMapPage({ searchParams }: { searchParam
       } satisfies PerformanceMapPharmacy;
     });
 
-  const segmentFiltersActive = Boolean(groupId || productScope || status || potential || priority || search);
-  const objectiveComparable = !segmentFiltersActive && !(territoryId && agentId);
-  const objectiveScope = agentId ? "agent" : territoryId ? "territory" : "brand";
-  const objective = objectiveComparable ? findObjective(objectives, objectiveScope, territoryId, agentId) : null;
+  const mappedObjectives: PerformanceMapObjective[] = objectives.map((objective) => ({
+    scopeType: objective.scope_type,
+    territoryId: objective.territory_id,
+    userId: objective.user_id,
+    metricKey: objective.metric_key,
+    attainmentPercent: objective.attainment_percent,
+    periodStart: objective.period_start,
+  }));
+
+  const brandObjective = findObjective(objectives, "brand", null, null);
   const orderingPharmacies = pharmacies.filter((pharmacy) => pharmacy.revenueHt > 0);
   const metrics = {
     revenueHt: pharmacies.reduce((sum, pharmacy) => sum + pharmacy.revenueHt, 0),
-    objectiveAttainment: objective?.attainment_percent ?? null,
-    objectiveComparable,
+    objectiveAttainment: productScope ? null : brandObjective?.attainment_percent ?? null,
+    objectiveComparable: !productScope,
     activePharmacies: pharmacies.filter((pharmacy) => !["dormant", "insufficient_history"].includes(pharmacy.healthStatus)).length,
     implantations: pharmacies.reduce((sum, pharmacy) => sum + pharmacy.implantations, 0),
     reorderRate: orderingPharmacies.length ? (orderingPharmacies.filter((pharmacy) => pharmacy.reorders > 0).length / orderingPharmacies.length) * 100 : null,
     atRiskAccounts: pharmacies.filter((pharmacy) => pharmacy.healthStatus === "at_risk").length,
   };
 
-  const territoryObjectiveComparable = !segmentFiltersActive && !agentId;
   const performanceTerritories = territories.map((territory) => {
     const territoryPharmacies = pharmacies.filter((pharmacy) => pharmacy.territoryId === territory.id);
-    const territoryObjective = territoryObjectiveComparable && (!territoryId || territoryId === territory.id)
-      ? findObjective(objectives, "territory", territory.id, null)
-      : null;
+    const territoryObjective = productScope ? null : findObjective(objectives, "territory", territory.id, null);
     const departmentCodes = [...new Set([...(territory.department_codes ?? []), territory.department_code].filter((code): code is string => Boolean(code)))];
     return {
       id: territory.id,
@@ -418,6 +431,7 @@ export default async function PerformanceMapPage({ searchParams }: { searchParam
     lastUpdatedAt: lastUpdatedData?.updated_at ?? null,
     productScopeLabel,
     metrics,
+    objectives: mappedObjectives,
     pharmacies,
     territories: performanceTerritories,
   };
@@ -438,7 +452,16 @@ export default async function PerformanceMapPage({ searchParams }: { searchParam
     potentials: potentialLevels.map((value) => ({ value, label: labels.potentialLevel[value] })),
     priorities: priorityLevels.map((value) => ({ value, label: labels.priorityLevel[value] })),
   };
-  const filters: PerformanceMapFilters = { territory: territoryId, agent: agentId, group: groupId, product: productScope, status, potential, priority, q: search };
+  const filters: PerformanceMapFilters = {
+    territory: options.territories.some((option) => option.value === territoryId) ? territoryId : null,
+    agent: options.agents.some((option) => option.value === agentId) ? agentId : null,
+    group: options.groups.some((option) => option.value === groupId) ? groupId : null,
+    product: productScope,
+    status: options.statuses.some((option) => option.value === status) ? status : null,
+    potential: options.potentials.some((option) => option.value === potential) ? potential : null,
+    priority: options.priorities.some((option) => option.value === priority) ? priority : null,
+    q: search,
+  };
 
   return (
     <main className="space-y-5">
@@ -468,8 +491,8 @@ function resolveProductIds(scope: string | null, products: ProductRow[]) {
 
 function resolveProductScopeLabel(scope: string | null, products: ProductRow[]) {
   if (!scope) return null;
-  if (scope.startsWith("product:")) return products.find((product) => product.id === scope.slice("product:".length))?.name ?? "Produit";
-  if (scope.startsWith("family:")) return scope.slice("family:".length) || "Gamme";
+  if (scope.startsWith("product:")) return products.find((product) => product.id === scope.slice("product:".length))?.name ?? null;
+  if (scope.startsWith("family:")) return scope.slice("family:".length) || null;
   return null;
 }
 

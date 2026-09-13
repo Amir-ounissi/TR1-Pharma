@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, type ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useDeferredValue, useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
 import { AlertTriangle, Building2, CalendarPlus, ChevronDown, CircleDollarSign, Filter, MapPinned, RotateCcw, Search, Target, TrendingUp, Users } from "lucide-react";
 import { FieldVisitCreateForm } from "@/components/agenda/field-visit-create-form";
 import { NextBestActionForm } from "@/components/commercial/next-best-action-form";
@@ -9,50 +10,163 @@ import { PerformanceSlippyMap } from "@/components/performance-map/performance-m
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { PerformanceMapDataset, PerformanceMapFilterOptions, PerformanceMapFilters, PerformanceMapPharmacy, PerformanceMapTerritory } from "@/lib/performance-map";
+import type { PerformanceMapDataset, PerformanceMapFilterOptions, PerformanceMapFilters, PerformanceMapObjective, PerformanceMapPharmacy, PerformanceMapTerritory } from "@/lib/performance-map";
 
 type TableSort = "priority" | "revenue" | "alerts" | "name";
+type ClientFilterKey = "territory" | "agent" | "group" | "status" | "potential" | "priority" | "q";
 
 export function PerformanceMap({ dataset, filters, options }: { dataset: PerformanceMapDataset; filters: PerformanceMapFilters; options: PerformanceMapFilterOptions }) {
+  const router = useRouter();
+  const pathname = usePathname();
   const [selectedPharmacyId, setSelectedPharmacyId] = useState<string | null>(null);
   const [selectedTerritoryId, setSelectedTerritoryId] = useState<string | null>(null);
   const [tableSort, setTableSort] = useState<TableSort>("priority");
-  const selectedPharmacy = dataset.pharmacies.find((pharmacy) => pharmacy.id === selectedPharmacyId) ?? null;
-  const selectedTerritory = dataset.territories.find((territory) => territory.id === selectedTerritoryId) ?? null;
+  const [localFilters, setLocalFilters] = useState<PerformanceMapFilters>(filters);
+  const [dateDraft, setDateDraft] = useState({ from: dataset.from, to: dataset.to });
+  const [isRefreshing, startTransition] = useTransition();
+  const serverNavigationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const deferredSearch = useDeferredValue(localFilters.q.trim().toLocaleLowerCase("fr"));
+
+  useEffect(() => () => {
+    if (serverNavigationTimer.current) clearTimeout(serverNavigationTimer.current);
+  }, []);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      setLocalFilters({
+        territory: nullableParam(params.get("territory")),
+        agent: nullableParam(params.get("agent")),
+        group: nullableParam(params.get("group")),
+        product: nullableParam(params.get("product")),
+        status: nullableParam(params.get("status")),
+        potential: nullableParam(params.get("potential")),
+        priority: nullableParam(params.get("priority")),
+        q: params.get("q") ?? "",
+      });
+      setDateDraft({ from: params.get("from") ?? dataset.from, to: params.get("to") ?? dataset.to });
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [dataset.from, dataset.to]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setUrlParam(params, "territory", localFilters.territory);
+    setUrlParam(params, "agent", localFilters.agent);
+    setUrlParam(params, "group", localFilters.group);
+    setUrlParam(params, "status", localFilters.status);
+    setUrlParam(params, "potential", localFilters.potential);
+    setUrlParam(params, "priority", localFilters.priority);
+    setUrlParam(params, "q", localFilters.q.trim() || null);
+    const query = params.toString();
+    window.history.replaceState(window.history.state, "", query ? `${pathname}?${query}` : pathname);
+  }, [localFilters.agent, localFilters.group, localFilters.potential, localFilters.priority, localFilters.q, localFilters.status, localFilters.territory, pathname]);
+
+  const visiblePharmacies = useMemo(() => dataset.pharmacies.filter((pharmacy) => {
+    if (localFilters.territory && pharmacy.territoryId !== localFilters.territory) return false;
+    if (localFilters.agent && pharmacy.agentUserId !== localFilters.agent) return false;
+    if (localFilters.group && pharmacy.groupId !== localFilters.group) return false;
+    if (localFilters.status && pharmacy.commercialStatus !== localFilters.status) return false;
+    if (localFilters.potential && pharmacy.potentialLevel !== localFilters.potential) return false;
+    if (localFilters.priority && pharmacy.priorityLevel !== localFilters.priority) return false;
+    if (deferredSearch && !pharmacy.searchText.toLocaleLowerCase("fr").includes(deferredSearch)) return false;
+    return true;
+  }), [dataset.pharmacies, deferredSearch, localFilters.agent, localFilters.group, localFilters.potential, localFilters.priority, localFilters.status, localFilters.territory]);
+
+  const viewDataset = useMemo(() => buildFilteredDataset(dataset, visiblePharmacies, localFilters), [dataset, localFilters, visiblePharmacies]);
+  const selectedPharmacy = viewDataset.pharmacies.find((pharmacy) => pharmacy.id === selectedPharmacyId) ?? null;
+  const selectedTerritory = viewDataset.territories.find((territory) => territory.id === selectedTerritoryId) ?? null;
   const sortedPharmacies = useMemo(() => {
-    const rows = [...dataset.pharmacies];
+    const rows = [...viewDataset.pharmacies];
     if (tableSort === "revenue") return rows.sort((a, b) => b.revenueHt - a.revenueHt);
     if (tableSort === "alerts") return rows.sort((a, b) => b.overdueAlerts - a.overdueAlerts || b.openAlerts - a.openAlerts || b.priorityScore - a.priorityScore);
     if (tableSort === "name") return rows.sort((a, b) => a.name.localeCompare(b.name, "fr"));
     return rows.sort((a, b) => b.priorityScore - a.priorityScore || b.revenueHt - a.revenueHt);
-  }, [dataset.pharmacies, tableSort]);
+  }, [tableSort, viewDataset.pharmacies]);
+
+  const updateClientFilter = (name: ClientFilterKey, value: string) => {
+    const normalized = name === "q" ? value : value === "all" ? null : value;
+    setLocalFilters((current) => ({ ...current, [name]: normalized }));
+    if (name === "territory") setSelectedTerritoryId(normalized as string | null);
+    if (name !== "q") setSelectedPharmacyId(null);
+  };
+
+  const navigateServerFilters = (nextDates: { from: string; to: string }, nextProduct: string | null, delay = 0) => {
+    if (serverNavigationTimer.current) clearTimeout(serverNavigationTimer.current);
+    serverNavigationTimer.current = setTimeout(() => {
+      const params = new URLSearchParams(window.location.search);
+      setUrlParam(params, "from", nextDates.from);
+      setUrlParam(params, "to", nextDates.to);
+      setUrlParam(params, "product", nextProduct);
+      setUrlParam(params, "territory", localFilters.territory);
+      setUrlParam(params, "agent", localFilters.agent);
+      setUrlParam(params, "group", localFilters.group);
+      setUrlParam(params, "status", localFilters.status);
+      setUrlParam(params, "potential", localFilters.potential);
+      setUrlParam(params, "priority", localFilters.priority);
+      setUrlParam(params, "q", localFilters.q.trim() || null);
+      const query = params.toString();
+      startTransition(() => router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false }));
+    }, delay);
+  };
+
+  const updateDate = (name: "from" | "to", value: string) => {
+    const nextDates = { ...dateDraft, [name]: value };
+    setDateDraft(nextDates);
+    if (nextDates.from && nextDates.to) navigateServerFilters(nextDates, localFilters.product, 350);
+  };
+
+  const updateProduct = (value: string) => {
+    const product = value === "all" ? null : value;
+    setLocalFilters((current) => ({ ...current, product }));
+    navigateServerFilters(dateDraft, product);
+  };
+
+  const resetFilters = () => {
+    const defaultDates = defaultDateRange();
+    setLocalFilters({ territory: null, agent: null, group: null, product: null, status: null, potential: null, priority: null, q: "" });
+    setDateDraft(defaultDates);
+    setSelectedPharmacyId(null);
+    setSelectedTerritoryId(null);
+    startTransition(() => router.replace(pathname, { scroll: false }));
+  };
 
   return <div className="space-y-4">
     <section className="grid gap-px overflow-hidden rounded-xl border border-[var(--tr1-line-strong)] bg-[var(--tr1-line-strong)] sm:grid-cols-2 xl:grid-cols-6">
-      <Metric icon={CircleDollarSign} label={dataset.productScopeLabel ? `CA · ${dataset.productScopeLabel}` : "CA facturé HT"} value={formatCurrency(dataset.metrics.revenueHt)} detail={`${formatDate(dataset.from)} → ${formatDate(dataset.to)}`} />
-      <Metric icon={Target} label="Atteinte objectif" value={dataset.metrics.objectiveComparable ? formatPercent(dataset.metrics.objectiveAttainment) : "Non comparable"} detail={dataset.metrics.objectiveComparable ? "Objectif du périmètre sélectionné" : "Filtres plus fins que l’objectif défini"} />
-      <Metric icon={Building2} label="Pharmacies actives" value={formatNumber(dataset.metrics.activePharmacies)} detail="Dans le périmètre affiché" />
-      <Metric icon={MapPinned} label="Implantations" value={formatNumber(dataset.metrics.implantations)} detail="Sur la période" />
-      <Metric icon={TrendingUp} label="Taux de réassort" value={formatPercent(dataset.metrics.reorderRate)} detail="Pharmacies commandantes avec ≥1 réassort" />
-      <Metric icon={AlertTriangle} label="Comptes à risque" value={formatNumber(dataset.metrics.atRiskAccounts)} detail="Signal santé commerciale" accent />
+      <Metric icon={CircleDollarSign} label={viewDataset.productScopeLabel ? `CA · ${viewDataset.productScopeLabel}` : "CA facturé HT"} value={formatCurrency(viewDataset.metrics.revenueHt)} detail={`${formatDate(viewDataset.from)} → ${formatDate(viewDataset.to)}`} />
+      <Metric icon={Target} label="Atteinte objectif" value={viewDataset.metrics.objectiveComparable ? formatPercent(viewDataset.metrics.objectiveAttainment) : "Non comparable"} detail={viewDataset.metrics.objectiveComparable ? "Objectif du périmètre sélectionné" : "Filtres plus fins que l’objectif défini"} />
+      <Metric icon={Building2} label="Pharmacies actives" value={formatNumber(viewDataset.metrics.activePharmacies)} detail="Dans le périmètre affiché" />
+      <Metric icon={MapPinned} label="Implantations" value={formatNumber(viewDataset.metrics.implantations)} detail="Sur la période" />
+      <Metric icon={TrendingUp} label="Taux de réassort" value={formatPercent(viewDataset.metrics.reorderRate)} detail="Pharmacies commandantes avec ≥1 réassort" />
+      <Metric icon={AlertTriangle} label="Comptes à risque" value={formatNumber(viewDataset.metrics.atRiskAccounts)} detail="Signal santé commerciale" accent />
     </section>
 
     <section className="grid min-h-[42rem] gap-3 xl:grid-cols-[17rem_minmax(0,1fr)_20rem]">
-      <FilterPanel from={dataset.from} to={dataset.to} filters={filters} options={options} />
+      <FilterPanel
+        dates={dateDraft}
+        filters={localFilters}
+        isRefreshing={isRefreshing}
+        onClientChange={updateClientFilter}
+        onDateChange={updateDate}
+        onProductChange={updateProduct}
+        onReset={resetFilters}
+        options={options}
+      />
       <PerformanceSlippyMap
-        pharmacies={dataset.pharmacies}
-        territories={dataset.territories}
+        pharmacies={viewDataset.pharmacies}
+        territories={viewDataset.territories}
         selectedPharmacyId={selectedPharmacyId}
         selectedTerritoryId={selectedTerritoryId}
         onSelectPharmacy={(id) => { setSelectedPharmacyId(id); setSelectedTerritoryId(null); }}
         onSelectTerritory={(id) => { setSelectedTerritoryId(id); setSelectedPharmacyId(null); }}
       />
-      <DetailPanel dataset={dataset} pharmacy={selectedPharmacy} territory={selectedTerritory} />
+      <DetailPanel dataset={viewDataset} pharmacy={selectedPharmacy} territory={selectedTerritory} />
     </section>
 
     <details className="group overflow-hidden rounded-xl border border-[var(--tr1-line-strong)] bg-[var(--card)]" open>
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
-        <div><p className="font-semibold text-[var(--tr1-navy)]">Pharmacies affichées</p><p className="text-xs text-muted-foreground">{dataset.pharmacies.length} compte(s) · triable par performance ou priorité</p></div>
+        <div><p className="font-semibold text-[var(--tr1-navy)]">Pharmacies affichées</p><p className="text-xs text-muted-foreground">{viewDataset.pharmacies.length} compte(s) · triable par performance ou priorité</p></div>
         <ChevronDown className="size-4 text-muted-foreground transition group-open:rotate-180" />
       </summary>
       <div className="border-t border-[var(--tr1-line)]">
@@ -70,29 +184,107 @@ export function PerformanceMap({ dataset, filters, options }: { dataset: Perform
   </div>;
 }
 
-function FilterPanel({ from, to, filters, options }: { from: string; to: string; filters: PerformanceMapFilters; options: PerformanceMapFilterOptions }) {
+function FilterPanel({
+  dates,
+  filters,
+  options,
+  isRefreshing,
+  onClientChange,
+  onDateChange,
+  onProductChange,
+  onReset,
+}: {
+  dates: { from: string; to: string };
+  filters: PerformanceMapFilters;
+  options: PerformanceMapFilterOptions;
+  isRefreshing: boolean;
+  onClientChange: (name: ClientFilterKey, value: string) => void;
+  onDateChange: (name: "from" | "to", value: string) => void;
+  onProductChange: (value: string) => void;
+  onReset: () => void;
+}) {
   return <details className="group h-fit rounded-xl border border-[var(--tr1-line-strong)] bg-[var(--card)]" open>
     <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 [&::-webkit-details-marker]:hidden"><span className="flex items-center gap-2 font-semibold text-[var(--tr1-navy)]"><Filter className="size-4" />Filtres</span><ChevronDown className="size-4 transition group-open:rotate-180" /></summary>
-    <form action="/dashboard/network/performance-map" className="space-y-3 border-t border-[var(--tr1-line)] p-3">
-      <div className="grid grid-cols-2 gap-2"><Field label="Du"><input className={fieldClass} defaultValue={from} name="from" type="date" /></Field><Field label="Au"><input className={fieldClass} defaultValue={to} name="to" type="date" /></Field></div>
-      <label className="relative block"><span className="sr-only">Rechercher</span><Search className="absolute left-3 top-3 size-3.5 text-muted-foreground" /><input className={`${fieldClass} pl-9`} defaultValue={filters.q} name="q" placeholder="Pharmacie, ville, CIP…" /></label>
-      <SelectField label="Secteur commercial" name="territory" value={filters.territory} options={options.territories} allLabel="Tous les secteurs" />
-      <SelectField label="Commercial" name="agent" value={filters.agent} options={options.agents} allLabel="Toute l’équipe" />
-      <SelectField label="Groupement" name="group" value={filters.group} options={options.groups} allLabel="Tous les groupements" />
-      <label className="block space-y-1"><span className="font-mono text-[0.55rem] font-bold uppercase tracking-[0.1em] text-muted-foreground">Produit / gamme</span><select className={fieldClass} name="product" defaultValue={filters.product ?? "all"}><option value="all">Tous les produits</option>{options.families.length ? <optgroup label="Gammes">{options.families.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</optgroup> : null}<optgroup label="Produits">{options.products.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</optgroup></select></label>
-      <SelectField label="Statut pharmacie" name="status" value={filters.status} options={options.statuses} allLabel="Tous les statuts" />
-      <SelectField label="Potentiel" name="potential" value={filters.potential} options={options.potentials} allLabel="Tous les potentiels" />
-      <SelectField label="Priorité" name="priority" value={filters.priority} options={options.priorities} allLabel="Toutes les priorités" />
-      <Button className="w-full" type="submit">Appliquer</Button><Button asChild className="w-full" type="button" variant="ghost"><Link href="/dashboard/network/performance-map"><RotateCcw className="size-3.5" />Réinitialiser</Link></Button>
+    <form className="space-y-3 border-t border-[var(--tr1-line)] p-3" onSubmit={(event) => event.preventDefault()}>
+      <div className="grid grid-cols-2 gap-2"><Field label="Du"><input className={fieldClass} value={dates.from} onChange={(event) => onDateChange("from", event.target.value)} type="date" /></Field><Field label="Au"><input className={fieldClass} value={dates.to} onChange={(event) => onDateChange("to", event.target.value)} type="date" /></Field></div>
+      <label className="relative block"><span className="sr-only">Rechercher</span><Search className="absolute left-3 top-3 size-3.5 text-muted-foreground" /><input className={`${fieldClass} pl-9`} value={filters.q} onChange={(event) => onClientChange("q", event.target.value)} placeholder="Pharmacie, ville, CIP…" /></label>
+      <SelectField label="Secteur commercial" value={filters.territory} options={options.territories} allLabel="Tous les secteurs" onChange={(value) => onClientChange("territory", value)} />
+      <SelectField label="Commercial" value={filters.agent} options={options.agents} allLabel="Toute l’équipe" onChange={(value) => onClientChange("agent", value)} />
+      <SelectField label="Groupement" value={filters.group} options={options.groups} allLabel="Tous les groupements" onChange={(value) => onClientChange("group", value)} />
+      <label className="block space-y-1"><span className="font-mono text-[0.55rem] font-bold uppercase tracking-[0.1em] text-muted-foreground">Produit / gamme</span><select className={fieldClass} value={filters.product ?? "all"} onChange={(event) => onProductChange(event.target.value)}><option value="all">Tous les produits</option>{options.families.length ? <optgroup label="Gammes">{options.families.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</optgroup> : null}<optgroup label="Produits">{options.products.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</optgroup></select></label>
+      <SelectField label="Statut pharmacie" value={filters.status} options={options.statuses} allLabel="Tous les statuts" onChange={(value) => onClientChange("status", value)} />
+      <SelectField label="Potentiel" value={filters.potential} options={options.potentials} allLabel="Tous les potentiels" onChange={(value) => onClientChange("potential", value)} />
+      <SelectField label="Priorité" value={filters.priority} options={options.priorities} allLabel="Toutes les priorités" onChange={(value) => onClientChange("priority", value)} />
+      <div className={`rounded-md border px-3 py-2 text-center text-[0.65rem] font-medium ${isRefreshing ? "border-amber-200 bg-amber-50 text-amber-800" : "border-emerald-200 bg-emerald-50/60 text-emerald-800"}`}>
+        {isRefreshing ? "Mise à jour des données…" : "Filtres appliqués instantanément"}
+      </div>
+      <Button className="w-full" type="button" variant="ghost" onClick={onReset}><RotateCcw className="size-3.5" />Réinitialiser</Button>
     </form>
   </details>;
 }
 
-function SelectField({ label, name, value, options, allLabel }: { label: string; name: string; value: string | null; options: Array<{ value: string; label: string }>; allLabel: string }) {
-  return <label className="block space-y-1"><span className="font-mono text-[0.55rem] font-bold uppercase tracking-[0.1em] text-muted-foreground">{label}</span><select className={fieldClass} name={name} defaultValue={value ?? "all"}><option value="all">{allLabel}</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>;
+function SelectField({ label, value, options, allLabel, onChange }: { label: string; value: string | null; options: Array<{ value: string; label: string }>; allLabel: string; onChange: (value: string) => void }) {
+  return <label className="block space-y-1"><span className="font-mono text-[0.55rem] font-bold uppercase tracking-[0.1em] text-muted-foreground">{label}</span><select className={fieldClass} value={value ?? "all"} onChange={(event) => onChange(event.target.value)}><option value="all">{allLabel}</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>;
 }
 function Field({ label, children }: { label: string; children: ReactNode }) { return <label className="block space-y-1"><span className="font-mono text-[0.55rem] font-bold uppercase tracking-[0.1em] text-muted-foreground">{label}</span>{children}</label>; }
 const fieldClass = "h-10 w-full rounded-md border border-[var(--tr1-line-strong)] bg-white px-3 text-sm";
+
+function buildFilteredDataset(dataset: PerformanceMapDataset, pharmacies: PerformanceMapPharmacy[], filters: PerformanceMapFilters): PerformanceMapDataset {
+  const segmentFiltersActive = Boolean(filters.group || filters.product || filters.status || filters.potential || filters.priority || filters.q.trim());
+  const objectiveComparable = !segmentFiltersActive && !(filters.territory && filters.agent);
+  const objectiveScope: PerformanceMapObjective["scopeType"] = filters.agent ? "agent" : filters.territory ? "territory" : "brand";
+  const objective = objectiveComparable ? findObjective(dataset.objectives, objectiveScope, filters.territory, filters.agent) : null;
+  const orderingPharmacies = pharmacies.filter((pharmacy) => pharmacy.revenueHt > 0);
+  const metrics = {
+    revenueHt: pharmacies.reduce((sum, pharmacy) => sum + pharmacy.revenueHt, 0),
+    objectiveAttainment: objective?.attainmentPercent ?? null,
+    objectiveComparable,
+    activePharmacies: pharmacies.filter((pharmacy) => !["dormant", "insufficient_history"].includes(pharmacy.healthStatus)).length,
+    implantations: pharmacies.reduce((sum, pharmacy) => sum + pharmacy.implantations, 0),
+    reorderRate: orderingPharmacies.length ? (orderingPharmacies.filter((pharmacy) => pharmacy.reorders > 0).length / orderingPharmacies.length) * 100 : null,
+    atRiskAccounts: pharmacies.filter((pharmacy) => pharmacy.healthStatus === "at_risk").length,
+  };
+  const territoryObjectiveComparable = !segmentFiltersActive && !filters.agent;
+  const territories = dataset.territories.map((territory) => {
+    const territoryPharmacies = pharmacies.filter((pharmacy) => pharmacy.territoryId === territory.id);
+    const objectiveVisible = territoryObjectiveComparable && (!filters.territory || filters.territory === territory.id);
+    return {
+      ...territory,
+      objectiveAttainment: objectiveVisible ? territory.objectiveAttainment : null,
+      objectiveMetricLabel: objectiveVisible ? territory.objectiveMetricLabel : null,
+      revenueHt: territoryPharmacies.reduce((sum, pharmacy) => sum + pharmacy.revenueHt, 0),
+      pharmacyCount: territoryPharmacies.length,
+      activePharmacies: territoryPharmacies.filter((pharmacy) => !["dormant", "insufficient_history"].includes(pharmacy.healthStatus)).length,
+      atRiskAccounts: territoryPharmacies.filter((pharmacy) => pharmacy.healthStatus === "at_risk").length,
+      openAlerts: territoryPharmacies.reduce((sum, pharmacy) => sum + pharmacy.openAlerts, 0),
+    };
+  });
+  return { ...dataset, metrics, pharmacies, territories };
+}
+
+function findObjective(objectives: PerformanceMapObjective[], scope: PerformanceMapObjective["scopeType"], territoryId: string | null, agentId: string | null) {
+  const matching = objectives.filter((objective) => objective.scopeType === scope)
+    .filter((objective) => scope !== "territory" || objective.territoryId === territoryId)
+    .filter((objective) => scope !== "agent" || objective.userId === agentId)
+    .sort((a, b) => b.periodStart.localeCompare(a.periodStart));
+  return matching.find((objective) => objective.metricKey === "revenue_ht") ?? matching[0] ?? null;
+}
+
+function nullableParam(value: string | null) {
+  return value && value !== "all" ? value : null;
+}
+
+function setUrlParam(params: URLSearchParams, name: string, value: string | null) {
+  if (value) params.set(name, value);
+  else params.delete(name);
+}
+
+function defaultDateRange() {
+  const to = new Date();
+  const from = new Date(to);
+  from.setDate(from.getDate() - 29);
+  return { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) };
+}
 
 function DetailPanel({ dataset, pharmacy, territory }: { dataset: PerformanceMapDataset; pharmacy: PerformanceMapPharmacy | null; territory: PerformanceMapTerritory | null }) {
   const defaultStart = `${shiftDate(dataset.to, 1)}T09:00`;
