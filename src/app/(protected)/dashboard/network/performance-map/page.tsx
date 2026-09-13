@@ -151,7 +151,7 @@ export default async function PerformanceMapPage({ searchParams }: { searchParam
   const territoryId = nullable(query.territory);
   const agentId = nullable(query.agent);
   const groupId = nullable(query.group);
-  const productScope = nullable(query.product);
+  const requestedProductScope = nullable(query.product);
   const status = nullable(query.status);
   const potential = nullable(query.potential);
   const priority = nullable(query.priority);
@@ -267,6 +267,9 @@ export default async function PerformanceMapPage({ searchParams }: { searchParam
   const territories = (territoriesData ?? []) as TerritoryRow[];
   const products = (productsData ?? []) as ProductRow[];
   const objectives = (objectivesData ?? []) as ObjectiveRow[];
+  const productIds = resolveProductIds(requestedProductScope, products);
+  const productScope = requestedProductScope && productIds.length ? requestedProductScope : null;
+  const productScopeLabel = resolveProductScopeLabel(productScope, products);
 
   const nextActions = new Map<string, PerformanceMapNextAction>();
   ((nextActionsData ?? []) as NextBestActionRow[]).forEach((row) => nextActions.set(row.brand_pharmacy_id, {
@@ -275,8 +278,6 @@ export default async function PerformanceMapPage({ searchParams }: { searchParam
     dueAt: row.suggested_due_at,
   }));
 
-  const productIds = resolveProductIds(productScope, products);
-  const productScopeLabel = resolveProductScopeLabel(productScope, products);
   const productRollups = new Map<string, ProductRollup>();
 
   if (productScope && productIds.length) {
@@ -451,7 +452,16 @@ export default async function PerformanceMapPage({ searchParams }: { searchParam
     potentials: potentialLevels.map((value) => ({ value, label: labels.potentialLevel[value] })),
     priorities: priorityLevels.map((value) => ({ value, label: labels.priorityLevel[value] })),
   };
-  const filters: PerformanceMapFilters = { territory: territoryId, agent: agentId, group: groupId, product: productScope, status, potential, priority, q: search };
+  const filters: PerformanceMapFilters = {
+    territory: options.territories.some((option) => option.value === territoryId) ? territoryId : null,
+    agent: options.agents.some((option) => option.value === agentId) ? agentId : null,
+    group: options.groups.some((option) => option.value === groupId) ? groupId : null,
+    product: productScope,
+    status: options.statuses.some((option) => option.value === status) ? status : null,
+    potential: options.potentials.some((option) => option.value === potential) ? potential : null,
+    priority: options.priorities.some((option) => option.value === priority) ? priority : null,
+    q: search,
+  };
 
   return (
     <main className="space-y-5">
@@ -481,8 +491,8 @@ function resolveProductIds(scope: string | null, products: ProductRow[]) {
 
 function resolveProductScopeLabel(scope: string | null, products: ProductRow[]) {
   if (!scope) return null;
-  if (scope.startsWith("product:")) return products.find((product) => product.id === scope.slice("product:".length))?.name ?? "Produit";
-  if (scope.startsWith("family:")) return scope.slice("family:".length) || "Gamme";
+  if (scope.startsWith("product:")) return products.find((product) => product.id === scope.slice("product:".length))?.name ?? null;
+  if (scope.startsWith("family:")) return scope.slice("family:".length) || null;
   return null;
 }
 
