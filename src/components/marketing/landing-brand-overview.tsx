@@ -40,10 +40,10 @@ export function LandingBrandOverview() {
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-xl bg-[var(--tr1-ivory)] p-4">
+    <div className="rounded-xl bg-[var(--tr1-ivory)] p-4">
       <h3 className="text-sm font-black text-[var(--tr1-navy)]">{title}</h3>
       <div className="mt-4 space-y-3">{children}</div>
-    </section>
+    </div>
   );
 }
 
