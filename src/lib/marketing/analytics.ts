@@ -2,6 +2,7 @@ export const marketingEvents = [
   "landing_view",
   "primary_cta_click",
   "product_tab_view",
+  "map_filter_use",
   "lead_form_start",
   "lead_form_validation_error",
   "lead_form_submit",
