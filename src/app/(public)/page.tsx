@@ -1,32 +1,46 @@
+import type { Metadata } from "next";
 import Image from "next/image";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { LandingActionScenario } from "@/components/marketing/landing-action-scenario";
 import { LandingPilotageMap } from "@/components/marketing/landing-pilotage-map";
+import { LandingTrainingDemo } from "@/components/marketing/landing-training-demo";
 import { LeadForm } from "@/components/marketing/lead-form";
 import { MarketingPageEvent, MarketingTrackedLink } from "@/components/marketing/marketing-events";
 
-const problems = [
-  {
-    number: "01",
-    title: "Vos données commerciales sont dispersées.",
-    text: "Pharmacies, commandes, contacts, visites et prochaines actions restent souvent répartis entre plusieurs outils.",
-  },
-  {
-    number: "02",
-    title: "Les priorités terrain sont difficiles à partager.",
-    text: "Le management et le terrain ne travaillent pas toujours à partir de la même lecture du réseau.",
-  },
-  {
-    number: "03",
-    title: "Un compte ouvert ne doit pas disparaître du radar.",
-    text: "La première commande n’est qu’une étape : réassort, animation, formation et suivi doivent ensuite prendre le relais.",
-  },
-];
+export const metadata: Metadata = {
+  title: "TR1 Pharma | Pilotage commercial et actions terrain en pharmacie",
+  description:
+    "TR1 Pharma aide les marques et laboratoires à identifier où agir, coordonner commerciaux, animateurs et formateurs, puis suivre les résultats dans leur réseau officinal.",
+};
 
-const missionSteps = [
-  ["01", "Recruter", "Mobilisez un animateur ou un formateur adapté à la mission, au secteur et aux besoins de la marque."],
-  ["02", "Planifier", "Définissez la pharmacie, la date, l’intervenant, le type de mission et son objectif."],
-  ["03", "Suivre", "Suivez les missions planifiées, affectées, réalisées et celles qui attendent encore leur compte rendu."],
-  ["04", "Mesurer", "Analysez l’impact observé après la mission et rapprochez le résultat du coût engagé."],
+const valueBlocks = [
+  {
+    title: "Identifiez les priorités",
+    text: "Repérez les réassorts attendus, les comptes à risque et les pharmacies sans prochaine action.",
+  },
+  {
+    title: "Coordonnez les équipes",
+    text: "Partagez les objectifs, les briefs et le planning des visites, animations et formations.",
+  },
+  {
+    title: "Suivez les résultats",
+    text: "Retrouvez les comptes rendus, les ventes déclarées, les équipes formées et les résultats des quiz.",
+  },
+] as const;
+
+const interventionMetrics = [
+  {
+    title: "Commercial",
+    lines: ["Commandes et implantations", "Réassorts et comptes à suivre", "Progression par rapport aux objectifs"],
+  },
+  {
+    title: "Animations",
+    lines: ["Missions réalisées", "Ventes déclarées et coûts", "Résultats observés et comparaison avant / après"],
+  },
+  {
+    title: "Formations",
+    lines: ["Pharmacies et participants formés", "Modules suivis", "Résultats des quiz et progression"],
+  },
 ] as const;
 
 export default function LandingPage() {
@@ -35,246 +49,226 @@ export default function LandingPage() {
       <MarketingPageEvent event="landing_view" />
 
       <section className="relative overflow-hidden px-5 pb-16 pt-12 sm:pb-20 sm:pt-16 lg:px-8 lg:pb-24 lg:pt-20">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-[42rem] bg-[radial-gradient(circle_at_65%_18%,rgba(182,211,230,.28),transparent_38%),radial-gradient(circle_at_20%_0%,rgba(255,255,255,.92),transparent_55%)]" />
-        <div className="relative mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-[.86fr_1.14fr] lg:gap-4 xl:gap-8">
-          <div className="relative z-10 max-w-[40rem] py-4 lg:py-10">
-            <p className="font-mono text-[.68rem] font-black uppercase tracking-[.22em] text-[var(--tr1-orange)]">
-              Exécution commerciale terrain
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[44rem] bg-[radial-gradient(circle_at_70%_16%,rgba(182,211,230,.3),transparent_38%),radial-gradient(circle_at_18%_0%,rgba(255,255,255,.94),transparent_58%)]" />
+        <div className="relative mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[.86fr_1.14fr] lg:gap-8">
+          <div className="relative z-10 max-w-[39rem] py-4 lg:py-8">
+            <p className="font-mono text-[.66rem] font-black uppercase tracking-[.2em] text-[var(--tr1-orange)]">
+              Pour les marques qui se développent en pharmacie
             </p>
-
-            <h1 className="mt-6 text-[3.15rem] font-black leading-[.94] tracking-[-.07em] text-[var(--tr1-navy)] sm:text-[4rem] lg:text-[4.55rem] xl:text-[5rem]">
-              Le cockpit d’exécution commerciale terrain des marques <span className="text-[var(--tr1-orange)]">en pharmacie.</span>
+            <h1 className="mt-6 text-[3rem] font-black leading-[.98] tracking-[-.065em] sm:text-[3.7rem] lg:text-[4.3rem]">
+              Une vision claire de votre réseau. <span className="text-[var(--tr1-orange)]">Des actions concrètes dans chaque pharmacie.</span>
             </h1>
-
             <p className="mt-7 max-w-[37rem] text-lg leading-8 text-[var(--tr1-muted)] sm:text-xl sm:leading-9">
-              Planifiez, suivez, prouvez et mesurez chaque action menée dans le réseau officinal. Du sell-in au sell-out, TR1 vous aide à savoir où agir, avec qui et pourquoi.
+              Coordonnez vos commerciaux, animateurs et formateurs. Identifiez où intervenir et suivez les résultats de vos visites, animations et formations.
             </p>
-
-            <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-9">
               <MarketingTrackedLink
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-[var(--tr1-navy)] px-5 text-sm font-black text-white shadow-[0_12px_30px_rgba(14,29,49,.16)] transition hover:-translate-y-0.5 hover:bg-[#173a5c]"
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-[var(--tr1-navy)] px-5 text-sm font-black text-white shadow-[0_12px_30px_rgba(14,29,49,.16)] transition hover:-translate-y-0.5 hover:bg-[#173a5c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-orange)] focus-visible:ring-offset-2 motion-reduce:transition-none"
                 event="primary_cta_click"
                 href="#diagnostic"
+                properties={{ placement: "hero" }}
               >
                 Demander une démo
                 <ArrowRight className="size-4" />
               </MarketingTrackedLink>
-
-              <a
-                className="inline-flex min-h-12 items-center justify-center rounded-md border border-[var(--tr1-line-strong)] bg-white/45 px-5 text-sm font-black transition hover:bg-white/75"
-                href="#produit"
-              >
-                Voir la plateforme
-              </a>
             </div>
-
-            <p className="mt-4 text-sm text-[var(--tr1-muted)]">
-              Diagnostic et démonstration personnalisée de 30 minutes.
-            </p>
-
-            <div className="mt-9 grid max-w-[38rem] gap-3 border-t border-[var(--tr1-line)] pt-6 text-sm sm:grid-cols-3">
-              <p><strong className="block text-[var(--tr1-navy)]">Identifiez</strong><span className="text-[var(--tr1-muted)]">où agir en priorité</span></p>
-              <p><strong className="block text-[var(--tr1-navy)]">Coordonnez</strong><span className="text-[var(--tr1-muted)]">les actions terrain</span></p>
-              <p><strong className="block text-[var(--tr1-navy)]">Mesurez</strong><span className="text-[var(--tr1-muted)]">ce qui se passe ensuite</span></p>
-            </div>
+            <p className="mt-4 text-sm text-[var(--tr1-muted)]">30 minutes pour découvrir TR1 à partir de vos enjeux terrain.</p>
           </div>
 
-          <div className="relative -mx-3 sm:mx-0 lg:-mr-8 xl:-mr-12">
+          <div className="relative min-w-0 lg:-mr-5 xl:-mr-8">
             <LandingPilotageMap />
           </div>
         </div>
       </section>
 
-      <section className="border-y border-[var(--tr1-line)] bg-white/28 px-5 py-24 lg:px-8 lg:py-32" id="pourquoi">
+      <section className="border-y border-[var(--tr1-line)] bg-white/28 px-5 py-20 lg:px-8 lg:py-28" id="scenario">
         <div className="mx-auto max-w-7xl">
           <div className="max-w-4xl">
-            <p className="font-mono text-[.67rem] font-black uppercase tracking-[.2em] text-[var(--tr1-orange)]">
-              Pourquoi TR1
-            </p>
-            <h2 className="mt-5 text-4xl font-black leading-[.98] tracking-[-.06em] sm:text-5xl lg:text-6xl">
-              Votre réseau grandit. Votre organisation doit pouvoir suivre.
-            </h2>
-            <p className="mt-7 max-w-3xl text-lg leading-8 text-[var(--tr1-muted)]">
-              Développer une marque en pharmacie demande de faire deux choses en même temps : ouvrir de nouveaux comptes et continuer à faire progresser ceux qui existent déjà.
-            </p>
+            <p className="font-mono text-[.66rem] font-black uppercase tracking-[.2em] text-[var(--tr1-orange)]">Du signal à la prochaine action</p>
+            <h2 className="mt-5 text-4xl font-black leading-[1] tracking-[-.055em] sm:text-5xl lg:text-[3.7rem]">Une action terrain avance, étape par étape.</h2>
+            <p className="mt-6 max-w-3xl text-lg leading-8 text-[var(--tr1-muted)]">Une pharmacie à relancer → une animation planifiée → un bilan disponible. Explorez les trois étapes pour voir comment TR1 garde le fil.</p>
           </div>
+          <div className="mt-12"><LandingActionScenario /></div>
+          <div className="mt-10 text-center">
+            <MarketingTrackedLink
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-[var(--tr1-orange)] px-5 text-sm font-black text-white shadow-[0_12px_30px_rgba(234,112,21,.18)] transition hover:-translate-y-0.5 hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-navy)] focus-visible:ring-offset-2 motion-reduce:transition-none"
+              event="primary_cta_click"
+              href="#diagnostic"
+              properties={{ placement: "after_scenario" }}
+            >
+              Demander une démo
+              <ArrowRight className="size-4" />
+            </MarketingTrackedLink>
+          </div>
+        </div>
+      </section>
 
-          <div className="mt-14 border-t border-[var(--tr1-line)]">
-            {problems.map((problem) => (
-              <article
-                className="grid gap-4 border-b border-[var(--tr1-line)] py-8 sm:grid-cols-[5rem_1fr] lg:grid-cols-[8rem_.9fr_1.1fr] lg:items-start lg:py-10"
-                key={problem.number}
-              >
-                <span className="font-mono text-sm font-black text-[var(--tr1-orange)]">{problem.number}</span>
-                <h3 className="text-2xl font-black leading-tight tracking-[-.035em]">
-                  {problem.title}
-                </h3>
-                <p className="max-w-xl text-base leading-7 text-[var(--tr1-muted)] sm:col-start-2 lg:col-start-auto">
-                  {problem.text}
-                </p>
+      <section className="px-5 py-20 lg:px-8 lg:py-28" id="pourquoi-tr1">
+        <div className="mx-auto max-w-7xl">
+          <div className="max-w-4xl">
+            <p className="font-mono text-[.66rem] font-black uppercase tracking-[.2em] text-[var(--tr1-orange)]">Pourquoi TR1</p>
+            <h2 className="mt-5 text-4xl font-black leading-[1] tracking-[-.055em] sm:text-5xl lg:text-[3.7rem]">
+              Sachez où agir, qui intervient et ce qui se passe ensuite.
+            </h2>
+          </div>
+          <div className="mt-12 grid border-t border-[var(--tr1-line)] md:grid-cols-3">
+            {valueBlocks.map((item, index) => (
+              <article className={`border-b border-[var(--tr1-line)] py-7 md:px-7 md:py-9 ${index < 2 ? "md:border-r" : ""} ${index === 0 ? "md:pl-0" : ""} ${index === 2 ? "md:pr-0" : ""}`} key={item.title}>
+                <span className="font-mono text-xs font-black text-[var(--tr1-orange)]">0{index + 1}</span>
+                <h3 className="mt-6 text-2xl font-black tracking-[-.04em]">{item.title}</h3>
+                <p className="mt-4 leading-7 text-[var(--tr1-muted)]">{item.text}</p>
               </article>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="px-5 py-24 lg:px-8 lg:py-32" id="produit">
+      <section className="border-t border-[var(--tr1-line)] px-5 py-20 lg:px-8 lg:py-28" id="plateforme">
         <div className="mx-auto max-w-7xl">
           <div className="max-w-4xl">
-            <p className="font-mono text-[.67rem] font-black uppercase tracking-[.2em] text-[var(--tr1-orange)]">
-              La plateforme
-            </p>
-            <h2 className="mt-5 text-4xl font-black leading-[.98] tracking-[-.06em] sm:text-5xl lg:text-6xl">
-              Un seul environnement pour savoir où agir.
+            <p className="font-mono text-[.66rem] font-black uppercase tracking-[.2em] text-[var(--tr1-orange)]">La plateforme</p>
+            <h2 className="mt-5 text-4xl font-black leading-[1] tracking-[-.055em] sm:text-5xl lg:text-[3.7rem]">
+              Un suivi continu, de la visite commerciale à la formation de l’équipe officinale.
             </h2>
-            <p className="mt-7 max-w-3xl text-lg leading-8 text-[var(--tr1-muted)]">
-              TR1 transforme les données du réseau en décisions concrètes pour le management et le terrain.
-            </p>
           </div>
 
-          <div className="mt-14 grid gap-5 lg:grid-cols-12">
-            <article className="overflow-hidden rounded-[1.35rem] border border-[var(--tr1-line)] bg-white/35 lg:col-span-7">
-              <div className="p-7 sm:p-9">
-                <p className="font-mono text-[.62rem] font-black uppercase tracking-[.17em] text-[var(--tr1-orange)]">
-                  Pilotage
+          <div className="mt-16 space-y-20 lg:space-y-28">
+            <article className="grid items-center gap-10 lg:grid-cols-[.8fr_1.2fr] lg:gap-14">
+              <div>
+                <p className="font-mono text-[.62rem] font-black uppercase tracking-[.17em] text-[var(--tr1-orange)]">Commercial</p>
+                <h3 className="mt-3 text-3xl font-black tracking-[-.05em] sm:text-4xl">Gardez le fil après chaque visite.</h3>
+                <p className="mt-5 text-lg leading-8 text-[var(--tr1-muted)]">
+                  Vos commerciaux retrouvent l’historique de la pharmacie, préparent leurs visites et renseignent leur retour depuis leur téléphone. Commandes, relances et prochaines actions restent rattachées au compte.
                 </p>
-                <h3 className="mt-3 text-3xl font-black tracking-[-.05em]">
-                  Savoir où agir aujourd’hui.
-                </h3>
-                <p className="mt-4 max-w-xl leading-7 text-[var(--tr1-muted)]">
-                  Les comptes prioritaires, les alertes et les objectifs remontent dans une même vue.
-                </p>
-              </div>
-              <div className="px-3 pb-3 sm:px-5 sm:pb-5">
-                <Image alt="Pilotage Manager TR1" className="w-full rounded-xl border border-[var(--tr1-line)]" height={600} src="/marketing/manager-day.webp" width={716} />
-              </div>
-            </article>
-
-            <article className="overflow-hidden rounded-[1.35rem] border border-[var(--tr1-line)] bg-[#fffdf8] lg:col-span-5">
-              <div className="p-7 sm:p-9">
-                <p className="font-mono text-[.62rem] font-black uppercase tracking-[.17em] text-[var(--tr1-orange)]">
-                  Compte pharmacie
-                </p>
-                <h3 className="mt-3 text-3xl font-black tracking-[-.05em]">
-                  Comprendre chaque pharmacie.
-                </h3>
-                <p className="mt-4 leading-7 text-[var(--tr1-muted)]">
-                  Commandes, activité, assortiment, historique et prochaine action restent rattachés au compte.
-                </p>
-              </div>
-              <div className="px-3 pb-3 sm:px-5 sm:pb-5">
-                <Image alt="Fiche pharmacie TR1" className="w-full rounded-xl border border-[var(--tr1-line)]" height={600} src="/marketing/pharmacy-account.webp" width={716} />
-              </div>
-            </article>
-
-            <article className="grid overflow-hidden rounded-[1.35rem] bg-[var(--tr1-navy)] text-[var(--tr1-ivory)] lg:col-span-12 lg:grid-cols-[.9fr_1.1fr]">
-              <div className="flex flex-col justify-center p-7 sm:p-10 lg:p-12">
-                <p className="font-mono text-[.62rem] font-black uppercase tracking-[.17em] text-[var(--tr1-orange)]">
-                  Expérience terrain
-                </p>
-                <h3 className="mt-4 text-3xl font-black tracking-[-.05em] sm:text-4xl">
-                  Donner au terrain la prochaine bonne action.
-                </h3>
-                <p className="mt-5 max-w-xl leading-7 text-white/65">
-                  La prochaine visite est préparée avec la pharmacie, le contexte, l’objectif et les informations utiles.
-                </p>
-                <div className="mt-8 space-y-3 border-t border-white/12 pt-6 font-semibold">
-                  <p>Où vais-je ?</p>
-                  <p>Pourquoi cette pharmacie ?</p>
-                  <p>Que dois-je faire sur place ?</p>
+                <div className="mt-7 space-y-3 text-sm font-semibold">
+                  {["Historique pharmacie", "Préparation de visite", "Compte rendu mobile", "Commandes, relances et prochaine action"].map((text) => (
+                    <p className="flex items-center gap-2" key={text}><CheckCircle2 className="size-4 text-[var(--tr1-orange)]" />{text}</p>
+                  ))}
                 </div>
               </div>
-              <div className="flex items-end justify-center px-6 pt-8 lg:px-10">
-                <Image alt="Expérience mobile Agent TR1" className="w-full max-w-[25rem] rounded-t-[1.4rem] border border-b-0 border-white/12" height={600} src="/marketing/agent-day-mobile.webp" width={716} />
+              <div className="relative min-w-0 rounded-[1.35rem] border border-[var(--tr1-line)] bg-white/35 p-3 shadow-[0_24px_70px_rgba(14,29,49,.09)] sm:p-5">
+                <Image alt="Fiche pharmacie TR1 : historique commercial et prochaine action" className="w-full rounded-xl border border-[var(--tr1-line)]" height={600} src="/marketing/pharmacy-account.webp" width={716} />
+                <div className="absolute -bottom-6 right-4 hidden w-[27%] min-w-[9rem] overflow-hidden rounded-t-[1rem] border border-b-0 border-[var(--tr1-line)] bg-white shadow-[0_18px_45px_rgba(14,29,49,.16)] sm:block">
+                  <Image alt="Aperçu mobile TR1 pour le commercial terrain" className="w-full" height={600} src="/marketing/agent-day-mobile.webp" width={716} />
+                </div>
               </div>
             </article>
+
+            <article className="grid items-center gap-10 lg:grid-cols-[1.1fr_.9fr] lg:gap-14" id="animations-formations">
+              <div className="order-2 min-w-0 rounded-[1.35rem] border border-[var(--tr1-line)] bg-[#fffdf8] p-3 shadow-[0_24px_70px_rgba(14,29,49,.09)] sm:p-5 lg:order-1">
+                <Image alt="Planning TR1 des animations et missions terrain" className="w-full rounded-xl border border-[var(--tr1-line)]" height={600} src="/marketing/missions-board.webp" width={716} />
+              </div>
+              <div className="order-1 lg:order-2">
+                <p className="font-mono text-[.62rem] font-black uppercase tracking-[.17em] text-[var(--tr1-orange)]">Animations</p>
+                <h3 className="mt-3 text-3xl font-black tracking-[-.05em] sm:text-4xl">Pilotez chaque journée, du brief au bilan.</h3>
+                <p className="mt-5 text-lg leading-8 text-[var(--tr1-muted)]">
+                  Organisez vos animations avec vos intervenants, précisez les produits et les objectifs, puis centralisez les comptes rendus, les photos et les ventes déclarées. Retrouvez les coûts et le suivi de facturation associés à chaque journée.
+                </p>
+                <div className="mt-7 flex flex-wrap gap-2 font-mono text-[.67rem] font-black uppercase tracking-[.08em]">
+                  {["Brief", "Planification", "Réalisation", "Compte rendu", "Bilan"].map((step, index) => (
+                    <span className="rounded-full border border-[var(--tr1-line)] bg-white/55 px-3 py-2" key={step}>{index + 1}. {step}</span>
+                  ))}
+                </div>
+              </div>
+            </article>
+
+            <article className="grid items-center gap-10 lg:grid-cols-[.8fr_1.2fr] lg:gap-14">
+              <div>
+                <p className="font-mono text-[.62rem] font-black uppercase tracking-[.17em] text-[var(--tr1-orange)]">Formations</p>
+                <h3 className="mt-3 text-3xl font-black tracking-[-.05em] sm:text-4xl">Sachez qui a été formé et ce qui a été retenu.</h3>
+                <p className="mt-5 text-lg leading-8 text-[var(--tr1-muted)]">
+                  Mettez vos modules à disposition des formateurs. Retrouvez, pour chaque pharmacie, les participants et les formations suivies. Des quiz courts et ludiques permettent d’évaluer les acquis et d’identifier les sujets à renforcer.
+                </p>
+                <div className="mt-7 space-y-3 text-sm font-semibold">
+                  {["Catalogue de modules par marque, gamme ou produit", "Participants et formations par pharmacie", "Quiz avec réponse expliquée", "Synthèse des résultats et sujets à renforcer"].map((text) => (
+                    <p className="flex items-start gap-2" key={text}><CheckCircle2 className="mt-0.5 size-4 shrink-0 text-[var(--tr1-orange)]" />{text}</p>
+                  ))}
+                </div>
+              </div>
+              <LandingTrainingDemo />
+            </article>
+          </div>
+
+          <div className="mt-16 text-center">
+            <MarketingTrackedLink
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-[var(--tr1-orange)] px-5 text-sm font-black text-white shadow-[0_12px_30px_rgba(234,112,21,.18)] transition hover:-translate-y-0.5 hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-navy)] focus-visible:ring-offset-2 motion-reduce:transition-none"
+              event="primary_cta_click"
+              href="#diagnostic"
+              properties={{ placement: "after_use_cases" }}
+            >
+              Demander une démo
+              <ArrowRight className="size-4" />
+            </MarketingTrackedLink>
           </div>
         </div>
       </section>
 
-      <section className="border-y border-[var(--tr1-line)] bg-white/28 px-5 py-24 lg:px-8 lg:py-32" id="animations">
+      <section className="border-y border-[var(--tr1-line)] bg-white/28 px-5 py-20 lg:px-8 lg:py-28">
         <div className="mx-auto max-w-7xl">
-          <div className="max-w-4xl">
-            <p className="font-mono text-[.67rem] font-black uppercase tracking-[.2em] text-[var(--tr1-orange)]">
-              Animation commerciale
-            </p>
-            <h2 className="mt-5 text-4xl font-black leading-[.98] tracking-[-.06em] sm:text-5xl lg:text-6xl">
-              Recrutez, planifiez et mesurez vos animations.
-            </h2>
-            <p className="mt-7 max-w-3xl text-lg leading-8 text-[var(--tr1-muted)]">
-              De la sélection de l’intervenant à l’analyse des résultats, TR1 permet de coordonner les animations et formations autour de chaque pharmacie.
-            </p>
+          <div className="grid gap-10 lg:grid-cols-[.8fr_1.2fr] lg:items-end">
+            <div>
+              <p className="font-mono text-[.66rem] font-black uppercase tracking-[.2em] text-[var(--tr1-orange)]">Pilotage et mesure</p>
+              <h2 className="mt-5 text-4xl font-black leading-[1] tracking-[-.055em] sm:text-5xl">Chaque intervention vous aide à préparer la suivante.</h2>
+              <p className="mt-6 text-lg leading-8 text-[var(--tr1-muted)]">
+                Retrouvez l’activité commerciale, les animations et les formations de chaque pharmacie. Appuyez-vous sur cet historique et les résultats disponibles pour décider des prochaines actions.
+              </p>
+            </div>
+            <div className="overflow-hidden rounded-[1.35rem] border border-[var(--tr1-line)] bg-white/55 p-3 shadow-[0_24px_70px_rgba(14,29,49,.08)] sm:p-5">
+              <Image alt="Vue Manager TR1 pour le pilotage du réseau" className="w-full rounded-xl border border-[var(--tr1-line)]" height={600} src="/marketing/manager-day.webp" width={716} />
+            </div>
           </div>
 
-          <div className="mt-14 grid border-t border-[var(--tr1-line)] lg:grid-cols-4">
-            {missionSteps.map(([number, title, text], index) => (
-              <article className={`border-b border-[var(--tr1-line)] py-8 lg:px-7 ${index < 3 ? "lg:border-r" : ""} ${index === 0 ? "lg:pl-0" : ""} ${index === 3 ? "lg:pr-0" : ""}`} key={number}>
-                <span className="font-mono text-xs font-black text-[var(--tr1-orange)]">{number}</span>
-                <h3 className="mt-7 text-2xl font-black tracking-[-.04em]">{title}</h3>
-                <p className="mt-4 leading-7 text-[var(--tr1-muted)]">{text}</p>
+          <div className="mt-12 grid border-t border-[var(--tr1-line)] lg:grid-cols-3">
+            {interventionMetrics.map((group, index) => (
+              <article className={`border-b border-[var(--tr1-line)] py-7 lg:px-7 ${index < 2 ? "lg:border-r" : ""} ${index === 0 ? "lg:pl-0" : ""} ${index === 2 ? "lg:pr-0" : ""}`} key={group.title}>
+                <h3 className="text-xl font-black">{group.title}</h3>
+                <div className="mt-5 space-y-3 text-sm leading-6 text-[var(--tr1-muted)]">
+                  {group.lines.map((line) => <p key={line}>{line}</p>)}
+                </div>
+                {group.title === "Animations" ? <p className="mt-5 rounded-lg bg-[var(--tr1-ivory)] p-3 text-xs font-semibold text-[var(--tr1-muted)]">Exemple de suivi : <strong className="text-[var(--tr1-navy)]">En cours d’observation</strong> tant que la période de comparaison n’est pas terminée.</p> : null}
               </article>
             ))}
           </div>
+          <p className="mt-6 max-w-3xl text-xs leading-5 text-[var(--tr1-muted)]">
+            Les comparaisons avant / après décrivent des résultats observés. Elles ne présentent pas automatiquement le chiffre d’affaires après intervention comme causé par l’action terrain.
+          </p>
+        </div>
+      </section>
 
-          <div className="mt-16 grid gap-6 lg:grid-cols-[1.15fr_.85fr]">
-            <div className="overflow-hidden rounded-[1.35rem] border border-[var(--tr1-line)] bg-[#fffdf8] p-3 shadow-[0_24px_70px_rgba(14,29,49,.09)] sm:p-5">
-              <div className="mb-5 px-2 pt-2">
-                <p className="font-mono text-[.62rem] font-black uppercase tracking-[.17em] text-[var(--tr1-orange)]">Exécution</p>
-                <h3 className="mt-2 text-2xl font-black tracking-[-.04em]">Toutes les missions dans un même planning.</h3>
-              </div>
-              <Image alt="Planning TR1 des animations, formations et missions terrain" className="w-full rounded-xl border border-[var(--tr1-line)]" height={600} src="/marketing/missions-board.webp" width={716} />
-            </div>
-
-            <div className="flex flex-col justify-between rounded-[1.35rem] bg-[var(--tr1-navy)] p-7 text-[var(--tr1-ivory)] sm:p-9">
+      <section className="px-5 py-20 lg:px-8 lg:py-28">
+        <div className="mx-auto max-w-7xl">
+          <div className="grid overflow-hidden rounded-[1.5rem] bg-[var(--tr1-navy)] text-[var(--tr1-ivory)] lg:grid-cols-[.38fr_.62fr]">
+            <div className="flex min-h-56 items-end bg-[radial-gradient(circle_at_35%_28%,rgba(234,112,21,.22),transparent_30%),linear-gradient(145deg,#173a5c,#0e1d31)] p-8 lg:min-h-full lg:p-10">
               <div>
-                <p className="font-mono text-[.62rem] font-black uppercase tracking-[.17em] text-[var(--tr1-orange)]">Performance & rentabilité</p>
-                <h3 className="mt-4 text-3xl font-black leading-[1.04] tracking-[-.05em]">
-                  Une animation ne devrait pas seulement être réalisée. Elle devrait être mesurée.
-                </h3>
-                <p className="mt-5 leading-7 text-white/65">
-                  TR1 rapproche l’exécution terrain des données disponibles après la mission pour aider à comprendre ce qui produit réellement du résultat.
-                </p>
-              </div>
-              <div className="mt-10 divide-y divide-white/12 border-y border-white/12">
-                {[["Coût de la mission", "Suivi"], ["Sell-out déclaré", "Impact"], ["CA après mission", "Performance"], ["Résultat / coût engagé", "Rentabilité"]].map(([label, value]) => (
-                  <div className="flex items-center justify-between gap-4 py-4" key={label}>
-                    <span className="text-sm text-white/60">{label}</span><strong className="text-sm">{value}</strong>
-                  </div>
-                ))}
+                <p className="font-mono text-[.62rem] font-black uppercase tracking-[.18em] text-[var(--tr1-orange)]">Origine de TR1</p>
+                <p className="mt-5 text-sm leading-6 text-white/55">Un produit construit à partir des contraintes réelles du terrain officinal.</p>
               </div>
             </div>
-          </div>
-
-          <div className="mt-16 border-t border-[var(--tr1-line)] pt-8 text-center">
-            <p className="text-2xl font-black tracking-[-.04em] sm:text-3xl">
-              Le sell-in ouvre le compte. L’activation terrain aide à le développer.
-            </p>
+            <div className="p-8 sm:p-10 lg:p-12">
+              <h2 className="text-3xl font-black tracking-[-.05em] sm:text-4xl">TR1 est né de mon quotidien de délégué pharmaceutique.</h2>
+              <blockquote className="mt-7 space-y-5 text-lg leading-8 text-white/72">
+                <p>« Je pouvais passer deux heures à préparer une tournée. Entre les visites, je prenais mes notes sur mon téléphone, puis je les recopiais dans mon CRM le soir… quand je le faisais.</p>
+                <p>J’ai commencé à construire TR1 pour simplifier ce quotidien. Avec une conviction : les informations du terrain doivent servir autant à ceux qui interviennent qu’à ceux qui pilotent la marque. »</p>
+              </blockquote>
+              <div className="mt-8 border-t border-white/12 pt-6">
+                <p className="font-black">Amir Ounissi</p>
+                <p className="mt-1 text-sm text-white/55">Délégué pharmaceutique et fondateur de TR1 Pharma</p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="px-5 py-24 lg:px-8 lg:py-36" id="diagnostic">
+      <section className="border-t border-[var(--tr1-line)] bg-white/28 px-5 py-20 lg:px-8 lg:py-28" id="diagnostic">
         <div className="mx-auto max-w-7xl">
           <div className="mx-auto max-w-4xl text-center">
-            <p className="font-mono text-[.67rem] font-black uppercase tracking-[.2em] text-[var(--tr1-orange)]">Découvrir TR1</p>
-            <h2 className="mt-5 text-4xl font-black leading-[.98] tracking-[-.06em] sm:text-5xl lg:text-6xl">Faites grandir votre réseau officinal.</h2>
-            <p className="mx-auto mt-7 max-w-2xl text-lg leading-8 text-[var(--tr1-muted)]">
-              Découvrez comment TR1 peut structurer votre développement commercial et terrain.
+            <p className="font-mono text-[.66rem] font-black uppercase tracking-[.2em] text-[var(--tr1-orange)]">Découvrir TR1</p>
+            <h2 className="mt-5 text-4xl font-black leading-[1] tracking-[-.055em] sm:text-5xl lg:text-[3.7rem]">Découvrez comment piloter votre terrain avec TR1.</h2>
+            <p className="mx-auto mt-6 max-w-3xl text-lg leading-8 text-[var(--tr1-muted)]">
+              En 30 minutes, parcourons votre organisation et les usages qui vous concernent : suivi commercial, animations, formations et mesure des résultats.
             </p>
           </div>
-
-          <div className="mx-auto mt-14 grid max-w-5xl items-start gap-10 lg:grid-cols-[.8fr_1.2fr]">
-            <div className="pt-3">
-              <p className="text-xl font-black tracking-[-.03em]">En 30 minutes, faisons le point sur votre réseau.</p>
-              <div className="mt-7 space-y-4 border-t border-[var(--tr1-line)] pt-6 text-[var(--tr1-muted)]">
-                <p>Votre portefeuille officinal</p>
-                <p>Votre organisation terrain</p>
-                <p>Vos outils actuels</p>
-                <p>Les points où TR1 peut simplifier le pilotage</p>
-              </div>
-            </div>
-            <div><LeadForm /></div>
-          </div>
+          <div className="mx-auto mt-12 max-w-2xl"><LeadForm /></div>
         </div>
       </section>
     </main>
