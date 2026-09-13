@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useState } from "react";
 import { ArrowRight, CalendarCheck2, FileCheck2, MapPinned } from "lucide-react";
 
@@ -96,13 +95,14 @@ export function LandingActionScenario() {
             </span>
           </div>
           <div className="p-3 sm:p-5">
-            <Image
+            <img
               alt={active.imageAlt}
-              className="w-full rounded-xl border border-[var(--tr1-line)] bg-white"
-              height={600}
+              className="h-auto w-full rounded-xl border border-[var(--tr1-line)] bg-white"
+              height="600"
               key={active.image}
+              loading="lazy"
               src={active.image}
-              width={716}
+              width="716"
             />
           </div>
         </div>
