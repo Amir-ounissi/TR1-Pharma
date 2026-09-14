@@ -1,32 +1,47 @@
-.shell { width: 100%; padding: 24px 28px 18px; border: 1px solid #dedbd3; border-radius: 16px; background: #faf9f6; text-align: left; }
-.title { font-size: 18px; font-weight: 650; letter-spacing: -.025em; color: var(--tr1-navy); }
-.subtitle { margin-top: 5px; font-size: 11px; color: #777b80; }
-.body { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(250px, 1fr); gap: 32px; align-items: center; margin-top: 20px; }
-.map { position: relative; width: 100%; max-width: 490px; margin-inline: auto; aspect-ratio: 700 / 620; }
-.marker { position: absolute; width: 44px; height: 44px; display: grid; place-items: center; transform: translate(-50%, -50%); z-index: 1; cursor: pointer; border-radius: 50%; }
-.dot { width: 10px; height: 10px; border: 2px solid #faf9f6; border-radius: 50%; background: #697b80; box-shadow: 0 0 0 1px #697b8030; transition: transform .2s, box-shadow .2s; }
-.city { position: absolute; left: 34px; top: 15px; font-size: 10px; line-height: 14px; font-weight: 550; color: #566269; white-space: nowrap; pointer-events: none; }
-.selected { z-index: 2; }
-.selected .dot { width: 13px; height: 13px; background: #df721f; box-shadow: 0 0 0 6px #df721f17; }
-.selected .city { color: #9e4b12; font-weight: 700; }
-.marker:hover .dot { transform: scale(1.25); }
-.marker:focus-visible { outline: 2px solid #df721f; outline-offset: 2px; }
-.detail { padding: 28px 0 28px 32px; border-left: 1px solid #dedbd3; min-height: 265px; }
-.detailLabel { margin-bottom: 24px; color: #8c603e; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
-.detail p { max-width: 290px; }
-.detail strong { font-weight: 650; }
-.hint { margin-top: 28px; color: #7b8085; font-size: 11px; line-height: 1.6; }
-@media (max-width: 767px) {
- .shell { padding: 20px 16px 16px; }
- .body { grid-template-columns: 1fr; gap: 8px; margin-top: 12px; }
- .map { max-width: 400px; }
- .detail { border-left: 0; border-top: 1px solid #dedbd3; padding: 22px 4px 8px; min-height: 0; }
- .detailLabel { margin-bottom: 14px; }
- .hint { margin-top: 18px; }
- .city { font-size: 9px; left: 30px; }
+.shell { width:100%; padding:20px 0 0; text-align:left; }
+.title {font-size:18px;font-weight:650;letter-spacing:-.025em;color:var(--tr1-navy)}
+.subtitle {margin-top:5px;font-size:11px;color:#777b80}
+.body {position:relative;isolation:isolate;min-height:560px;display:flex;align-items:center;justify-content:center;margin-top:12px;background:radial-gradient(ellipse at 50% 50%,#6b879329 0%,#b9c4bc26 35%,#f4f0e700 70%)}
+.orbit {position:absolute;width:540px;height:540px;border:1px solid #ffffff95;border-radius:50%;top:8px;left:50%;transform:translateX(-50%);pointer-events:none;z-index:-1;box-shadow:0 0 0 48px #ffffff14,0 0 0 49px #ffffff50}
+.orbit:before,.orbit:after {content:"";position:absolute;width:7px;height:7px;background:#fffdf9;border-radius:50%;left:14%;top:14%;box-shadow:0 0 14px #fff}
+.orbit:after {left:auto;top:65%;right:2%}
+.map {position:relative;width:610px;max-width:65%;aspect-ratio:700 / 620;margin-inline:auto}
+.marker {position:absolute;width:44px;height:44px;display:grid;place-items:center;transform:translate(-50%,-50%);z-index:1;cursor:pointer;border-radius:50%;--point:#526c70;--halo:#526c7019}
+.marker[data-tone="risk"] {--point:#b96337;--halo:#c47a4220}
+.marker[data-tone="watch"] {--point:#e47a22;--halo:#e47a2220}
+.dot {width:16px;height:16px;border:3px solid #fffdf7;border-radius:50%;background:var(--point);box-shadow:0 0 0 7px var(--halo),0 0 0 14px var(--halo),0 3px 8px #152d3b20;transition:transform .25s,box-shadow .25s}
+.city {position:absolute;left:37px;top:15px;font-size:11px;line-height:14px;font-weight:550;color:#193247;white-space:nowrap;pointer-events:none;text-shadow:0 1px 3px #fff}
+.selected {z-index:2}
+.selected .dot {width:20px;height:20px;background:#e47a22;box-shadow:0 0 0 8px #e47a2225,0 0 0 17px #e47a2212,0 0 0 26px #e47a2209}
+.selected .city {color:#994b16;font-weight:700}
+.marker:hover .dot {transform:scale(1.2)}
+.marker:focus-visible,.signalCard:focus-visible {outline:2px solid #df721f;outline-offset:4px}
+.marker[data-city="Montpellier"] .city {left:auto;right:35px}
+.detail {position:absolute;right:0;bottom:76px;width:260px;padding:24px;border:1px solid #ffffffdf;background:#fffefaed;border-radius:18px;box-shadow:0 16px 40px #17324614;backdrop-filter:blur(12px)}
+.detailLabel {margin-bottom:18px;color:#8c603e;font-size:9px;letter-spacing:.12em;text-transform:uppercase}
+.detail p {max-width:290px}
+.hint {margin-top:20px;color:#747b80;font-size:10px;line-height:1.6}
+.signalCard {position:absolute;left:0;top:88px;width:248px;z-index:3;display:flex;align-items:start;gap:12px;padding:20px;text-align:left;border:1px solid #ffffffdf;background:#fffefaeb;border-radius:16px;box-shadow:0 12px 32px #17324612;backdrop-filter:blur(12px);cursor:pointer;transition:transform .2s}
+.signalCard:hover {transform:translateY(-3px)}
+.signalCard>svg {flex-shrink:0;color:#526c70;margin-top:3px}
+.signalIcon {display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:#e47a2214;color:#c96620;flex-shrink:0}
+.signalCard strong {display:block;font-size:12px;font-weight:650;color:#a9561c;line-height:1.5}
+.signalCard span span {display:block;margin-top:3px;font-size:12px;color:#183047}
+.signalCard small {display:block;margin-top:5px;font-size:10px;line-height:1.6;color:#65727c}
+.benefits {display:grid;grid-template-columns:repeat(3,1fr);max-width:900px;margin:8px auto 0;padding:22px 0;border-top:1px solid #d6cec1}
+.benefits>div {display:flex;gap:14px;align-items:center;justify-content:center;padding:0 18px;font-size:12px;color:#66717a;line-height:1.65}
+.benefits>div+div {border-left:1px solid #d6cec1}
+.benefits svg {flex-shrink:0;color:#183047}
+.benefits strong {display:block;color:#183047;font-size:14px;font-weight:650}
+.shell [role="tablist"] {border-radius:30px;background:#fffefa85;padding:4px;border-color:#e1d9cd}
+.shell [role="tab"] {border-radius:24px}
+.shell [role="tab"] svg {flex-shrink:0}
+@media (max-width:1023px) and (min-width:768px) {.signalCard {width:205px;padding:16px;top:46px}.detail {width:225px;padding:20px;bottom:30px}.map {max-width:76%}.body {min-height:490px}}
+@media (max-width:767px) {
+.shell {padding:16px 0 0}.body {min-height:0;display:flex;flex-direction:column;margin-top:12px;background:radial-gradient(ellipse at 50% 30%,#6b879324,#f4f0e700 65%)}
+.map {width:100%;max-width:420px;margin-top:16px;margin-bottom:24px}.orbit {display:none}.detail {position:relative;right:auto;bottom:auto;width:100%;padding:22px;border-radius:14px;box-shadow:0 8px 24px #1732460a}
+.signalCard {position:relative;left:auto;top:auto;order:2;width:100%;margin-top:12px;padding:16px;box-shadow:none}.signalCard>span:nth-child(2){flex:1}
+.detailLabel {margin-bottom:14px}.hint {margin-top:16px}.city {font-size:9px;left:33px}.dot{width:12px;height:12px;border-width:2px;box-shadow:0 0 0 5px var(--halo),0 0 0 10px var(--halo)}.selected .dot {width:15px;height:15px;box-shadow:0 0 0 6px #e47a2220,0 0 0 13px #e47a2210}.marker[data-city="Montpellier"] .city{right:32px}
+.shell [role="tab"] {padding-inline:6px;font-size:11px;gap:5px}.benefits {gap:16px;grid-template-columns:1fr;margin-top:20px;padding:20px 0}.benefits>div {justify-content:start;padding:0 8px}.benefits>div+div{border:0}.benefits strong{display:inline;font-size:12px}.benefits svg {width:18px}
 }
-@media (prefers-reduced-motion: reduce) { .dot { transition: none; } }
-
-.marker[data-city="Montpellier"] .city { left: auto; right: 33px; }
-.shell [role="tab"] svg { flex-shrink: 0; }
-@media (max-width: 767px) { .shell [role="tab"] { padding-inline: 6px; font-size: 11px; gap: 5px; } }
+@media(prefers-reduced-motion:reduce){.dot,.signalCard{transition:none}}

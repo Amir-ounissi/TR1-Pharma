@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BriefcaseBusiness, CalendarCheck2, ChevronDown, GraduationCap } from "lucide-react";
+import { BriefcaseBusiness, CalendarCheck2, ChevronDown, GraduationCap, ArrowUpRight, Target, Eye, Users } from "lucide-react";
 import franceDepartments from "@/data/france-departments-metro.json";
 import { demoPharmacies, type DemoMode, type DemoTone } from "@/lib/marketing/demo-network";
 import styles from "./landing-pilotage-map.module.css";
@@ -75,9 +75,24 @@ export function LandingPilotageMap() {
       </div>
 
       <div className={styles.body}>
+        <div className={styles.orbit} aria-hidden="true" />
+        <button type="button" className={styles.signalCard} onClick={() => setSelectedId(demoPharmacies[2].id)}>
+          <span className={styles.signalIcon}><Target size={20} aria-hidden="true" /></span>
+          <span><strong>{demoPharmacies[2][mode].status}</strong><span>{demoPharmacies[2].city}</span><small>{demoPharmacies[2][mode].information}</small></span>
+          <ArrowUpRight size={15} aria-hidden="true" />
+        </button>
         <div className={styles.map} aria-label={`Carte de France de démonstration — filtre ${mode}`}>
           <svg aria-hidden="true" className="absolute inset-0 size-full" preserveAspectRatio="xMidYMid meet" viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}>
-            <g fill="#e9e6df" stroke="#faf9f6" strokeLinejoin="round" strokeWidth="1.2">
+            <defs>
+              <linearGradient id="tr1-land" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#fffefa" /><stop offset="100%" stopColor="#e8dfcf" />
+              </linearGradient>
+              <filter id="tr1-relief" x="-30%" y="-30%" width="160%" height="180%">
+                <feDropShadow dx="0" dy="6" stdDeviation="1" floodColor="#b8b0a1" floodOpacity=".4" />
+                <feDropShadow dx="0" dy="20" stdDeviation="17" floodColor="#183b4d" floodOpacity=".22" />
+              </filter>
+            </defs>
+            <g fill="url(#tr1-land)" stroke="#d8cdbb" strokeOpacity=".55" strokeLinejoin="round" strokeWidth=".7" filter="url(#tr1-relief)">
               {departmentFeatures.map((feature) => (
                 <path d={geometryToPath(feature.geometry)} key={feature.properties.code} />
               ))}
@@ -93,6 +108,7 @@ export function LandingPilotageMap() {
                 aria-label={`${pharmacy.name}, ${pharmacy.city} — ${data.status}`}
                 aria-pressed={isSelected}
                 data-city={pharmacy.city}
+                data-tone={data.tone}
                 className={`${styles.marker} ${isSelected ? styles.selected : ""}`}
                 key={pharmacy.id}
                 onClick={() => setSelectedId(pharmacy.id)}
@@ -144,9 +160,11 @@ export function LandingPilotageMap() {
         ) : null}
       </div>
 
-      <p className="mt-4 text-center text-xs font-bold tracking-[.01em] text-[var(--tr1-muted)]">
-        Une vision nationale. Un suivi pharmacie par pharmacie.
-      </p>
+      <div className={styles.benefits}>
+        <div><Eye aria-hidden="true" size={20} /><span><strong>Identifiez</strong> les opportunités du réseau.</span></div>
+        <div><Target aria-hidden="true" size={20} /><span><strong>Priorisez</strong> les prochaines actions.</span></div>
+        <div><Users aria-hidden="true" size={20} /><span><strong>Suivez</strong> vos équipes sur le terrain.</span></div>
+      </div>
     </div>
   );
 }
