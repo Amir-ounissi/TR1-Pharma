@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
 import { syncHubSpotOrderAfterPersistence } from "@/lib/integrations/hubspot/runtime";
@@ -100,7 +101,13 @@ export async function createOrderAction(_state: OrderActionState, formData: Form
   if (orderId && header.data.orderStatus !== "draft") {
     await syncHubSpotOrderAfterPersistence(brand.id, orderId);
   }
-  return { success: "Commande créée et indicateurs recalculés.", orderId: orderId ?? undefined };
+  if (orderId) {
+    revalidatePath("/dashboard/orders");
+    revalidatePath("/dashboard/network");
+    revalidatePath("/dashboard/pharmacies");
+    redirect(`/dashboard/orders/${orderId}/confirmation`);
+  }
+  return { success: "Commande créée et indicateurs recalculés." };
 }
 
 export async function reviseOrderAction(
