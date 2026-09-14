@@ -3,7 +3,7 @@ import type { HubSpotBrandConfiguration } from "./model";
 export const NAALI_HUBSPOT_ORDER_ROUTES = {
   commercial: {
     pipeline: "1543644371",
-    confirmedStage: "5786904809",
+    confirmedStage: "2870908123",
     origin: "Commercial Naali",
   },
   agent: {
