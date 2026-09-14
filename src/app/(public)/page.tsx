@@ -44,22 +44,25 @@ const priorities = [
 
 export default function LandingPage() {
   return (
-    <main className="bg-[var(--tr1-ivory)] text-[var(--tr1-navy)]">
+    <main className="bg-transparent text-[#0b1e32]">
       <MarketingPageEvent event="landing_view" />
 
-      <section className="px-5 py-10 sm:py-12 lg:px-8 lg:py-14">
+      <section className="px-5 py-12 sm:py-14 lg:px-8 lg:py-16">
         <div className="mx-auto max-w-7xl">
           <div className="mx-auto max-w-4xl text-center">
-            <h1 className="text-[2.35rem] font-black leading-[1.02] tracking-[-.04em] sm:text-5xl lg:text-[4rem]">
-              <span className="text-[var(--tr1-orange)]">Du sell-in au sell-out,</span>{" "}
+            <div className="inline-flex items-center rounded-full border border-[#0b1e32]/10 bg-white/80 px-3 py-2 font-mono text-[.62rem] font-black uppercase tracking-[.14em] text-[#c84f24] shadow-[0_8px_24px_rgba(7,20,33,.04)]">
+              Cockpit d’exécution commerciale terrain
+            </div>
+            <h1 className="mx-auto mt-6 max-w-4xl text-[2.8rem] font-black leading-[.95] tracking-[-.065em] text-[#0b1e32] sm:text-[4.4rem] lg:text-[5rem]">
+              <span className="text-[#c84f24]">Du sell-in au sell-out,</span>{" "}
               pilotez chaque action qui fait vendre en pharmacie.
             </h1>
-            <p className="mx-auto mt-6 max-w-3xl text-base leading-[1.55] text-[var(--tr1-muted)] sm:text-lg">
+            <p className="mx-auto mt-6 max-w-3xl text-base leading-7 text-[#667384] sm:text-lg">
               TR1 réunit visites commerciales, commandes, animations, formations et suivi du réseau dans un même cockpit terrain. Vos équipes savent où agir. Vous savez ce qui a été fait et ce qui doit suivre.
             </p>
-            <div className="mt-7">
+            <div className="mt-8">
               <MarketingTrackedLink
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-[var(--tr1-orange)] px-5 text-sm font-black text-white transition duration-200 hover:-translate-y-0.5 hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-navy)] focus-visible:ring-offset-2 motion-reduce:transition-none"
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#c84f24] px-5 font-mono text-[.68rem] font-black uppercase tracking-[.06em] text-white shadow-[0_14px_30px_rgba(200,79,36,.18)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#b64620] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b1e32] focus-visible:ring-offset-2 motion-reduce:transition-none"
                 event="primary_cta_click"
                 href="#diagnostic"
                 properties={{ placement: "hero" }}
@@ -68,12 +71,12 @@ export default function LandingPage() {
                 <ArrowRight className="size-4" />
               </MarketingTrackedLink>
             </div>
-            <p className="mt-3 text-sm leading-6 text-[var(--tr1-muted)]">
-              30 minutes pour découvrir TR1 à partir de votre organisation terrain.
+            <p className="mt-4 font-mono text-[.62rem] font-bold uppercase tracking-[.10em] text-[#667384]">
+              30 minutes · Votre organisation terrain · Vos cas d’usage
             </p>
           </div>
 
-          <div className="mx-auto mt-10 max-w-6xl sm:mt-12">
+          <div className="mx-auto mt-11 max-w-6xl rounded-[1.6rem] border border-[#0b1e32]/10 bg-white/72 p-2 shadow-[0_24px_70px_rgba(7,20,33,.10)] sm:mt-14 sm:p-3">
             <LandingPilotageMap />
           </div>
         </div>
