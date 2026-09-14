@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Tr1BrandLogo } from "@/components/brand/tr1-brand-logo";
 import { MarketingTrackedLink } from "@/components/marketing/marketing-events";
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
@@ -7,13 +8,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
       <header className="sticky top-0 z-40 border-b border-[#0b1e32]/10 bg-[#fffdf8]/90 backdrop-blur-xl">
         <div className="mx-auto flex h-[4.6rem] max-w-7xl items-center gap-4 px-5 lg:px-8">
           <Link aria-label="TR1 Pharma — Accueil" className="flex shrink-0 items-center" href="/">
-            <img
-              alt="TR1 Pharma"
-              className="block h-12 w-auto shrink-0"
-              height="192"
-              src="/brand/tr1-wordmark-rgba.png"
-              width="328"
-            />
+            <Tr1BrandLogo className="h-12 w-auto shrink-0" />
           </Link>
 
           <nav className="ml-auto hidden items-center gap-6 text-sm font-semibold text-[#445265] lg:flex">
@@ -52,7 +47,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
       <footer className="border-t border-[#0b1e32]/10 bg-[#fffdf8] px-5 py-10 lg:px-8">
         <div className="mx-auto flex max-w-7xl flex-col gap-7 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <img alt="TR1 Pharma" className="block h-14 w-auto" height="192" src="/brand/tr1-wordmark-rgba.png" width="328" />
+            <Tr1BrandLogo className="h-14 w-auto" />
             <p className="mt-3 max-w-md text-sm leading-6 text-[#667384]">Pilotage commercial et coordination des actions terrain en pharmacie.</p>
           </div>
           <div className="flex flex-wrap gap-x-5 gap-y-2 font-mono text-[.66rem] font-bold uppercase tracking-[.06em] text-[#667384]">
