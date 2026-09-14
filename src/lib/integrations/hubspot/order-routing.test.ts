@@ -28,7 +28,7 @@ describe("Naali HubSpot order routing", () => {
     expect(mapped.deal.properties).toMatchObject({
       hubspot_owner_id: "727665403",
       pipeline: "1543644371",
-      dealstage: "5786904809",
+      dealstage: "2870908123",
       origine_de_la_commande: "Commercial Naali",
     });
   });
