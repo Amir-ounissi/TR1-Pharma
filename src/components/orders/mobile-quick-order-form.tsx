@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useMemo, useState } from "react";
-import { Check, Minus, PackagePlus, Plus, RotateCcw, Search, Trash2 } from "lucide-react";
+import { Check, Minus, PackagePlus, Plus, RotateCcw, Search, Trash2, X } from "lucide-react";
 import {
   createOrderAction,
   searchOrderPharmaciesAction,
@@ -20,12 +20,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { uiLabel } from "@/lib/ui-copy";
@@ -129,8 +123,16 @@ function PharmacyAutocomplete({
           void search(event.target.value);
         }}
       />
-      <input type="hidden" name="brandPharmacyId" value={selected?.brandPharmacyId ?? ""} />
-      <input type="hidden" name="pharmacyId" value={selected?.brandPharmacyId ? "" : selected?.pharmacyId ?? ""} />
+      <input
+        type="hidden"
+        name="brandPharmacyId"
+        value={selected?.brandPharmacyId ?? ""}
+      />
+      <input
+        type="hidden"
+        name="pharmacyId"
+        value={selected?.brandPharmacyId ? "" : selected?.pharmacyId ?? ""}
+      />
       {selected ? (
         <div className="rounded-xl border bg-background px-3 py-2.5">
           <p className="font-semibold text-[var(--tr1-navy)]">{selected.name}</p>
@@ -163,7 +165,9 @@ function PharmacyAutocomplete({
               }}
             >
               <span className="font-semibold">{result.name}</span>
-              <span className="block text-xs text-muted-foreground">{result.detail}</span>
+              <span className="block text-xs text-muted-foreground">
+                {result.detail}
+              </span>
             </button>
           ))}
         </div>
@@ -196,9 +200,13 @@ export function MobileQuickOrderForm({
 }) {
   const [state, action, pending] = useActionState(createOrderAction, {});
   const initialProduct = products.find((product) => product.id === initialProductId);
-  const [defaultDiscountRate, setDefaultDiscountRate] = useState<number | null>(initialDiscountRate);
+  const [defaultDiscountRate, setDefaultDiscountRate] = useState<number | null>(
+    initialDiscountRate,
+  );
   const [potential, setPotential] = useState<string | null>(initialPotential);
-  const [freeUnitsRule, setFreeUnitsRule] = useState<FreeUnitsRule | null>(initialFreeUnitsRule);
+  const [freeUnitsRule, setFreeUnitsRule] = useState<FreeUnitsRule | null>(
+    initialFreeUnitsRule,
+  );
   const [pricingLoading, setPricingLoading] = useState(false);
   const [orderType, setOrderType] = useState(initialOrderType);
   const [initialContextChanged, setInitialContextChanged] = useState(false);
@@ -215,7 +223,8 @@ export function MobileQuickOrderForm({
         quantity: minimum,
         freeQuantity: freeQuantityFor(minimum, initialFreeUnitsRule),
         unitPriceHt: initialProduct.price == null ? "" : String(initialProduct.price),
-        discountRate: initialDiscountRate == null ? "" : String(initialDiscountRate),
+        discountRate:
+          initialDiscountRate == null ? "" : String(initialDiscountRate),
       },
     ];
   });
@@ -252,7 +261,9 @@ export function MobileQuickOrderForm({
 
   function updateLine(index: number, patch: Partial<DraftLine>) {
     setLines((current) =>
-      current.map((line, lineIndex) => (lineIndex === index ? { ...line, ...patch } : line)),
+      current.map((line, lineIndex) =>
+        lineIndex === index ? { ...line, ...patch } : line,
+      ),
     );
   }
 
@@ -312,7 +323,9 @@ export function MobileQuickOrderForm({
             : freeQuantityFor(Math.max(1, Number(item.quantity)), freeUnitsRule),
         unitPriceHt: String(item.unitPriceHt ?? ""),
         discountRate:
-          item.discountRate == null ? defaultDiscountValue() : String(item.discountRate),
+          item.discountRate == null
+            ? defaultDiscountValue()
+            : String(item.discountRate),
       })),
     );
     setOrderType("reorder");
@@ -328,7 +341,8 @@ export function MobileQuickOrderForm({
       setLines((current) =>
         current.map((line) => ({
           ...line,
-          discountRate: pricing.discountRate == null ? "" : String(pricing.discountRate),
+          discountRate:
+            pricing.discountRate == null ? "" : String(pricing.discountRate),
           freeQuantity: freeQuantityFor(line.quantity, pricing.freeUnitsRule),
         })),
       );
@@ -341,7 +355,9 @@ export function MobileQuickOrderForm({
     <>
       <form action={action} className="space-y-4">
         <ActionFeedback {...state} />
-        {isAgent ? <input type="hidden" name="orderStatus" value="pending" /> : null}
+        {isAgent ? (
+          <input type="hidden" name="orderStatus" value="pending" />
+        ) : null}
 
         <div className="rounded-2xl border bg-muted/20 p-3.5">
           <PharmacyAutocomplete
@@ -462,7 +478,11 @@ export function MobileQuickOrderForm({
                 className="overflow-hidden rounded-2xl border bg-background shadow-sm"
               >
                 <input type="hidden" name="productId" value={line.productId} />
-                <input type="hidden" name="discountRate" value={line.discountRate} />
+                <input
+                  type="hidden"
+                  name="discountRate"
+                  value={line.discountRate}
+                />
                 <div className="flex items-start gap-3 border-b bg-muted/15 p-3.5">
                   <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--tr1-navy)] text-xs font-black text-white">
                     {index + 1}
@@ -550,7 +570,10 @@ export function MobileQuickOrderForm({
                           onChange={(event) =>
                             updateLineQuantity(
                               index,
-                              Math.max(minimum, Number(event.target.value) || minimum),
+                              Math.max(
+                                minimum,
+                                Number(event.target.value) || minimum,
+                              ),
                             )
                           }
                           className="h-12 min-w-0 flex-1 rounded-none border-0 px-1 text-center text-lg font-black text-[var(--tr1-navy)] shadow-none focus-visible:ring-0"
@@ -628,7 +651,9 @@ export function MobileQuickOrderForm({
                         : ""}
                     </span>
                     <strong className="text-base font-black text-[var(--tr1-navy)]">
-                      {lineTotal == null ? "Prix à compléter" : `${money(lineTotal)} HT`}
+                      {lineTotal == null
+                        ? "Prix à compléter"
+                        : `${money(lineTotal)} HT`}
                     </strong>
                   </div>
                 </div>
@@ -758,32 +783,49 @@ export function MobileQuickOrderForm({
         </div>
       </form>
 
-      <Sheet open={pickerOpen} onOpenChange={setPickerOpen}>
-        <SheetContent
-          side="bottom"
-          className="h-[88dvh] overflow-hidden rounded-t-[1.75rem] p-0"
+      {pickerOpen ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Choisir les références"
+          className="fixed inset-0 z-[100] h-[100dvh] touch-pan-y overflow-y-auto overscroll-y-contain bg-background"
+          style={{ WebkitOverflowScrolling: "touch" }}
         >
-          <div className="grid h-full min-h-0 grid-rows-[auto_auto_minmax(0,1fr)_auto] overflow-hidden">
-            <SheetHeader className="border-b px-4 pb-3 pt-4 text-left">
-              <div className="pr-8">
-                <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--tr1-orange)]">
-                  Catalogue
-                </p>
-                <SheetTitle className="mt-1 text-xl">Choisir les références</SheetTitle>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Touchez plusieurs produits puis validez une fois.
-                </p>
+          <div className="min-h-[100dvh]">
+            <div className="sticky top-0 z-20 border-b bg-background/95 px-4 pb-3 pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--tr1-orange)]">
+                    Catalogue
+                  </p>
+                  <h2 className="mt-1 text-xl font-black text-[var(--tr1-navy)]">
+                    Choisir les références
+                  </h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {filteredProducts.length} produit
+                    {filteredProducts.length > 1 ? "s" : ""} affiché
+                    {filteredProducts.length > 1 ? "s" : ""}.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-11 shrink-0 rounded-full"
+                  aria-label="Fermer le catalogue"
+                  onClick={() => setPickerOpen(false)}
+                >
+                  <X className="size-5" />
+                </Button>
               </div>
-            </SheetHeader>
 
-            <div className="border-b p-3">
-              <div className="relative">
+              <div className="relative mt-3">
                 <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   value={pickerQuery}
                   onChange={(event) => setPickerQuery(event.target.value)}
                   placeholder="Rechercher un produit, SKU ou EAN…"
-                  className="h-12 rounded-xl pl-9 text-base"
+                  className="h-12 rounded-xl bg-background pl-9 text-base"
                 />
               </div>
               <div className="mt-2 flex items-center justify-between gap-2">
@@ -814,7 +856,7 @@ export function MobileQuickOrderForm({
               </div>
             </div>
 
-            <div className="min-h-0 touch-pan-y overflow-y-scroll overscroll-y-contain p-3 [-webkit-overflow-scrolling:touch]">
+            <div className="p-3 pb-3">
               <div className="grid gap-2 sm:grid-cols-2">
                 {filteredProducts.map((product) => {
                   const selected = pickerSelection.includes(product.id);
@@ -845,7 +887,10 @@ export function MobileQuickOrderForm({
                           {product.name}
                         </span>
                         <span className="mt-1 block truncate font-mono text-[0.65rem] text-muted-foreground">
-                          {[product.detail, product.ean ? `EAN ${product.ean}` : null]
+                          {[
+                            product.detail,
+                            product.ean ? `EAN ${product.ean}` : null,
+                          ]
                             .filter(Boolean)
                             .join(" · ")}
                         </span>
@@ -879,7 +924,7 @@ export function MobileQuickOrderForm({
               ) : null}
             </div>
 
-            <div className="shrink-0 border-t bg-background/96 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur">
+            <div className="sticky bottom-0 z-20 border-t bg-background/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur">
               <Button
                 type="button"
                 className="h-12 w-full rounded-xl bg-[var(--tr1-orange)] text-white hover:bg-[var(--tr1-orange)]/90"
@@ -890,8 +935,8 @@ export function MobileQuickOrderForm({
               </Button>
             </div>
           </div>
-        </SheetContent>
-      </Sheet>
+        </div>
+      ) : null}
     </>
   );
 }
