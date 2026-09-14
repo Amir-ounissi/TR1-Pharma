@@ -6,6 +6,7 @@ import { HubSpotClient, type HubSpotClientMode } from "./client";
 import { applyHubSpotFieldMapping } from "./mapping-profile";
 import { assertHubSpotBrandConfiguration, type HubSpotBrandConfiguration, type HubSpotMeetingSyncInput, type HubSpotNoteSyncInput, type HubSpotOrderSyncInput } from "./model";
 import { NAALI_HUBSPOT_CONFIGURATION, resolveNaaliHubSpotOrderRoute } from "./naali";
+import { resolveHubSpotOrderRouteOverride } from "./order-route-overrides";
 import {
   syncHubSpotNote,
   syncHubSpotOrder,
@@ -451,7 +452,14 @@ export async function syncHubSpotOrderAfterPersistence(brandId: string, orderId:
       }
 
       const roleKey = await roleKeyForOrderUser(admin, brandId, ownerTr1UserId);
-      const route = resolveNaaliHubSpotOrderRoute(roleKey);
+      const routeOverride = resolveHubSpotOrderRouteOverride(connection.configuration, ownerTr1UserId);
+      const route = resolveNaaliHubSpotOrderRoute(
+        routeOverride === "commercial"
+          ? "brand_user"
+          : routeOverride === "agent"
+            ? "agent"
+            : roleKey,
+      );
 
       const productMappings = new Map<string, string>();
       const freeProductMappings = new Map<string, string>();
