@@ -92,6 +92,7 @@ export function LandingPilotageMap() {
               <button
                 aria-label={`${pharmacy.name}, ${pharmacy.city} — ${data.status}`}
                 aria-pressed={isSelected}
+                data-city={pharmacy.city}
                 className={`${styles.marker} ${isSelected ? styles.selected : ""}`}
                 key={pharmacy.id}
                 onClick={() => setSelectedId(pharmacy.id)}

@@ -26,3 +26,7 @@
  .city { font-size: 9px; left: 30px; }
 }
 @media (prefers-reduced-motion: reduce) { .dot { transition: none; } }
+
+.marker[data-city="Montpellier"] .city { left: auto; right: 33px; }
+.shell [role="tab"] svg { flex-shrink: 0; }
+@media (max-width: 767px) { .shell [role="tab"] { padding-inline: 6px; font-size: 11px; gap: 5px; } }
