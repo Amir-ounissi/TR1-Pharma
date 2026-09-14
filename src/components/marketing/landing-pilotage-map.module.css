@@ -9,12 +9,12 @@
 .marker {position:absolute;width:44px;height:44px;display:grid;place-items:center;transform:translate(-50%,-50%);z-index:1;cursor:pointer;border-radius:50%;--point:#526c70;--halo:#526c7019}
 .marker[data-tone="risk"] {--point:#b96337;--halo:#c47a4220}
 .marker[data-tone="watch"] {--point:#e47a22;--halo:#e47a2220}
-.dot {width:16px;height:16px;border:3px solid #fffdf7;border-radius:50%;background:var(--point);box-shadow:0 0 0 7px var(--halo),0 0 0 14px var(--halo),0 3px 8px #152d3b20;transition:transform .25s,box-shadow .25s}
+.dot {width:16px;height:16px;border:3px solid #fffdf7;border-radius:50%;background:var(--point);box-shadow:0 0 0 7px var(--halo),0 0 0 14px var(--halo),0 3px 8px #152d3b20;transition:none}
 .city {position:absolute;left:37px;top:15px;font-size:11px;line-height:14px;font-weight:550;color:#193247;white-space:nowrap;pointer-events:none;text-shadow:0 1px 3px #fff}
 .selected {z-index:2}
-.selected .dot {width:20px;height:20px;background:#e47a22;box-shadow:0 0 0 8px #e47a2225,0 0 0 17px #e47a2212,0 0 0 26px #e47a2209}
+.selected .dot {width:16px;height:16px;background:#e47a22;box-shadow:0 0 0 8px #e47a2225,0 0 0 17px #e47a2212,0 0 0 26px #e47a2209}
 .selected .city {color:#994b16;font-weight:700}
-.marker:hover .dot {transform:scale(1.2)}
+.marker:hover .dot {outline:1px solid var(--point);outline-offset:3px}
 .marker:focus-visible,.signalCard:focus-visible {outline:2px solid #df721f;outline-offset:4px}
 .marker[data-city="Montpellier"] .city {left:auto;right:35px}
 .detail {position:absolute;right:0;bottom:76px;width:260px;padding:24px;border:1px solid #ffffffdf;background:#fffefaed;border-radius:18px;box-shadow:0 16px 40px #17324614;backdrop-filter:blur(12px)}
@@ -41,7 +41,7 @@
 .shell {padding:16px 0 0}.body {min-height:0;display:flex;flex-direction:column;margin-top:12px;background:radial-gradient(ellipse at 50% 30%,#6b879324,#f4f0e700 65%)}
 .map {width:100%;max-width:420px;margin-top:16px;margin-bottom:24px}.orbit {display:none}.detail {position:relative;right:auto;bottom:auto;width:100%;padding:22px;border-radius:14px;box-shadow:0 8px 24px #1732460a}
 .signalCard {position:relative;left:auto;top:auto;order:2;width:100%;margin-top:12px;padding:16px;box-shadow:none}.signalCard>span:nth-child(2){flex:1}
-.detailLabel {margin-bottom:14px}.hint {margin-top:16px}.city {font-size:9px;left:33px}.dot{width:12px;height:12px;border-width:2px;box-shadow:0 0 0 5px var(--halo),0 0 0 10px var(--halo)}.selected .dot {width:15px;height:15px;box-shadow:0 0 0 6px #e47a2220,0 0 0 13px #e47a2210}.marker[data-city="Montpellier"] .city{right:32px}
+.detailLabel {margin-bottom:14px}.hint {margin-top:16px}.city {font-size:9px;left:33px}.dot{width:12px;height:12px;border-width:2px;box-shadow:0 0 0 5px var(--halo),0 0 0 10px var(--halo)}.selected .dot {width:12px;height:12px;box-shadow:0 0 0 6px #e47a2220,0 0 0 13px #e47a2210}.marker[data-city="Montpellier"] .city{right:32px}
 .shell [role="tab"] {padding-inline:6px;font-size:11px;gap:5px}.benefits {gap:16px;grid-template-columns:1fr;margin-top:20px;padding:20px 0}.benefits>div {justify-content:start;padding:0 8px}.benefits>div+div{border:0}.benefits strong{display:inline;font-size:12px}.benefits svg {width:18px}
 }
 @media(prefers-reduced-motion:reduce){.dot,.signalCard{transition:none}}
