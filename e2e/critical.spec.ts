@@ -17,7 +17,8 @@ async function createOrder(page: Page, number: string, type: "initial" | "reorde
   await page.locator('input[name="quantity"]').fill("2");
   await page.locator('input[name="unitPriceHt"]').fill("18.50");
   await page.getByRole("button", { name: "Créer la commande" }).click();
-  await expect(page.getByText("Commande créée et indicateurs recalculés.")).toBeVisible();
+  await expect(page).toHaveURL(/\/dashboard\/orders\/[^/]+\/confirmation$/);
+  await expect(page.getByRole("heading", { name: "Commande validée et envoyée" })).toBeVisible();
 }
 
 async function openOrder(page: Page, number: string) {

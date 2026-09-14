@@ -27,7 +27,8 @@ test("PDF mocké : prévisualisation puis confirmation crée une commande, sans 
 
   await page.getByLabel("Numéro commande").fill(orderNumber);
   await page.getByRole("button", { name: "Envoyer à la marque" }).click();
-  await expect(page.getByText("Commande envoyée à la marque.")).toBeVisible();
+  await expect(page).toHaveURL(/\/dashboard\/orders\/[^/]+\/confirmation$/);
+  await expect(page.getByRole("heading", { name: "Commande envoyée à la marque" })).toBeVisible();
 
   await expect.poll(async () => {
     const { data } = await service
