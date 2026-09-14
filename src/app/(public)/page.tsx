@@ -47,22 +47,23 @@ export default function LandingPage() {
     <main className="bg-transparent text-[#0b1e32]">
       <MarketingPageEvent event="landing_view" />
 
-      <section className="px-5 py-12 sm:py-14 lg:px-8 lg:py-16">
+      <section className="px-5 pb-12 pt-10 sm:py-14 lg:px-8 lg:py-16">
         <div className="mx-auto max-w-7xl">
-          <div className="mx-auto max-w-4xl text-center">
-            <div className="inline-flex items-center rounded-full border border-[#0b1e32]/10 bg-white/80 px-3 py-2 font-mono text-[.62rem] font-black uppercase tracking-[.14em] text-[#c84f24] shadow-[0_8px_24px_rgba(7,20,33,.04)]">
+          <div className="mx-auto max-w-5xl text-center">
+            <div className="inline-flex max-w-full items-center justify-center rounded-full border border-[#0b1e32]/10 bg-white/80 px-4 py-2 font-mono text-[.58rem] font-black uppercase leading-5 tracking-[.13em] text-[#c84f24] shadow-[0_8px_24px_rgba(7,20,33,.04)] sm:text-[.62rem]">
               Cockpit d’exécution commerciale terrain
             </div>
-            <h1 className="mx-auto mt-6 max-w-4xl text-[2.8rem] font-black leading-[.95] tracking-[-.065em] text-[#0b1e32] sm:text-[4.4rem] lg:text-[5rem]">
-              <span className="text-[#c84f24]">Du sell-in au sell-out,</span>{" "}
-              pilotez chaque action qui fait vendre en pharmacie.
+            <h1 className="mx-auto mt-5 max-w-[22rem] text-balance text-[2.45rem] font-black leading-[.94] tracking-[-.055em] text-[#0b1e32] sm:mt-6 sm:max-w-4xl sm:text-[4.35rem] sm:leading-[.92] lg:text-[5rem]">
+              <span className="mb-1 block text-[#c84f24] sm:mb-2">Du sell-in au sell-out,</span>
+              <span className="block">pilotez chaque action</span>
+              <span className="block">qui fait vendre en pharmacie<span className="text-[#c84f24]">.</span></span>
             </h1>
-            <p className="mx-auto mt-6 max-w-3xl text-base leading-7 text-[#667384] sm:text-lg">
+            <p className="mx-auto mt-6 max-w-[23rem] text-[1rem] leading-[1.65] text-[#667384] sm:max-w-3xl sm:text-lg sm:leading-8">
               TR1 réunit visites commerciales, commandes, animations, formations et suivi du réseau dans un même cockpit terrain. Vos équipes savent où agir. Vous savez ce qui a été fait et ce qui doit suivre.
             </p>
-            <div className="mt-8">
+            <div className="mt-7 sm:mt-8">
               <MarketingTrackedLink
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#c84f24] px-5 font-mono text-[.68rem] font-black uppercase tracking-[.06em] text-white shadow-[0_14px_30px_rgba(200,79,36,.18)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#b64620] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b1e32] focus-visible:ring-offset-2 motion-reduce:transition-none"
+                className="inline-flex min-h-12 w-full max-w-[22rem] items-center justify-center gap-2 rounded-xl bg-[#c84f24] px-5 font-mono text-[.68rem] font-black uppercase tracking-[.06em] text-white shadow-[0_14px_30px_rgba(200,79,36,.18)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#b64620] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b1e32] focus-visible:ring-offset-2 motion-reduce:transition-none sm:w-auto"
                 event="primary_cta_click"
                 href="#diagnostic"
                 properties={{ placement: "hero" }}
@@ -71,12 +72,12 @@ export default function LandingPage() {
                 <ArrowRight className="size-4" />
               </MarketingTrackedLink>
             </div>
-            <p className="mt-4 font-mono text-[.62rem] font-bold uppercase tracking-[.10em] text-[#667384]">
+            <p className="mx-auto mt-4 max-w-[22rem] font-mono text-[.58rem] font-bold uppercase leading-5 tracking-[.09em] text-[#667384] sm:max-w-none sm:text-[.62rem]">
               30 minutes · Votre organisation terrain · Vos cas d’usage
             </p>
           </div>
 
-          <div className="mx-auto mt-11 max-w-6xl rounded-[1.6rem] border border-[#0b1e32]/10 bg-white/72 p-2 shadow-[0_24px_70px_rgba(7,20,33,.10)] sm:mt-14 sm:p-3">
+          <div className="mx-auto mt-10 max-w-6xl rounded-[1.6rem] border border-[#0b1e32]/10 bg-white/72 p-2 shadow-[0_24px_70px_rgba(7,20,33,.10)] sm:mt-14 sm:p-3">
             <LandingPilotageMap />
           </div>
         </div>
