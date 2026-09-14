@@ -51,7 +51,8 @@ export default function LandingPage() {
         <div className="mx-auto max-w-7xl">
           <div className="mx-auto max-w-4xl text-center">
             <h1 className="text-[2.35rem] font-black leading-[1.02] tracking-[-.04em] sm:text-5xl lg:text-[4rem]">
-              <span className="text-[var(--tr1-orange)]">Du sell-in au sell-out,</span>{" "}
+              <span className="text-[var(--tr1-orange)]">Du sell-in au sell-out,</span>
+              <br />
               pilotez chaque action qui fait vendre en pharmacie.
             </h1>
             <p className="mx-auto mt-6 max-w-3xl text-base leading-[1.55] text-[var(--tr1-muted)] sm:text-lg">
