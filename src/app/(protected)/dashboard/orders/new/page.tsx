@@ -156,7 +156,11 @@ export default async function NewOrderPage({
     isAgent,
   };
 
-  const quickOrderForm = <ResponsiveQuickOrderForm {...sharedOrderProps} />;
+  // Brand-specific form state (selected products, prices and last order) must
+  // never survive a workspace switch when the route URL stays identical.
+  const quickOrderForm = (
+    <ResponsiveQuickOrderForm key={brand.id} {...sharedOrderProps} />
+  );
 
   return (
     <div className="space-y-4 sm:space-y-6">
