@@ -9,10 +9,10 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
           <Link aria-label="TR1 Pharma — Accueil" className="flex shrink-0 items-center" href="/">
             <img
               alt="TR1 Pharma"
-              className="h-[2.8rem] w-auto object-contain mix-blend-multiply sm:h-[3rem]"
-              height="430"
-              src="/brand/tr1-wordmark.webp"
-              width="735"
+              className="h-[2.8rem] w-auto object-contain sm:h-[3rem]"
+              height="243"
+              src="/brand/tr1-wordmark-transparent.png"
+              width="420"
             />
           </Link>
 
@@ -52,7 +52,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
       <footer className="border-t border-[#0b1e32]/10 bg-[#fffdf8] px-5 py-10 lg:px-8">
         <div className="mx-auto flex max-w-7xl flex-col gap-7 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <img alt="TR1 Pharma" className="h-14 w-auto object-contain mix-blend-multiply" height="430" src="/brand/tr1-wordmark.webp" width="735" />
+            <img alt="TR1 Pharma" className="h-14 w-auto object-contain" height="243" src="/brand/tr1-wordmark-transparent.png" width="420" />
             <p className="mt-3 max-w-md text-sm leading-6 text-[#667384]">Pilotage commercial et coordination des actions terrain en pharmacie.</p>
           </div>
           <div className="flex flex-wrap gap-x-5 gap-y-2 font-mono text-[.66rem] font-bold uppercase tracking-[.06em] text-[#667384]">
