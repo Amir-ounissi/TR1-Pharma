@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { ACTIVE_BRAND_COOKIE, getBrandContexts, isPlatformAdmin } from "@/lib/auth";
@@ -27,6 +28,11 @@ export async function selectBrandAction(formData: FormData) {
 
   const cookieStore = await cookies();
   cookieStore.set(ACTIVE_BRAND_COOKIE, brandId, brandCookieOptions);
+
+  // The same dashboard URLs are reused across brands. Invalidating the
+  // dashboard layout prevents the App Router from reusing an RSC payload
+  // prefetched under the previous brand (notably the order catalogue).
+  revalidatePath("/dashboard", "layout");
   redirect(getRoleLandingPath(selectedContext.role));
 }
 
@@ -37,5 +43,6 @@ export async function selectPlatformViewAction() {
 
   const cookieStore = await cookies();
   cookieStore.delete(ACTIVE_BRAND_COOKIE);
+  revalidatePath("/dashboard", "layout");
   redirect("/dashboard");
 }
