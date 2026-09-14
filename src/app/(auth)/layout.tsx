@@ -8,10 +8,10 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <Link aria-label="TR1 Pharma — Accueil" className="flex shrink-0 items-center" href="/">
             <img
               alt="TR1 Pharma"
-              className="h-[2.8rem] w-auto object-contain sm:h-[3rem]"
-              height="243"
-              src="/brand/tr1-wordmark-transparent.png"
-              width="420"
+              className="block h-12 w-auto shrink-0"
+              height="192"
+              src="/brand/tr1-wordmark-rgba.png"
+              width="328"
             />
           </Link>
           <nav className="ml-auto hidden items-center gap-6 text-sm font-semibold text-[#445265] lg:flex">
