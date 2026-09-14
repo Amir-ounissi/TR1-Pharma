@@ -8,7 +8,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <Link aria-label="TR1 Pharma — Accueil" className="flex shrink-0 items-center" href="/">
             <img
               alt="TR1 Pharma"
-              className="h-[2.8rem] w-auto object-contain sm:h-[3rem]"
+              className="h-[2.8rem] w-auto object-contain mix-blend-multiply sm:h-[3rem]"
               height="430"
               src="/brand/tr1-wordmark.webp"
               width="735"
