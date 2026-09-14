@@ -759,8 +759,11 @@ export function MobileQuickOrderForm({
       </form>
 
       <Sheet open={pickerOpen} onOpenChange={setPickerOpen}>
-        <SheetContent side="bottom" className="h-[88dvh] rounded-t-[1.75rem] p-0">
-          <div className="flex h-full flex-col">
+        <SheetContent
+          side="bottom"
+          className="h-[88dvh] overflow-hidden rounded-t-[1.75rem] p-0"
+        >
+          <div className="grid h-full min-h-0 grid-rows-[auto_auto_minmax(0,1fr)_auto] overflow-hidden">
             <SheetHeader className="border-b px-4 pb-3 pt-4 text-left">
               <div className="pr-8">
                 <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--tr1-orange)]">
@@ -811,7 +814,7 @@ export function MobileQuickOrderForm({
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-3 pb-28">
+            <div className="min-h-0 touch-pan-y overflow-y-scroll overscroll-y-contain p-3 [-webkit-overflow-scrolling:touch]">
               <div className="grid gap-2 sm:grid-cols-2">
                 {filteredProducts.map((product) => {
                   const selected = pickerSelection.includes(product.id);
@@ -876,7 +879,7 @@ export function MobileQuickOrderForm({
               ) : null}
             </div>
 
-            <div className="absolute inset-x-0 bottom-0 border-t bg-background/96 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur">
+            <div className="shrink-0 border-t bg-background/96 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur">
               <Button
                 type="button"
                 className="h-12 w-full rounded-xl bg-[var(--tr1-orange)] text-white hover:bg-[var(--tr1-orange)]/90"
