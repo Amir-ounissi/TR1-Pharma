@@ -8,6 +8,18 @@ import { createAdminClient } from "@/lib/supabase/admin";
 const uuid = z.string().uuid();
 const allowedRoles = new Set(["agent", "tr1_manager", "brand_admin", "super_admin"]);
 
+function emptyCommercialTerms() {
+  return {
+    discountRate: null,
+    potential: null,
+    leadStatus: null,
+    freeUnitsRule: null,
+    discountSource: null,
+    freeUnitsSource: null,
+    overrideNote: null,
+  } as const;
+}
+
 async function editableBrandPharmacy(pharmacyId: string) {
   const { supabase, brand, userId } = await requireActiveBrand();
   const contexts = await getBrandContexts();
@@ -34,22 +46,17 @@ async function editableBrandPharmacy(pharmacyId: string) {
 export async function getPharmacyCommercialTermsAction(pharmacyId: string) {
   const parsedPharmacyId = uuid.parse(pharmacyId);
   const { supabase, brand } = await requireActiveBrand();
-  const { data: pharmacy, error } = await supabase
-    .from("pharmacies")
+  const { data: relation, error } = await supabase
+    .from("brand_pharmacies")
     .select("id")
-    .eq("id", parsedPharmacyId)
+    .eq("brand_id", brand.id)
+    .eq("pharmacy_id", parsedPharmacyId)
     .is("archived_at", null)
+    .limit(1)
     .maybeSingle();
-  if (error || !pharmacy) {
-    return {
-      discountRate: null,
-      potential: null,
-      leadStatus: null,
-      freeUnitsRule: null,
-      discountSource: null,
-      freeUnitsSource: null,
-      overrideNote: null,
-    };
+
+  if (error || !relation) {
+    return emptyCommercialTerms();
   }
 
   return getNaaliHubSpotPharmacyPricing(brand.id, parsedPharmacyId);
