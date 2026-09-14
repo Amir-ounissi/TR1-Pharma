@@ -1,8 +1,5 @@
 import { Building2, Check, ShieldCheck } from "lucide-react";
-import {
-  selectBrandAction,
-  selectPlatformViewAction,
-} from "@/app/(auth)/select-brand/actions";
+import { selectPlatformViewAction } from "@/app/(auth)/select-brand/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -122,15 +119,16 @@ export default async function AccountPage() {
             }
 
             return (
-              <form action={selectBrandAction} key={brand.id}>
-                <input type="hidden" name="brandId" value={brand.id} />
-                <Button
-                  className="h-auto w-full justify-between gap-4 rounded-xl p-4"
-                  variant={active ? "secondary" : "outline"}
-                >
+              <Button
+                asChild
+                className="h-auto w-full justify-between gap-4 rounded-xl p-4"
+                key={brand.id}
+                variant={active ? "secondary" : "outline"}
+              >
+                <a href={`/auth/activate-brand?brandId=${encodeURIComponent(brand.id)}`}>
                   {content}
-                </Button>
-              </form>
+                </a>
+              </Button>
             );
           })}
 
