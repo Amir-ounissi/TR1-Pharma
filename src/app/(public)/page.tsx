@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
-import { LandingAnimationDemo } from "@/components/marketing/landing-animation-demo";
-import { LandingBrandOverview } from "@/components/marketing/landing-brand-overview";
-import { LandingCommercialDemo } from "@/components/marketing/landing-commercial-demo";
+import { ArrowRight, BriefcaseBusiness, CalendarDays, Check, Clock3, GraduationCap, MoveUpRight } from "lucide-react";
 import { LandingPilotageMap } from "@/components/marketing/landing-pilotage-map";
-import { LandingTrainingDemo } from "@/components/marketing/landing-training-demo";
 import { LeadForm } from "@/components/marketing/lead-form";
 import { MarketingPageEvent, MarketingTrackedLink } from "@/components/marketing/marketing-events";
+import { demoPharmacyById } from "@/lib/marketing/demo-network";
+import styles from "./landing.module.css";
 
 export const metadata: Metadata = {
   title: "TR1 Pharma | Du sell-in au sell-out en pharmacie",
@@ -14,25 +12,35 @@ export const metadata: Metadata = {
     "Pilotez visites commerciales, animations, formations et prochaines actions dans votre réseau officinal avec TR1 Pharma.",
 };
 
-const commercialPoints = [
-  "Les pharmacies à voir et la raison de la visite.",
-  "Le contexte, l’historique et les actions en attente.",
-  "Le compte rendu et la prochaine action depuis le téléphone.",
+const useCases = [
+  {
+    number: "01", label: "Commercial", icon: BriefcaseBusiness,
+    title: "Développez vos comptes.",
+    description: "Le bon contexte avant la visite. Une commande, un compte rendu et une prochaine action directement depuis le terrain.",
+    features: ["Visites et portefeuille pharmacies", "Commandes et réassorts", "Compte rendu mobile"],
+    outcome: "Chaque visite prépare la suivante.",
+  },
+  {
+    number: "02", label: "Animations", icon: CalendarDays,
+    title: "Activez vos points de vente.",
+    description: "Un brief clair pour l’intervenant. Un planning partagé pour la marque. Les preuves et le bilan réunis après chaque animation.",
+    features: ["Intervenants, briefs et planning", "Photos et ventes déclarées", "Coûts et suivi de facturation"],
+    outcome: "Chaque animation reste suivie.",
+  },
+  {
+    number: "03", label: "Formations", icon: GraduationCap,
+    title: "Accompagnez le conseil.",
+    description: "Des modules pour les équipes officinales. Le suivi des participants et les résultats des quiz pour savoir ce qui a été retenu.",
+    features: ["Modules par gamme ou produit", "Formations et participants", "Quiz, scores et progression"],
+    outcome: "Chaque formation laisse une trace utile.",
+  },
 ] as const;
 
-const animationPoints = [
-  "Un brief, un intervenant et un objectif rattachés à la pharmacie.",
-  "Le suivi de réalisation, les preuves terrain et les ventes déclarées.",
-  "Le bilan, les coûts et la suite commerciale à préparer.",
+const priorities = [
+  { pharmacy: demoPharmacyById.get("arcades-lille")!, mode: "commercial", label: "Commercial" },
+  { pharmacy: demoPharmacyById.get("republique-paris")!, mode: "animations", label: "Animation" },
+  { pharmacy: demoPharmacyById.get("prado-marseille")!, mode: "formations", label: "Formation" },
 ] as const;
-
-const trainingPoints = [
-  "Les modules à transmettre aux équipes officinales.",
-  "Les participants et formations suivies par pharmacie.",
-  "Les résultats des quiz et les sujets à renforcer.",
-] as const;
-
-const executionSteps = ["Commande", "Implantation", "Formation", "Animation", "Réassort", "Résultats"] as const;
 
 export default function LandingPage() {
   return (
@@ -71,161 +79,105 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section className="scroll-mt-24 border-t border-[var(--tr1-line)] px-5 py-16 lg:px-8 lg:py-20" id="plateforme">
-        <div className="mx-auto max-w-7xl">
-          <div className="max-w-4xl">
-            <p className="font-mono text-[.66rem] font-black uppercase tracking-[.14em] text-[var(--tr1-orange)]">La plateforme</p>
-            <h2 className="mt-4 text-[2rem] font-black leading-[1.08] tracking-[-.03em] sm:text-[2.35rem]">
-              Une pharmacie. Tout son historique terrain. Une prochaine action claire.
-            </h2>
-            <p className="mt-5 max-w-3xl text-base leading-[1.55] text-[var(--tr1-muted)] sm:text-lg">
-              Chaque information sert à préparer la suivante. Le commercial, l’animateur, le formateur et la marque travaillent autour du même compte pharmacie.
-            </p>
+      <section className={styles.platform} id="plateforme" aria-labelledby="platform-title">
+        <div className={styles.container}>
+          <div className={styles.sectionHeading}>
+            <div>
+              <p className={styles.eyebrow}>La plateforme</p>
+              <h2 id="platform-title" className={styles.heading}>Trois métiers.<br />Un même suivi.</h2>
+            </div>
+            <p className={styles.intro}>Du premier contact au réassort, vos équipes travaillent autour de la même pharmacie. Vous gardez une lecture commune de votre réseau.</p>
           </div>
 
-          <div className="mt-8 overflow-x-auto pb-1">
-            <div className="flex min-w-[760px] items-center rounded-2xl border border-[var(--tr1-line)] bg-white px-4 py-4 shadow-[0_12px_30px_rgba(14,29,49,.04)]">
-              {executionSteps.map((step, index) => (
-                <div className="flex flex-1 items-center" key={step}>
-                  <div className="flex min-w-0 flex-1 items-center gap-2">
-                    <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[var(--tr1-navy)] font-mono text-[.67rem] font-black text-white">{index + 1}</span>
-                    <span className="truncate text-sm font-black text-[var(--tr1-navy)]">{step}</span>
-                  </div>
-                  {index < executionSteps.length - 1 ? <ArrowRight className="mx-2 size-4 shrink-0 text-[var(--tr1-orange)]" aria-hidden="true" /> : null}
+          <div className={styles.useCases}>
+            {useCases.map(({ number, label, icon: Icon, title, description, features, outcome }, index) => (
+              <article className={styles.useCase} key={label} id={index === 1 ? "animations-formations" : undefined}>
+                <div className={styles.useCaseTop}>
+                  <span className={styles.role}><Icon size={18} strokeWidth={1.6} aria-hidden="true" />{label}</span>
+                  <span className={styles.number} aria-hidden="true">{number}</span>
+                </div>
+                <h3>{title}</h3>
+                <p className={styles.description}>{description}</p>
+                <ul className={styles.features}>
+                  {features.map((feature) => <li key={feature}><Check size={15} strokeWidth={1.8} aria-hidden="true" />{feature}</li>)}
+                </ul>
+                <p className={styles.outcome}>{outcome}</p>
+              </article>
+            ))}
+          </div>
+          <div className={styles.platformFoot}>
+            <p>Visites, commandes, animations et formations. <strong>Tout reste lié au compte pharmacie.</strong></p>
+            <DemoLink placement="after_use_cases" className={styles.textLink} />
+          </div>
+        </div>
+      </section>
+
+      <section className={styles.brand} aria-labelledby="brand-title">
+        <div className={`${styles.container} ${styles.brandGrid}`}>
+          <div className={styles.brandCopy}>
+            <p className={styles.eyebrow}>Côté marque</p>
+            <h2 id="brand-title" className={styles.heading}>Le terrain avance.<br />Vous savez où agir.</h2>
+            <p>Pharmacies à relancer, interventions à suivre, résultats à consulter : retrouvez les priorités sans reconstituer l’histoire du réseau.</p>
+            <ul className={styles.brandBenefits}>
+              <li><Check size={16} aria-hidden="true" />Coordonnez vos équipes et prestataires.</li>
+              <li><Check size={16} aria-hidden="true" />Suivez la réalisation et les résultats disponibles.</li>
+              <li><Check size={16} aria-hidden="true" />Décidez de la prochaine action.</li>
+            </ul>
+          </div>
+
+          <div className={styles.networkPreview} aria-label="Exemple de priorités pour la marque">
+            <div className={styles.previewHead}>
+              <span>Votre réseau · les prochaines actions</span>
+              <span className={styles.demoLabel}>Démonstration</span>
+            </div>
+            <div className={styles.priorities}>
+              {priorities.map(({ pharmacy, mode, label }) => (
+                <div className={styles.priority} key={pharmacy.id}>
+                  <div className={styles.priorityLabel}><span>{label}</span><span>{pharmacy.city}</span></div>
+                  <p className={styles.pharmacyName}>{pharmacy.name}</p>
+                  <p className={styles.signal}>{pharmacy[mode].status}</p>
+                  <div className={styles.nextAction}><span>{pharmacy[mode].nextAction}</span><MoveUpRight size={15} aria-hidden="true" /></div>
                 </div>
               ))}
             </div>
-          </div>
-
-          <div className="mt-14 space-y-16 lg:space-y-20">
-            <article className="grid items-center gap-8 lg:grid-cols-[.38fr_.62fr] lg:gap-12">
-              <div>
-                <p className="font-mono text-[.64rem] font-black uppercase tracking-[.14em] text-[var(--tr1-orange)]">COMMERCIAL</p>
-                <h3 className="mt-3 text-[1.75rem] font-black leading-tight tracking-[-.025em] sm:text-[2rem]">Avant la visite, sachez où aller et pourquoi.</h3>
-                <p className="mt-4 text-base leading-[1.55] text-[var(--tr1-muted)] sm:text-[1.06rem]">
-                  Une pharmacie n’a pas commandé depuis plusieurs semaines ? Une prochaine action manque ? TR1 fait remonter le contexte utile pour préparer la tournée et éviter de repartir de zéro à chaque visite.
-                </p>
-                <FeatureList items={commercialPoints} />
-              </div>
-              <LandingCommercialDemo />
-            </article>
-
-            <article className="scroll-mt-24 grid items-center gap-8 lg:grid-cols-[.38fr_.62fr] lg:gap-12" id="animations-formations">
-              <div>
-                <p className="font-mono text-[.64rem] font-black uppercase tracking-[.14em] text-[var(--tr1-orange)]">ANIMATIONS</p>
-                <h3 className="mt-3 text-[1.75rem] font-black leading-tight tracking-[-.025em] sm:text-[2rem]">Après l’implantation, organisez ce qui fera vivre la marque.</h3>
-                <p className="mt-4 text-base leading-[1.55] text-[var(--tr1-muted)] sm:text-[1.06rem]">
-                  Le commercial déclenche l’animation, l’intervenant reçoit son brief et la marque retrouve le bilan au même endroit. La journée ne disparaît plus dans une chaîne de messages, de photos et de fichiers séparés.
-                </p>
-                <FeatureList items={animationPoints} />
-              </div>
-              <LandingAnimationDemo />
-            </article>
-
-            <article className="grid items-center gap-8 lg:grid-cols-[.38fr_.62fr] lg:gap-12">
-              <div>
-                <p className="font-mono text-[.64rem] font-black uppercase tracking-[.14em] text-[var(--tr1-orange)]">FORMATIONS</p>
-                <h3 className="mt-3 text-[1.75rem] font-black leading-tight tracking-[-.025em] sm:text-[2rem]">Formez les équipes. Retrouvez ce qui a vraiment été transmis.</h3>
-                <p className="mt-4 text-base leading-[1.55] text-[var(--tr1-muted)] sm:text-[1.06rem]">
-                  Pour chaque pharmacie, TR1 conserve les participants, les modules suivis et les résultats des quiz. La marque sait où la formation a eu lieu et quels sujets méritent d’être renforcés.
-                </p>
-                <FeatureList items={trainingPoints} />
-              </div>
-              <LandingTrainingDemo />
-            </article>
-          </div>
-
-          <div className="mt-12 text-center">
-            <MarketingTrackedLink
-              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-[var(--tr1-orange)] px-5 text-sm font-black text-white transition duration-200 hover:-translate-y-0.5 hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-navy)] focus-visible:ring-offset-2 motion-reduce:transition-none"
-              event="primary_cta_click"
-              href="#diagnostic"
-              properties={{ placement: "after_use_cases" }}
-            >
-              Demander une démo
-              <ArrowRight className="size-4" />
-            </MarketingTrackedLink>
+            <p className={styles.previewFoot}>Une pharmacie. Son historique. La suite à donner.</p>
           </div>
         </div>
       </section>
 
-      <section className="border-t border-[var(--tr1-line)] bg-white/28 px-5 py-16 lg:px-8 lg:py-20">
-        <div className="mx-auto max-w-7xl">
-          <div className="max-w-4xl">
-            <p className="font-mono text-[.66rem] font-black uppercase tracking-[.14em] text-[var(--tr1-orange)]">Pilotage de la marque</p>
-            <h2 className="mt-4 text-[2rem] font-black leading-[1.08] tracking-[-.03em] sm:text-[2.35rem]">Pendant que le terrain agit, la direction voit où intervenir ensuite.</h2>
-            <p className="mt-5 max-w-3xl text-base leading-[1.55] text-[var(--tr1-muted)] sm:text-lg">
-              Pharmacies à relancer, interventions à suivre, résultats disponibles : la vue marque rassemble les signaux utiles pour prioriser l’action sans devoir reconstruire l’histoire du réseau.
-            </p>
+      <section className={styles.founder} id="pourquoi-tr1" aria-labelledby="founder-title">
+        <div className={`${styles.container} ${styles.founderGrid}`}>
+          <div>
+            <p className={styles.eyebrow}>Pourquoi TR1</p>
+            <h2 id="founder-title" className={styles.heading}>Né sur le terrain.</h2>
+            <p className={styles.founderContext}>L’expérience d’un délégué pharmaceutique, à l’origine du produit.</p>
           </div>
-
-          <div className="mt-10">
-            <LandingBrandOverview />
-          </div>
-
-          <div className="mt-8 grid gap-6 border-t border-[var(--tr1-line)] pt-7 md:grid-cols-3">
-            <PilotageLegend title="Commercial">Commandes, implantations, réassorts et prochaines visites.</PilotageLegend>
-            <PilotageLegend title="Animations">Réalisation, ventes déclarées, coûts et évolution observée après intervention.</PilotageLegend>
-            <PilotageLegend title="Formations">Couverture du réseau, participants formés et résultats des quiz.</PilotageLegend>
-          </div>
-          <p className="mt-5 max-w-3xl text-xs leading-5 text-[var(--tr1-muted)]">
-            Le « CA observé après intervention » décrit une évolution constatée sur la période suivie. Il ne constitue pas, à lui seul, une preuve de causalité de l’action terrain.
-          </p>
-        </div>
-      </section>
-
-      <section className="scroll-mt-24 px-5 py-16 lg:px-8 lg:py-20" id="pourquoi-tr1">
-        <div className="mx-auto max-w-7xl rounded-2xl bg-[var(--tr1-navy)] px-6 py-10 text-[var(--tr1-ivory)] sm:px-10 lg:px-14 lg:py-12">
-          <div className="max-w-4xl">
-            <p className="font-mono text-[.66rem] font-black uppercase tracking-[.14em] text-[var(--tr1-orange)]">Pourquoi TR1</p>
-            <h2 className="mt-4 text-[2rem] font-black leading-[1.08] tracking-[-.03em] sm:text-[2.35rem]">TR1 est né sur le terrain.</h2>
-            <div className="mt-6 space-y-4 text-base leading-[1.65] text-white/75 sm:text-lg">
-              <p>Avant une tournée, je pouvais passer deux heures à choisir les pharmacies à revoir, retrouver nos derniers échanges et organiser les trajets autour des rendez-vous.</p>
-              <p>Entre deux visites, je prenais mes notes sur mon téléphone. Le soir, je les recopiais dans mon CRM… quand je le faisais.</p>
-              <p>J’ai commencé à construire TR1 pour préparer mes tournées plus rapidement, retrouver les bonnes informations avant d’entrer en pharmacie et faire mon retour directement sur mon téléphone en sortant.</p>
-            </div>
-            <div className="mt-7 border-t border-white/15 pt-5">
-              <p className="font-black">Amir Ounissi</p>
-              <p className="mt-1 text-sm text-white/55">Délégué pharmaceutique et fondateur de TR1 Pharma</p>
-            </div>
+          <div className={styles.founderStory}>
+            <blockquote>« Je voulais juste un outil qui colle davantage à ma réalité de délégué : préparer ma tournée plus rapidement, retrouver les bonnes infos avant d’entrer dans une pharmacie et faire mon retour directement sur mon téléphone en sortant. »</blockquote>
+            <p className={styles.signature}><strong>Amir Ounissi</strong><span>Délégué pharmaceutique · Fondateur de TR1 Pharma</span></p>
           </div>
         </div>
       </section>
 
-      <section className="scroll-mt-24 border-t border-[var(--tr1-line)] bg-white/28 px-5 py-16 lg:px-8 lg:py-20" id="diagnostic">
-        <div className="mx-auto max-w-7xl">
-          <div className="mx-auto max-w-3xl text-center">
-            <p className="font-mono text-[.66rem] font-black uppercase tracking-[.14em] text-[var(--tr1-orange)]">Démonstration</p>
-            <h2 className="mt-4 text-[2rem] font-black leading-[1.08] tracking-[-.03em] sm:text-[2.35rem]">Voyez comment TR1 s’adapte à votre organisation terrain.</h2>
-            <p className="mx-auto mt-5 max-w-2xl text-base leading-[1.55] text-[var(--tr1-muted)] sm:text-lg">
-              En 30 minutes, partons de votre réseau, de vos équipes et de vos actions actuelles pour voir comment TR1 peut structurer leur suivi du sell-in au sell-out.
-            </p>
+      <section className={styles.contact} id="diagnostic" aria-labelledby="contact-title">
+        <div className={`${styles.container} ${styles.contactGrid}`}>
+          <div className={styles.contactCopy}>
+            <p className={styles.eyebrow}>Démonstration personnalisée</p>
+            <h2 id="contact-title" className={styles.heading}>Votre réseau.<br />Vos équipes.<br /><span>Voyons ça ensemble.</span></h2>
+            <p>Partons de votre organisation pour vous montrer comment TR1 relie le pilotage de la marque aux actions du terrain.</p>
+            <div className={styles.duration}><Clock3 size={18} aria-hidden="true" /><span>30 minutes · Un échange autour de vos usages</span></div>
           </div>
-          <div className="mx-auto mt-9 max-w-xl"><LeadForm /></div>
+          <div className={styles.formPanel}><LeadForm /></div>
         </div>
       </section>
     </main>
   );
 }
 
-function FeatureList({ items }: { items: readonly string[] }) {
+function DemoLink({ placement, className }: { placement: string; className: string }) {
   return (
-    <div className="mt-6 space-y-3 text-sm leading-6 text-[var(--tr1-navy)]">
-      {items.map((text) => (
-        <p className="flex items-start gap-2.5" key={text}>
-          <CheckCircle2 aria-hidden="true" className="mt-1 size-4 shrink-0 text-[var(--tr1-orange)]" />
-          <span>{text}</span>
-        </p>
-      ))}
-    </div>
-  );
-}
-
-function PilotageLegend({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <h3 className="text-base font-black text-[var(--tr1-navy)]">{title}</h3>
-      <p className="mt-2 text-sm leading-6 text-[var(--tr1-muted)]">{children}</p>
-    </div>
+    <MarketingTrackedLink className={className} event="primary_cta_click" href="#diagnostic" properties={{ placement }}>
+      Demander une démo<ArrowRight size={16} aria-hidden="true" />
+    </MarketingTrackedLink>
   );
 }
