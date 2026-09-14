@@ -33,8 +33,8 @@ describe("Naali HubSpot order routing", () => {
     });
   });
 
-  it("routes submitted partner-agent orders to the agent pipeline and equivalent ADV stage", () => {
-    const route = resolveNaaliHubSpotOrderRoute("agent");
+  it("routes Amir Ounissi to the commercial pipeline even when his TR1 role is agent", () => {
+    const route = resolveNaaliHubSpotOrderRoute("agent", "727665403");
     const mapped = mapOrderToHubSpot({
       ...order,
       status: "pending",
@@ -44,6 +44,26 @@ describe("Naali HubSpot order routing", () => {
     }, NAALI_HUBSPOT_CONFIGURATION);
 
     expect(mapped.deal.properties).toMatchObject({
+      hubspot_owner_id: "727665403",
+      pipeline: "1543644371",
+      dealstage: "5786904809",
+      origine_de_la_commande: "Commercial Naali",
+    });
+  });
+
+  it("routes other submitted partner-agent orders to the agent pipeline and equivalent ADV stage", () => {
+    const route = resolveNaaliHubSpotOrderRoute("agent", "999999999");
+    const mapped = mapOrderToHubSpot({
+      ...order,
+      ownerExternalId: "999999999",
+      status: "pending",
+      pipelineExternalId: route.pipeline,
+      stageExternalId: route.confirmedStage,
+      originValue: route.origin,
+    }, NAALI_HUBSPOT_CONFIGURATION);
+
+    expect(mapped.deal.properties).toMatchObject({
+      hubspot_owner_id: "999999999",
       pipeline: "1543733493",
       dealstage: "5787550915",
       origine_de_la_commande: "Agent",

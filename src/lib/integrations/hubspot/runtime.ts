@@ -451,7 +451,7 @@ export async function syncHubSpotOrderAfterPersistence(brandId: string, orderId:
       }
 
       const roleKey = await roleKeyForOrderUser(admin, brandId, ownerTr1UserId);
-      const route = resolveNaaliHubSpotOrderRoute(roleKey);
+      const route = resolveNaaliHubSpotOrderRoute(roleKey, ownerExternalId);
 
       const productMappings = new Map<string, string>();
       const freeProductMappings = new Map<string, string>();
