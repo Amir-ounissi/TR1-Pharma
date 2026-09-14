@@ -1,0 +1,28 @@
+.shell { width: 100%; padding: 24px 28px 18px; border: 1px solid #dedbd3; border-radius: 16px; background: #faf9f6; text-align: left; }
+.title { font-size: 18px; font-weight: 650; letter-spacing: -.025em; color: var(--tr1-navy); }
+.subtitle { margin-top: 5px; font-size: 11px; color: #777b80; }
+.body { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(250px, 1fr); gap: 32px; align-items: center; margin-top: 20px; }
+.map { position: relative; width: 100%; max-width: 490px; margin-inline: auto; aspect-ratio: 700 / 620; }
+.marker { position: absolute; width: 44px; height: 44px; display: grid; place-items: center; transform: translate(-50%, -50%); z-index: 1; cursor: pointer; border-radius: 50%; }
+.dot { width: 10px; height: 10px; border: 2px solid #faf9f6; border-radius: 50%; background: #697b80; box-shadow: 0 0 0 1px #697b8030; transition: transform .2s, box-shadow .2s; }
+.city { position: absolute; left: 34px; top: 15px; font-size: 10px; line-height: 14px; font-weight: 550; color: #566269; white-space: nowrap; pointer-events: none; }
+.selected { z-index: 2; }
+.selected .dot { width: 13px; height: 13px; background: #df721f; box-shadow: 0 0 0 6px #df721f17; }
+.selected .city { color: #9e4b12; font-weight: 700; }
+.marker:hover .dot { transform: scale(1.25); }
+.marker:focus-visible { outline: 2px solid #df721f; outline-offset: 2px; }
+.detail { padding: 28px 0 28px 32px; border-left: 1px solid #dedbd3; min-height: 265px; }
+.detailLabel { margin-bottom: 24px; color: #8c603e; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
+.detail p { max-width: 290px; }
+.detail strong { font-weight: 650; }
+.hint { margin-top: 28px; color: #7b8085; font-size: 11px; line-height: 1.6; }
+@media (max-width: 767px) {
+ .shell { padding: 20px 16px 16px; }
+ .body { grid-template-columns: 1fr; gap: 8px; margin-top: 12px; }
+ .map { max-width: 400px; }
+ .detail { border-left: 0; border-top: 1px solid #dedbd3; padding: 22px 4px 8px; min-height: 0; }
+ .detailLabel { margin-bottom: 14px; }
+ .hint { margin-top: 18px; }
+ .city { font-size: 9px; left: 30px; }
+}
+@media (prefers-reduced-motion: reduce) { .dot { transition: none; } }

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { BriefcaseBusiness, CalendarCheck2, ChevronDown, GraduationCap } from "lucide-react";
 import franceDepartments from "@/data/france-departments-metro.json";
 import { demoPharmacies, type DemoMode, type DemoTone } from "@/lib/marketing/demo-network";
+import styles from "./landing-pilotage-map.module.css";
 import { trackMarketingEvent } from "@/lib/marketing/analytics";
 
 const VIEWBOX_WIDTH = 700;
@@ -40,9 +41,6 @@ export function LandingPilotageMap() {
     () => demoPharmacies.find((pharmacy) => pharmacy.id === selectedId) ?? demoPharmacies[0],
     [selectedId],
   );
-  const selectedData = selected[mode];
-  const selectedPoint = projectCoordinate(selected.longitude, selected.latitude);
-  const popupPosition = getPopupPosition(selectedPoint);
 
   const selectMode = (nextMode: DemoMode) => {
     setMode(nextMode);
@@ -50,11 +48,11 @@ export function LandingPilotageMap() {
   };
 
   return (
-    <div className="w-full rounded-2xl border border-[var(--tr1-line)] bg-white p-4 shadow-[0_18px_48px_rgba(14,29,49,.08)] sm:p-5">
+    <div className={styles.shell}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-xl font-black tracking-[-.025em] text-[var(--tr1-navy)] sm:text-2xl">Votre réseau en un regard</h2>
-          <p className="mt-1 text-sm font-semibold text-[var(--tr1-muted)]">Données de démonstration</p>
+          <h2 className={styles.title}>Votre réseau en un regard</h2>
+          <p className={styles.subtitle}>Données de démonstration</p>
         </div>
         <div aria-label="Choisir les informations affichées sur la carte" className="grid grid-cols-3 rounded-lg border border-[var(--tr1-line)] bg-[var(--tr1-ivory)] p-1" role="tablist">
           {modes.map(({ id, label, icon: Icon }) => {
@@ -76,10 +74,10 @@ export function LandingPilotageMap() {
         </div>
       </div>
 
-      <div className="relative mt-4 overflow-hidden rounded-xl bg-[var(--tr1-ivory)]">
-        <div className="relative mx-auto aspect-[1.1/1] w-full max-w-[42rem]" aria-label={`Carte de France de démonstration — filtre ${mode}`}>
+      <div className={styles.body}>
+        <div className={styles.map} aria-label={`Carte de France de démonstration — filtre ${mode}`}>
           <svg aria-hidden="true" className="absolute inset-0 size-full" preserveAspectRatio="xMidYMid meet" viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}>
-            <g fill="#fffdf8" stroke="#c7b79f" strokeLinejoin="round" strokeWidth="1.1">
+            <g fill="#e9e6df" stroke="#faf9f6" strokeLinejoin="round" strokeWidth="1.2">
               {departmentFeatures.map((feature) => (
                 <path d={geometryToPath(feature.geometry)} key={feature.properties.code} />
               ))}
@@ -94,29 +92,24 @@ export function LandingPilotageMap() {
               <button
                 aria-label={`${pharmacy.name}, ${pharmacy.city} — ${data.status}`}
                 aria-pressed={isSelected}
-                className={`absolute grid size-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-[3px] border-white outline-none transition duration-200 focus-visible:ring-4 focus-visible:ring-[var(--tr1-orange)]/30 motion-reduce:transition-none ${isSelected ? "z-20 scale-110 shadow-[0_7px_18px_rgba(14,29,49,.24)] ring-4 ring-[var(--tr1-navy)]/10" : "z-10 shadow-[0_4px_12px_rgba(14,29,49,.18)] hover:scale-105"} ${toneClass(data.tone)}`}
+                className={`${styles.marker} ${isSelected ? styles.selected : ""}`}
                 key={pharmacy.id}
                 onClick={() => setSelectedId(pharmacy.id)}
                 style={{ left: `${(point.x / VIEWBOX_WIDTH) * 100}%`, top: `${(point.y / VIEWBOX_HEIGHT) * 100}%` }}
                 type="button"
               >
-                <ModeGlyph mode={mode} />
+                <span className={styles.dot} />
+                <span className={styles.city}>{pharmacy.city}</span>
               </button>
             );
           })}
 
-          <div
-            aria-live="polite"
-            className="absolute z-30 hidden w-[15.5rem] rounded-xl border border-[var(--tr1-line)] bg-white p-4 shadow-[0_16px_42px_rgba(14,29,49,.14)] md:block"
-            style={{ left: `${popupPosition.left}%`, top: `${popupPosition.top}%` }}
-          >
-            <PharmacySummary mode={mode} pharmacyId={selected.id} />
-          </div>
         </div>
-      </div>
-
-      <div aria-live="polite" className="mt-4 min-h-[11rem] rounded-xl border border-[var(--tr1-line)] bg-[var(--tr1-ivory)] p-4 md:hidden">
-        <PharmacySummary mode={mode} pharmacyId={selected.id} />
+        <div aria-live="polite" className={styles.detail}>
+          <p className={styles.detailLabel}>VOTRE RÉSEAU · {modes.find((item) => item.id === mode)?.label}</p>
+          <PharmacySummary mode={mode} pharmacyId={selected.id} />
+          <p className={styles.hint}>Sélectionnez un point pour découvrir son suivi.</p>
+        </div>
       </div>
 
       <div className="mt-4 md:hidden">
@@ -177,11 +170,6 @@ function PharmacySummary({ mode, pharmacyId }: { mode: DemoMode; pharmacyId: str
   );
 }
 
-function ModeGlyph({ mode }: { mode: DemoMode }) {
-  const Icon = mode === "commercial" ? BriefcaseBusiness : mode === "animations" ? CalendarCheck2 : GraduationCap;
-  return <Icon aria-hidden="true" className="size-4 text-white" strokeWidth={2.5} />;
-}
-
 function projectCoordinate(longitude: number, latitude: number): ProjectedPoint {
   const geographicWidth = (MAX_LONGITUDE - MIN_LONGITUDE) * LONGITUDE_SCALE;
   const geographicHeight = MAX_LATITUDE - MIN_LATITUDE;
@@ -214,25 +202,6 @@ function ringToPath(ring: number[][]) {
     const point = projectCoordinate(longitude, latitude);
     return `${index === 0 ? "M" : "L"}${point.x.toFixed(2)} ${point.y.toFixed(2)}`;
   }).join(" ") + " Z";
-}
-
-function getPopupPosition(point: ProjectedPoint) {
-  const x = (point.x / VIEWBOX_WIDTH) * 100;
-  const y = (point.y / VIEWBOX_HEIGHT) * 100;
-  const left = clamp(x > 60 ? x - 39 : x + 6, 3, 63);
-  const top = clamp(y > 64 ? y - 29 : y + 5, 3, 68);
-  return { left, top };
-}
-
-function clamp(value: number, minimum: number, maximum: number) {
-  return Math.min(maximum, Math.max(minimum, value));
-}
-
-function toneClass(tone: DemoTone) {
-  if (tone === "risk") return "bg-[#c2413d]";
-  if (tone === "watch") return "bg-[#d97706]";
-  if (tone === "neutral") return "bg-[#8d9297]";
-  return "bg-[#2f855a]";
 }
 
 function toneDotClass(tone: DemoTone) {
