@@ -1,6 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
-import tr1Logo from "../../../public/brand/tr1-wordmark-rgba.png";
+import { Tr1BrandLogo } from "@/components/brand/tr1-brand-logo";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -8,12 +7,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       <header className="sticky top-0 z-40 border-b border-[#0b1e32]/10 bg-[#fffdf8]/90 backdrop-blur-xl">
         <div className="mx-auto flex h-[4.6rem] max-w-7xl items-center gap-6 px-5 lg:px-8">
           <Link aria-label="TR1 Pharma — Accueil" className="flex shrink-0 items-center" href="/">
-            <Image
-              alt="TR1 Pharma"
-              className="h-12 w-auto shrink-0 object-contain"
-              priority
-              src={tr1Logo}
-            />
+            <Tr1BrandLogo className="h-12 w-auto shrink-0" />
           </Link>
           <nav className="ml-auto hidden items-center gap-6 text-sm font-semibold text-[#445265] lg:flex">
             <Link className="hover:text-[#c84f24]" href="/#pourquoi-tr1">Pourquoi TR1</Link>
