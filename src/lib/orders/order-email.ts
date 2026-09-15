@@ -1,5 +1,7 @@
 import "server-only";
 
+import { randomUUID } from "crypto";
+
 export type EmailAttachment = {
   filename: string;
   contentType: string;
@@ -105,7 +107,7 @@ export function buildMimeMessage(input: {
   body: string;
   attachments: EmailAttachment[];
 }) {
-  const boundary = `tr1-${crypto.randomUUID()}`;
+  const boundary = `tr1-${randomUUID()}`;
   const headers = [
     `From: ${input.from}`,
     `To: ${input.to}`,
@@ -116,7 +118,7 @@ export function buildMimeMessage(input: {
   const parts = [
     `--${boundary}\r\nContent-Type: text/plain; charset=\"UTF-8\"\r\nContent-Transfer-Encoding: base64\r\n\r\n${foldBase64(Buffer.from(input.body, "utf8"))}`,
     ...input.attachments.map((attachment) =>
-      `--${boundary}\r\nContent-Type: ${attachment.contentType}; name=\"${ascii(attachment.filename).replace(/\"/g, "") }\"\r\nContent-Disposition: attachment; filename=\"${ascii(attachment.filename).replace(/\"/g, "")}\"\r\nContent-Transfer-Encoding: base64\r\n\r\n${foldBase64(attachment.data)}`,
+      `--${boundary}\r\nContent-Type: ${attachment.contentType}; name=\"${ascii(attachment.filename).replace(/\"/g, "")}\"\r\nContent-Disposition: attachment; filename=\"${ascii(attachment.filename).replace(/\"/g, "")}\"\r\nContent-Transfer-Encoding: base64\r\n\r\n${foldBase64(attachment.data)}`,
     ),
     `--${boundary}--`,
   ];
