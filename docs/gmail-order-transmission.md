@@ -55,7 +55,7 @@ Le refresh token Google est chiffré en AES-256-GCM avant stockage et les tables
 
 ## Données pharmacie
 
-Les documents KBIS/RIB sont stockés dans le bucket privé `pharmacy-documents` et réutilisés pour les commandes suivantes de la même pharmacie. Le numéro de TVA est enregistré sur la fiche pharmacie.
+Les documents KBIS/RIB sont stockés dans le bucket privé `pharmacy-documents`. Ils sont isolés par marque et pharmacie afin qu'une pièce fournie dans un contexte de marque ne soit pas réutilisée automatiquement par une autre marque. Le numéro de TVA reste enregistré sur l'identité légale de la pharmacie.
 
 ## Activation
 
@@ -63,5 +63,6 @@ Les migrations doivent être appliquées avant d'activer l'interface :
 
 - `20260915201500_order_transmission_workflow.sql`
 - `20260915203000_user_gmail_connections.sql`
+- `20260915204000_scope_pharmacy_documents_by_brand.sql`
 
 Le déploiement automatique Vercel n'est pas réactivé par cette fonctionnalité.
