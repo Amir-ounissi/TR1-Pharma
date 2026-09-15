@@ -159,11 +159,14 @@ export function OrderEmailTransmissionCard({
           </form>
         </div>
 
-        <div className="space-y-2 rounded-xl border bg-muted/20 p-4 text-sm">
+        <div className="space-y-3 rounded-xl border bg-muted/20 p-4 text-sm">
           <p className="font-medium">Prévisualisation</p>
           <p><span className="text-muted-foreground">À :</span> {recipientEmail || "Non configuré dans la marque"}</p>
           <p><span className="text-muted-foreground">Objet :</span> {previewSubject}</p>
           <p><span className="text-muted-foreground">Pièces jointes :</span> bon de commande PDF, KBIS, RIB</p>
+          <Button asChild variant="outline" size="sm">
+            <a href={`/api/orders/${orderId}/pdf`} target="_blank" rel="noreferrer">Voir le bon de commande</a>
+          </Button>
         </div>
 
         <form action={sendAction} className="space-y-2">
