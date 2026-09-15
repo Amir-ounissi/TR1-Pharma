@@ -192,6 +192,8 @@ export async function sendOrderByEmailAction(
       `Total TTC : ${Number(order.total_ttc ?? 0).toFixed(2)} €`,
       "",
       "Bonne réception,",
+      "",
+      "Ceci est un message automatique, mais vous pouvez y répondre directement.",
     ].join("\n");
 
     const pdfLines = [
