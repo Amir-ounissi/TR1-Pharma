@@ -23,7 +23,8 @@ test.beforeAll(() => mkdirSync(artifacts, { recursive: true }));
 
 test("landing desktop, CTA, preuve produit et capture du lead", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Du sell-in au sell-out, pilotez chaque action qui fait vendre en pharmacie." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Du sell-in au sell-out." })).toBeVisible();
+  await expect(page.getByText("Pilotez chaque action qui fait vendre en pharmacie.", { exact: true })).toBeVisible();
   await expect(page.getByText("TR1 réunit visites commerciales, commandes, animations, formations et suivi du réseau dans un même cockpit terrain. Vos équipes savent où agir. Vous savez ce qui a été fait et ce qui doit suivre.")).toBeVisible();
   await expect(page.getByText("Données de démonstration").first()).toBeVisible();
   await expect(page.getByRole("heading", { name: /Trois métiers.*Un même suivi/ })).toBeVisible();
@@ -61,7 +62,8 @@ test("landing desktop, CTA, preuve produit et capture du lead", async ({ page })
 test("landing mobile reste lisible et sans débordement", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Du sell-in au sell-out, pilotez chaque action qui fait vendre en pharmacie." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Du sell-in au sell-out." })).toBeVisible();
+  await expect(page.getByText("Pilotez chaque action qui fait vendre en pharmacie.", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Voir les pharmacies en liste" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Accompagnez le conseil." })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
