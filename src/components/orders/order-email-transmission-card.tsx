@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const initialState: OrderTransmissionActionState = {};
+const pharmacyDocumentAccept = "application/pdf,image/jpeg,image/png,image/heic,image/heif,image/webp";
 
 function Feedback({ state }: { state: OrderTransmissionActionState }) {
   if (state.error) return <p className="text-sm text-destructive">{state.error}</p>;
@@ -133,8 +134,9 @@ export function OrderEmailTransmissionCard({
             <input type="hidden" name="orderId" value={orderId} />
             <input type="hidden" name="documentType" value="kbis" />
             <label className="text-sm font-medium" htmlFor={`kbis-${orderId}`}>KBIS {hasKbis ? "· enregistré" : ""}</label>
-            <input id={`kbis-${orderId}`} name="file" type="file" accept="application/pdf,image/jpeg,image/png" required className="block w-full text-sm" />
-            <Button type="submit" variant="outline" size="sm" disabled={kbisPending}>{kbisPending ? "Envoi…" : hasKbis ? "Remplacer" : "Ajouter le KBIS"}</Button>
+            <input id={`kbis-${orderId}`} name="file" type="file" accept={pharmacyDocumentAccept} required className="block w-full text-sm" />
+            <p className="text-xs text-muted-foreground">PDF ou photo · JPG, PNG, HEIC/HEIF ou WebP · 10 Mo max.</p>
+            <Button type="submit" variant="outline" size="sm" disabled={kbisPending}>{kbisPending ? "Envoi…" : hasKbis ? "Remplacer" : "Ajouter / photographier le KBIS"}</Button>
             <Feedback state={kbisState} />
           </form>
 
@@ -142,8 +144,9 @@ export function OrderEmailTransmissionCard({
             <input type="hidden" name="orderId" value={orderId} />
             <input type="hidden" name="documentType" value="rib" />
             <label className="text-sm font-medium" htmlFor={`rib-${orderId}`}>RIB {hasRib ? "· enregistré" : ""}</label>
-            <input id={`rib-${orderId}`} name="file" type="file" accept="application/pdf,image/jpeg,image/png" required className="block w-full text-sm" />
-            <Button type="submit" variant="outline" size="sm" disabled={ribPending}>{ribPending ? "Envoi…" : hasRib ? "Remplacer" : "Ajouter le RIB"}</Button>
+            <input id={`rib-${orderId}`} name="file" type="file" accept={pharmacyDocumentAccept} required className="block w-full text-sm" />
+            <p className="text-xs text-muted-foreground">PDF ou photo · JPG, PNG, HEIC/HEIF ou WebP · 10 Mo max.</p>
+            <Button type="submit" variant="outline" size="sm" disabled={ribPending}>{ribPending ? "Envoi…" : hasRib ? "Remplacer" : "Ajouter / photographier le RIB"}</Button>
             <Feedback state={ribState} />
           </form>
         </div>
