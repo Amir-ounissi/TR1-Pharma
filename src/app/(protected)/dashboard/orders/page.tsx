@@ -22,8 +22,9 @@ export default async function OrdersPage({ searchParams }: { searchParams: Searc
   const { supabase, brand, userId } = session;
   const role = contexts.find((context) => context.id === brand.id)?.role ?? "brand_user";
   const isAgent = role === "agent";
+  const canReview = ["tr1_manager", "brand_admin", "super_admin"].includes(role);
   const canOperate = ["agent", "tr1_manager", "brand_admin", "super_admin"].includes(role);
-  const canImport = ["tr1_manager", "brand_admin", "super_admin"].includes(role);
+  const canImport = canReview;
   const canViewPayment = ["tr1_manager", "brand_admin", "brand_user", "super_admin"].includes(role);
   const page = Math.max(1, Number(typeof params.page === "string" ? params.page : "1") || 1);
 
@@ -79,6 +80,24 @@ export default async function OrdersPage({ searchParams }: { searchParams: Searc
         </div>
       </div>
 
+      {canReview && (workflow.pending_count ?? 0) > 0 ? (
+        <Card className="border-primary/20 bg-primary/5">
+          <CardContent className="flex flex-col gap-3 pt-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-medium">
+                {workflow.pending_count} commande{workflow.pending_count > 1 ? "s" : ""} en attente de décision
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Ouvrez une commande pour la valider, demander une correction ou la refuser.
+              </p>
+            </div>
+            <Button asChild size="sm">
+              <Link href="?status=pending">Traiter les commandes</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
+
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <Card><CardContent className="pt-5"><p className="text-2xl font-semibold">{workflow.pending_count ?? 0}</p><p className="text-sm font-medium">{isAgent ? "En attente marque" : "À valider"}</p><p className="text-xs text-muted-foreground">{formatCurrency(workflow.pending_revenue_ht ?? 0)} HT en attente</p></CardContent></Card>
         <Card><CardContent className="pt-5"><p className="text-2xl font-semibold">{workflow.needs_correction_count ?? 0}</p><p className="text-sm font-medium">À corriger</p><p className="text-xs text-muted-foreground">Retour nécessaire vers l’agent</p></CardContent></Card>
@@ -132,19 +151,27 @@ export default async function OrdersPage({ searchParams }: { searchParams: Searc
             </div>
           ) : (
             <Table>
-              <TableHeader><TableRow><TableHead>Commande</TableHead><TableHead>Pharmacie</TableHead><TableHead>Date</TableHead><TableHead>Type</TableHead><TableHead>Statut</TableHead><TableHead>Net HT</TableHead>{canViewPayment ? <TableHead>Règlement</TableHead> : null}</TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>Commande</TableHead><TableHead>Pharmacie</TableHead><TableHead>Date</TableHead><TableHead>Type</TableHead><TableHead>Statut</TableHead><TableHead>Net HT</TableHead>{canViewPayment ? <TableHead>Règlement</TableHead> : null}{canReview ? <TableHead className="text-right">Action</TableHead> : null}</TableRow></TableHeader>
               <TableBody>
                 {orders.map((order) => {
                   const pharmacy = Array.isArray(order.pharmacies) ? order.pharmacies[0] : order.pharmacies;
+                  const orderHref = `/dashboard/orders/${order.id}`;
                   return (
                     <TableRow key={order.id}>
-                      <TableCell><Link href={`/dashboard/orders/${order.id}`} className="font-medium hover:underline">{order.order_number || order.external_order_id || order.id.slice(0, 8)}</Link></TableCell>
+                      <TableCell><Link href={orderHref} className="font-medium hover:underline">{order.order_number || order.external_order_id || order.id.slice(0, 8)}</Link></TableCell>
                       <TableCell>{pharmacy?.trade_name || pharmacy?.legal_name}<p className="text-xs text-muted-foreground">{pharmacy?.city}</p></TableCell>
                       <TableCell>{new Date(order.order_date).toLocaleDateString("fr-FR")}</TableCell>
                       <TableCell>{order.is_initial_order ? "Implantation" : order.is_reorder ? "Réassort" : uiLabel(order.order_type)}</TableCell>
-                      <TableCell><Badge variant="secondary">{orderStatusLabel(order.order_status)}</Badge></TableCell>
+                      <TableCell><Badge variant={canReview && order.order_status === "pending" ? "default" : "secondary"}>{orderStatusLabel(order.order_status)}</Badge></TableCell>
                       <TableCell>{formatCurrency(order.net_amount_ht)}</TableCell>
                       {canViewPayment ? <TableCell>{order.payment_status === "not_applicable" ? "Non connecté" : uiLabel(order.payment_status)}</TableCell> : null}
+                      {canReview ? (
+                        <TableCell className="text-right">
+                          <Button asChild size="sm" variant={order.order_status === "pending" ? "default" : "outline"}>
+                            <Link href={orderHref}>{order.order_status === "pending" ? "Traiter" : "Voir"}</Link>
+                          </Button>
+                        </TableCell>
+                      ) : null}
                     </TableRow>
                   );
                 })}
