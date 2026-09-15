@@ -10,7 +10,9 @@ test("brief avant visite depuis Ma journée jusqu'aux actions terrain", async ({
   await expect(page.getByRole("heading", { name: "Aujourd’hui", exact: true }).first()).toBeVisible();
   await expect(page.getByTestId("next-visit-card")).toContainText("Pharmacie République");
 
-  const briefEntry = page.getByRole("link", { name: /Ouvrir le brief/i });
+  const briefEntry = page
+    .locator(`a[href="/dashboard/pharmacies/${pharmacyRelationId}/brief"]`)
+    .filter({ hasText: /Prochaine visite/i });
   await expect(briefEntry).toBeVisible();
   await briefEntry.click();
 
