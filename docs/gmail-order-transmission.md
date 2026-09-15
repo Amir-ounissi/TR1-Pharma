@@ -61,8 +61,8 @@ Les documents KBIS/RIB sont stockés dans le bucket privé `pharmacy-documents`.
 
 Les migrations doivent être appliquées avant d'activer l'interface :
 
-- `20260915201500_order_transmission_workflow.sql`
-- `20260915203000_user_gmail_connections.sql`
-- `20260915204000_scope_pharmacy_documents_by_brand.sql`
+- `20260915190359_order_transmission_workflow.sql`
+- `20260915190404_user_gmail_connections.sql`
+- `20260915190408_scope_pharmacy_documents_by_brand.sql`
 
 Le déploiement automatique Vercel n'est pas réactivé par cette fonctionnalité.
