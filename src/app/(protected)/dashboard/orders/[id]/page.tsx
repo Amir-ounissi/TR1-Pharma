@@ -122,8 +122,8 @@ export default async function OrderDetailPage({
 
   const canEdit =
     (isAgent &&
-      ["draft", "needs_correction"].includes(order.order_status)) ||
-    (canOperate && order.order_status === "draft");
+      ["draft", "needs_correction", "pending"].includes(order.order_status)) ||
+    (canOperate && ["draft", "pending"].includes(order.order_status));
 
   const productOptions = (products ?? []).map((product) => ({
     id: product.id,
@@ -183,6 +183,9 @@ export default async function OrderDetailPage({
   const pharmacyName = pharmacy?.trade_name || pharmacy?.legal_name || "Pharmacie";
   const orderReference = order.order_number || order.external_order_id || order.id.slice(0, 8);
   const previewSubject = `Commande ${brand.name} · ${pharmacyName} · ${orderReference}`;
+  const hasSentTransmission = transmissions.some(
+    (transmission) => transmission.status === "sent",
+  );
 
   return (
     <div className="space-y-6">
@@ -199,13 +202,20 @@ export default async function OrderDetailPage({
           </p>
         </div>
 
-        <Button asChild variant="outline">
-          <Link
-            href={`/dashboard/pharmacies/${order.brand_pharmacy_id}?tab=orders`}
-          >
-            Voir la pharmacie
-          </Link>
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {canEdit ? (
+            <Button asChild>
+              <Link href="#modifier-commande">Modifier la commande</Link>
+            </Button>
+          ) : null}
+          <Button asChild variant="outline">
+            <Link
+              href={`/dashboard/pharmacies/${order.brand_pharmacy_id}?tab=orders`}
+            >
+              Voir la pharmacie
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {anomaly ? (
@@ -242,14 +252,24 @@ export default async function OrderDetailPage({
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-6">
-          <Card>
+          <Card id="modifier-commande">
             <CardHeader>
               <CardTitle>
                 {canEdit ? "Modifier la commande" : "Lignes figées"}
               </CardTitle>
             </CardHeader>
 
-            <CardContent className={canEdit ? "" : "p-0"}>
+            <CardContent className={canEdit ? "space-y-4" : "p-0"}>
+              {canEdit && order.order_status === "pending" ? (
+                <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
+                  <strong>Commande en attente de validation.</strong>{" "}
+                  Vous pouvez encore la modifier tant qu’elle n’est pas validée.
+                  {hasSentTransmission
+                    ? " Un email a déjà été envoyé : après modification, renvoyez le bon corrigé depuis la zone « Transmission de la commande »."
+                    : ""}
+                </div>
+              ) : null}
+
               {canEdit ? (
                 <OrderRevisionForm
                   orderId={order.id}
@@ -352,13 +372,22 @@ export default async function OrderDetailPage({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <OrderStatusForm
-                orderId={order.id}
-                currentStatus={order.order_status}
-                isAgent={isAgent}
-                canOperate={canOperate}
-                reviewNote={order.review_note}
-              />
+              {isAgent && order.order_status === "pending" ? (
+                <div className="space-y-2">
+                  <Badge variant="secondary">À valider par la marque</Badge>
+                  <p className="text-sm text-muted-foreground">
+                    Vous pouvez encore modifier la commande tant qu’elle n’a pas été validée.
+                  </p>
+                </div>
+              ) : (
+                <OrderStatusForm
+                  orderId={order.id}
+                  currentStatus={order.order_status}
+                  isAgent={isAgent}
+                  canOperate={canOperate}
+                  reviewNote={order.review_note}
+                />
+              )}
             </CardContent>
           </Card>
 
