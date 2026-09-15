@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BriefcaseBusiness, CalendarCheck2, ChevronDown, GraduationCap } from "lucide-react";
+import { ArrowRight, BriefcaseBusiness, CalendarCheck2, GraduationCap } from "lucide-react";
 import franceDepartments from "@/data/france-departments-metro.json";
 import { demoPharmacies, type DemoMode, type DemoTone } from "@/lib/marketing/demo-network";
 import { trackMarketingEvent } from "@/lib/marketing/analytics";
@@ -34,35 +34,56 @@ const departmentFeatures = (franceDepartments as { features: GeometryFeature[] }
 export function LandingPilotageMap() {
   const [mode, setMode] = useState<DemoMode>("commercial");
   const [selectedId, setSelectedId] = useState(demoPharmacies[0].id);
-  const [showList, setShowList] = useState(false);
 
   const selected = useMemo(
     () => demoPharmacies.find((pharmacy) => pharmacy.id === selectedId) ?? demoPharmacies[0],
     [selectedId],
   );
-  const selectedData = selected[mode];
-  const selectedPoint = projectCoordinate(selected.longitude, selected.latitude);
-  const popupPosition = getPopupPosition(selectedPoint);
+
+  const priorities = useMemo(() => {
+    const ranked = [...demoPharmacies].sort((a, b) => toneRank(a[mode].tone) - toneRank(b[mode].tone));
+    return [selected, ...ranked.filter((pharmacy) => pharmacy.id !== selected.id)].slice(0, 3);
+  }, [mode, selected]);
 
   const selectMode = (nextMode: DemoMode) => {
+    const nextPriority = [...demoPharmacies].sort(
+      (a, b) => toneRank(a[nextMode].tone) - toneRank(b[nextMode].tone),
+    )[0];
+
     setMode(nextMode);
+    setSelectedId(nextPriority.id);
     trackMarketingEvent("map_filter_use", { filter: nextMode });
   };
 
   return (
-    <div className="w-full rounded-2xl border border-[var(--tr1-line)] bg-white p-4 shadow-[0_18px_48px_rgba(14,29,49,.08)] sm:p-5">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h2 className="text-xl font-black tracking-[-.025em] text-[var(--tr1-navy)] sm:text-2xl">Votre réseau en un regard</h2>
-          <p className="mt-1 text-sm font-semibold text-[var(--tr1-muted)]">Données de démonstration</p>
+    <div className="w-full rounded-2xl border border-[var(--tr1-line)] bg-white p-4 shadow-[0_18px_48px_rgba(14,29,49,.08)] sm:p-5 lg:p-6">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div className="max-w-2xl">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-mono text-[.58rem] font-black uppercase tracking-[.12em] text-[var(--tr1-orange)]">Pilotage terrain</p>
+            <span className="rounded-full border border-[var(--tr1-line)] bg-[var(--tr1-ivory)] px-2.5 py-1 font-mono text-[.52rem] font-bold uppercase tracking-[.08em] text-[var(--tr1-muted)]">
+              Démonstration
+            </span>
+          </div>
+          <h2 className="mt-2 text-2xl font-black tracking-[-.035em] text-[var(--tr1-navy)] sm:text-3xl">
+            Votre terrain vous dit où agir.
+          </h2>
+          <p className="mt-2 max-w-xl text-sm font-medium leading-6 text-[var(--tr1-muted)] sm:text-[.95rem]">
+            Du national au point de vente, identifiez les signaux qui demandent une action et gardez la suite à donner sous les yeux.
+          </p>
         </div>
-        <div aria-label="Choisir les informations affichées sur la carte" className="grid grid-cols-3 rounded-lg border border-[var(--tr1-line)] bg-[var(--tr1-ivory)] p-1" role="tablist">
+
+        <div
+          aria-label="Choisir les informations affichées sur la carte"
+          className="grid grid-cols-3 rounded-xl border border-[var(--tr1-line)] bg-[var(--tr1-ivory)] p-1"
+          role="tablist"
+        >
           {modes.map(({ id, label, icon: Icon }) => {
             const active = mode === id;
             return (
               <button
                 aria-selected={active}
-                className={`inline-flex min-h-11 items-center justify-center gap-1.5 rounded-md px-2.5 text-xs font-bold outline-none transition duration-200 focus-visible:ring-2 focus-visible:ring-[var(--tr1-orange)] motion-reduce:transition-none sm:px-3 ${active ? "bg-[var(--tr1-navy)] text-white" : "text-[var(--tr1-muted)] hover:bg-white"}`}
+                className={`inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg px-2.5 text-xs font-bold outline-none transition duration-200 focus-visible:ring-2 focus-visible:ring-[var(--tr1-orange)] motion-reduce:transition-none sm:px-3 ${active ? "bg-[var(--tr1-navy)] text-white shadow-sm" : "text-[var(--tr1-muted)] hover:bg-white"}`}
                 key={id}
                 onClick={() => selectMode(id)}
                 role="tab"
@@ -76,110 +97,102 @@ export function LandingPilotageMap() {
         </div>
       </div>
 
-      <div className="relative mt-4 overflow-hidden rounded-xl bg-[var(--tr1-ivory)]">
-        <div className="relative mx-auto aspect-[1.1/1] w-full max-w-[42rem]" aria-label={`Carte de France de démonstration — filtre ${mode}`}>
-          <svg aria-hidden="true" className="absolute inset-0 size-full" preserveAspectRatio="xMidYMid meet" viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}>
-            <g fill="#fffdf8" stroke="#c7b79f" strokeLinejoin="round" strokeWidth="1.1">
-              {departmentFeatures.map((feature) => (
-                <path d={geometryToPath(feature.geometry)} key={feature.properties.code} />
-              ))}
-            </g>
-          </svg>
-
-          {demoPharmacies.map((pharmacy) => {
-            const point = projectCoordinate(pharmacy.longitude, pharmacy.latitude);
-            const data = pharmacy[mode];
-            const isSelected = pharmacy.id === selected.id;
-            return (
-              <button
-                aria-label={`${pharmacy.name}, ${pharmacy.city} — ${data.status}`}
-                aria-pressed={isSelected}
-                className={`absolute grid size-11 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-[3px] border-white outline-none transition duration-200 focus-visible:ring-4 focus-visible:ring-[var(--tr1-orange)]/30 motion-reduce:transition-none ${isSelected ? "z-20 scale-110 shadow-[0_7px_18px_rgba(14,29,49,.24)] ring-4 ring-[var(--tr1-navy)]/10" : "z-10 shadow-[0_4px_12px_rgba(14,29,49,.18)] hover:scale-105"} ${toneClass(data.tone)}`}
-                key={pharmacy.id}
-                onClick={() => setSelectedId(pharmacy.id)}
-                style={{ left: `${(point.x / VIEWBOX_WIDTH) * 100}%`, top: `${(point.y / VIEWBOX_HEIGHT) * 100}%` }}
-                type="button"
-              >
-                <ModeGlyph mode={mode} />
-              </button>
-            );
-          })}
-
-          <div
-            aria-live="polite"
-            className="absolute z-30 hidden w-[15.5rem] rounded-xl border border-[var(--tr1-line)] bg-white p-4 shadow-[0_16px_42px_rgba(14,29,49,.14)] md:block"
-            style={{ left: `${popupPosition.left}%`, top: `${popupPosition.top}%` }}
-          >
-            <PharmacySummary mode={mode} pharmacyId={selected.id} />
+      <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1.45fr)_minmax(18rem,.75fr)] lg:gap-5">
+        <div className="relative overflow-hidden rounded-2xl border border-[var(--tr1-line)] bg-[var(--tr1-ivory)]">
+          <div className="absolute left-4 top-4 z-20 rounded-full border border-[var(--tr1-line)] bg-white/90 px-3 py-1.5 font-mono text-[.55rem] font-black uppercase tracking-[.08em] text-[var(--tr1-muted)] shadow-sm backdrop-blur">
+            Réseau national
           </div>
-        </div>
-      </div>
 
-      <div aria-live="polite" className="mt-4 min-h-[11rem] rounded-xl border border-[var(--tr1-line)] bg-[var(--tr1-ivory)] p-4 md:hidden">
-        <PharmacySummary mode={mode} pharmacyId={selected.id} />
-      </div>
+          <div className="relative mx-auto aspect-[1.16/1] w-full max-w-[46rem]" aria-label={`Carte de France de démonstration — filtre ${mode}`}>
+            <svg aria-hidden="true" className="absolute inset-0 size-full" preserveAspectRatio="xMidYMid meet" viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}>
+              <g fill="#fffdfa" stroke="#ded3c3" strokeLinejoin="round" strokeWidth="0.72">
+                {departmentFeatures.map((feature) => (
+                  <path d={geometryToPath(feature.geometry)} key={feature.properties.code} />
+                ))}
+              </g>
+            </svg>
 
-      <div className="mt-4 md:hidden">
-        <button
-          aria-expanded={showList}
-          className="flex min-h-11 w-full items-center justify-between rounded-lg border border-[var(--tr1-line)] bg-white px-4 text-sm font-bold outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-orange)]"
-          onClick={() => setShowList((current) => !current)}
-          type="button"
-        >
-          <span>{showList ? "Masquer la liste" : "Voir les pharmacies en liste"}</span>
-          <ChevronDown aria-hidden="true" className={`size-4 transition duration-200 motion-reduce:transition-none ${showList ? "rotate-180" : ""}`} />
-        </button>
-        {showList ? (
-          <div className="mt-2 grid gap-2" aria-label="Pharmacies de démonstration">
             {demoPharmacies.map((pharmacy) => {
+              const point = projectCoordinate(pharmacy.longitude, pharmacy.latitude);
               const data = pharmacy[mode];
-              const active = selected.id === pharmacy.id;
+              const isSelected = pharmacy.id === selected.id;
+
               return (
                 <button
-                  className={`flex min-h-11 items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-orange)] ${active ? "border-[var(--tr1-navy)] bg-white" : "border-[var(--tr1-line)] bg-white/55"}`}
+                  aria-label={`${pharmacy.name}, ${pharmacy.city} — ${data.status}`}
+                  aria-pressed={isSelected}
+                  className="group absolute z-10 -translate-x-1/2 -translate-y-1/2 outline-none"
                   key={pharmacy.id}
                   onClick={() => setSelectedId(pharmacy.id)}
+                  style={{ left: `${(point.x / VIEWBOX_WIDTH) * 100}%`, top: `${(point.y / VIEWBOX_HEIGHT) * 100}%` }}
                   type="button"
                 >
-                  <span><strong className="block">{pharmacy.name}</strong><span className="text-xs text-[var(--tr1-muted)]">{pharmacy.city} · {data.status}</span></span>
-                  <span aria-hidden="true" className={`size-2.5 shrink-0 rounded-full ${toneDotClass(data.tone)}`} />
+                  <span
+                    className={`grid size-7 place-items-center rounded-full border-[3px] border-white shadow-[0_5px_14px_rgba(14,29,49,.16)] transition duration-200 group-hover:scale-110 group-focus-visible:ring-4 group-focus-visible:ring-[var(--tr1-orange)]/25 motion-reduce:transition-none ${isSelected ? "scale-110 ring-4 ring-[var(--tr1-navy)]/10" : ""} ${markerClass(data.tone)}`}
+                  >
+                    <span className="size-1.5 rounded-full bg-white" aria-hidden="true" />
+                  </span>
+                  <span className={`pointer-events-none absolute left-1/2 top-full mt-1.5 hidden -translate-x-1/2 whitespace-nowrap rounded-md border px-2 py-1 text-[.62rem] font-black shadow-sm lg:block ${isSelected ? "border-[var(--tr1-navy)] bg-[var(--tr1-navy)] text-white" : "border-[var(--tr1-line)] bg-white/92 text-[var(--tr1-navy)]"}`}>
+                    {pharmacy.city}
+                  </span>
                 </button>
               );
             })}
           </div>
-        ) : null}
+        </div>
+
+        <aside className="rounded-2xl border border-[var(--tr1-line)] bg-[#fffdfa] p-4 sm:p-5" aria-label="Actions prioritaires du réseau">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="font-mono text-[.56rem] font-black uppercase tracking-[.1em] text-[var(--tr1-orange)]">À traiter</p>
+              <h3 className="mt-1 text-lg font-black tracking-[-.025em] text-[var(--tr1-navy)]">3 actions prioritaires</h3>
+            </div>
+            <span className="grid size-9 place-items-center rounded-full bg-[var(--tr1-navy)] font-mono text-xs font-black text-white">3</span>
+          </div>
+
+          <div className="mt-4 grid gap-2.5">
+            {priorities.map((pharmacy, index) => {
+              const data = pharmacy[mode];
+              const active = pharmacy.id === selected.id;
+
+              return (
+                <button
+                  className={`group w-full rounded-xl border p-3.5 text-left outline-none transition duration-200 focus-visible:ring-2 focus-visible:ring-[var(--tr1-orange)] motion-reduce:transition-none ${active ? "border-[var(--tr1-navy)] bg-white shadow-[0_10px_26px_rgba(14,29,49,.08)]" : "border-[var(--tr1-line)] bg-white/55 hover:bg-white"}`}
+                  key={pharmacy.id}
+                  onClick={() => setSelectedId(pharmacy.id)}
+                  type="button"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className={`size-2 shrink-0 rounded-full ${toneDotClass(data.tone)}`} aria-hidden="true" />
+                        <span className="font-mono text-[.54rem] font-black uppercase tracking-[.08em] text-[var(--tr1-muted)]">
+                          {String(index + 1).padStart(2, "0")} · {pharmacy.city}
+                        </span>
+                      </div>
+                      <p className="mt-1.5 truncate text-sm font-black text-[var(--tr1-navy)]">{pharmacy.name}</p>
+                    </div>
+                    <ArrowRight className={`mt-1 size-4 shrink-0 transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none ${active ? "text-[var(--tr1-orange)]" : "text-[var(--tr1-muted)]"}`} aria-hidden="true" />
+                  </div>
+
+                  <p className="mt-2 text-sm font-black leading-5 text-[var(--tr1-navy)]">{data.status}</p>
+                  <p className="mt-1 text-xs leading-5 text-[var(--tr1-muted)]">{data.information}</p>
+                  <div className="mt-3 border-t border-[var(--tr1-line)] pt-2.5">
+                    <p className="font-mono text-[.52rem] font-black uppercase tracking-[.08em] text-[var(--tr1-muted)]">Prochaine action</p>
+                    <p className="mt-1 text-sm font-black leading-5 text-[var(--tr1-orange)]">{data.nextAction}</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </aside>
       </div>
 
       <p className="mt-4 text-center text-xs font-bold tracking-[.01em] text-[var(--tr1-muted)]">
-        Une vision nationale. Un suivi pharmacie par pharmacie.
+        Du national au point de vente, chaque signal mène à une action.
       </p>
     </div>
   );
-}
-
-function PharmacySummary({ mode, pharmacyId }: { mode: DemoMode; pharmacyId: string }) {
-  const pharmacy = demoPharmacies.find((item) => item.id === pharmacyId) ?? demoPharmacies[0];
-  const data = pharmacy[mode];
-  return (
-    <div>
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="font-black leading-5 text-[var(--tr1-navy)]">{pharmacy.name}</p>
-          <p className="mt-0.5 text-xs text-[var(--tr1-muted)]">{pharmacy.city}</p>
-        </div>
-        <span className={`size-2.5 shrink-0 rounded-full ${toneDotClass(data.tone)}`} />
-      </div>
-      <p className="mt-3 text-sm font-black text-[var(--tr1-navy)]">{data.status}</p>
-      <p className="mt-2 text-sm leading-5 text-[var(--tr1-muted)]">{data.information}</p>
-      <p className="mt-3 border-t border-[var(--tr1-line)] pt-3 text-xs font-semibold uppercase tracking-[.04em] text-[var(--tr1-muted)]">Prochaine action</p>
-      <p className="mt-1 text-sm font-black leading-5 text-[var(--tr1-navy)]">{data.nextAction}</p>
-    </div>
-  );
-}
-
-function ModeGlyph({ mode }: { mode: DemoMode }) {
-  const Icon = mode === "commercial" ? BriefcaseBusiness : mode === "animations" ? CalendarCheck2 : GraduationCap;
-  return <Icon aria-hidden="true" className="size-4 text-white" strokeWidth={2.5} />;
 }
 
 function projectCoordinate(longitude: number, latitude: number): ProjectedPoint {
@@ -192,6 +205,7 @@ function projectCoordinate(longitude: number, latitude: number): ProjectedPoint 
   const contentHeight = geographicHeight * scale;
   const offsetX = (VIEWBOX_WIDTH - contentWidth) / 2;
   const offsetY = (VIEWBOX_HEIGHT - contentHeight) / 2;
+
   return {
     x: offsetX + (longitude - MIN_LONGITUDE) * LONGITUDE_SCALE * scale,
     y: offsetY + (MAX_LATITUDE - latitude) * scale,
@@ -202,6 +216,7 @@ function geometryToPath(geometry: GeometryFeature["geometry"]) {
   const polygons = geometry.type === "Polygon"
     ? [geometry.coordinates as number[][][]]
     : (geometry.coordinates as number[][][][]);
+
   return polygons
     .flatMap((polygon) => polygon.map((ring) => ringToPath(ring)))
     .filter(Boolean)
@@ -210,34 +225,30 @@ function geometryToPath(geometry: GeometryFeature["geometry"]) {
 
 function ringToPath(ring: number[][]) {
   if (!ring.length) return "";
+
   return ring.map(([longitude, latitude], index) => {
     const point = projectCoordinate(longitude, latitude);
     return `${index === 0 ? "M" : "L"}${point.x.toFixed(2)} ${point.y.toFixed(2)}`;
   }).join(" ") + " Z";
 }
 
-function getPopupPosition(point: ProjectedPoint) {
-  const x = (point.x / VIEWBOX_WIDTH) * 100;
-  const y = (point.y / VIEWBOX_HEIGHT) * 100;
-  const left = clamp(x > 60 ? x - 39 : x + 6, 3, 63);
-  const top = clamp(y > 64 ? y - 29 : y + 5, 3, 68);
-  return { left, top };
+function toneRank(tone: DemoTone) {
+  if (tone === "risk") return 0;
+  if (tone === "watch") return 1;
+  if (tone === "neutral") return 2;
+  return 3;
 }
 
-function clamp(value: number, minimum: number, maximum: number) {
-  return Math.min(maximum, Math.max(minimum, value));
-}
-
-function toneClass(tone: DemoTone) {
-  if (tone === "risk") return "bg-[#c2413d]";
-  if (tone === "watch") return "bg-[#d97706]";
+function markerClass(tone: DemoTone) {
+  if (tone === "risk") return "bg-[var(--tr1-orange)]";
+  if (tone === "watch") return "bg-[#dc8b6b]";
   if (tone === "neutral") return "bg-[#8d9297]";
-  return "bg-[#2f855a]";
+  return "bg-[var(--tr1-navy)]";
 }
 
 function toneDotClass(tone: DemoTone) {
-  if (tone === "risk") return "bg-[#c2413d]";
-  if (tone === "watch") return "bg-[#d97706]";
+  if (tone === "risk") return "bg-[var(--tr1-orange)]";
+  if (tone === "watch") return "bg-[#dc8b6b]";
   if (tone === "neutral") return "bg-[#8d9297]";
-  return "bg-[#2f855a]";
+  return "bg-[var(--tr1-navy)]";
 }
