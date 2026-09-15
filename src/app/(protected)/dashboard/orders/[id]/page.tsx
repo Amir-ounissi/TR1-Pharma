@@ -4,6 +4,10 @@ import {
   OrderRevisionForm,
   OrderStatusForm,
 } from "@/components/orders/order-forms";
+import {
+  OrderEmailTransmissionCard,
+  type OrderEmailTransmission,
+} from "@/components/orders/order-email-transmission-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +27,7 @@ import {
 import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
 import { isIncompleteHubSpotHistory } from "@/lib/orders/historical-import";
 import { formatCurrency } from "@/lib/reference-data";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   translateUiMessage,
   uiLabel,
@@ -36,7 +41,7 @@ export default async function OrderDetailPage({
   params: Params;
 }) {
   const { id } = await params;
-  const { supabase, brand } = await requireActiveBrand();
+  const { supabase, brand, userId } = await requireActiveBrand();
 
   const contexts = await getBrandContexts();
   const role =
@@ -57,6 +62,14 @@ export default async function OrderDetailPage({
     "super_admin",
   ].includes(role);
 
+  const canTransmitOrder = [
+    "agent",
+    "brand_user",
+    "tr1_manager",
+    "brand_admin",
+    "super_admin",
+  ].includes(role);
+
   const [
     { data: order },
     { data: items },
@@ -67,7 +80,7 @@ export default async function OrderDetailPage({
     supabase
       .from("orders")
       .select(
-        "*,pharmacies(legal_name,trade_name,city),brand_pharmacies(id)",
+        "*,pharmacies(legal_name,trade_name,city,vat_number),brand_pharmacies(id)",
       )
       .eq("id", id)
       .eq("brand_id", brand.id)
@@ -122,6 +135,54 @@ export default async function OrderDetailPage({
     minimumOrderQuantity: product.minimum_order_quantity,
   }));
 
+  let gmailEmail: string | null = null;
+  let recipientEmail: string | null = null;
+  let hasKbis = false;
+  let hasRib = false;
+  let transmissions: OrderEmailTransmission[] = [];
+
+  if (canTransmitOrder) {
+    const admin = createAdminClient();
+    const [
+      { data: gmail },
+      { data: documents },
+      { data: transmissionRows },
+      { data: brandTransmission },
+    ] = await Promise.all([
+      admin
+        .from("user_gmail_connections")
+        .select("email")
+        .eq("user_id", userId)
+        .maybeSingle(),
+      admin
+        .from("pharmacy_documents")
+        .select("document_type")
+        .eq("pharmacy_id", order.pharmacy_id),
+      admin
+        .from("order_email_transmissions")
+        .select("id,status,sender_email,recipient_email,created_at,sent_at,error_message")
+        .eq("order_id", order.id)
+        .eq("brand_id", brand.id)
+        .order("created_at", { ascending: false })
+        .limit(10),
+      supabase
+        .from("brands")
+        .select("order_email")
+        .eq("id", brand.id)
+        .maybeSingle(),
+    ]);
+
+    gmailEmail = gmail?.email ?? null;
+    recipientEmail = brandTransmission?.order_email ?? null;
+    hasKbis = (documents ?? []).some((document) => document.document_type === "kbis");
+    hasRib = (documents ?? []).some((document) => document.document_type === "rib");
+    transmissions = (transmissionRows ?? []) as OrderEmailTransmission[];
+  }
+
+  const pharmacyName = pharmacy?.trade_name || pharmacy?.legal_name || "Pharmacie";
+  const orderReference = order.order_number || order.external_order_id || order.id.slice(0, 8);
+  const previewSubject = `Commande ${brand.name} · ${pharmacyName} · ${orderReference}`;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -132,7 +193,7 @@ export default async function OrderDetailPage({
               `Commande ${order.id.slice(0, 8)}`}
           </h1>
           <p className="text-muted-foreground">
-            {pharmacy?.trade_name || pharmacy?.legal_name} ·{" "}
+            {pharmacyName} ·{" "}
             {new Date(order.order_date).toLocaleString("fr-FR")}
           </p>
         </div>
@@ -163,6 +224,19 @@ export default async function OrderDetailPage({
             Le montant et la date de cette commande proviennent de HubSpot. Le détail produits disponible dans la source est incomplet : aucune ligne manquante n’a été inventée.
           </CardContent>
         </Card>
+      ) : null}
+
+      {canTransmitOrder ? (
+        <OrderEmailTransmissionCard
+          orderId={order.id}
+          gmailEmail={gmailEmail}
+          recipientEmail={recipientEmail}
+          vatNumber={pharmacy?.vat_number ?? null}
+          hasKbis={hasKbis}
+          hasRib={hasRib}
+          previewSubject={previewSubject}
+          transmissions={transmissions}
+        />
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
