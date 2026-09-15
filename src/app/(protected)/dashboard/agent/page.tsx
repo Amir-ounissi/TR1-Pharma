@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarPlus, ClipboardPlus, MapPin, ShoppingCart } from "lucide-react";
+import { BookOpenCheck, CalendarPlus, ClipboardPlus, MapPin, ShoppingCart } from "lucide-react";
 import { AgentDayExperience, type AgentNextVisit, type AgentTodayData } from "@/components/agent/agent-day-experience";
 import {
   AgentMultibrandOverview,
@@ -124,6 +124,7 @@ export default async function AgentPage() {
   const visit = nextVisit as AgentNextVisit | null;
   const multibrandDay = (multibrandDayResult.data ?? { tasks: [], missions: [], reports: [], follow_ups: [] }) as AgentMultibrandDay;
   const multibrandNextVisit = multibrandNextVisitResult.data as AgentMultibrandNextVisit | null;
+  const nextVisitBriefRelationId = multibrandNextVisit?.brands.find((item) => item.brand_id === brand.id)?.brand_pharmacy_id ?? null;
   const navigation = visit ? { latitude: visit.latitude, longitude: visit.longitude, address_line_1: visit.address } : null;
   const firstName = profile.full_name.split(" ")[0];
   const dayLabel = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Paris" }).format(now);
@@ -219,6 +220,22 @@ export default async function AgentPage() {
         }}
       />
       <DashboardTracker />
+
+      {nextVisitBriefRelationId && multibrandNextVisit ? (
+        <Link
+          href={`/dashboard/pharmacies/${nextVisitBriefRelationId}/brief`}
+          className="flex min-h-16 items-center justify-between gap-4 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 transition hover:border-[var(--tr1-orange)] hover:bg-orange-100/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-navy)]"
+        >
+          <span className="flex min-w-0 items-center gap-3">
+            <BookOpenCheck className="size-5 shrink-0 text-[var(--tr1-orange)]" />
+            <span className="min-w-0">
+              <span className="block text-xs font-bold uppercase tracking-wide text-[var(--tr1-orange)]">Prochaine visite</span>
+              <span className="block truncate font-semibold text-[var(--tr1-navy)]">Préparer {multibrandNextVisit.name}</span>
+            </span>
+          </span>
+          <span className="shrink-0 text-sm font-semibold text-[var(--tr1-navy)]">Ouvrir le brief →</span>
+        </Link>
+      ) : null}
 
       <AgentMultibrandOverview
         brands={activeAgentBrands}
