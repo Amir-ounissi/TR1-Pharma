@@ -95,14 +95,11 @@ type FieldVisitRow = {
   id: string;
   title: string;
   objective: string | null;
+  notes: string | null;
+  outcome: string | null;
   status: string;
   scheduled_start_at: string;
-  completed_at: string | null;
-};
-
-type CloseoutRow = {
-  summary: string | null;
-  outcome: string | null;
+  actual_end_at: string | null;
   completed_at: string | null;
 };
 
@@ -141,6 +138,11 @@ function qualityLabel(value: SellOutCaptureRow["quality"]) {
   return "À confirmer";
 }
 
+function visitSummary(visit: FieldVisitRow | null) {
+  if (!visit) return null;
+  return visit.notes?.trim() || visit.objective?.trim() || null;
+}
+
 function SignalList({ items, empty }: { items: VisitBriefSignal[]; empty: string }) {
   if (!items.length) {
     return (
@@ -150,6 +152,7 @@ function SignalList({ items, empty }: { items: VisitBriefSignal[]; empty: string
       </div>
     );
   }
+
   return (
     <div className="space-y-3">
       {items.map((item, index) => (
@@ -177,6 +180,7 @@ export default async function VisitBriefPage({ params }: { params: Promise<{ id:
 
   if (relationError) throw relationError;
   if (!relationData) notFound();
+
   const relation = relationData as RelationRow;
   const pharmacy = Array.isArray(relation.pharmacies) ? relation.pharmacies[0] : relation.pharmacies;
   const pharmacyName = pharmacy?.trade_name || pharmacy?.legal_name || "Pharmacie";
@@ -202,8 +206,18 @@ export default async function VisitBriefPage({ params }: { params: Promise<{ id:
       .order("order_date", { ascending: false })
       .limit(1)
       .maybeSingle(),
-    supabase.from("brand_pharmacy_order_performance").select("*").eq("brand_pharmacy_id", id).maybeSingle(),
-    supabase.from("brand_pharmacy_distribution").select("*").eq("brand_pharmacy_id", id).maybeSingle(),
+    supabase
+      .from("brand_pharmacy_order_performance")
+      .select("*")
+      .eq("brand_id", brand.id)
+      .eq("brand_pharmacy_id", id)
+      .maybeSingle(),
+    supabase
+      .from("brand_pharmacy_distribution")
+      .select("*")
+      .eq("brand_id", brand.id)
+      .eq("brand_pharmacy_id", id)
+      .maybeSingle(),
     supabase
       .from("commercial_tasks")
       .select("id,title,effective_status,due_at")
@@ -244,7 +258,17 @@ export default async function VisitBriefPage({ params }: { params: Promise<{ id:
       .limit(20),
   ]);
 
-  for (const result of [orderResult, performanceResult, distributionResult, tasksResult, healthResult, nextActionResult, missionImpactResult, sellOutCaptureResult, visitBrandResult]) {
+  for (const result of [
+    orderResult,
+    performanceResult,
+    distributionResult,
+    tasksResult,
+    healthResult,
+    nextActionResult,
+    missionImpactResult,
+    sellOutCaptureResult,
+    visitBrandResult,
+  ]) {
     if (result.error) throw result.error;
   }
 
@@ -261,31 +285,26 @@ export default async function VisitBriefPage({ params }: { params: Promise<{ id:
   const latestVisitResult = visitIds.length
     ? await supabase
         .from("field_visits")
-        .select("id,title,objective,status,scheduled_start_at,completed_at")
+        .select("id,title,objective,notes,outcome,status,scheduled_start_at,actual_end_at,completed_at")
         .in("id", visitIds)
+        .is("archived_at", null)
         .order("scheduled_start_at", { ascending: false })
         .limit(1)
         .maybeSingle()
     : { data: null, error: null };
+
   if (latestVisitResult.error) throw latestVisitResult.error;
   const latestVisit = (latestVisitResult.data ?? null) as FieldVisitRow | null;
-
-  const closeoutResult = latestVisit
-    ? await supabase
-        .from("field_visit_closeouts")
-        .select("summary,outcome,completed_at")
-        .eq("visit_id", latestVisit.id)
-        .maybeSingle()
-    : { data: null, error: null };
-  if (closeoutResult.error) throw closeoutResult.error;
-  const closeout = (closeoutResult.data ?? null) as CloseoutRow | null;
 
   const sellOutLinesResult = sellOutCapture
     ? await supabase
         .from("sell_out_lines")
         .select("units_sold,theoretical_units,stock_current,label")
+        .eq("brand_id", brand.id)
+        .eq("brand_pharmacy_id", id)
         .eq("capture_id", sellOutCapture.id)
     : { data: [], error: null };
+
   if (sellOutLinesResult.error) throw sellOutLinesResult.error;
   const sellOutLines = (sellOutLinesResult.data ?? []) as SellOutLineRow[];
 
@@ -295,13 +314,18 @@ export default async function VisitBriefPage({ params }: { params: Promise<{ id:
     (sum, line) => sum + Number(line.units_sold ?? line.theoretical_units ?? 0),
     0,
   );
-  const lowStockLines = sellOutLines.filter((line) => line.stock_current != null && Number(line.stock_current) <= 2);
+  const lowStockLines = sellOutLines.filter(
+    (line) => line.stock_current != null && Number(line.stock_current) <= 2,
+  );
 
   const cockpit = getPharmacyCockpit({
     firstOrderAt: performance?.first_valid_order_at,
     validOrderCount: performance?.valid_order_count,
     reorderCount: performance?.reorder_count,
-    strategicDistributionRate: distribution?.strategic_distribution_rate == null ? null : Number(distribution.strategic_distribution_rate),
+    strategicDistributionRate:
+      distribution?.strategic_distribution_rate == null
+        ? null
+        : Number(distribution.strategic_distribution_rate),
     missingProducts,
     healthStatus: health?.health_status,
     priorityReasons: health?.priority_reasons,
@@ -318,8 +342,10 @@ export default async function VisitBriefPage({ params }: { params: Promise<{ id:
     lastInteraction: latestVisit
       ? {
           label: "Dernière visite",
-          value: formatDate(latestVisit.completed_at || latestVisit.scheduled_start_at),
-          detail: closeout?.summary || latestVisit.objective || null,
+          value: formatDate(
+            latestVisit.completed_at || latestVisit.actual_end_at || latestVisit.scheduled_start_at,
+          ),
+          detail: visitSummary(latestVisit),
         }
       : relation.last_interaction_at
         ? { label: "Dernier échange", value: formatDate(relation.last_interaction_at) }
@@ -340,13 +366,19 @@ export default async function VisitBriefPage({ params }: { params: Promise<{ id:
             : `${Number(performance.valid_order_count)} commande(s) valide(s)`,
         }
       : null,
-    distribution: distribution?.strategic_distribution_rate != null
-      ? {
-          label: "Distribution stratégique",
-          value: `${Math.round(Number(distribution.strategic_distribution_rate) * (Number(distribution.strategic_distribution_rate) <= 1 ? 100 : 1))} %`,
-          detail: missingProducts.length ? `${missingProducts.length} référence(s) manquante(s)` : "Assortiment couvert",
-        }
-      : null,
+    distribution:
+      distribution?.strategic_distribution_rate != null
+        ? {
+            label: "Distribution stratégique",
+            value: `${Math.round(
+              Number(distribution.strategic_distribution_rate) *
+                (Number(distribution.strategic_distribution_rate) <= 1 ? 100 : 1),
+            )} %`,
+            detail: missingProducts.length
+              ? `${missingProducts.length} référence(s) manquante(s)`
+              : "Assortiment couvert",
+          }
+        : null,
   };
 
   const brief = buildVisitBrief({
@@ -364,9 +396,10 @@ export default async function VisitBriefPage({ params }: { params: Promise<{ id:
     recentMission: missionImpact
       ? {
           title: `Revenir sur ${missionImpact.mission_title}`,
-          detail: missionImpact.sell_out_units != null
-            ? `${missionImpact.sell_out_units} unité(s) sell-out observée(s) après cette action.`
-            : "Une action terrain récente mérite un suivi pendant la visite.",
+          detail:
+            missionImpact.sell_out_units != null
+              ? `${missionImpact.sell_out_units} unité(s) sell-out observée(s) après cette action.`
+              : "Une action terrain récente mérite un suivi pendant la visite.",
           source: `Mission du ${formatDate(missionImpact.mission_date)}`,
         }
       : null,
@@ -375,14 +408,19 @@ export default async function VisitBriefPage({ params }: { params: Promise<{ id:
           title: lowStockLines.length
             ? `${lowStockLines.length} référence(s) avec stock faible dans le dernier relevé`
             : "Dernier relevé sell-out disponible",
-          detail: sellOutUnits > 0
-            ? `${sellOutUnits} unité(s) observée(s) sur ${sellOutLines.length} ligne(s).`
-            : `${sellOutLines.length} ligne(s) relevée(s).`,
-          source: `${qualityLabel(sellOutCapture.quality)} · ${formatDate(sellOutCapture.observed_at)}${sellOutCapture.source_label ? ` · ${sellOutCapture.source_label}` : ""}`,
+          detail:
+            sellOutUnits > 0
+              ? `${sellOutUnits} unité(s) observée(s) sur ${sellOutLines.length} ligne(s).`
+              : `${sellOutLines.length} ligne(s) relevée(s).`,
+          source: `${qualityLabel(sellOutCapture.quality)} · ${formatDate(sellOutCapture.observed_at)}${
+            sellOutCapture.source_label ? ` · ${sellOutCapture.source_label}` : ""
+          }`,
         }
       : null,
     fallbackObjective: cockpit.primaryAction.label,
   });
+
+  const lastVisitSummary = visitSummary(latestVisit);
 
   return (
     <main className="mx-auto max-w-5xl space-y-5 pb-28 sm:pb-10">
@@ -395,29 +433,40 @@ export default async function VisitBriefPage({ params }: { params: Promise<{ id:
       <header className="rounded-2xl bg-[var(--tr1-navy)] p-5 text-white shadow-sm sm:p-7">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="font-mono text-[0.65rem] font-bold uppercase tracking-[0.16em] text-orange-300">Préparer ma visite · {brand.name}</p>
+            <p className="font-mono text-[0.65rem] font-bold uppercase tracking-[0.16em] text-orange-300">
+              Préparer ma visite · {brand.name}
+            </p>
             <h1 className="mt-1 break-words text-2xl font-black tracking-tight sm:text-3xl">{pharmacyName}</h1>
             <p className="mt-1 text-sm text-white/70">{pharmacy?.city || "Ville non renseignée"}</p>
           </div>
           <Badge className="bg-orange-300 text-[var(--tr1-navy)] hover:bg-orange-300">Brief terrain</Badge>
         </div>
         <div className="mt-6 rounded-xl border border-white/15 bg-white/10 p-4">
-          <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-orange-300"><Target className="size-4" /> Objectif conseillé</p>
+          <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-orange-300">
+            <Target className="size-4" /> Objectif conseillé
+          </p>
           <p className="mt-2 text-xl font-semibold leading-snug">{brief.objective}</p>
-          <p className="mt-2 text-xs text-white/60">Construit uniquement à partir des données disponibles dans TR1.</p>
+          <p className="mt-2 text-xs text-white/60">
+            Construit uniquement à partir des données disponibles dans TR1.
+          </p>
         </div>
       </header>
 
       {brief.atAGlance.length ? (
         <section aria-labelledby="visit-brief-glance-title">
-          <div className="mb-3 flex items-center gap-2"><ClipboardList className="size-5 text-[var(--tr1-orange)]" /><h2 id="visit-brief-glance-title" className="text-lg font-semibold">À retenir en 30 secondes</h2></div>
+          <div className="mb-3 flex items-center gap-2">
+            <ClipboardList className="size-5 text-[var(--tr1-orange)]" />
+            <h2 id="visit-brief-glance-title" className="text-lg font-semibold">À retenir en 30 secondes</h2>
+          </div>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {brief.atAGlance.map((fact) => (
               <Card key={fact.label}>
                 <CardContent className="pt-5">
                   <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{fact.label}</p>
                   <p className="mt-2 text-xl font-semibold text-[var(--tr1-navy)]">{fact.value}</p>
-                  {fact.detail ? <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{fact.detail}</p> : null}
+                  {fact.detail ? (
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{fact.detail}</p>
+                  ) : null}
                 </CardContent>
               </Card>
             ))}
@@ -425,25 +474,44 @@ export default async function VisitBriefPage({ params }: { params: Promise<{ id:
         </section>
       ) : null}
 
-      {latestVisit && closeout?.summary ? (
+      {latestVisit && lastVisitSummary ? (
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-base"><CalendarClock className="size-5 text-[var(--tr1-orange)]" /> Dernier compte rendu</CardTitle></CardHeader>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <CalendarClock className="size-5 text-[var(--tr1-orange)]" /> Dernière préparation / note de visite
+            </CardTitle>
+          </CardHeader>
           <CardContent>
-            <p className="text-sm leading-relaxed">{closeout.summary}</p>
-            <p className="mt-2 text-xs text-muted-foreground">Visite du {formatDate(latestVisit.completed_at || latestVisit.scheduled_start_at)}</p>
+            <p className="text-sm leading-relaxed">{lastVisitSummary}</p>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Visite du {formatDate(latestVisit.completed_at || latestVisit.actual_end_at || latestVisit.scheduled_start_at)}
+              {latestVisit.outcome ? ` · Issue : ${latestVisit.outcome}` : ""}
+            </p>
           </CardContent>
         </Card>
       ) : null}
 
       <div className="grid gap-5 lg:grid-cols-2">
         <section aria-labelledby="visit-brief-alerts-title" className="space-y-3">
-          <div className="flex items-center gap-2"><AlertTriangle className="size-5 text-[#a74413]" /><h2 id="visit-brief-alerts-title" className="text-lg font-semibold">Alertes</h2></div>
-          <SignalList items={brief.alerts} empty="Aucune alerte suffisamment documentée dans les données disponibles." />
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="size-5 text-[#a74413]" />
+            <h2 id="visit-brief-alerts-title" className="text-lg font-semibold">Alertes</h2>
+          </div>
+          <SignalList
+            items={brief.alerts}
+            empty="Aucune alerte suffisamment documentée dans les données disponibles."
+          />
         </section>
 
         <section aria-labelledby="visit-brief-opportunities-title" className="space-y-3">
-          <div className="flex items-center gap-2"><Lightbulb className="size-5 text-[var(--tr1-orange)]" /><h2 id="visit-brief-opportunities-title" className="text-lg font-semibold">Opportunités</h2></div>
-          <SignalList items={brief.opportunities} empty="Aucune opportunité spécifique n’est suffisamment documentée pour être affichée." />
+          <div className="flex items-center gap-2">
+            <Lightbulb className="size-5 text-[var(--tr1-orange)]" />
+            <h2 id="visit-brief-opportunities-title" className="text-lg font-semibold">Opportunités</h2>
+          </div>
+          <SignalList
+            items={brief.opportunities}
+            empty="Aucune opportunité spécifique n’est suffisamment documentée pour être affichée."
+          />
         </section>
       </div>
 
@@ -453,8 +521,17 @@ export default async function VisitBriefPage({ params }: { params: Promise<{ id:
           <CardContent className="space-y-2">
             {tasks.slice(0, 4).map((task) => (
               <div key={task.id} className="flex items-start justify-between gap-3 rounded-lg border p-3 text-sm">
-                <div><p className="font-medium">{task.title}</p><p className="mt-1 text-xs text-muted-foreground">{task.due_at ? `Échéance : ${formatDate(task.due_at)}` : "Sans échéance"}</p></div>
-                {task.effective_status === "overdue" ? <Badge variant="destructive">En retard</Badge> : <Badge variant="secondary">Ouverte</Badge>}
+                <div>
+                  <p className="font-medium">{task.title}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {task.due_at ? `Échéance : ${formatDate(task.due_at)}` : "Sans échéance"}
+                  </p>
+                </div>
+                {task.effective_status === "overdue" ? (
+                  <Badge variant="destructive">En retard</Badge>
+                ) : (
+                  <Badge variant="secondary">Ouverte</Badge>
+                )}
               </div>
             ))}
           </CardContent>
