@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { CalendarPlus, ClipboardPlus, MapPin, ShoppingCart } from "lucide-react";
 import { AgentDayExperience, type AgentNextVisit, type AgentTodayData } from "@/components/agent/agent-day-experience";
 import {
@@ -72,6 +73,14 @@ export default async function AgentPage({
   const agentBrands = agentCapabilityChecks.filter((context): context is NonNullable<typeof context> => context !== null);
   const requestedBrandId = typeof params.brand === "string" ? params.brand : null;
   const selectedBrand = agentBrands.find((context) => context.id === requestedBrandId) ?? null;
+
+  if (selectedBrand && selectedBrand.id !== brand.id) {
+    const nextPath = `/dashboard/agent?brand=${encodeURIComponent(selectedBrand.id)}`;
+    redirect(
+      `/auth/activate-brand?brandId=${encodeURIComponent(selectedBrand.id)}&next=${encodeURIComponent(nextPath)}`,
+    );
+  }
+
   const brandFilter = selectedBrand?.id ?? null;
 
   const today = parisBusinessDate();
