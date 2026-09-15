@@ -89,6 +89,7 @@ export async function uploadPharmacyDocumentAction(
     const { data: existing } = await admin
       .from("pharmacy_documents")
       .select("id,object_path")
+      .eq("brand_id", brand.id)
       .eq("pharmacy_id", order.pharmacy_id)
       .eq("document_type", documentType)
       .maybeSingle();
@@ -100,6 +101,7 @@ export async function uploadPharmacyDocumentAction(
     if (uploadError) throw uploadError;
 
     const payload = {
+      brand_id: brand.id,
       pharmacy_id: order.pharmacy_id,
       document_type: documentType,
       file_name: file.name.slice(0, 255),
@@ -160,7 +162,7 @@ export async function sendOrderByEmailAction(
       supabase.from("brands").select("name,order_email").eq("id", brand.id).single(),
       supabase.from("pharmacies").select("legal_name,trade_name,siret,vat_number,address_line_1,postal_code,city").eq("id", order.pharmacy_id).single(),
       supabase.from("order_items").select("product_name_snapshot,sku_snapshot,quantity,free_quantity,unit_price_ht,discount_rate,line_total_ht").eq("order_id", order.id).order("created_at"),
-      admin.from("pharmacy_documents").select("document_type,file_name,content_type,object_path").eq("pharmacy_id", order.pharmacy_id),
+      admin.from("pharmacy_documents").select("document_type,file_name,content_type,object_path").eq("brand_id", brand.id).eq("pharmacy_id", order.pharmacy_id),
       admin.from("user_gmail_connections").select("email,refresh_token_ciphertext").eq("user_id", userId).maybeSingle(),
     ]);
     if (brandError || pharmacyError || itemsError || documentsError || gmailError) {
