@@ -8,11 +8,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export function LoginForm() {
+export function LoginForm({ oauthError }: { oauthError?: string | null }) {
   const [state, action, pending] = useActionState(loginAction, {});
 
   return (
     <div className="space-y-5">
+      {oauthError ? (
+        <Alert variant="destructive" className="border-[#d95034]/35 bg-[#fff1ec] text-[#8f2e19]">
+          <AlertDescription>{oauthError}</AlertDescription>
+        </Alert>
+      ) : null}
+
       <Button
         asChild
         variant="outline"
