@@ -47,21 +47,26 @@ export default function LandingPage() {
     <main className="bg-transparent text-[#0b1e32]">
       <MarketingPageEvent event="landing_view" />
 
-      <section className="px-5 pb-12 pt-10 sm:py-14 lg:px-8 lg:py-16">
+      <section className="px-5 pb-12 pt-9 sm:py-14 lg:px-8 lg:py-16">
         <div className="mx-auto max-w-7xl">
           <div className="mx-auto max-w-5xl text-center">
             <div className="inline-flex max-w-full items-center justify-center rounded-full border border-[#0b1e32]/10 bg-white/80 px-4 py-2 font-mono text-[.58rem] font-black uppercase leading-5 tracking-[.13em] text-[#c84f24] shadow-[0_8px_24px_rgba(7,20,33,.04)] sm:text-[.62rem]">
               Cockpit d’exécution commerciale terrain
             </div>
-            <h1 className="mx-auto mt-5 max-w-[22rem] text-balance text-[2.45rem] font-black leading-[.94] tracking-[-.055em] text-[#0b1e32] sm:mt-6 sm:max-w-4xl sm:text-[4.35rem] sm:leading-[.92] lg:text-[5rem]">
-              <span className="mb-1 block text-[#c84f24] sm:mb-2">Du sell-in au sell-out,</span>
-              <span className="block">pilotez chaque action</span>
-              <span className="block">qui fait vendre en pharmacie<span className="text-[#c84f24]">.</span></span>
+
+            <h1 className="mx-auto mt-5 max-w-[23rem] text-balance text-[3.2rem] font-black leading-[.9] tracking-[-.065em] text-[#c84f24] sm:mt-6 sm:max-w-5xl sm:text-[5.25rem] sm:leading-[.88] lg:text-[6.35rem]">
+              Du sell-in au sell-out<span className="text-[#0b1e32]">.</span>
             </h1>
-            <p className="mx-auto mt-6 max-w-[23rem] text-[1rem] leading-[1.65] text-[#667384] sm:max-w-3xl sm:text-lg sm:leading-8">
+
+            <p className="mx-auto mt-4 max-w-[22rem] text-balance text-[1.45rem] font-black leading-[1.03] tracking-[-.035em] text-[#0b1e32] sm:mt-5 sm:max-w-3xl sm:text-[2.15rem] sm:leading-[1.08] lg:text-[2.5rem]">
+              Pilotez chaque action qui fait vendre en pharmacie.
+            </p>
+
+            <p className="mx-auto mt-5 max-w-[24rem] text-[.98rem] leading-[1.65] text-[#667384] sm:mt-6 sm:max-w-2xl sm:text-[1.05rem] sm:leading-7">
               TR1 réunit visites commerciales, commandes, animations, formations et suivi du réseau dans un même cockpit terrain. Vos équipes savent où agir. Vous savez ce qui a été fait et ce qui doit suivre.
             </p>
-            <div className="mt-7 sm:mt-8">
+
+            <div className="mt-6 sm:mt-7">
               <MarketingTrackedLink
                 className="inline-flex min-h-12 w-full max-w-[22rem] items-center justify-center gap-2 rounded-xl bg-[#c84f24] px-5 font-mono text-[.68rem] font-black uppercase tracking-[.06em] text-white shadow-[0_14px_30px_rgba(200,79,36,.18)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#b64620] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b1e32] focus-visible:ring-offset-2 motion-reduce:transition-none sm:w-auto"
                 event="primary_cta_click"
