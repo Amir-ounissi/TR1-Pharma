@@ -31,11 +31,19 @@ function Requirement({ ready, label }: { ready: boolean; label: string }) {
   );
 }
 
+function gmailMessageUrl(senderEmail: string, messageId: string) {
+  return `https://mail.google.com/mail/u/?authuser=${encodeURIComponent(senderEmail)}#all/${encodeURIComponent(messageId)}`;
+}
+
 export type OrderEmailTransmission = {
   id: string;
   status: string;
   sender_email: string | null;
   recipient_email: string;
+  subject: string;
+  external_message_id: string | null;
+  attachment_manifest: Array<{ filename?: string; content_type?: string }> | null;
+  body_text: string | null;
   created_at: string;
   sent_at: string | null;
   error_message: string | null;
@@ -170,18 +178,63 @@ export function OrderEmailTransmissionCard({
         {transmissions.length ? (
           <div className="space-y-2 border-t pt-4">
             <p className="text-sm font-medium">Historique des envois</p>
-            {transmissions.map((transmission) => (
-              <div key={transmission.id} className="flex flex-col gap-1 rounded-lg border p-3 text-xs sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p>{transmission.sender_email || "Gmail"} → {transmission.recipient_email}</p>
-                  <p className="text-muted-foreground">{new Date(transmission.sent_at || transmission.created_at).toLocaleString("fr-FR")}</p>
-                  {transmission.error_message ? <p className="text-destructive">{transmission.error_message}</p> : null}
+            {transmissions.map((transmission) => {
+              const canOpenGmail = Boolean(
+                transmission.status === "sent" &&
+                transmission.external_message_id &&
+                transmission.sender_email,
+              );
+
+              return (
+                <div key={transmission.id} className="space-y-3 rounded-lg border p-3 text-xs">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p>{transmission.sender_email || "Gmail"} → {transmission.recipient_email}</p>
+                      <p className="text-muted-foreground">{new Date(transmission.sent_at || transmission.created_at).toLocaleString("fr-FR")}</p>
+                      {transmission.error_message ? <p className="text-destructive">{transmission.error_message}</p> : null}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {canOpenGmail ? (
+                        <Button asChild variant="outline" size="sm">
+                          <a
+                            href={gmailMessageUrl(transmission.sender_email!, transmission.external_message_id!)}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Voir le mail
+                          </a>
+                        </Button>
+                      ) : null}
+                      <Badge variant={transmission.status === "sent" ? "default" : "outline"}>
+                        {transmission.status === "sent" ? "Envoyée" : transmission.status === "failed" ? "Échec" : "En cours"}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <details className="rounded-md bg-muted/30 p-3">
+                    <summary className="cursor-pointer font-medium">Voir le contenu</summary>
+                    <div className="mt-3 space-y-2">
+                      <p><span className="text-muted-foreground">Objet :</span> {transmission.subject}</p>
+                      {transmission.body_text ? (
+                        <p className="whitespace-pre-wrap rounded-md bg-background p-3 text-sm">{transmission.body_text}</p>
+                      ) : (
+                        <p className="text-muted-foreground">Le texte exact n’a pas été archivé pour cet ancien envoi. Utilisez « Voir le mail » pour consulter le message original dans Gmail.</p>
+                      )}
+                      {transmission.attachment_manifest?.length ? (
+                        <div>
+                          <p className="text-muted-foreground">Pièces jointes :</p>
+                          <ul className="mt-1 list-disc pl-5">
+                            {transmission.attachment_manifest.map((attachment, index) => (
+                              <li key={`${attachment.filename || "piece-jointe"}-${index}`}>{attachment.filename || "Pièce jointe"}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null}
+                    </div>
+                  </details>
                 </div>
-                <Badge variant={transmission.status === "sent" ? "default" : "outline"}>
-                  {transmission.status === "sent" ? "Envoyée" : transmission.status === "failed" ? "Échec" : "En cours"}
-                </Badge>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : null}
       </CardContent>
