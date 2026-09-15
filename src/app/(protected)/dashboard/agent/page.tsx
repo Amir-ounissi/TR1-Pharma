@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { CalendarPlus, ClipboardPlus, MapPin, ShoppingCart } from "lucide-react";
 import { AgentDayExperience, type AgentNextVisit, type AgentTodayData } from "@/components/agent/agent-day-experience";
 import {
@@ -47,16 +46,11 @@ type CapabilityRow = {
   enabled: boolean;
 };
 
-export default async function AgentPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ brand?: string | string[] }>;
-}) {
-  const [saas, session, contexts, params] = await Promise.all([
+export default async function AgentPage() {
+  const [saas, session, contexts] = await Promise.all([
     requireActiveBrandCapability("agent_day"),
     requireActiveBrand(),
     getBrandContexts(),
-    searchParams,
   ]);
   const { supabase, brand, profile, userId } = session;
   const agentRoleBrands = contexts.filter((context) => context.role === "agent");
@@ -71,17 +65,8 @@ export default async function AgentPage({
     }),
   );
   const agentBrands = agentCapabilityChecks.filter((context): context is NonNullable<typeof context> => context !== null);
-  const requestedBrandId = typeof params.brand === "string" ? params.brand : null;
-  const selectedBrand = agentBrands.find((context) => context.id === requestedBrandId) ?? null;
-
-  if (selectedBrand && selectedBrand.id !== brand.id) {
-    const nextPath = `/dashboard/agent?brand=${encodeURIComponent(selectedBrand.id)}`;
-    redirect(
-      `/auth/activate-brand?brandId=${encodeURIComponent(selectedBrand.id)}&next=${encodeURIComponent(nextPath)}`,
-    );
-  }
-
-  const brandFilter = selectedBrand?.id ?? null;
+  const activeAgentBrands = agentBrands.filter((context) => context.id === brand.id);
+  const brandFilter = brand.id;
 
   const today = parisBusinessDate();
   const planningHorizon = addCalendarDays(today, 90);
@@ -236,7 +221,7 @@ export default async function AgentPage({
       <DashboardTracker />
 
       <AgentMultibrandOverview
-        brands={agentBrands}
+        brands={activeAgentBrands}
         selectedBrandId={brandFilter}
         day={multibrandDay}
         nextVisit={multibrandNextVisit}
@@ -252,7 +237,6 @@ export default async function AgentPage({
         <div>
           <h2 id="active-brand-execution-title" className="text-lg font-semibold text-[var(--tr1-navy)]">Actions pour {brand.name}</h2>
           <p className="mt-1 text-sm text-muted-foreground">Ces actions concernent {brand.name}. Pour travailler pour une autre marque, utilisez « Marque active » en haut de l’écran.</p>
-          {selectedBrand && selectedBrand.id !== brand.id ? <p className="mt-2 rounded-lg border border-orange-200 bg-orange-50 p-3 text-sm text-[#8b3c16]">Votre journée affiche {selectedBrand.name} ; les actions ci-dessous concernent {brand.name}.</p> : null}
         </div>
         {quickActions.length ? (
           <nav aria-label={`Actions pour ${brand.name}`} className="grid gap-3 sm:grid-cols-2">
@@ -287,6 +271,10 @@ export default async function AgentPage({
           font-family: var(--font-sans);
           text-transform: none;
           letter-spacing: -0.025em;
+        }
+
+        .tr1-product-da main.agent-day-home [aria-label="Marques affichées dans la journée"] {
+          display: none;
         }
       `}</style>
     </main>
