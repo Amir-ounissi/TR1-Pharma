@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MoreHorizontal } from "lucide-react";
+import { BookOpenCheck, MoreHorizontal } from "lucide-react";
 import { AiVisitClose } from "@/components/agent/ai-visit-close";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,6 +44,10 @@ function commercialTermsHref(pharmacyId: string) {
   return `/dashboard/pharmacies/${pharmacyId}/commercial-terms`;
 }
 
+function briefHref(pharmacyId: string) {
+  return `/dashboard/pharmacies/${pharmacyId}/brief`;
+}
+
 export function PharmacySectionNav({ pharmacyId, activeTab }: PharmacySectionNavProps) {
   const router = useRouter();
   const commercialTermsActive = activeTab === "commercial_terms";
@@ -54,6 +58,19 @@ export function PharmacySectionNav({ pharmacyId, activeTab }: PharmacySectionNav
   return (
     <>
       <AiVisitClose brandPharmacyId={pharmacyId} />
+
+      <Button asChild className="w-full sm:w-auto" size="lg">
+        <Link
+          href={briefHref(pharmacyId)}
+          prefetch={false}
+          onPointerEnter={warmRoute(briefHref(pharmacyId))}
+          onPointerDown={warmRoute(briefHref(pharmacyId))}
+          onFocus={warmRoute(briefHref(pharmacyId))}
+        >
+          <BookOpenCheck className="size-5" />
+          Préparer ma visite
+        </Link>
+      </Button>
 
       <nav
         aria-label="Sections de la pharmacie"
