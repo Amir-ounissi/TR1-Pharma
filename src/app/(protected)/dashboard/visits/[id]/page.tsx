@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Building2, CalendarDays, MapPin, Navigation, Target } from "lucide-react";
+import { ArrowLeft, BookOpenCheck, Building2, CalendarDays, MapPin, Navigation, Target } from "lucide-react";
 import { VisitCloseoutPanel } from "@/components/visits/visit-closeout-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -75,6 +75,9 @@ export default async function FieldVisitPage({ params }: { params: Promise<{ id:
   const pharmacyHref = primaryBrandPharmacyId
     ? `/dashboard/pharmacies/${primaryBrandPharmacyId}`
     : "/dashboard/pharmacies";
+  const briefHref = primaryBrandPharmacyId
+    ? `/dashboard/pharmacies/${primaryBrandPharmacyId}/brief`
+    : null;
 
   return (
     <main className="mx-auto max-w-4xl space-y-5 pb-32 sm:pb-10">
@@ -102,7 +105,16 @@ export default async function FieldVisitPage({ params }: { params: Promise<{ id:
         </div>
       </header>
 
-      <nav aria-label="Actions rapides de la visite" className="grid grid-cols-2 gap-2 sm:flex">
+      <nav aria-label="Actions rapides de la visite" className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {briefHref ? (
+          <Link
+            href={briefHref}
+            className="inline-flex min-h-12 touch-manipulation items-center justify-center gap-2 rounded-xl bg-[var(--tr1-orange)] px-4 text-sm font-semibold text-white shadow-sm transition active:scale-[0.98] hover:opacity-90"
+          >
+            <BookOpenCheck className="size-4" />
+            Préparer ma visite
+          </Link>
+        ) : null}
         <a
           href={mapsHref}
           target="_blank"
