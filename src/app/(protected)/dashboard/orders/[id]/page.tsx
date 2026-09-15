@@ -161,7 +161,7 @@ export default async function OrderDetailPage({
         .eq("pharmacy_id", order.pharmacy_id),
       admin
         .from("order_email_transmissions")
-        .select("id,status,sender_email,recipient_email,created_at,sent_at,error_message")
+        .select("id,status,sender_email,recipient_email,subject,external_message_id,attachment_manifest,body_text,created_at,sent_at,error_message")
         .eq("order_id", order.id)
         .eq("brand_id", brand.id)
         .order("created_at", { ascending: false })
