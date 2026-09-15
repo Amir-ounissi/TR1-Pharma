@@ -150,33 +150,74 @@ export default async function OrdersPage({ searchParams }: { searchParams: Searc
               {canImport || canOperate ? <Button asChild className="mt-4" size="sm"><Link href={canImport ? "/dashboard/imports" : "/dashboard/orders/new"}>{canImport ? "Importer des commandes" : "Créer une commande"}</Link></Button> : null}
             </div>
           ) : (
-            <Table>
-              <TableHeader><TableRow><TableHead>Commande</TableHead><TableHead>Pharmacie</TableHead><TableHead>Date</TableHead><TableHead>Type</TableHead><TableHead>Statut</TableHead><TableHead>Net HT</TableHead>{canViewPayment ? <TableHead>Règlement</TableHead> : null}{canReview ? <TableHead className="text-right">Action</TableHead> : null}</TableRow></TableHeader>
-              <TableBody>
+            <>
+              <div className="divide-y md:hidden">
                 {orders.map((order) => {
                   const pharmacy = Array.isArray(order.pharmacies) ? order.pharmacies[0] : order.pharmacies;
                   const orderHref = `/dashboard/orders/${order.id}`;
+                  const reference = order.order_number || order.external_order_id || order.id.slice(0, 8);
                   return (
-                    <TableRow key={order.id}>
-                      <TableCell><Link href={orderHref} className="font-medium hover:underline">{order.order_number || order.external_order_id || order.id.slice(0, 8)}</Link></TableCell>
-                      <TableCell>{pharmacy?.trade_name || pharmacy?.legal_name}<p className="text-xs text-muted-foreground">{pharmacy?.city}</p></TableCell>
-                      <TableCell>{new Date(order.order_date).toLocaleDateString("fr-FR")}</TableCell>
-                      <TableCell>{order.is_initial_order ? "Implantation" : order.is_reorder ? "Réassort" : uiLabel(order.order_type)}</TableCell>
-                      <TableCell><Badge variant={canReview && order.order_status === "pending" ? "default" : "secondary"}>{orderStatusLabel(order.order_status)}</Badge></TableCell>
-                      <TableCell>{formatCurrency(order.net_amount_ht)}</TableCell>
-                      {canViewPayment ? <TableCell>{order.payment_status === "not_applicable" ? "Non connecté" : uiLabel(order.payment_status)}</TableCell> : null}
-                      {canReview ? (
-                        <TableCell className="text-right">
-                          <Button asChild size="sm" variant={order.order_status === "pending" ? "default" : "outline"}>
-                            <Link href={orderHref}>{order.order_status === "pending" ? "Traiter" : "Voir"}</Link>
-                          </Button>
-                        </TableCell>
-                      ) : null}
-                    </TableRow>
+                    <Link
+                      key={order.id}
+                      href={orderHref}
+                      className="block min-h-24 px-4 py-4 active:bg-muted/70"
+                      aria-label={`Ouvrir la commande ${reference} de ${pharmacy?.trade_name || pharmacy?.legal_name || "la pharmacie"}`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate font-semibold text-[var(--tr1-navy)]">
+                            {pharmacy?.trade_name || pharmacy?.legal_name || "Pharmacie"}
+                          </p>
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            {pharmacy?.city || "—"} · {new Date(order.order_date).toLocaleDateString("fr-FR")}
+                          </p>
+                        </div>
+                        <span className="shrink-0 text-lg text-muted-foreground" aria-hidden="true">›</span>
+                      </div>
+                      <div className="mt-3 flex items-center justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <Badge variant={canReview && order.order_status === "pending" ? "default" : "secondary"}>
+                            {orderStatusLabel(order.order_status)}
+                          </Badge>
+                          <span className="truncate text-xs text-muted-foreground">{reference}</span>
+                        </div>
+                        <strong className="shrink-0 text-sm">{formatCurrency(order.net_amount_ht)} HT</strong>
+                      </div>
+                    </Link>
                   );
                 })}
-              </TableBody>
-            </Table>
+              </div>
+
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader><TableRow><TableHead>Commande</TableHead><TableHead>Pharmacie</TableHead><TableHead>Date</TableHead><TableHead>Type</TableHead><TableHead>Statut</TableHead><TableHead>Net HT</TableHead>{canViewPayment ? <TableHead>Règlement</TableHead> : null}{canReview ? <TableHead className="text-right">Action</TableHead> : null}</TableRow></TableHeader>
+                  <TableBody>
+                    {orders.map((order) => {
+                      const pharmacy = Array.isArray(order.pharmacies) ? order.pharmacies[0] : order.pharmacies;
+                      const orderHref = `/dashboard/orders/${order.id}`;
+                      return (
+                        <TableRow key={order.id}>
+                          <TableCell><Link href={orderHref} className="font-medium hover:underline">{order.order_number || order.external_order_id || order.id.slice(0, 8)}</Link></TableCell>
+                          <TableCell><Link href={orderHref} className="block hover:underline">{pharmacy?.trade_name || pharmacy?.legal_name}<p className="text-xs text-muted-foreground">{pharmacy?.city}</p></Link></TableCell>
+                          <TableCell>{new Date(order.order_date).toLocaleDateString("fr-FR")}</TableCell>
+                          <TableCell>{order.is_initial_order ? "Implantation" : order.is_reorder ? "Réassort" : uiLabel(order.order_type)}</TableCell>
+                          <TableCell><Badge variant={canReview && order.order_status === "pending" ? "default" : "secondary"}>{orderStatusLabel(order.order_status)}</Badge></TableCell>
+                          <TableCell>{formatCurrency(order.net_amount_ht)}</TableCell>
+                          {canViewPayment ? <TableCell>{order.payment_status === "not_applicable" ? "Non connecté" : uiLabel(order.payment_status)}</TableCell> : null}
+                          {canReview ? (
+                            <TableCell className="text-right">
+                              <Button asChild size="sm" variant={order.order_status === "pending" ? "default" : "outline"}>
+                                <Link href={orderHref}>{order.order_status === "pending" ? "Traiter" : "Voir"}</Link>
+                              </Button>
+                            </TableCell>
+                          ) : null}
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
