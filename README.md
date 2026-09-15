@@ -137,3 +137,5 @@ Cette procédure ne nécessite ni Meta, ni WhatsApp, ni géocodage, ni API Verce
 - [Expérience Sharp Sprint 12.2A](docs/releases/sprint-12-2-sharp-experiment.md)
 - [Stabilité E2E Sprint 12.2A](docs/releases/sprint-12-2-e2e-stability-report.md)
 - [Clôture Sprint 12.2A](docs/releases/sprint-12-2-closure-report.md)
+
+<!-- deploy: france-map-v3 -->
