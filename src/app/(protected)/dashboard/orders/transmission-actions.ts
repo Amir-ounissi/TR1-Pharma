@@ -6,7 +6,7 @@ import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { decryptCredential } from "@/lib/integrations/gmail/credentials";
 import { refreshGoogleAccessToken, sendGmailRawMessage } from "@/lib/integrations/gmail/google";
-import { buildMimeMessage, buildSimpleOrderPdf, type EmailAttachment } from "@/lib/orders/order-email";
+import { buildMimeMessage, buildTr1OrderPdf, type EmailAttachment } from "@/lib/orders/order-email";
 
 const uuid = z.string().uuid();
 const allowedRoles = new Set(["agent", "brand_user", "brand_admin", "tr1_manager", "super_admin"]);
@@ -35,7 +35,7 @@ async function requireTransmissionOrder(orderId: string) {
 
   const { data: order, error } = await supabase
     .from("orders")
-    .select("id,brand_id,pharmacy_id,brand_pharmacy_id,order_number,external_order_id,order_date,order_status,subtotal_ht,discount_amount_ht,net_amount_ht,tax_amount,total_ttc,notes")
+    .select("id,brand_id,pharmacy_id,brand_pharmacy_id,order_number,external_order_id,order_date,order_status,subtotal_ht,discount_amount_ht,net_amount_ht,tax_amount,total_ttc,notes,created_by")
     .eq("id", orderId)
     .eq("brand_id", brand.id)
     .maybeSingle();
@@ -158,12 +158,14 @@ export async function sendOrderByEmailAction(
       { data: items, error: itemsError },
       { data: documents, error: documentsError },
       { data: gmail, error: gmailError },
+      { data: creator },
     ] = await Promise.all([
-      supabase.from("brands").select("name,order_email").eq("id", brand.id).single(),
-      supabase.from("pharmacies").select("legal_name,trade_name,siret,vat_number,address_line_1,postal_code,city").eq("id", order.pharmacy_id).single(),
-      supabase.from("order_items").select("product_name_snapshot,sku_snapshot,quantity,free_quantity,unit_price_ht,discount_rate,line_total_ht").eq("order_id", order.id).order("created_at"),
+      supabase.from("brands").select("name,code,order_email").eq("id", brand.id).single(),
+      supabase.from("pharmacies").select("legal_name,trade_name,cip_code,siret,vat_number,email,phone,address_line_1,address_line_2,postal_code,city").eq("id", order.pharmacy_id).single(),
+      supabase.from("order_items").select("product_name_snapshot,sku_snapshot,quantity,free_quantity,unit_price_ht,discount_rate,net_unit_price_ht,line_total_ht,tax_rate").eq("order_id", order.id).order("created_at"),
       admin.from("pharmacy_documents").select("document_type,file_name,content_type,object_path").eq("brand_id", brand.id).eq("pharmacy_id", order.pharmacy_id),
       admin.from("user_gmail_connections").select("email,refresh_token_ciphertext").eq("user_id", userId).maybeSingle(),
+      admin.from("users").select("email").eq("id", order.created_by || userId).maybeSingle(),
     ]);
     if (brandError || pharmacyError || itemsError || documentsError || gmailError) {
       throw new Error("Impossible de préparer les données de transmission.");
@@ -196,34 +198,49 @@ export async function sendOrderByEmailAction(
       "Ceci est un message automatique, mais vous pouvez y répondre directement.",
     ].join("\n");
 
-    const pdfLines = [
-      `BON DE COMMANDE - ${brandData!.name}`,
-      `Reference : ${reference}`,
-      `Date : ${new Date(order.order_date).toLocaleDateString("fr-FR")}`,
-      "",
-      `Pharmacie : ${pharmacyName}`,
-      `SIRET : ${pharmacy!.siret || "-"}`,
-      `TVA : ${pharmacy!.vat_number}`,
-      `Adresse : ${[pharmacy!.address_line_1, pharmacy!.postal_code, pharmacy!.city].filter(Boolean).join(" ")}`,
-      "",
-      "PRODUITS",
-      ...(items ?? []).flatMap((item, index) => [
-        `${index + 1}. ${item.product_name_snapshot || item.sku_snapshot || "Produit"}`,
-        `   SKU ${item.sku_snapshot || "-"} | Qte ${item.quantity} | Gratuits ${item.free_quantity || 0} | PU HT ${Number(item.unit_price_ht || 0).toFixed(2)} EUR | Remise ${Number(item.discount_rate || 0).toFixed(2)}% | Total HT ${Number(item.line_total_ht || 0).toFixed(2)} EUR`,
-      ]),
-      "",
-      `Sous-total HT : ${Number(order.subtotal_ht ?? 0).toFixed(2)} EUR`,
-      `Remises : ${Number(order.discount_amount_ht ?? 0).toFixed(2)} EUR`,
-      `Net HT : ${Number(order.net_amount_ht ?? 0).toFixed(2)} EUR`,
-      `TVA : ${Number(order.tax_amount ?? 0).toFixed(2)} EUR`,
-      `TOTAL TTC : ${Number(order.total_ttc ?? 0).toFixed(2)} EUR`,
-      order.notes ? `Notes : ${order.notes}` : "",
-      "",
-      "Document genere par TR1 Pharma.",
-    ].filter(Boolean);
+    const pdf = buildTr1OrderPdf({
+      reference,
+      orderDate: order.order_date,
+      brandName: brandData!.name,
+      brandCode: brandData!.code,
+      brandOrderEmail: recipient,
+      commercialEmail: creator?.email || gmail!.email,
+      pharmacy: {
+        name: pharmacyName,
+        legalName: pharmacy!.legal_name,
+        code: pharmacy!.cip_code,
+        addressLine1: pharmacy!.address_line_1,
+        addressLine2: pharmacy!.address_line_2,
+        postalCode: pharmacy!.postal_code,
+        city: pharmacy!.city,
+        email: pharmacy!.email,
+        phone: pharmacy!.phone,
+        siret: pharmacy!.siret,
+        vatNumber: pharmacy!.vat_number,
+      },
+      items: (items ?? []).map((item) => ({
+        reference: item.sku_snapshot,
+        designation: item.product_name_snapshot,
+        quantity: item.quantity,
+        freeQuantity: item.free_quantity,
+        unitPriceHt: item.unit_price_ht,
+        discountRate: item.discount_rate,
+        netUnitPriceHt: item.net_unit_price_ht,
+        lineTotalHt: item.line_total_ht,
+        taxRate: item.tax_rate,
+      })),
+      totals: {
+        subtotalHt: order.subtotal_ht,
+        discountAmountHt: order.discount_amount_ht,
+        netAmountHt: order.net_amount_ht,
+        taxAmount: order.tax_amount,
+        totalTtc: order.total_ttc,
+      },
+      notes: order.notes,
+    });
 
     const attachments: EmailAttachment[] = [
-      { filename: `commande-${safeFileName(reference)}.pdf`, contentType: "application/pdf", data: buildSimpleOrderPdf(pdfLines) },
+      { filename: `bon-de-commande-${safeFileName(reference)}.pdf`, contentType: "application/pdf", data: pdf },
     ];
 
     for (const type of ["kbis", "rib"] as const) {
