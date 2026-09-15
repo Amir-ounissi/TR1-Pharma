@@ -3,7 +3,20 @@ import { ArrowRight, LockKeyhole } from "lucide-react";
 import { LoginForm } from "@/components/auth/login-form";
 import { Card, CardContent } from "@/components/ui/card";
 
-export default function LoginPage() {
+type SearchParams = Promise<{ oauth?: string }>;
+
+const oauthMessages: Record<string, string> = {
+  google_unavailable: "La connexion Google n’est pas encore disponible sur cet environnement.",
+  google_cancelled: "La connexion Google a été annulée.",
+  missing_code: "Google n’a pas renvoyé de code de connexion valide.",
+  exchange_failed: "La connexion Google n’a pas pu être finalisée. Réessayez.",
+  session_failed: "La session TR1 n’a pas pu être créée après la connexion Google.",
+};
+
+export default async function LoginPage({ searchParams }: { searchParams: SearchParams }) {
+  const { oauth } = await searchParams;
+  const oauthError = oauth ? oauthMessages[oauth] ?? "La connexion Google a échoué." : null;
+
   return (
     <section className="mx-auto grid min-h-[calc(100vh-4.6rem)] max-w-7xl items-center gap-12 px-5 py-10 lg:grid-cols-[.9fr_.7fr] lg:px-8 lg:py-16">
       <div className="space-y-6">
@@ -21,7 +34,7 @@ export default function LoginPage() {
         </div>
         <div className="flex flex-wrap items-center gap-4 text-sm text-[#445265]">
           <div className="font-mono text-[.68rem] font-bold uppercase tracking-[.14em] text-[#667384]">
-            Email · Mot de passe · Session sécurisée
+            Google · Email · Session sécurisée
           </div>
           <Link className="inline-flex items-center gap-2 font-black text-[#0b1e32] hover:text-[#c84f24]" href="/">
             Retour à la présentation
@@ -36,7 +49,7 @@ export default function LoginPage() {
             <h2 className="mt-3 text-2xl font-black tracking-[-.05em]">Accédez à votre espace.</h2>
           </div>
           <div className="bg-[#fffefa] px-6 py-7 sm:px-8">
-            <LoginForm />
+            <LoginForm oauthError={oauthError} />
           </div>
         </CardContent>
       </Card>
