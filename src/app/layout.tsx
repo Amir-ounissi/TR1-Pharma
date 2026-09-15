@@ -3,6 +3,8 @@ import { PwaRuntime } from "@/components/pwa-runtime";
 import "./globals.css";
 import "./mobile-pharmacy-fixes.css";
 
+const iconVersion = "tr1-brand-20260915";
+
 export const metadata: Metadata = {
   title: "TR1 Pharma",
   applicationName: "TR1 Pharma",
@@ -18,9 +20,22 @@ export const metadata: Metadata = {
     "apple-mobile-web-app-capable": "yes",
   },
   icons: {
+    icon: [
+      {
+        url: `/pwa/icon/192?v=${iconVersion}`,
+        sizes: "192x192",
+        type: "image/svg+xml",
+      },
+    ],
+    shortcut: [
+      {
+        url: `/pwa/icon/192?v=${iconVersion}`,
+        type: "image/svg+xml",
+      },
+    ],
     apple: [
       {
-        url: "/pwa/icon/180?v=official-svg-20260910",
+        url: `/pwa/icon/180?v=${iconVersion}`,
         sizes: "180x180",
         type: "image/svg+xml",
       },
