@@ -248,6 +248,7 @@ export async function sendOrderByEmailAction(
         sender_email: gmail!.email,
         recipient_email: recipient!,
         subject,
+        body_text: body,
         attachment_manifest: attachments.map((attachment) => ({ filename: attachment.filename, content_type: attachment.contentType })),
       })
       .select("id")
