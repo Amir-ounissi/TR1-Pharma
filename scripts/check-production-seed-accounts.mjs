@@ -29,7 +29,7 @@ const localFixtureEmails = new Set([
 ]);
 
 let page = 1;
-let found = [];
+const found = [];
 while (true) {
   const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 1000 });
   if (error) throw error;
@@ -39,9 +39,26 @@ while (true) {
   page += 1;
 }
 
-if (found.length > 0) {
-  console.error(`Production safety check failed: ${found.length} local fixture account(s) exist in Auth.`);
+const now = Date.now();
+const notBanned = found.filter((user) => !user.banned_until || Date.parse(user.banned_until) <= now);
+
+const fixtureIds = found.map((user) => user.id);
+let activeMemberships = [];
+if (fixtureIds.length > 0) {
+  const { data, error } = await supabase
+    .from("memberships")
+    .select("user_id,status")
+    .in("user_id", fixtureIds)
+    .eq("status", "active");
+  if (error) throw error;
+  activeMemberships = data ?? [];
+}
+
+if (notBanned.length > 0 || activeMemberships.length > 0) {
+  console.error(
+    `Production safety check failed: ${notBanned.length} local fixture account(s) are not banned and ${activeMemberships.length} active membership(s) remain.`,
+  );
   process.exit(1);
 }
 
-console.log("Production seed-account check: OK");
+console.log(`Production seed-account check: OK (${found.length} fixture account(s), all disabled).`);
