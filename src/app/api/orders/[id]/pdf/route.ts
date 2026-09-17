@@ -15,6 +15,10 @@ function safeFileName(value: string) {
     .slice(0, 120) || "commande";
 }
 
+function commercialLabel(fullName?: string | null, email?: string | null) {
+  return [fullName?.trim(), email?.trim()].filter(Boolean).join(" · ") || null;
+}
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -35,16 +39,19 @@ export async function GET(
       .maybeSingle();
     if (orderError || !order) return NextResponse.json({ error: "Commande introuvable." }, { status: 404 });
 
+    const creatorId = order.created_by || userId;
     const [
       { data: brandData, error: brandError },
       { data: pharmacy, error: pharmacyError },
       { data: items, error: itemsError },
       { data: creator },
+      { data: creatorProfile },
     ] = await Promise.all([
       supabase.from("brands").select("name,code,order_email").eq("id", brand.id).single(),
       supabase.from("pharmacies").select("legal_name,trade_name,cip_code,siret,vat_number,email,phone,address_line_1,address_line_2,postal_code,city").eq("id", order.pharmacy_id).single(),
       supabase.from("order_items").select("product_id,product_name_snapshot,sku_snapshot,quantity,free_quantity,unit_price_ht,discount_rate,net_unit_price_ht,line_total_ht,tax_rate").eq("order_id", order.id).order("created_at"),
-      admin.from("users").select("email").eq("id", order.created_by || userId).maybeSingle(),
+      admin.from("users").select("email").eq("id", creatorId).maybeSingle(),
+      admin.from("user_profiles").select("full_name").eq("user_id", creatorId).maybeSingle(),
     ]);
 
     if (brandError || pharmacyError || itemsError || !brandData || !pharmacy) {
@@ -78,7 +85,7 @@ export async function GET(
       pharmacy,
       items: items ?? [],
       products: products ?? [],
-      commercialEmail: creator?.email ?? null,
+      commercialEmail: commercialLabel(creatorProfile?.full_name, creator?.email),
     });
     const pdf = buildTr1OrderPdf(payload);
 
