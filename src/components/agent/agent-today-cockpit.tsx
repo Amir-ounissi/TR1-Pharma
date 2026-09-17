@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CalendarDays, CalendarPlus, CheckCircle2, TrendingUp } from "lucide-react";
+import { AgentMonthlyTargetForm } from "@/components/agent/agent-monthly-target-form";
 
 function currency(value: number | null | undefined) {
   if (value == null || !Number.isFinite(value)) return "—";
@@ -13,6 +14,7 @@ function currency(value: number | null | undefined) {
 export function AgentTodayCockpit({
   brandId,
   brandName,
+  monthStart,
   monthLabel,
   revenue,
   orderCount,
@@ -22,11 +24,12 @@ export function AgentTodayCockpit({
 }: {
   brandId: string;
   brandName: string;
+  monthStart: string;
   monthLabel: string;
   revenue: number;
   orderCount: number;
   target: number | null;
-  targetSource: "official" | null;
+  targetSource: "official" | "personal" | null;
   pendingVisitCount: number;
 }) {
   const averageBasket = orderCount > 0 ? revenue / orderCount : 0;
@@ -101,7 +104,9 @@ export function AgentTodayCockpit({
               {currency(revenue)}{target ? <span className="text-lg font-medium text-white/55"> / {currency(target)}</span> : null}
             </p>
             <p className="mt-1 text-xs text-white/55">
-              {brandName}{targetSource ? " · objectif attribué" : ""}
+              {brandName}
+              {targetSource === "official" ? " · objectif attribué" : null}
+              {targetSource === "personal" ? " · objectif personnel" : null}
             </p>
           </div>
           <span className="rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold">
@@ -130,6 +135,15 @@ export function AgentTodayCockpit({
           </div>
         </div>
       </Link>
+
+      {targetSource !== "official" ? (
+        <AgentMonthlyTargetForm
+          brandId={brandId}
+          monthStart={monthStart}
+          currentTarget={targetSource === "personal" ? target : null}
+          compact
+        />
+      ) : null}
     </section>
   );
 }
