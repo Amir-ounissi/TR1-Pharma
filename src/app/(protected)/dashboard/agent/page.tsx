@@ -139,7 +139,7 @@ export default async function AgentPage() {
       target_brand_id: brand.id,
       target_filter_start: monthStart,
       target_filter_end: today,
-      target_scope_type: null,
+      target_scope_type: "agent",
       target_territory_id: null,
       target_agent_id: userId,
     }),
