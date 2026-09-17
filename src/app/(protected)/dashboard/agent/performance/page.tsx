@@ -74,7 +74,7 @@ export default async function AgentPerformancePage({ searchParams }: { searchPar
       target_brand_id: brand.id,
       target_filter_start: from,
       target_filter_end: to,
-      target_scope_type: null,
+      target_scope_type: "agent",
       target_territory_id: null,
       target_agent_id: userId,
     }),
@@ -147,7 +147,7 @@ export default async function AgentPerformancePage({ searchParams }: { searchPar
       </Card>
 
       <section className="space-y-3">
-        <SectionHeader id="where-i-stand" title="Où j’en suis" description="Les objectifs qui doivent guider le mois et les prochaines actions terrain." />
+        <SectionHeader id="where-i-stand" title="Où j’en suis" description="Les objectifs individuels qui doivent guider le mois et les prochaines actions terrain." />
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {topObjectives.length ? topObjectives.map((objective) => (
             <Card key={objective.objective_id}>
@@ -192,7 +192,7 @@ export default async function AgentPerformancePage({ searchParams }: { searchPar
 
         {!topObjectives.length && !personalTarget ? (
           <p className="text-xs text-muted-foreground">
-            Aucun objectif attribué ne couvre cette période. Les KPI restent visibles sans inventer de cible.
+            Aucun objectif individuel attribué ne couvre cette période. Les KPI restent visibles et tu peux définir une cible personnelle pour le mois en cours.
           </p>
         ) : null}
       </section>
