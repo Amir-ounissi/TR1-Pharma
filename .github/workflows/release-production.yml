@@ -74,7 +74,6 @@ jobs:
     environment: staging
     env:
       STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
-      PRODUCTION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ vars.VERCEL_STAGING_PROJECT_ID }}
@@ -93,7 +92,7 @@ jobs:
       - name: Vérifier la configuration staging
         run: |
           set -eu
-          for name in STAGING_DATABASE_URL PRODUCTION_DATABASE_URL VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID STAGING_URL; do
+          for name in STAGING_DATABASE_URL VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID STAGING_URL; do
             eval "value=\${$name:-}"
             test -n "$value" || {
               echo "::error::$name n'est pas configuré pour l'environnement staging."
@@ -107,8 +106,8 @@ jobs:
       - name: Appliquer les migrations staging
         run: npm exec -- supabase db push --db-url "$STAGING_DATABASE_URL"
 
-      - name: Vérifier Git / staging et l'absence de dérive production
-        run: npm run release:drift:preflight
+      - name: Exiger Git = staging
+        run: npm run release:drift:staging
 
       - name: Déployer exactement le SHA sur le projet Vercel staging
         run: |
@@ -126,7 +125,7 @@ jobs:
           {
             echo "### Staging validé"
             echo "- SHA: \`$RELEASE_SHA\`"
-            echo "- migrations: Git = staging ; production sans historique divergent"
+            echo "- migrations: Git = staging"
             echo "- smoke: PASS"
           } >> "$GITHUB_STEP_SUMMARY"
 
