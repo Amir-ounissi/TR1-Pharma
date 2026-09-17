@@ -30,11 +30,33 @@ for (let page = 1; ; page += 1) {
   if (users.length < perPage) break;
 }
 
-if (demoUsers.length > 0) {
+if (demoUsers.length === 0) {
+  console.log("Production auth guard: aucun compte de seed/demo .local détecté.");
+  process.exit(0);
+}
+
+const now = Date.now();
+const unbannedUsers = demoUsers.filter((user) => {
+  const bannedUntil = user.banned_until ? Date.parse(user.banned_until) : Number.NaN;
+  return !Number.isFinite(bannedUntil) || bannedUntil <= now;
+});
+
+const demoUserIds = demoUsers.map((user) => user.id);
+const { data: activeMemberships, error: membershipError } = await supabase
+  .from("memberships")
+  .select("user_id")
+  .in("user_id", demoUserIds)
+  .eq("status", "active");
+
+if (membershipError) throw membershipError;
+
+if (unbannedUsers.length > 0 || (activeMemberships?.length ?? 0) > 0) {
   console.error(
-    `Production auth guard: ${demoUsers.length} compte(s) de seed/demo en .local détecté(s). Release bloquée.`,
+    `Production auth guard: comptes seed/demo exploitables détectés (non bannis: ${unbannedUsers.length}, memberships actifs: ${activeMemberships?.length ?? 0}). Release bloquée.`,
   );
   process.exit(1);
 }
 
-console.log("Production auth guard: aucun compte de seed/demo .local détecté.");
+console.log(
+  `Production auth guard: ${demoUsers.length} compte(s) seed/demo historique(s), tous bannis et sans membership actif.`,
+);
