@@ -36,6 +36,10 @@ export function VisitCloseoutPanel({
   const [closeState, closeAction, closing] = useActionState(closeFieldVisitAction, emptyState);
   const startFormId = `visit-start-${visitId}`;
   const closeFormId = `visit-close-${visitId}`;
+  const outcomeId = `visit-outcome-${visitId}`;
+  const summaryId = `visit-summary-${visitId}`;
+  const nextVisitAtId = `visit-next-at-${visitId}`;
+  const nextObjectiveId = `visit-next-objective-${visitId}`;
 
   useEffect(() => {
     if (startState.success) router.refresh();
@@ -140,8 +144,8 @@ export function VisitCloseoutPanel({
         {closeState.success ? <Feedback tone="success">{closeState.success}</Feedback> : null}
 
         <div>
-          <Label className="mb-1.5">Résultat</Label>
-          <select name="outcome" defaultValue="no_order" className="min-h-11 w-full rounded-md border bg-background px-3 text-sm">
+          <Label htmlFor={outcomeId} className="mb-1.5">Résultat</Label>
+          <select id={outcomeId} name="outcome" defaultValue="no_order" className="min-h-11 w-full rounded-md border bg-background px-3 text-sm">
             <option value="order_taken">Commande prise</option>
             <option value="no_order">Pas de commande</option>
             <option value="follow_up">À relancer</option>
@@ -151,8 +155,9 @@ export function VisitCloseoutPanel({
         </div>
 
         <div>
-          <Label className="mb-1.5">Notes / compte rendu</Label>
+          <Label htmlFor={summaryId} className="mb-1.5">Notes / compte rendu</Label>
           <Textarea
+            id={summaryId}
             name="summary"
             required
             rows={5}
@@ -169,12 +174,12 @@ export function VisitCloseoutPanel({
           </summary>
           <div className="mt-4 space-y-3">
             <div>
-              <Label className="mb-1.5">Date et heure</Label>
-              <Input type="datetime-local" name="nextVisitAt" className="min-h-11" />
+              <Label htmlFor={nextVisitAtId} className="mb-1.5">Date et heure</Label>
+              <Input id={nextVisitAtId} type="datetime-local" name="nextVisitAt" className="min-h-11" />
             </div>
             <div>
-              <Label className="mb-1.5">Objectif de la prochaine visite</Label>
-              <Textarea name="nextObjective" rows={3} className="text-base sm:text-sm" placeholder="Optionnel" />
+              <Label htmlFor={nextObjectiveId} className="mb-1.5">Objectif de la prochaine visite</Label>
+              <Textarea id={nextObjectiveId} name="nextObjective" rows={3} className="text-base sm:text-sm" placeholder="Optionnel" />
             </div>
             <p className="text-xs text-muted-foreground">
               Si une date est renseignée, TR1 crée directement une vraie visite dans l’Agenda — pas une simple tâche.
