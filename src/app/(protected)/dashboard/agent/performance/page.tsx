@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { PageHeader } from "@/components/ux/page-header";
 import { SectionHeader } from "@/components/ux/section-header";
 import { requireActiveBrand } from "@/lib/auth";
-import { nextIsoDate, parisYearToDate } from "@/lib/business-date";
+import { nextIsoDate, parisBusinessDate } from "@/lib/business-date";
 import {
   formatCompactCurrency,
   formatCompactNumber,
@@ -47,7 +47,8 @@ function parseDate(value: string | undefined, fallback: string) {
 
 export default async function AgentPerformancePage({ searchParams }: { searchParams: SearchParams }) {
   const query = await searchParams;
-  const defaultPeriod = parisYearToDate();
+  const today = parisBusinessDate();
+  const defaultPeriod = { from: `${today.slice(0, 7)}-01`, to: today };
   const from = parseDate(query.from, defaultPeriod.from);
   const to = parseDate(query.to, defaultPeriod.to);
   const { supabase, brand, profile, userId } = await requireActiveBrand();
@@ -107,7 +108,7 @@ export default async function AgentPerformancePage({ searchParams }: { searchPar
       <PageHeader
         eyebrow={`Ma performance · ${brand.name}`}
         title={`Où en es-tu, ${firstName} ?`}
-        description="Lis ton avancement, ton activité réelle, l’état de ton portefeuille et les comptes à traiter sans te perdre dans 20 KPI plats."
+        description="Le mois en cours en premier : CA, commandes, objectifs, portefeuille et comptes à traiter."
         tone="dark"
       />
 
@@ -119,13 +120,13 @@ export default async function AgentPerformancePage({ searchParams }: { searchPar
             <button className="inline-flex h-10 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground">Mettre à jour</button>
           </form>
           <p className="mt-2 text-xs text-muted-foreground">
-            Par défaut : depuis le 1er janvier de l’année en cours.
+            Par défaut : du 1er jour du mois à aujourd’hui. Modifiez les dates pour analyser une autre période.
           </p>
         </CardContent>
       </Card>
 
       <section className="space-y-3">
-        <SectionHeader id="where-i-stand" title="Où j’en suis" description="Les 3 à 4 objectifs qui doivent guider ta journée." />
+        <SectionHeader id="where-i-stand" title="Où j’en suis" description="Les objectifs qui doivent guider le mois et les prochaines actions terrain." />
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {topObjectives.length ? topObjectives.map((objective) => (
             <Card key={objective.objective_id}>
@@ -151,6 +152,11 @@ export default async function AgentPerformancePage({ searchParams }: { searchPar
             </>
           )}
         </div>
+        {!topObjectives.length ? (
+          <p className="text-xs text-muted-foreground">
+            Aucun objectif attribué ne couvre cette période. Les KPI restent visibles sans inventer de cible.
+          </p>
+        ) : null}
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[1.05fr_.95fr]">
