@@ -27,6 +27,9 @@ export PDF_ORDER_E2E_MOCK='{"orderNumber":"E2E-PDF-ORDER","orderDate":"2026-09-0
 export E2E_SKIP_TYPECHECK="true"
 export NEXT_DIST_DIR="${NEXT_DIST_DIR:-.next-playwright-prod}"
 export PLAYWRIGHT_BROWSERS_PATH="${PLAYWRIGHT_BROWSERS_PATH:-/private/tmp/tr1-playwright-browsers}"
+export E2E_TEST_PASSWORD="$(node -e 'const { randomBytes } = require("node:crypto"); process.stdout.write(`Tr1E2E-${randomBytes(24).toString("base64url")}!a9`);')"
+
+node scripts/prepare-e2e-users.mjs
 
 rm -rf "$NEXT_DIST_DIR"
 playwright test "$@"
