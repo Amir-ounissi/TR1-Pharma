@@ -23,6 +23,22 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Historique des migrations immuable
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -eu
+          changes="$(git diff --name-status "$BASE_SHA" HEAD -- supabase/migrations || true)"
+          printf '%s\n' "$changes"
+          forbidden="$(printf '%s\n' "$changes" | awk 'NF && $1 != "A" { print }')"
+          if [ -n "$forbidden" ]; then
+            echo "::error::Une migration déjà présente sur la branche de base a été modifiée, renommée ou supprimée. Ajoutez une nouvelle migration corrective au lieu de réécrire l'historique."
+            printf '%s\n' "$forbidden"
+            exit 1
+          fi
       - uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
