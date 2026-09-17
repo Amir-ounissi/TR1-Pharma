@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { VisitCloseoutPhotoPicker } from "@/components/visits/visit-closeout-photo-picker";
 
 export type AgentPendingCloseoutVisit = {
   id: string;
@@ -46,7 +47,7 @@ export function AgentVisitCloseoutQueue({ visits }: { visits: AgentPendingCloseo
         <div className="flex items-center gap-3">
           <CheckCircle2 className="size-5 text-emerald-700" />
           <div>
-            <h2 className="font-bold text-emerald-950">Visites du jour à jour</h2>
+            <h2 className="font-bold text-emerald-950">Visites à jour</h2>
             <p className="mt-1 text-sm text-emerald-900/70">Aucune visite à clôturer.</p>
           </div>
         </div>
@@ -92,6 +93,9 @@ export function AgentVisitCloseoutQueue({ visits }: { visits: AgentPendingCloseo
           {state.error ? (
             <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{state.error}</p>
           ) : null}
+          {state.warning ? (
+            <p role="status" className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">{state.warning}</p>
+          ) : null}
           {state.success ? (
             <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700">{state.success}</p>
           ) : null}
@@ -108,7 +112,7 @@ export function AgentVisitCloseoutQueue({ visits }: { visits: AgentPendingCloseo
               </select>
             </div>
             <div>
-              <Label className="mb-1.5">Compte rendu</Label>
+              <Label className="mb-1.5">Notes / compte rendu</Label>
               <Textarea
                 name="summary"
                 required
@@ -118,6 +122,8 @@ export function AgentVisitCloseoutQueue({ visits }: { visits: AgentPendingCloseo
               />
             </div>
           </div>
+
+          <VisitCloseoutPhotoPicker key={current.id} disabled={pending} />
 
           <details className="rounded-xl border bg-white px-4 py-2">
             <summary className="min-h-11 cursor-pointer touch-manipulation py-2 text-sm font-semibold text-[var(--tr1-navy)]">
