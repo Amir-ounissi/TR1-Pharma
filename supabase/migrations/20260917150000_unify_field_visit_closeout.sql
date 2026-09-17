@@ -79,9 +79,9 @@ begin
   end if;
 
   if exists (select 1 from public.field_visit_closeouts where visit_id = target_visit_id) then
-    select id, next_visit_id into closeout_id, next_visit_id
-    from public.field_visit_closeouts
-    where visit_id = target_visit_id;
+    select closeout.id, closeout.next_visit_id into closeout_id, next_visit_id
+    from public.field_visit_closeouts closeout
+    where closeout.visit_id = target_visit_id;
 
     select coalesce(
       jsonb_agg(
