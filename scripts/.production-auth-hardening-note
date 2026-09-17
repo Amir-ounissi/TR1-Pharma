@@ -1,1 +1,0 @@
-Production auth hardening is enforced by scripts/check-production-auth.mjs.
