@@ -2,7 +2,13 @@ import { readdirSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 
-const mode = process.argv[2] === "preflight" ? "preflight" : "strict";
+const requestedMode = process.argv[2] ?? "strict";
+const allowedModes = new Set(["staging", "preflight", "strict"]);
+if (!allowedModes.has(requestedMode)) {
+  throw new Error(`Mode inconnu: ${requestedMode}. Utilisez staging, preflight ou strict.`);
+}
+const mode = requestedMode;
+
 const migrationDir = join(process.cwd(), "supabase", "migrations");
 const localVersions = readdirSync(migrationDir)
   .filter((name) => /^\d{14}_.+\.sql$/.test(name))
@@ -78,9 +84,15 @@ function assertPrefix(label, remoteVersions) {
 }
 
 const stagingVersions = migrationList(process.env.STAGING_DATABASE_URL, "staging");
-const productionVersions = migrationList(process.env.PRODUCTION_DATABASE_URL, "production");
-
 assertExact("staging", stagingVersions);
+
+if (mode === "staging") {
+  console.log("Migration drift gate: PASS (staging).");
+  console.log(`Git=${localVersions.length} staging=${stagingVersions.length}`);
+  process.exit(0);
+}
+
+const productionVersions = migrationList(process.env.PRODUCTION_DATABASE_URL, "production");
 if (mode === "preflight") {
   assertPrefix("production", productionVersions);
 } else {
