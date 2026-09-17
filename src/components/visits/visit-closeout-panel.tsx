@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { VisitCloseoutPhotoPicker } from "@/components/visits/visit-closeout-photo-picker";
 
 const emptyState: VisitCloseoutActionState = {};
 
@@ -100,7 +101,7 @@ export function VisitCloseoutPanel({
         <div>
           <h2 className="font-bold text-[var(--tr1-navy)]">Clôturer sans ressaisie inutile</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Un résultat, un compte rendu court, puis éventuellement la prochaine visite. Ce même contrat pourra être prérempli par dictée ou par l’assistant IA.
+            Un résultat, tes notes et éventuellement jusqu’à 3 photos, puis la prochaine visite si nécessaire.
           </p>
         </div>
       </div>
@@ -110,6 +111,7 @@ export function VisitCloseoutPanel({
         <input type="hidden" name="inputMode" value="manual" />
 
         {closeState.error ? <Feedback tone="error">{closeState.error}</Feedback> : null}
+        {closeState.warning ? <Feedback tone="warning">{closeState.warning}</Feedback> : null}
         {closeState.success ? <Feedback tone="success">{closeState.success}</Feedback> : null}
 
         <div>
@@ -124,7 +126,7 @@ export function VisitCloseoutPanel({
         </div>
 
         <div>
-          <Label className="mb-1.5">Compte rendu</Label>
+          <Label className="mb-1.5">Notes / compte rendu</Label>
           <Textarea
             name="summary"
             required
@@ -133,6 +135,8 @@ export function VisitCloseoutPanel({
             placeholder="Ex. Référencement validé sur 3 références. Équipe formée. Revoir la pharmacie après les premières sorties."
           />
         </div>
+
+        <VisitCloseoutPhotoPicker key={visitId} disabled={closing} />
 
         <details className="rounded-xl border px-4 py-3">
           <summary className="min-h-11 cursor-pointer touch-manipulation py-2 text-sm font-semibold text-[var(--tr1-navy)]">
@@ -182,10 +186,11 @@ function MobilePrimaryBar({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Feedback({ children, tone }: { children: React.ReactNode; tone: "error" | "success" }) {
-  return (
-    <p className={tone === "error" ? "rounded-lg bg-red-50 p-3 text-sm text-red-700" : "rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700"}>
-      {children}
-    </p>
-  );
+function Feedback({ children, tone }: { children: React.ReactNode; tone: "error" | "success" | "warning" }) {
+  const className = tone === "error"
+    ? "rounded-lg bg-red-50 p-3 text-sm text-red-700"
+    : tone === "warning"
+      ? "rounded-lg bg-amber-50 p-3 text-sm text-amber-800"
+      : "rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700";
+  return <p className={className}>{children}</p>;
 }
