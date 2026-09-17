@@ -1,0 +1,201 @@
+name: Release production
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: "SHA Git exact à valider en staging puis déployer en production"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: tr1-production-release
+  cancel-in-progress: false
+
+env:
+  RELEASE_SHA: ${{ inputs.release_sha }}
+  VERCEL_CLI_VERSION: 59.19.1
+
+jobs:
+  gate:
+    name: Gate du SHA
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+
+      - name: Vérifier le SHA et son appartenance à main
+        run: |
+          set -eu
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA" || {
+            echo "::error::Le checkout ne correspond pas au SHA demandé."
+            exit 1
+          }
+          git fetch origin main
+          git merge-base --is-ancestor "$RELEASE_SHA" origin/main || {
+            echo "::error::Le SHA demandé n'appartient pas à l'historique de main."
+            exit 1
+          }
+
+      - name: Exiger une CI verte sur ce SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          count="$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${RELEASE_SHA}&per_page=20" \
+            --jq '[.workflow_runs[] | select(.status == "completed" and .conclusion == "success")] | length')"
+          test "$count" -gt 0 || {
+            echo "::error::Aucune CI complète et verte n'est attachée au SHA $RELEASE_SHA."
+            exit 1
+          }
+          echo "CI verte trouvée pour $RELEASE_SHA."
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run release:check:local
+
+  staging:
+    name: Staging — migrations, déploiement et smoke
+    needs: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    environment: staging
+    env:
+      STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+      PRODUCTION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_STAGING_PROJECT_ID }}
+      STAGING_URL: ${{ vars.STAGING_URL }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+
+      - name: Vérifier la configuration staging
+        run: |
+          set -eu
+          for name in STAGING_DATABASE_URL PRODUCTION_DATABASE_URL VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID STAGING_URL; do
+            eval "value=\${$name:-}"
+            test -n "$value" || {
+              echo "::error::$name n'est pas configuré pour l'environnement staging."
+              exit 1
+            }
+          done
+
+      - name: Prévisualiser les migrations staging
+        run: npm exec -- supabase db push --db-url "$STAGING_DATABASE_URL" --dry-run
+
+      - name: Appliquer les migrations staging
+        run: npm exec -- supabase db push --db-url "$STAGING_DATABASE_URL"
+
+      - name: Vérifier Git / staging et l'absence de dérive production
+        run: npm run release:drift:preflight
+
+      - name: Déployer exactement le SHA sur le projet Vercel staging
+        run: |
+          set -eu
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          npx --yes "vercel@${VERCEL_CLI_VERSION}" deploy --prod --yes --token "$VERCEL_TOKEN"
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          test -z "$(git status --porcelain)"
+
+      - name: Smoke staging
+        run: BASE_URL="$STAGING_URL" npm run staging:smoke
+
+      - name: Preuve staging
+        run: |
+          {
+            echo "### Staging validé"
+            echo "- SHA: \`$RELEASE_SHA\`"
+            echo "- migrations: Git = staging ; production sans historique divergent"
+            echo "- smoke: PASS"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  production:
+    name: Production — migration gate et déploiement du même SHA
+    needs: staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    environment: production
+    env:
+      STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+      PRODUCTION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_PRODUCTION_PROJECT_ID }}
+      PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+
+      - name: Vérifier la configuration production
+        run: |
+          set -eu
+          for name in STAGING_DATABASE_URL PRODUCTION_DATABASE_URL VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID PRODUCTION_URL; do
+            eval "value=\${$name:-}"
+            test -n "$value" || {
+              echo "::error::$name n'est pas configuré pour l'environnement production."
+              exit 1
+            }
+          done
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+
+      - name: Vérifier le préflight migrations
+        run: npm run release:drift:preflight
+
+      - name: Prévisualiser les migrations production
+        run: npm exec -- supabase db push --db-url "$PRODUCTION_DATABASE_URL" --dry-run
+
+      - name: Appliquer les migrations production
+        run: npm exec -- supabase db push --db-url "$PRODUCTION_DATABASE_URL"
+
+      - name: Exiger Git = staging = production
+        run: npm run release:drift
+
+      - name: Déployer exactement le SHA sur le projet Vercel production
+        run: |
+          set -eu
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          npx --yes "vercel@${VERCEL_CLI_VERSION}" deploy --prod --yes --token "$VERCEL_TOKEN"
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          test -z "$(git status --porcelain)"
+
+      - name: Smoke production
+        run: BASE_URL="$PRODUCTION_URL" npm run staging:smoke
+
+      - name: Preuve release
+        run: |
+          {
+            echo "### Production déployée"
+            echo "- SHA: \`$RELEASE_SHA\`"
+            echo "- CI: PASS"
+            echo "- staging smoke: PASS"
+            echo "- migrations Git/staging/production: identiques"
+            echo "- production smoke: PASS"
+          } >> "$GITHUB_STEP_SUMMARY"
