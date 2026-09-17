@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { CalendarDays, CalendarPlus, CheckCircle2, TrendingUp } from "lucide-react";
-import { AgentMonthlyTargetForm } from "@/components/agent/agent-monthly-target-form";
 
 function currency(value: number | null | undefined) {
   if (value == null || !Number.isFinite(value)) return "—";
@@ -36,6 +35,7 @@ export function AgentTodayCockpit({
   const attainment = target && target > 0 ? (revenue / target) * 100 : null;
   const progress = attainment == null ? 0 : Math.max(0, Math.min(attainment, 100));
   const remaining = target == null ? null : Math.max(target - revenue, 0);
+  const settingsHref = `/dashboard/agent/settings?month=${encodeURIComponent(monthStart)}`;
 
   const actions = [
     {
@@ -137,12 +137,9 @@ export function AgentTodayCockpit({
       </Link>
 
       {targetSource !== "official" ? (
-        <AgentMonthlyTargetForm
-          brandId={brandId}
-          monthStart={monthStart}
-          currentTarget={targetSource === "personal" ? target : null}
-          compact
-        />
+        <p className="text-right text-xs text-muted-foreground">
+          L’objectif se règle dans <Link href={settingsHref} className="font-semibold text-[var(--tr1-navy)] underline-offset-4 hover:underline">Paramètres</Link>.
+        </p>
       ) : null}
     </section>
   );
