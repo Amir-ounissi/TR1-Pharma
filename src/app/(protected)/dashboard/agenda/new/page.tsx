@@ -16,6 +16,7 @@ export default async function NewAgendaVisitPage({
     pharmacy?: string | string[];
     brand?: string | string[];
     objective?: string | string[];
+    mode?: string | string[];
   }>;
 }) {
   const [{ supabase }, contexts, params] = await Promise.all([
@@ -64,8 +65,11 @@ export default async function NewAgendaVisitPage({
     grouped.set(relation.pharmacy_id, current);
   }
 
+  const quick = params.mode === "quick";
   const currentTime = new Date();
-  const defaultStartDate = new Date(currentTime.getTime() + 60 * 60_000);
+  const defaultStartDate = quick
+    ? currentTime
+    : new Date(currentTime.getTime() + 60 * 60_000);
   const defaultStart = isoToParisLocal(defaultStartDate.toISOString()).slice(0, 16);
   const requestedPharmacyId = typeof params.pharmacy === "string" ? params.pharmacy : undefined;
   const requestedBrandId = typeof params.brand === "string" ? params.brand : undefined;
@@ -90,10 +94,12 @@ export default async function NewAgendaVisitPage({
           Visite terrain
         </p>
         <h1 className="mt-1 font-mono text-3xl font-black uppercase tracking-[-0.05em] text-[var(--tr1-navy)]">
-          Ajouter une visite
+          {quick ? "Ajouter maintenant" : "Ajouter une visite"}
         </h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          Choisissez la pharmacie, le créneau et l’objectif. La visite apparaîtra immédiatement dans votre Agenda.
+          {quick
+            ? "Choisissez la pharmacie et le type de visite. TR1 l’ajoute immédiatement à votre journée."
+            : "Choisissez la pharmacie, le créneau et l’objectif. La visite apparaîtra immédiatement dans votre Agenda."}
         </p>
       </header>
 
@@ -105,6 +111,7 @@ export default async function NewAgendaVisitPage({
         defaultPharmacyId={requestedPharmacyId}
         defaultBrandId={requestedBrandId}
         defaultObjective={requestedObjective}
+        quick={quick}
       />
     </main>
   );
