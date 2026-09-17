@@ -9,6 +9,7 @@
   "packageManager": "npm@11.9.0",
   "scripts": {
     "dev": "next dev --webpack -p 3001",
+    "prebuild": "node scripts/prebuild-security.mjs",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
@@ -28,6 +29,7 @@
     "benchmark:sprint11": "sh scripts/benchmark-sprint11.sh",
     "security:secrets": "sh scripts/check-secrets.sh",
     "security:release": "sh scripts/check-release-config.sh",
+    "security:production-seeds": "node scripts/check-production-seed-accounts.mjs",
     "staging:check-env": "node scripts/check-staging-env.mjs",
     "staging:smoke": "node scripts/smoke-staging.mjs",
     "staging:reset-demo": "sh scripts/reset-demo-environment.sh",
@@ -58,7 +60,6 @@
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
-    "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.12",
     "shadcn": "^4.13.1",
