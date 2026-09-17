@@ -186,7 +186,7 @@ test("parcours complet animation Sprint 5 avec vérification en base", async ({ 
   await tr1Page.locator('input[name="quantity"]').fill("2");
   await tr1Page.locator('input[name="unitPriceHt"]').fill("18.50");
   await tr1Page.getByRole("button", { name: "Créer la commande" }).click();
-  await expect(tr1Page.getByText("Commande créée et indicateurs recalculés.")).toBeVisible();
+  await expect(tr1Page.getByRole("heading", { name: "Commande validée et envoyée" })).toBeVisible();
 
   const { data: createdOrder, error: createdOrderError } = await admin
     .from("orders")
