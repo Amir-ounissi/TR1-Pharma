@@ -58,7 +58,8 @@ describe("buildTr1OrderPdf", () => {
     expect(content).toContain("6467333");
     expect(content).toContain("7629999810969");
     expect(content).toContain("PCB : 1");
-    expect(content).toContain("UG offerte(s)");
+    expect(content).toContain("Ashwagandha KSM-66 - UG");
+    expect(content).toContain("offerte\\(s\\)");
     expect(content).toContain("100 %");
   });
 
@@ -89,7 +90,8 @@ describe("buildTr1OrderPdf", () => {
     });
 
     const content = buildTr1OrderPdf(input).toString("latin1");
-    expect(content).not.toContain("UG offerte(s)");
+    expect(content).not.toContain("Ashwagandha KSM-66 - UG");
+    expect(content).not.toContain("offerte\\(s\\)");
     expect(content).not.toContain("100 %");
   });
 
