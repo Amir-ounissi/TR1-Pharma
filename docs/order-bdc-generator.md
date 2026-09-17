@@ -2,88 +2,82 @@
 
 ## Objectif
 
-TR1 Pharma transforme une commande validée en bon de commande fournisseur homogène, multi-marques et directement exploitable par la marque.
+Transformer une commande pharmacie en un bon de commande fournisseur standardisé, multi-marques et généré avec la charte TR1 Pharma.
 
-Le PDF final utilise la charte graphique TR1 Pharma et doit rester une représentation fidèle des données commerciales validées dans la commande.
+Le PDF est une sortie du workflow commande. Il ne doit jamais devenir une source de données indépendante ni modifier silencieusement les conditions commerciales saisies ou validées.
 
 ## Workflow cible
 
-1. Import ou saisie de la commande.
-2. Analyse et rapprochement de la pharmacie et des produits.
-3. Contrôle humain des lignes, quantités, UG, remises et prix.
-4. Validation de la commande.
-5. Génération du bon de commande dans la charte TR1.
-6. Prévisualisation du PDF final dans TR1.
-7. Validation explicite « J’ai vérifié le bon de commande ».
-8. Transmission à la marque.
-9. Archivage dans TR1 et poursuite du suivi de la commande.
+1. Importer ou saisir la commande pharmacie.
+2. Extraire et rapprocher la pharmacie et les produits du référentiel de la marque.
+3. Présenter un écran de contrôle avant validation.
+4. Permettre un enrichissement commercial explicite (UG, remise, quantité, prix), jamais automatique sans validation utilisateur.
+5. Enregistrer la commande validée.
+6. Générer le BDC fournisseur avec la charte TR1 Pharma.
+7. Prévisualiser/télécharger le PDF avant envoi.
+8. Confirmer explicitement « J’ai vérifié le bon de commande ».
+9. Envoyer et journaliser la transmission à la marque.
 
-## Principe d’intégrité
+## Règles d'intégrité
 
-La génération du PDF ne modifie jamais silencieusement la commande.
+- Les quantités facturées enregistrées dans la commande sont la source du BDC.
+- Les UG du BDC proviennent uniquement des `free_quantity` validées.
+- Les remises du BDC proviennent uniquement des remises enregistrées sur les lignes.
+- Le prix affiché utilise le snapshot de la ligne de commande, pas le tarif courant du catalogue.
+- Aucun mécanisme commercial ne doit être appliqué silencieusement lors de la génération PDF.
+- EAN et PCB peuvent être enrichis depuis le référentiel produit pour l'affichage du document ; cet enrichissement ne doit pas modifier la commande.
+- Une commande sans ligne produit ne produit pas de BDC final.
+- La prévisualisation et la pièce jointe envoyée passent par le même mapper de données PDF.
 
-Les champs suivants proviennent de la commande validée :
+## Template BDC TR1
 
-- quantités facturées ;
-- quantités gratuites ;
-- prix unitaires HT ;
-- remises ;
-- taux de TVA ;
-- totaux HT et TTC.
+Le template reste commun à toutes les marques :
 
-Une offre commerciale connue de TR1 peut être proposée pendant la phase de contrôle, mais elle ne peut être appliquée qu’après action explicite de l’utilisateur.
-
-Le rendu PDF peut enrichir le document avec des métadonnées du référentiel produit qui ne modifient pas la commande :
-
-- EAN / code-barres ;
-- référence produit ;
-- PCB ;
-- désignation catalogue.
-
-## Template BDC
-
-Le générateur est multi-marques. Il ne doit pas contenir de logique spécifique à VK Swiss.
-
-Le squelette commun comprend :
-
-- identité TR1 Pharma ;
-- marque concernée ;
-- identité du commercial ;
-- numéro et date du bon de commande ;
-- informations pharmacie ;
-- tableau produits ;
+- logo et signature TR1 Pharma ;
+- marque concernée et email commandes ;
+- référence du BDC et date ;
+- bloc client/pharmacie ;
+- bloc marque/commercial avec nom du commercial quand son profil le fournit, puis son email ;
+- tableau produits avec code-barres EAN, référence, désignation, quantité, PU HT, remise, PU net et total HT ;
 - lignes UG distinctes ;
-- récapitulatif des quantités ;
+- PCB et TVA en information secondaire ;
+- récapitulatif des lignes, quantités facturées et UG ;
 - sous-total HT, remises, net HT, TVA et total TTC ;
-- pagination et référence du BDC en pied de page.
+- pagination et footer TR1.
 
-Les données propres à une marque sont injectées dynamiquement depuis son contexte TR1.
+La marque fournit les données dynamiques ; elle ne possède pas un template PDF spécifique. Cela garantit un générateur réellement multi-marques.
 
-## Prévisualisation avant envoi
+## État du chantier
 
-La transmission ne doit jamais partir immédiatement après génération du PDF.
+Le socle existe déjà dans TR1 : import PDF/photo, rapprochement pharmacie/produits, validation de commande, renderer PDF TR1, prévisualisation et transmission Gmail.
 
-Dans la carte « Transmission de la commande », TR1 affiche le BDC final dans une prévisualisation PDF intégrée. L’utilisateur peut également ouvrir le même PDF dans un nouvel onglet pour un contrôle plein écran.
+Cette branche consolide ce socle au lieu de créer un second workflow parallèle. La prévisualisation est intégrée avant envoi, l'envoi Gmail reste bloqué jusqu'à validation explicite du document, et le rendu aperçu/envoyé utilise désormais le même mapper de données.
 
-Le bouton d’envoi reste désactivé tant que :
+## Critères d'acceptation MVP
 
-- les prérequis de transmission ne sont pas complets ;
-- l’utilisateur n’a pas coché « J’ai vérifié le bon de commande ».
-
-La prévisualisation et la pièce jointe envoyée doivent utiliser les mêmes données. L’email transmis à la marque reçoit donc le même BDC que celui contrôlé à l’écran, y compris les métadonnées produit EAN et PCB.
+- Le même renderer fonctionne pour VK Swiss, Naali ou toute autre marque configurée.
+- La prévisualisation PDF affiche l'EAN/code-barres quand il existe dans le catalogue.
+- Le PCB est affiché quand il existe.
+- Quantités, UG, prix et remises du PDF correspondent exactement aux valeurs de la commande validée.
+- Le total du document repose sur les totaux de la commande enregistrée.
+- Le document peut être prévisualisé avant transmission.
+- L'envoi reste désactivé tant que le commercial n'a pas confirmé avoir vérifié le BDC.
+- Le PDF envoyé à la marque et le PDF prévisualisé reposent sur le même renderer et le même mapper de données.
+- L'identité du commercial reprend son nom de profil lorsqu'il existe, avec son email en solution de repli.
 
 ## Tests de non-régression
 
-Le renderer PDF est couvert sur les invariants suivants :
+Le chantier couvre désormais :
 
-- présence des informations de commande, marque et pharmacie ;
-- présence de la référence produit, de l’EAN et du PCB quand ils existent ;
-- affichage d’une ligne UG uniquement si une quantité gratuite a été validée ;
-- absence d’UG inventée lorsque `freeQuantity = 0` ;
-- pagination des commandes longues tout en conservant la référence du BDC.
+- contenu et métadonnées principales du PDF ;
+- EAN/code-barres et PCB ;
+- génération des UG uniquement quand elles existent ;
+- pagination des commandes longues ;
+- intégrité du payload commercial : quantités, UG, prix, remises et totaux sont recopiés sans recalcul métier silencieux ;
+- scénario de référence à six lignes avec quantité 8, zéro UG et total HT enregistré à 884 €.
 
-## Règle produit
+## Suite prévue
 
-Le PDF est une sortie du workflow de commande, pas une deuxième source de vérité.
-
-La source de vérité reste la commande enregistrée et validée dans TR1 Pharma.
+- Faire passer l'ensemble de la CI sur le dernier commit.
+- Ajouter un contrôle visuel/snapshot du template BDC si le pipeline le permet sans rendre les tests instables.
+- Effectuer un contrôle fonctionnel final sur une vraie commande avant passage de la PR en ready.
