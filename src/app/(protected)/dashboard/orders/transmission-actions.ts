@@ -28,6 +28,10 @@ function safeFileName(value: string) {
     .slice(0, 120) || "document";
 }
 
+function commercialLabel(fullName?: string | null, email?: string | null) {
+  return [fullName?.trim(), email?.trim()].filter(Boolean).join(" · ") || null;
+}
+
 async function requireTransmissionOrder(orderId: string) {
   const { supabase, brand, userId } = await requireActiveBrand();
   const contexts = await getBrandContexts();
@@ -153,6 +157,7 @@ export async function sendOrderByEmailAction(
     }
 
     const admin = createAdminClient();
+    const creatorId = order.created_by || userId;
     const [
       { data: brandData, error: brandError },
       { data: pharmacy, error: pharmacyError },
@@ -160,13 +165,15 @@ export async function sendOrderByEmailAction(
       { data: documents, error: documentsError },
       { data: gmail, error: gmailError },
       { data: creator },
+      { data: creatorProfile },
     ] = await Promise.all([
       supabase.from("brands").select("name,code,order_email").eq("id", brand.id).single(),
       supabase.from("pharmacies").select("legal_name,trade_name,cip_code,siret,vat_number,email,phone,address_line_1,address_line_2,postal_code,city").eq("id", order.pharmacy_id).single(),
       supabase.from("order_items").select("product_id,product_name_snapshot,sku_snapshot,quantity,free_quantity,unit_price_ht,discount_rate,net_unit_price_ht,line_total_ht,tax_rate").eq("order_id", order.id).order("created_at"),
       admin.from("pharmacy_documents").select("document_type,file_name,content_type,object_path").eq("brand_id", brand.id).eq("pharmacy_id", order.pharmacy_id),
       admin.from("user_gmail_connections").select("email,refresh_token_ciphertext").eq("user_id", userId).maybeSingle(),
-      admin.from("users").select("email").eq("id", order.created_by || userId).maybeSingle(),
+      admin.from("users").select("email").eq("id", creatorId).maybeSingle(),
+      admin.from("user_profiles").select("full_name").eq("user_id", creatorId).maybeSingle(),
     ]);
     if (brandError || pharmacyError || itemsError || documentsError || gmailError || !brandData || !pharmacy) {
       throw new Error("Impossible de préparer les données de transmission.");
@@ -205,7 +212,7 @@ export async function sendOrderByEmailAction(
       pharmacy,
       items: items ?? [],
       products: products ?? [],
-      commercialEmail: creator?.email || gmail!.email,
+      commercialEmail: commercialLabel(creatorProfile?.full_name, creator?.email || gmail!.email),
     });
     const reference = pdfPayload.reference;
     const pharmacyName = pdfPayload.pharmacy.name;
