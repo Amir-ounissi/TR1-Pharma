@@ -24,33 +24,28 @@ select ok(
   'anonymous users cannot execute canonical visit closeout'
 );
 
-select like(
-  pg_get_functiondef('public.close_field_visit(uuid,jsonb)'::regprocedure),
-  '%field_visit_id%',
+select ok(
+  pg_get_functiondef('public.close_field_visit(uuid,jsonb)'::regprocedure) like '%field_visit_id%',
   'canonical closeout links created interactions to the visit'
 );
 
-select like(
-  pg_get_functiondef('public.close_field_visit(uuid,jsonb)'::regprocedure),
-  '%interactions%',
+select ok(
+  pg_get_functiondef('public.close_field_visit(uuid,jsonb)'::regprocedure) like '%interactions%',
   'canonical closeout returns interaction references for evidence persistence'
 );
 
-select like(
-  pg_get_functiondef('public.complete_field_visit(uuid,text,timestamp with time zone)'::regprocedure),
-  '%close_field_visit%',
+select ok(
+  pg_get_functiondef('public.complete_field_visit(uuid,text,timestamp with time zone)'::regprocedure) like '%close_field_visit%',
   'legacy completion delegates to the canonical closeout RPC'
 );
 
-select like(
-  pg_get_functiondef('public.start_field_visit(uuid)'::regprocedure),
-  '%actual_start_at%',
+select ok(
+  pg_get_functiondef('public.start_field_visit(uuid)'::regprocedure) like '%actual_start_at%',
   'visit start keeps legacy and canonical start timestamps aligned'
 );
 
-select like(
-  pg_get_functiondef('public.close_field_visit(uuid,jsonb)'::regprocedure),
-  '%actual_end_at%',
+select ok(
+  pg_get_functiondef('public.close_field_visit(uuid,jsonb)'::regprocedure) like '%actual_end_at%',
   'visit closeout keeps legacy and canonical end timestamps aligned'
 );
 
