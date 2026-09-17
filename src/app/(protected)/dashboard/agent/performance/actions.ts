@@ -57,6 +57,7 @@ export async function savePersonalMonthlyTargetAction(
 
     revalidatePath("/dashboard/agent");
     revalidatePath("/dashboard/agent/performance");
+    revalidatePath("/dashboard/agent/settings");
 
     return { success: "Objectif personnel enregistré." };
   } catch (error) {

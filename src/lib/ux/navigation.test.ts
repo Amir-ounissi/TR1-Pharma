@@ -7,7 +7,7 @@ describe("role navigation", () => {
     expect(links).toContain("/dashboard/agent");
     expect(links).toEqual(["/dashboard/agent", "/dashboard/pharmacies", "/dashboard/orders", "/dashboard/agent/performance", "/dashboard/agent/more"]);
     expect(links).not.toContain("/dashboard/missions");
-    expect(getAgentMoreItems().map((item) => item.href)).toEqual(["/dashboard/agent/performance", "/dashboard/products", "/dashboard/missions", "/dashboard/tasks", "/dashboard/sell-out", "/dashboard/reports", "/dashboard/agent/assistant"]);
+    expect(getAgentMoreItems().map((item) => item.href)).toEqual(["/dashboard/agent/performance", "/dashboard/products", "/dashboard/missions", "/dashboard/tasks", "/dashboard/sell-out", "/dashboard/reports", "/dashboard/agent/assistant", "/dashboard/agent/settings"]);
     expect(links).not.toContain("/dashboard/users");
     expect(links).not.toContain("/dashboard/subscription");
     expect(links).not.toContain("/dashboard/admin/onboarding");
@@ -97,6 +97,7 @@ describe("role navigation", () => {
     expect(agentLinks).toContain("/dashboard/agent/performance");
     expect(agentMoreLinks).toContain("/dashboard/missions");
     expect(agentMoreLinks).toContain("/dashboard/agent/performance");
+    expect(agentMoreLinks).toContain("/dashboard/agent/settings");
     expect(agentMoreLinks).not.toContain("/dashboard/agenda");
     expect(agentMoreLinks).not.toContain("/dashboard/sell-out");
     expect(agentMoreLinks).not.toContain("/dashboard/agent/assistant");
