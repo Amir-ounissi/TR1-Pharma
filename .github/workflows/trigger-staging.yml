@@ -1,0 +1,43 @@
+name: Trigger staging release
+
+on:
+  push:
+    branches:
+      - staging-release
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  dispatch:
+    name: Déclencher Release staging
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vérifier que le SHA appartient à main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          set -eu
+          git init repo
+          cd repo
+          git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          git fetch --depth=1 origin main
+          git fetch --depth=1 origin "$RELEASE_SHA"
+          git merge-base --is-ancestor "$RELEASE_SHA" origin/main || {
+            echo "::error::Le SHA staging-release n'est pas le SHA de main."
+            exit 1
+          }
+
+      - name: Déclencher le workflow staging uniquement
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          set -eu
+          gh workflow run release-staging.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref main \
+            -f release_sha="$RELEASE_SHA"
+          echo "Release staging demandée pour $RELEASE_SHA."
