@@ -1,0 +1,27 @@
+name: Trigger staging release v2
+
+on:
+  push:
+    branches:
+      - staging-release
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  dispatch:
+    name: Déclencher Release staging
+    runs-on: ubuntu-latest
+    steps:
+      - name: Déclencher le workflow staging uniquement
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          set -eu
+          gh workflow run release-staging.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref main \
+            -f release_sha="$RELEASE_SHA"
+          echo "Release staging demandée pour $RELEASE_SHA."
