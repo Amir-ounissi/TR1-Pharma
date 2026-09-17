@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import {
   disconnectGmailAction,
@@ -72,9 +72,13 @@ export function OrderEmailTransmissionCard({
   const [kbisState, kbisAction, kbisPending] = useActionState(uploadPharmacyDocumentAction, initialState);
   const [ribState, ribAction, ribPending] = useActionState(uploadPharmacyDocumentAction, initialState);
   const [sendState, sendAction, sendPending] = useActionState(sendOrderByEmailAction, initialState);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewConfirmed, setPreviewConfirmed] = useState(false);
 
   const ready = Boolean(gmailEmail && recipientEmail && vatNumber && hasKbis && hasRib);
+  const canSend = ready && previewConfirmed;
   const returnTo = `/dashboard/orders/${orderId}`;
+  const pdfUrl = `/api/orders/${orderId}/pdf`;
 
   return (
     <Card>
@@ -83,10 +87,12 @@ export function OrderEmailTransmissionCard({
           <div>
             <CardTitle>Transmission de la commande</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
-              Contrôle des pièces, génération du bon de commande puis envoi depuis votre Gmail.
+              Contrôle des pièces, prévisualisation obligatoire du bon de commande puis envoi depuis votre Gmail.
             </p>
           </div>
-          <Badge variant={ready ? "default" : "outline"}>{ready ? "Prête à envoyer" : "Préparation"}</Badge>
+          <Badge variant={canSend ? "default" : "outline"}>
+            {canSend ? "Prête à envoyer" : ready ? "BDC à vérifier" : "Préparation"}
+          </Badge>
         </div>
       </CardHeader>
 
@@ -97,7 +103,7 @@ export function OrderEmailTransmissionCard({
           <Requirement ready={Boolean(vatNumber)} label="N° TVA pharmacie" />
           <Requirement ready={hasKbis} label="KBIS" />
           <Requirement ready={hasRib} label="RIB" />
-          <Requirement ready label="Bon de commande PDF" />
+          <Requirement ready={previewConfirmed} label="Bon de commande vérifié" />
         </div>
 
         <div className="space-y-3 rounded-xl border p-4">
@@ -159,22 +165,74 @@ export function OrderEmailTransmissionCard({
           </form>
         </div>
 
-        <div className="space-y-3 rounded-xl border bg-muted/20 p-4 text-sm">
-          <p className="font-medium">Prévisualisation</p>
-          <p><span className="text-muted-foreground">À :</span> {recipientEmail || "Non configuré dans la marque"}</p>
-          <p><span className="text-muted-foreground">Objet :</span> {previewSubject}</p>
-          <p><span className="text-muted-foreground">Pièces jointes :</span> bon de commande PDF, KBIS, RIB</p>
-          <Button asChild variant="outline" size="sm">
-            <a href={`/api/orders/${orderId}/pdf`} target="_blank" rel="noreferrer">Voir le bon de commande</a>
-          </Button>
+        <div className="space-y-4 rounded-xl border bg-muted/20 p-4 text-sm">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="font-medium">Prévisualisation avant envoi</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Vérifiez le document exact qui sera joint à l’email avant d’autoriser l’envoi.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setPreviewOpen((open) => !open)}
+            >
+              {previewOpen ? "Masquer le BDC" : "Prévisualiser le BDC"}
+            </Button>
+          </div>
+
+          <div className="grid gap-2">
+            <p><span className="text-muted-foreground">À :</span> {recipientEmail || "Non configuré dans la marque"}</p>
+            <p><span className="text-muted-foreground">Objet :</span> {previewSubject}</p>
+            <p><span className="text-muted-foreground">Pièces jointes :</span> bon de commande PDF, KBIS, RIB</p>
+          </div>
+
+          {previewOpen ? (
+            <div className="space-y-3">
+              <div className="overflow-hidden rounded-lg border bg-background">
+                <iframe
+                  src={pdfUrl}
+                  title="Prévisualisation du bon de commande"
+                  className="h-[680px] w-full"
+                />
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <a
+                  href={pdfUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm font-medium underline underline-offset-4"
+                >
+                  Ouvrir le PDF dans un nouvel onglet
+                </a>
+                <label className="flex cursor-pointer items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    checked={previewConfirmed}
+                    onChange={(event) => setPreviewConfirmed(event.target.checked)}
+                    className="h-4 w-4"
+                  />
+                  J’ai vérifié le bon de commande
+                </label>
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <form action={sendAction} className="space-y-2">
           <input type="hidden" name="orderId" value={orderId} />
-          <Button type="submit" disabled={!ready || sendPending} className="w-full sm:w-auto">
+          <Button type="submit" disabled={!canSend || sendPending} className="w-full sm:w-auto">
             {sendPending ? "Envoi en cours…" : "Envoyer la commande par Gmail"}
           </Button>
-          <p className="text-xs text-muted-foreground">Aucun envoi automatique : cette action nécessite votre clic.</p>
+          <p className="text-xs text-muted-foreground">
+            {!ready
+              ? "Complétez les éléments manquants avant l’envoi."
+              : !previewConfirmed
+                ? "Prévisualisez puis validez le bon de commande pour activer l’envoi."
+                : "Aucun envoi automatique : cette action nécessite votre clic."}
+          </p>
           <Feedback state={sendState} />
         </form>
 
