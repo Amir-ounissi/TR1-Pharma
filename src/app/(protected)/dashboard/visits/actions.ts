@@ -2,12 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { createQuickNoteAction } from "@/app/(protected)/dashboard/pharmacies/quick-actions";
 import { requireCompletedOnboarding } from "@/lib/auth";
 import { parisLocalToIso } from "@/lib/agenda";
 
 export type VisitCloseoutActionState = {
   error?: string;
   success?: string;
+  warning?: string;
 };
 
 const uuid = z.string().uuid();
@@ -49,6 +51,11 @@ export async function closeFieldVisitAction(
       inputMode: z.enum(["manual", "dictation", "assistant"]).default("manual"),
     }).parse(Object.fromEntries(formData));
 
+    const photos = formData
+      .getAll("photos")
+      .filter((entry): entry is File => entry instanceof File && entry.size > 0)
+      .slice(0, 3);
+
     const nextVisitAt = parsed.nextVisitAt?.trim()
       ? parisLocalToIso(parsed.nextVisitAt)
       : null;
@@ -67,14 +74,56 @@ export async function closeFieldVisitAction(
     });
     if (error) throw error;
 
+    let photoResult: Awaited<ReturnType<typeof createQuickNoteAction>> | null = null;
+    let brandPharmacyId: string | null = null;
+
+    if (photos.length > 0) {
+      const { data: visitBrand, error: visitBrandError } = await supabase
+        .from("field_visit_brands")
+        .select("brand_pharmacy_id,is_primary")
+        .eq("visit_id", parsed.visitId)
+        .not("brand_pharmacy_id", "is", null)
+        .order("is_primary", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!visitBrandError && visitBrand?.brand_pharmacy_id) {
+        brandPharmacyId = visitBrand.brand_pharmacy_id;
+        const noteData = new FormData();
+        noteData.set("brandPharmacyId", brandPharmacyId);
+        noteData.set("fieldVisitId", parsed.visitId);
+        noteData.set("notes", parsed.summary);
+        photos.forEach((photo) => noteData.append("photos", photo, photo.name));
+        photoResult = await createQuickNoteAction(noteData);
+      } else {
+        photoResult = { error: "Impossible de rattacher les photos à la pharmacie." };
+      }
+    }
+
     revalidatePath(`/dashboard/visits/${parsed.visitId}`);
     revalidatePath("/dashboard/agenda");
     revalidatePath("/dashboard/agent");
+    revalidatePath("/dashboard/agent/closeouts");
     revalidatePath("/dashboard/pharmacies");
+    if (brandPharmacyId) {
+      revalidatePath(`/dashboard/pharmacies/${brandPharmacyId}`);
+      revalidatePath(`/dashboard/pharmacies/${brandPharmacyId}/notes`);
+    }
+
+    const success = nextVisitAt
+      ? "Visite clôturée et prochaine visite ajoutée à l’Agenda."
+      : "Visite clôturée.";
+
+    if (photoResult?.error) {
+      return {
+        success,
+        warning: `La visite est bien clôturée, mais les photos n’ont pas pu être enregistrées : ${photoResult.error}`,
+      };
+    }
+
     return {
-      success: nextVisitAt
-        ? "Visite clôturée et prochaine visite ajoutée à l’Agenda."
-        : "Visite clôturée.",
+      success: photoResult?.success ? `${success} ${photoResult.success}` : success,
+      warning: photoResult?.warning,
     };
   } catch (error) {
     return {
