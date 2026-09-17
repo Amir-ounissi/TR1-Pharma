@@ -74,7 +74,8 @@ Le chantier couvre désormais :
 - génération des UG uniquement quand elles existent ;
 - pagination des commandes longues ;
 - intégrité du payload commercial : quantités, UG, prix, remises et totaux sont recopiés sans recalcul métier silencieux ;
-- scénario de référence à six lignes avec quantité 8, zéro UG et total HT enregistré à 884 €.
+- scénario de référence à six lignes avec quantité 8, zéro UG et total HT enregistré à 884 € ;
+- conservation de l'identité commerciale transmise au rendu PDF.
 
 ## Suite prévue
 
