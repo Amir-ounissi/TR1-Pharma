@@ -33,20 +33,19 @@ export default async function OrderConfirmationPage({
     pharmacy?.trade_name || pharmacy?.legal_name || "la pharmacie";
   const reference =
     order.order_number || order.external_order_id || `Commande ${order.id.slice(0, 8)}`;
+  const isPending = order.order_status === "pending";
 
-  const title =
-    order.order_status === "pending"
-      ? "Commande envoyée à la marque"
-      : order.order_status === "draft"
-        ? "Commande enregistrée en brouillon"
-        : "Commande validée et envoyée";
+  const title = isPending
+    ? "Commande prête à transmettre"
+    : order.order_status === "draft"
+      ? "Commande enregistrée en brouillon"
+      : "Commande validée";
 
-  const description =
-    order.order_status === "pending"
-      ? `La commande pour ${pharmacyName} a bien été enregistrée et transmise à la marque.`
-      : order.order_status === "draft"
-        ? `Le brouillon pour ${pharmacyName} a bien été enregistré.`
-        : `La commande pour ${pharmacyName} a bien été enregistrée et transmise.`;
+  const description = isPending
+    ? `La commande pour ${pharmacyName} est bien enregistrée dans TR1. Vérifiez maintenant le bon de commande puis envoyez-le réellement par email à la marque.`
+    : order.order_status === "draft"
+      ? `Le brouillon pour ${pharmacyName} a bien été enregistré.`
+      : `La commande pour ${pharmacyName} a bien été enregistrée.`;
 
   return (
     <div className="mx-auto flex min-h-[60vh] w-full max-w-2xl items-center py-4 sm:py-10">
@@ -77,33 +76,64 @@ export default async function OrderConfirmationPage({
             </p>
           </div>
 
-          <div className="mt-7 grid gap-3 sm:grid-cols-2">
-            <Button
-              asChild
-              className="h-12 rounded-xl bg-[var(--tr1-navy)] text-white hover:bg-[var(--tr1-navy-soft)]"
-            >
-              <Link href="/dashboard">
-                <Home className="size-4" />
-                Retour au tableau de bord
-              </Link>
-            </Button>
-
-            {order.brand_pharmacy_id ? (
-              <Button asChild variant="outline" className="h-12 rounded-xl">
-                <Link href={`/dashboard/pharmacies/${order.brand_pharmacy_id}`}>
-                  <Store className="size-4" />
-                  Voir la pharmacie
+          {isPending ? (
+            <div className="mt-7 grid gap-3 sm:grid-cols-2">
+              <Button
+                asChild
+                className="h-12 rounded-xl bg-[var(--tr1-navy)] text-white hover:bg-[var(--tr1-navy-soft)]"
+              >
+                <Link href={`/dashboard/orders/${order.id}#transmission-commande`}>
+                  <ClipboardList className="size-4" />
+                  Prévisualiser et envoyer le BDC
                 </Link>
               </Button>
-            ) : null}
-          </div>
+              <Button asChild variant="outline" className="h-12 rounded-xl">
+                <Link href="/dashboard">
+                  <Home className="size-4" />
+                  Retour au tableau de bord
+                </Link>
+              </Button>
+            </div>
+          ) : (
+            <div className="mt-7 grid gap-3 sm:grid-cols-2">
+              <Button
+                asChild
+                className="h-12 rounded-xl bg-[var(--tr1-navy)] text-white hover:bg-[var(--tr1-navy-soft)]"
+              >
+                <Link href="/dashboard">
+                  <Home className="size-4" />
+                  Retour au tableau de bord
+                </Link>
+              </Button>
 
-          <Button asChild variant="ghost" className="mt-3 h-11 rounded-xl">
-            <Link href={`/dashboard/orders/${order.id}`}>
-              <ClipboardList className="size-4" />
-              Voir le détail de la commande
-            </Link>
-          </Button>
+              {order.brand_pharmacy_id ? (
+                <Button asChild variant="outline" className="h-12 rounded-xl">
+                  <Link href={`/dashboard/pharmacies/${order.brand_pharmacy_id}`}>
+                    <Store className="size-4" />
+                    Voir la pharmacie
+                  </Link>
+                </Button>
+              ) : null}
+            </div>
+          )}
+
+          {isPending && order.brand_pharmacy_id ? (
+            <Button asChild variant="ghost" className="mt-3 h-11 rounded-xl">
+              <Link href={`/dashboard/pharmacies/${order.brand_pharmacy_id}`}>
+                <Store className="size-4" />
+                Voir la pharmacie
+              </Link>
+            </Button>
+          ) : null}
+
+          {!isPending ? (
+            <Button asChild variant="ghost" className="mt-3 h-11 rounded-xl">
+              <Link href={`/dashboard/orders/${order.id}`}>
+                <ClipboardList className="size-4" />
+                Voir le détail de la commande
+              </Link>
+            </Button>
+          ) : null}
         </CardContent>
       </Card>
     </div>
