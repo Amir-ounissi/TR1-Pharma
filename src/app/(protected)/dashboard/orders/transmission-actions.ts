@@ -162,7 +162,7 @@ export async function sendOrderByEmailAction(
     ] = await Promise.all([
       supabase.from("brands").select("name,code,order_email").eq("id", brand.id).single(),
       supabase.from("pharmacies").select("legal_name,trade_name,cip_code,siret,vat_number,email,phone,address_line_1,address_line_2,postal_code,city").eq("id", order.pharmacy_id).single(),
-      supabase.from("order_items").select("product_name_snapshot,sku_snapshot,quantity,free_quantity,unit_price_ht,discount_rate,net_unit_price_ht,line_total_ht,tax_rate").eq("order_id", order.id).order("created_at"),
+      supabase.from("order_items").select("product_id,product_name_snapshot,sku_snapshot,quantity,free_quantity,unit_price_ht,discount_rate,net_unit_price_ht,line_total_ht,tax_rate").eq("order_id", order.id).order("created_at"),
       admin.from("pharmacy_documents").select("document_type,file_name,content_type,object_path").eq("brand_id", brand.id).eq("pharmacy_id", order.pharmacy_id),
       admin.from("user_gmail_connections").select("email,refresh_token_ciphertext").eq("user_id", userId).maybeSingle(),
       admin.from("users").select("email").eq("id", order.created_by || userId).maybeSingle(),
@@ -182,6 +182,23 @@ export async function sendOrderByEmailAction(
     if (!gmail) missing.push("connexion Gmail");
     if (!(items ?? []).length) missing.push("lignes de commande");
     if (missing.length) return { error: `Transmission bloquée : ${missing.join(", ")}.` };
+
+    const productIds = [
+      ...new Set(
+        (items ?? [])
+          .map((item) => item.product_id)
+          .filter((productId): productId is string => Boolean(productId)),
+      ),
+    ];
+    const { data: products, error: productsError } = productIds.length
+      ? await supabase
+          .from("products")
+          .select("id,ean,units_per_case")
+          .eq("brand_id", brand.id)
+          .in("id", productIds)
+      : { data: [], error: null };
+    if (productsError) throw new Error("Impossible de charger le référentiel produits du bon de commande.");
+    const productById = new Map((products ?? []).map((product) => [product.id, product]));
 
     const reference = order.order_number || order.external_order_id || order.id.slice(0, 8);
     const subject = `Commande ${brandData!.name} · ${pharmacyName} · ${reference}`;
@@ -218,17 +235,22 @@ export async function sendOrderByEmailAction(
         siret: pharmacy!.siret,
         vatNumber: pharmacy!.vat_number,
       },
-      items: (items ?? []).map((item) => ({
-        reference: item.sku_snapshot,
-        designation: item.product_name_snapshot,
-        quantity: item.quantity,
-        freeQuantity: item.free_quantity,
-        unitPriceHt: item.unit_price_ht,
-        discountRate: item.discount_rate,
-        netUnitPriceHt: item.net_unit_price_ht,
-        lineTotalHt: item.line_total_ht,
-        taxRate: item.tax_rate,
-      })),
+      items: (items ?? []).map((item) => {
+        const product = item.product_id ? productById.get(item.product_id) : undefined;
+        return {
+          reference: item.sku_snapshot,
+          ean: product?.ean ?? null,
+          designation: item.product_name_snapshot,
+          quantity: item.quantity,
+          freeQuantity: item.free_quantity,
+          unitPriceHt: item.unit_price_ht,
+          discountRate: item.discount_rate,
+          netUnitPriceHt: item.net_unit_price_ht,
+          lineTotalHt: item.line_total_ht,
+          taxRate: item.tax_rate,
+          unitsPerCase: product?.units_per_case ?? null,
+        };
+      }),
       totals: {
         subtotalHt: order.subtotal_ht,
         discountAmountHt: order.discount_amount_ht,
