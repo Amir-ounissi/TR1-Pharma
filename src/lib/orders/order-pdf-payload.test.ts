@@ -49,7 +49,7 @@ function buildValentineFixture(): BuildOrderPdfPayloadInput {
       { id: "product-1", ean: "3760000000010", units_per_case: 6 },
       { id: "product-2", ean: "3760000000027", units_per_case: 12 },
     ],
-    commercialEmail: "amir@example.test",
+    commercialEmail: "Amir Ounissi · amir@example.test",
   };
 }
 
@@ -61,6 +61,7 @@ describe("buildOrderPdfPayload", () => {
     expect(payload.reference).toBe("155860");
     expect(payload.pharmacy.name).toBe("Grande Pharmacie de la Valentine");
     expect(payload.brandName).toBe("VK Swiss");
+    expect(payload.commercialEmail).toBe("Amir Ounissi · amir@example.test");
     expect(payload.items).toHaveLength(6);
     expect(payload.items.map((item) => item.quantity)).toEqual([8, 8, 8, 8, 8, 8]);
     expect(payload.items.map((item) => item.freeQuantity)).toEqual([0, 0, 0, 0, 0, 0]);
