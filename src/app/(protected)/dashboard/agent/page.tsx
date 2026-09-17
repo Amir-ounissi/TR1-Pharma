@@ -96,6 +96,7 @@ export default async function AgentPage() {
     monthOverviewResult,
     monthObjectivesResult,
     monthOrdersResult,
+    personalTargetResult,
   ] = await Promise.all([
     supabase.rpc("get_agent_today", { target_brand_id: brand.id, target_date: today }),
     supabase.rpc("get_next_agent_visit", { target_brand_id: brand.id }),
@@ -149,6 +150,13 @@ export default async function AgentPage() {
       .eq("agent_user_id_at_order", userId)
       .gte("order_date", `${monthStart}T00:00:00.000Z`)
       .lt("order_date", `${nextIsoDate(today)}T00:00:00.000Z`),
+    supabase
+      .from("agent_personal_monthly_targets")
+      .select("revenue_target_ht")
+      .eq("brand_id", brand.id)
+      .eq("user_id", userId)
+      .eq("month_start", monthStart)
+      .maybeSingle(),
   ]);
 
   if (multibrandFieldAgendaResult.error) throw new Error(multibrandFieldAgendaResult.error.message);
@@ -156,6 +164,10 @@ export default async function AgentPage() {
   if (activeFieldAgendaResult.error) throw new Error(activeFieldAgendaResult.error.message);
   if (multibrandDayResult.error) throw new Error(multibrandDayResult.error.message);
   if (multibrandNextVisitResult.error) throw new Error(multibrandNextVisitResult.error.message);
+  if (monthOverviewResult.error) throw new Error(monthOverviewResult.error.message);
+  if (monthObjectivesResult.error) throw new Error(monthObjectivesResult.error.message);
+  if (monthOrdersResult.error) throw new Error(monthOrdersResult.error.message);
+  if (personalTargetResult.error) throw new Error(personalTargetResult.error.message);
 
   const day = (agenda ?? { tasks: [], missions: [], reports: [], follow_ups: [] }) as AgentTodayData;
   const visit = nextVisit as AgentNextVisit | null;
@@ -226,8 +238,18 @@ export default async function AgentPage() {
   const revenueObjective = ((monthObjectivesResult.data ?? []) as ObjectiveProgressRow[]).find(
     (objective) => objective.metric_key === "revenue_ht",
   );
+  const personalMonthTarget = personalTargetResult.data?.revenue_target_ht == null
+    ? null
+    : Number(personalTargetResult.data.revenue_target_ht);
   const monthRevenue = Number(monthSummary.booked_revenue_ht ?? revenueObjective?.realized_value ?? 0);
-  const monthTarget = revenueObjective ? Number(revenueObjective.target_value) : null;
+  const monthTarget = revenueObjective
+    ? Number(revenueObjective.target_value)
+    : personalMonthTarget;
+  const monthTargetSource = revenueObjective
+    ? "official" as const
+    : personalMonthTarget != null
+      ? "personal" as const
+      : null;
   const monthOrderCount = monthOrdersResult.count ?? 0;
 
   const pharmacyIds = [...new Set(activeFieldVisits.flatMap((event) => event.pharmacy_id ? [event.pharmacy_id] : []))];
@@ -278,11 +300,12 @@ export default async function AgentPage() {
       <AgentTodayCockpit
         brandId={brand.id}
         brandName={brand.name}
+        monthStart={monthStart}
         monthLabel={monthLabel}
         revenue={monthRevenue}
         orderCount={monthOrderCount}
         target={monthTarget}
-        targetSource={monthTarget == null ? null : "official"}
+        targetSource={monthTargetSource}
         pendingVisitCount={pendingCloseouts.length}
       />
 
