@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { loginAction } from "./actions";
 
 const mocks = vi.hoisted(() => ({
@@ -21,6 +21,23 @@ describe("loginAction", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.cookieStore.get.mockReturnValue(undefined);
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("rejects local fixture accounts in production before calling Supabase", async () => {
+    vi.stubEnv("VERCEL_ENV", "production");
+
+    const formData = new FormData();
+    formData.set("email", "agent@dermavita.local");
+    formData.set("password", "DemoTR1!2026");
+
+    await expect(loginAction({}, formData)).resolves.toEqual({
+      error: "Connexion impossible. Vérifiez vos identifiants.",
+    });
+    expect(mocks.createClient).not.toHaveBeenCalled();
   });
 
   it("activates an accessible brand in the login action before landing on the role workspace", async () => {
