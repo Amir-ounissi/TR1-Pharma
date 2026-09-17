@@ -41,6 +41,7 @@ const agentMoreItems: NavigationItem[] = [
   { href: "/dashboard/sell-out", label: "Sell-out", icon: "chart", capability: "sell_out" },
   { href: "/dashboard/reports", label: "Mes comptes rendus", icon: "file", capability: "missions" },
   { href: "/dashboard/agent/assistant", label: "Assistant Terrain", icon: "sparkles", capability: "assistant_terrain" },
+  { href: "/dashboard/agent/settings", label: "Paramètres", icon: "badge" },
 ];
 
 const managerItems: NavigationItem[] = [
