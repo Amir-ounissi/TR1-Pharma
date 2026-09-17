@@ -1,13 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
 import { expect, type Page } from "@playwright/test";
 
-export const password = "DemoTR1!2026";
-
 function requiredEnvironment(name: string) {
   const value = process.env[name];
   if (!value) throw new Error(`${name} is required for E2E tests.`);
   return value;
 }
+
+export const password = requiredEnvironment("E2E_TEST_PASSWORD");
 
 export function adminClient() {
   return createClient(requiredEnvironment("NEXT_PUBLIC_SUPABASE_URL"), requiredEnvironment("SUPABASE_SERVICE_ROLE_KEY"), { auth: { persistSession: false, autoRefreshToken: false } });
