@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Gauge, Target, TrendingUp } from "lucide-react";
+import { AgentMonthlyTargetForm } from "@/components/agent/agent-monthly-target-form";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/ux/page-header";
@@ -48,9 +49,11 @@ function parseDate(value: string | undefined, fallback: string) {
 export default async function AgentPerformancePage({ searchParams }: { searchParams: SearchParams }) {
   const query = await searchParams;
   const today = parisBusinessDate();
-  const defaultPeriod = { from: `${today.slice(0, 7)}-01`, to: today };
+  const monthStart = `${today.slice(0, 7)}-01`;
+  const defaultPeriod = { from: monthStart, to: today };
   const from = parseDate(query.from, defaultPeriod.from);
   const to = parseDate(query.to, defaultPeriod.to);
+  const isCurrentMonthPeriod = from === defaultPeriod.from && to === defaultPeriod.to;
   const { supabase, brand, profile, userId } = await requireActiveBrand();
   const [
     { data: overview },
@@ -58,6 +61,7 @@ export default async function AgentPerformancePage({ searchParams }: { searchPar
     { data: networkRows },
     { data: priorities },
     { count: orderCount },
+    personalTargetResult,
   ] = await Promise.all([
     supabase.rpc("get_performance_overview", {
       target_brand_id: brand.id,
@@ -93,15 +97,32 @@ export default async function AgentPerformancePage({ searchParams }: { searchPar
       .eq("agent_user_id_at_order", userId)
       .gte("order_date", `${from}T00:00:00.000Z`)
       .lt("order_date", `${nextIsoDate(to)}T00:00:00.000Z`),
+    supabase
+      .from("agent_personal_monthly_targets")
+      .select("revenue_target_ht")
+      .eq("brand_id", brand.id)
+      .eq("user_id", userId)
+      .eq("month_start", monthStart)
+      .maybeSingle(),
   ]);
+
+  if (personalTargetResult.error) throw new Error(personalTargetResult.error.message);
 
   const summary = (overview ?? {}) as Record<string, number | null>;
   const objectiveRows = (objectives ?? []) as ObjectiveRow[];
+  const officialRevenueObjective = objectiveRows.find((objective) => objective.metric_key === "revenue_ht");
+  const personalTarget = personalTargetResult.data?.revenue_target_ht == null
+    ? null
+    : Number(personalTargetResult.data.revenue_target_ht);
   const topObjectives = objectiveRows
     .filter((objective) => ["revenue_ht", "implantations", "reorders", "first_reorder_rate"].includes(objective.metric_key))
-    .slice(0, 4);
+    .slice(0, officialRevenueObjective ? 4 : 3);
   const portfolio = (networkRows ?? []) as NetworkRow[];
   const firstName = profile.full_name.split(" ")[0];
+  const bookedRevenue = Number(summary.booked_revenue_ht ?? 0);
+  const personalAttainment = personalTarget && personalTarget > 0
+    ? (bookedRevenue / personalTarget) * 100
+    : null;
 
   return (
     <main className="space-y-6">
@@ -145,14 +166,31 @@ export default async function AgentPerformancePage({ searchParams }: { searchPar
             </Card>
           )) : (
             <>
-              <MetricCard icon={Target} label="CA commandé HT" value={formatCompactCurrency(summary.booked_revenue_ht)} detail="Commandes confirmées" />
+              {isCurrentMonthPeriod && personalTarget ? (
+                <PersonalRevenueCard revenue={bookedRevenue} target={personalTarget} attainment={personalAttainment} />
+              ) : (
+                <MetricCard icon={Target} label="CA commandé HT" value={formatCompactCurrency(summary.booked_revenue_ht)} detail="Commandes confirmées" />
+              )}
               <MetricCard icon={TrendingUp} label="Implantations" value={formatCompactNumber(summary.implantations)} detail="Sur la période" />
               <MetricCard icon={Gauge} label="Premier réassort" value={formatCompactPercent(summary.first_reorder_rate)} detail="Lecture éligible" />
               <MetricCard icon={ArrowRight} label="Réassorts" value={formatCompactNumber(summary.reorders)} detail="Rythme terrain" />
             </>
           )}
+
+          {topObjectives.length > 0 && isCurrentMonthPeriod && !officialRevenueObjective && personalTarget ? (
+            <PersonalRevenueCard revenue={bookedRevenue} target={personalTarget} attainment={personalAttainment} />
+          ) : null}
         </div>
-        {!topObjectives.length ? (
+
+        {isCurrentMonthPeriod && !officialRevenueObjective ? (
+          <AgentMonthlyTargetForm
+            brandId={brand.id}
+            monthStart={monthStart}
+            currentTarget={personalTarget}
+          />
+        ) : null}
+
+        {!topObjectives.length && !personalTarget ? (
           <p className="text-xs text-muted-foreground">
             Aucun objectif attribué ne couvre cette période. Les KPI restent visibles sans inventer de cible.
           </p>
@@ -253,6 +291,23 @@ function MetricCard({ icon: Icon, label, value, detail }: { icon: typeof Target;
         <p className="mt-3 text-2xl font-semibold">{value}</p>
         <p className="text-sm font-medium">{label}</p>
         <p className="text-xs text-muted-foreground">{detail}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function PersonalRevenueCard({ revenue, target, attainment }: { revenue: number; target: number; attainment: number | null }) {
+  return (
+    <Card>
+      <CardContent className="pt-5">
+        <Target className="size-4 text-[var(--tr1-orange)]" />
+        <p className={`mt-3 text-2xl font-semibold ${objectiveTone(attainment)}`}>
+          {attainment == null ? "—" : `${attainment.toFixed(1)} %`}
+        </p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {formatCompactCurrency(revenue)} / {formatCompactCurrency(target)}
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">Objectif CA personnel du mois</p>
       </CardContent>
     </Card>
   );
