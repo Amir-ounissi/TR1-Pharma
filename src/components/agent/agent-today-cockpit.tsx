@@ -51,9 +51,9 @@ export function AgentTodayCockpit({
       icon: CalendarDays,
     },
     {
-      href: "#visit-closeouts",
-      label: pendingVisitCount > 0 ? `${pendingVisitCount} visite${pendingVisitCount > 1 ? "s" : ""} à clôturer` : "Visites à jour",
-      detail: pendingVisitCount > 0 ? "Faire mes comptes rendus à la suite" : "Aucune clôture en attente",
+      href: "/dashboard/agent/closeouts",
+      label: pendingVisitCount > 0 ? `${pendingVisitCount} visite${pendingVisitCount > 1 ? "s" : ""} à clôturer` : "Visites à clôturer",
+      detail: "Aujourd’hui et visites précédentes non clôturées",
       icon: CheckCircle2,
     },
     {
