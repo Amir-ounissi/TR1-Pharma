@@ -47,7 +47,7 @@ jobs:
           set -eu
           if ! git diff --quiet "$BASE_SHA" HEAD -- vercel.json; then
             echo "::error::vercel.json est un contrat d'infrastructure, pas un interrupteur de release. Déployez/promouvez l'artefact validé sans modifier deploymentEnabled dans une PR produit."
-            git diff -- "$BASE_SHA" HEAD -- vercel.json
+            git diff "$BASE_SHA" HEAD -- vercel.json
             exit 1
           fi
       - uses: actions/setup-node@v6
