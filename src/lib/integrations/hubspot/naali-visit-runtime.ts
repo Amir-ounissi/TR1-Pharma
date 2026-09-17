@@ -90,15 +90,20 @@ function formatMeetingBody(
   rows: Array<{ subject: unknown; notes: unknown }> | null,
 ) {
   const blocks: string[] = [];
-  if (visitNotes) {
-    const value = String(visitNotes).trim();
-    if (value) blocks.push(value);
-  }
+  const seen = new Set<string>();
+  const append = (value: string) => {
+    const clean = value.trim();
+    if (!clean || seen.has(clean)) return;
+    seen.add(clean);
+    blocks.push(clean);
+  };
+
+  if (visitNotes) append(String(visitNotes));
   for (const row of rows ?? []) {
     const subject = row.subject ? String(row.subject).trim() : "";
     const notes = row.notes ? String(row.notes).trim() : "";
-    if (subject && notes) blocks.push(`${subject}\n\n${notes}`);
-    else if (notes || subject) blocks.push(notes || subject);
+    if (subject && notes) append(`${subject}\n\n${notes}`);
+    else append(notes || subject);
   }
   return blocks.join("\n\n---\n\n") || null;
 }
@@ -230,7 +235,7 @@ export async function syncNaaliHubSpotVisitAfterPersistence(brandId: string, vis
         .select("subject,notes,occurred_at")
         .eq("brand_id", brandId)
         .eq("field_visit_id", visitId)
-        .eq("interaction_type", "internal_note")
+        .in("interaction_type", ["visit", "internal_note"])
         .is("archived_at", null)
         .order("occurred_at", { ascending: true });
       if (notesError) throw notesError;

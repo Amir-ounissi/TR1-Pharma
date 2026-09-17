@@ -36,10 +36,17 @@ export function VisitCloseoutPanel({
   const [closeState, closeAction, closing] = useActionState(closeFieldVisitAction, emptyState);
   const startFormId = `visit-start-${visitId}`;
   const closeFormId = `visit-close-${visitId}`;
+  const outcomeId = `visit-outcome-${visitId}`;
+  const summaryId = `visit-summary-${visitId}`;
+  const nextVisitAtId = `visit-next-at-${visitId}`;
+  const nextObjectiveId = `visit-next-objective-${visitId}`;
 
   useEffect(() => {
-    if (startState.success || closeState.success) router.refresh();
-  }, [startState.success, closeState.success, router]);
+    if (startState.success) router.refresh();
+    // When evidence upload is incomplete, keep the form and selected photos in
+    // place so the user can safely retry the idempotent closeout action.
+    if (closeState.success && !closeState.warning) router.refresh();
+  }, [startState.success, closeState.success, closeState.warning, router]);
 
   if (status === "completed" || closeout) {
     return (
@@ -58,6 +65,17 @@ export function VisitCloseoutPanel({
             ) : null}
           </div>
         </div>
+      </section>
+    );
+  }
+
+  if (status === "cancelled") {
+    return (
+      <section id="visit-execution" className="scroll-mt-24 rounded-2xl border bg-muted/40 p-5">
+        <h2 className="font-bold text-[var(--tr1-navy)]">Visite annulée</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Cette visite ne peut plus être démarrée ni clôturée. Planifiez une nouvelle visite si un passage reste nécessaire.
+        </p>
       </section>
     );
   }
@@ -92,6 +110,17 @@ export function VisitCloseoutPanel({
     );
   }
 
+  if (status !== "in_progress") {
+    return (
+      <section id="visit-execution" className="scroll-mt-24 rounded-2xl border bg-muted/40 p-5">
+        <h2 className="font-bold text-[var(--tr1-navy)]">Visite indisponible</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Le statut actuel de cette visite ne permet pas d’exécuter une action terrain.
+        </p>
+      </section>
+    );
+  }
+
   return (
     <section id="visit-execution" className="scroll-mt-24 rounded-2xl border bg-white p-5 shadow-sm">
       <div className="flex items-start gap-3">
@@ -115,8 +144,8 @@ export function VisitCloseoutPanel({
         {closeState.success ? <Feedback tone="success">{closeState.success}</Feedback> : null}
 
         <div>
-          <Label className="mb-1.5">Résultat</Label>
-          <select name="outcome" defaultValue="no_order" className="min-h-11 w-full rounded-md border bg-background px-3 text-sm">
+          <Label htmlFor={outcomeId} className="mb-1.5">Résultat</Label>
+          <select id={outcomeId} name="outcome" defaultValue="no_order" className="min-h-11 w-full rounded-md border bg-background px-3 text-sm">
             <option value="order_taken">Commande prise</option>
             <option value="no_order">Pas de commande</option>
             <option value="follow_up">À relancer</option>
@@ -126,8 +155,9 @@ export function VisitCloseoutPanel({
         </div>
 
         <div>
-          <Label className="mb-1.5">Notes / compte rendu</Label>
+          <Label htmlFor={summaryId} className="mb-1.5">Notes / compte rendu</Label>
           <Textarea
+            id={summaryId}
             name="summary"
             required
             rows={5}
@@ -144,12 +174,12 @@ export function VisitCloseoutPanel({
           </summary>
           <div className="mt-4 space-y-3">
             <div>
-              <Label className="mb-1.5">Date et heure</Label>
-              <Input type="datetime-local" name="nextVisitAt" className="min-h-11" />
+              <Label htmlFor={nextVisitAtId} className="mb-1.5">Date et heure</Label>
+              <Input id={nextVisitAtId} type="datetime-local" name="nextVisitAt" className="min-h-11" />
             </div>
             <div>
-              <Label className="mb-1.5">Objectif de la prochaine visite</Label>
-              <Textarea name="nextObjective" rows={3} className="text-base sm:text-sm" placeholder="Optionnel" />
+              <Label htmlFor={nextObjectiveId} className="mb-1.5">Objectif de la prochaine visite</Label>
+              <Textarea id={nextObjectiveId} name="nextObjective" rows={3} className="text-base sm:text-sm" placeholder="Optionnel" />
             </div>
             <p className="text-xs text-muted-foreground">
               Si une date est renseignée, TR1 crée directement une vraie visite dans l’Agenda — pas une simple tâche.
@@ -159,7 +189,7 @@ export function VisitCloseoutPanel({
 
         <Button disabled={closing} className="hidden min-h-11 sm:inline-flex">
           <CheckCircle2 className="size-4" />
-          {closing ? "Clôture…" : "Clôturer la visite"}
+          {closing ? "Clôture…" : closeState.warning ? "Réessayer les preuves" : "Clôturer la visite"}
         </Button>
       </form>
 
@@ -171,7 +201,7 @@ export function VisitCloseoutPanel({
           className="min-h-12 w-full touch-manipulation text-sm"
         >
           <CheckCircle2 className="size-5" />
-          {closing ? "Clôture…" : "Clôturer la visite"}
+          {closing ? "Clôture…" : closeState.warning ? "Réessayer les preuves" : "Clôturer la visite"}
         </Button>
       </MobilePrimaryBar>
     </section>
