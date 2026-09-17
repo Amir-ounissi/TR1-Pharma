@@ -44,7 +44,11 @@ function migrationList(databaseUrl, label) {
   for (const line of result.stdout.split(/\r?\n/)) {
     const columns = line.split(/[│|]/).map((value) => value.trim());
     if (columns.length < 2) continue;
-    const remote = /^\d{14}$/.test(columns[1]) ? columns[1] : null;
+    // Supabase CLI renders "Local | Remote | Time". On some CLI/output
+    // variants (including pooler-backed connections), the remote version can
+    // be the first timestamp column instead of a fixed second column.
+    const versions = columns.filter((value) => /^\d{14}$/.test(value));
+    const remote = versions.length >= 2 ? versions[1] : versions[0] ?? null;
     if (remote) remoteVersions.push(remote);
   }
 
