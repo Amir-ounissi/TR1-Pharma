@@ -21,18 +21,31 @@ Les noms de projets ne sont jamais utilisés comme source de vérité par le wor
 
 Créer les environnements GitHub `staging` et `production`. La production devrait utiliser une règle d'approbation manuelle.
 
-Secrets disponibles dans les deux environnements :
+### Environnement `staging`
+
+Secrets :
 
 - `STAGING_DATABASE_URL` : connexion PostgreSQL directe vers la base Supabase staging.
-- `PRODUCTION_DATABASE_URL` : connexion PostgreSQL directe vers la base Supabase réellement utilisée en production.
-- `VERCEL_TOKEN` : token Vercel autorisé à déployer les deux projets.
+- `VERCEL_TOKEN` : token Vercel autorisé à déployer le projet staging.
 
 Variables :
 
 - `VERCEL_ORG_ID` : `team_WhI0GBrg7UZgZpDsvTwUGZ8V` pour l'organisation observée pendant l'audit.
 - `VERCEL_STAGING_PROJECT_ID` : projet Vercel jouant le rôle staging. Le candidat actuel est `prj_KziP4kPjCBHDULmFuvGSLFOzDtVh`.
-- `VERCEL_PRODUCTION_PROJECT_ID` : projet Vercel servant les domaines publics. À la date de l'audit : `prj_qUQM4tS4vVKQtBLSOlo545y3vEjt`.
 - `STAGING_URL` : URL HTTPS stable du staging.
+
+### Environnement `production`
+
+Secrets :
+
+- `STAGING_DATABASE_URL` : accès lecture de l'historique staging pour comparer les migrations juste avant la production.
+- `PRODUCTION_DATABASE_URL` : connexion PostgreSQL directe vers la base Supabase réellement utilisée en production.
+- `VERCEL_TOKEN` : token Vercel autorisé à déployer le projet production.
+
+Variables :
+
+- `VERCEL_ORG_ID` : même organisation Vercel.
+- `VERCEL_PRODUCTION_PROJECT_ID` : projet Vercel servant les domaines publics. À la date de l'audit : `prj_qUQM4tS4vVKQtBLSOlo545y3vEjt`.
 - `PRODUCTION_URL` : `https://www.tr1pharma.com` lorsque le domaine public reste inchangé.
 
 Le projet Vercel staging doit contenir `APP_ENV=staging` et ses variables Supabase staging. Le projet production doit contenir `APP_ENV=production` et les variables Supabase production. Les clés `NEXT_PUBLIC_*` sont donc construites séparément pour chaque environnement ; on ne promeut pas un build staging précompilé vers production.
@@ -42,9 +55,9 @@ Le projet Vercel staging doit contenir `APP_ENV=staging` et ses variables Supaba
 1. Merger le code dans `main` et attendre une CI verte sur le SHA exact.
 2. Déclencher manuellement `Release production` avec ce SHA.
 3. Le job `Gate du SHA` vérifie que le SHA appartient à `main`, qu'une CI complète est verte et que le release check local passe.
-4. Staging applique uniquement les migrations Git manquantes, puis exige que l'historique staging soit exactement identique à Git et que la production ne contienne aucune migration inconnue ou hors ordre.
+4. Staging applique uniquement les migrations Git manquantes puis exige que l'historique staging soit exactement identique à Git.
 5. Le même SHA est déployé sur le projet Vercel staging et soumis au smoke HTTP.
-6. Après validation de l'environnement GitHub `production`, le job production refait le préflight migrations.
+6. Après validation de l'environnement GitHub `production`, le job production vérifie de nouveau que staging = Git et que la production est soit identique, soit uniquement en retard avec un historique strictement compatible.
 7. Un `db push --dry-run` est exécuté avant l'application des migrations production.
 8. Après application, le gate exige `Git = staging = production`.
 9. Le même SHA est déployé sur le projet Vercel production puis soumis au smoke HTTP public.
@@ -56,6 +69,7 @@ Une migration appliquée sur un environnement partagé est immuable.
 - Ne jamais renommer, modifier ou supprimer une migration déjà présente sur `main`.
 - Une correction de schéma est une nouvelle migration.
 - Le contrôle PR de `ci.yml` bloque déjà la réécriture d'une migration historique.
+- `scripts/check-migration-drift.mjs staging` exige staging = Git.
 - `scripts/check-migration-drift.mjs preflight` exige staging = Git et autorise seulement une production strictement en retard, sans branchement d'historique.
 - `scripts/check-migration-drift.mjs strict` exige Git = staging = production.
 - `supabase migration repair` est une procédure exceptionnelle de récupération, jamais une étape normale de release.
@@ -72,11 +86,11 @@ Ne jamais supprimer automatiquement des données ou inverser une migration destr
 
 ## Vérification du gate de dérive
 
-Le script utilise la commande officielle `supabase migration list --db-url` et compare les timestamps de `supabase/migrations` aux historiques `supabase_migrations.schema_migrations` des deux bases.
+Le script utilise la commande officielle `supabase migration list --db-url` et compare les timestamps de `supabase/migrations` aux historiques `supabase_migrations.schema_migrations` des bases concernées.
 
 Le workflow refuse de continuer si :
 
-- une URL de base est absente ;
+- une URL requise pour le job est absente ;
 - l'historique distant ne peut pas être lu ;
 - une migration distante est inconnue dans le SHA Git ;
 - les migrations production ne forment pas un préfixe exact de Git pendant le préflight ;
