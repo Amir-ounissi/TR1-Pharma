@@ -38,8 +38,11 @@ export function VisitCloseoutPanel({
   const closeFormId = `visit-close-${visitId}`;
 
   useEffect(() => {
-    if (startState.success || closeState.success) router.refresh();
-  }, [startState.success, closeState.success, router]);
+    if (startState.success) router.refresh();
+    // When evidence upload is incomplete, keep the form and selected photos in
+    // place so the user can safely retry the idempotent closeout action.
+    if (closeState.success && !closeState.warning) router.refresh();
+  }, [startState.success, closeState.success, closeState.warning, router]);
 
   if (status === "completed" || closeout) {
     return (
@@ -58,6 +61,17 @@ export function VisitCloseoutPanel({
             ) : null}
           </div>
         </div>
+      </section>
+    );
+  }
+
+  if (status === "cancelled") {
+    return (
+      <section id="visit-execution" className="scroll-mt-24 rounded-2xl border bg-muted/40 p-5">
+        <h2 className="font-bold text-[var(--tr1-navy)]">Visite annulée</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Cette visite ne peut plus être démarrée ni clôturée. Planifiez une nouvelle visite si un passage reste nécessaire.
+        </p>
       </section>
     );
   }
@@ -88,6 +102,17 @@ export function VisitCloseoutPanel({
             {starting ? "Démarrage…" : "Démarrer la visite"}
           </Button>
         </MobilePrimaryBar>
+      </section>
+    );
+  }
+
+  if (status !== "in_progress") {
+    return (
+      <section id="visit-execution" className="scroll-mt-24 rounded-2xl border bg-muted/40 p-5">
+        <h2 className="font-bold text-[var(--tr1-navy)]">Visite indisponible</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Le statut actuel de cette visite ne permet pas d’exécuter une action terrain.
+        </p>
       </section>
     );
   }
@@ -159,7 +184,7 @@ export function VisitCloseoutPanel({
 
         <Button disabled={closing} className="hidden min-h-11 sm:inline-flex">
           <CheckCircle2 className="size-4" />
-          {closing ? "Clôture…" : "Clôturer la visite"}
+          {closing ? "Clôture…" : closeState.warning ? "Réessayer les preuves" : "Clôturer la visite"}
         </Button>
       </form>
 
@@ -171,7 +196,7 @@ export function VisitCloseoutPanel({
           className="min-h-12 w-full touch-manipulation text-sm"
         >
           <CheckCircle2 className="size-5" />
-          {closing ? "Clôture…" : "Clôturer la visite"}
+          {closing ? "Clôture…" : closeState.warning ? "Réessayer les preuves" : "Clôturer la visite"}
         </Button>
       </MobilePrimaryBar>
     </section>
