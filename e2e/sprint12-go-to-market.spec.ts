@@ -62,7 +62,7 @@ test("landing mobile reste lisible et sans débordement", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Du sell-in au sell-out." })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Voir les pharmacies en liste" })).toBeVisible();
+  await expect(page.getByRole("tablist", { name: "Choisir les informations affichées sur la carte" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Accompagnez le conseil." })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
   await page.screenshot({ path: `${artifacts}/landing-mobile.png`, fullPage: true });
