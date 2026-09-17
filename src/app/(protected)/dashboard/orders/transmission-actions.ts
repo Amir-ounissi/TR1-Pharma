@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { decryptCredential } from "@/lib/integrations/gmail/credentials";
 import { refreshGoogleAccessToken, sendGmailRawMessage } from "@/lib/integrations/gmail/google";
 import { buildMimeMessage, buildTr1OrderPdf, type EmailAttachment } from "@/lib/orders/order-email";
+import { buildOrderPdfPayload } from "@/lib/orders/order-pdf-payload";
 
 const uuid = z.string().uuid();
 const allowedRoles = new Set(["agent", "brand_user", "brand_admin", "tr1_manager", "super_admin"]);
@@ -167,16 +168,15 @@ export async function sendOrderByEmailAction(
       admin.from("user_gmail_connections").select("email,refresh_token_ciphertext").eq("user_id", userId).maybeSingle(),
       admin.from("users").select("email").eq("id", order.created_by || userId).maybeSingle(),
     ]);
-    if (brandError || pharmacyError || itemsError || documentsError || gmailError) {
+    if (brandError || pharmacyError || itemsError || documentsError || gmailError || !brandData || !pharmacy) {
       throw new Error("Impossible de préparer les données de transmission.");
     }
 
-    const recipient = brandData?.order_email?.trim();
-    const pharmacyName = pharmacy?.trade_name || pharmacy?.legal_name || "Pharmacie";
+    const recipient = brandData.order_email?.trim();
     const byType = new Map((documents ?? []).map((document) => [document.document_type, document]));
     const missing: string[] = [];
     if (!recipient) missing.push("email de prise de commande de la marque");
-    if (!pharmacy?.vat_number?.trim()) missing.push("numéro de TVA pharmacie");
+    if (!pharmacy.vat_number?.trim()) missing.push("numéro de TVA pharmacie");
     if (!byType.has("kbis")) missing.push("KBIS");
     if (!byType.has("rib")) missing.push("RIB");
     if (!gmail) missing.push("connexion Gmail");
@@ -198,16 +198,24 @@ export async function sendOrderByEmailAction(
           .in("id", productIds)
       : { data: [], error: null };
     if (productsError) throw new Error("Impossible de charger le référentiel produits du bon de commande.");
-    const productById = new Map((products ?? []).map((product) => [product.id, product]));
 
-    const reference = order.order_number || order.external_order_id || order.id.slice(0, 8);
-    const subject = `Commande ${brandData!.name} · ${pharmacyName} · ${reference}`;
+    const pdfPayload = buildOrderPdfPayload({
+      order,
+      brand: { ...brandData, order_email: recipient ?? null },
+      pharmacy,
+      items: items ?? [],
+      products: products ?? [],
+      commercialEmail: creator?.email || gmail!.email,
+    });
+    const reference = pdfPayload.reference;
+    const pharmacyName = pdfPayload.pharmacy.name;
+    const subject = `Commande ${brandData.name} · ${pharmacyName} · ${reference}`;
     const body = [
       "Bonjour,",
       "",
       `Vous trouverez ci-joint la commande ${reference} pour ${pharmacyName}, ainsi que le KBIS et le RIB de la pharmacie.`,
       "",
-      `N° TVA : ${pharmacy!.vat_number}`,
+      `N° TVA : ${pharmacy.vat_number}`,
       `Total TTC : ${Number(order.total_ttc ?? 0).toFixed(2)} €`,
       "",
       "Bonne réception,",
@@ -215,52 +223,7 @@ export async function sendOrderByEmailAction(
       "Ceci est un message automatique, mais vous pouvez y répondre directement.",
     ].join("\n");
 
-    const pdf = buildTr1OrderPdf({
-      reference,
-      orderDate: order.order_date,
-      brandName: brandData!.name,
-      brandCode: brandData!.code,
-      brandOrderEmail: recipient,
-      commercialEmail: creator?.email || gmail!.email,
-      pharmacy: {
-        name: pharmacyName,
-        legalName: pharmacy!.legal_name,
-        code: pharmacy!.cip_code,
-        addressLine1: pharmacy!.address_line_1,
-        addressLine2: pharmacy!.address_line_2,
-        postalCode: pharmacy!.postal_code,
-        city: pharmacy!.city,
-        email: pharmacy!.email,
-        phone: pharmacy!.phone,
-        siret: pharmacy!.siret,
-        vatNumber: pharmacy!.vat_number,
-      },
-      items: (items ?? []).map((item) => {
-        const product = item.product_id ? productById.get(item.product_id) : undefined;
-        return {
-          reference: item.sku_snapshot,
-          ean: product?.ean ?? null,
-          designation: item.product_name_snapshot,
-          quantity: item.quantity,
-          freeQuantity: item.free_quantity,
-          unitPriceHt: item.unit_price_ht,
-          discountRate: item.discount_rate,
-          netUnitPriceHt: item.net_unit_price_ht,
-          lineTotalHt: item.line_total_ht,
-          taxRate: item.tax_rate,
-          unitsPerCase: product?.units_per_case ?? null,
-        };
-      }),
-      totals: {
-        subtotalHt: order.subtotal_ht,
-        discountAmountHt: order.discount_amount_ht,
-        netAmountHt: order.net_amount_ht,
-        taxAmount: order.tax_amount,
-        totalTtc: order.total_ttc,
-      },
-      notes: order.notes,
-    });
-
+    const pdf = buildTr1OrderPdf(pdfPayload);
     const attachments: EmailAttachment[] = [
       { filename: `bon-de-commande-${safeFileName(reference)}.pdf`, contentType: "application/pdf", data: pdf },
     ];
