@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { decryptCredential } from "@/lib/integrations/gmail/credentials";
 import { refreshGoogleAccessToken, sendGmailRawMessage } from "@/lib/integrations/gmail/google";
 import { buildMimeMessage, buildTr1OrderPdf, type EmailAttachment } from "@/lib/orders/order-email";
+import { buildOrderPdfPayload } from "@/lib/orders/order-pdf-payload";
 
 const uuid = z.string().uuid();
 const allowedRoles = new Set(["agent", "brand_user", "brand_admin", "tr1_manager", "super_admin"]);
@@ -25,6 +26,10 @@ function safeFileName(value: string) {
     .replace(/[^a-zA-Z0-9._-]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 120) || "document";
+}
+
+function commercialLabel(fullName?: string | null, email?: string | null) {
+  return [fullName?.trim(), email?.trim()].filter(Boolean).join(" · ") || null;
 }
 
 async function requireTransmissionOrder(orderId: string) {
@@ -152,6 +157,7 @@ export async function sendOrderByEmailAction(
     }
 
     const admin = createAdminClient();
+    const creatorId = order.created_by || userId;
     const [
       { data: brandData, error: brandError },
       { data: pharmacy, error: pharmacyError },
@@ -159,38 +165,64 @@ export async function sendOrderByEmailAction(
       { data: documents, error: documentsError },
       { data: gmail, error: gmailError },
       { data: creator },
+      { data: creatorProfile },
     ] = await Promise.all([
       supabase.from("brands").select("name,code,order_email").eq("id", brand.id).single(),
       supabase.from("pharmacies").select("legal_name,trade_name,cip_code,siret,vat_number,email,phone,address_line_1,address_line_2,postal_code,city").eq("id", order.pharmacy_id).single(),
-      supabase.from("order_items").select("product_name_snapshot,sku_snapshot,quantity,free_quantity,unit_price_ht,discount_rate,net_unit_price_ht,line_total_ht,tax_rate").eq("order_id", order.id).order("created_at"),
+      supabase.from("order_items").select("product_id,product_name_snapshot,sku_snapshot,quantity,free_quantity,unit_price_ht,discount_rate,net_unit_price_ht,line_total_ht,tax_rate").eq("order_id", order.id).order("created_at"),
       admin.from("pharmacy_documents").select("document_type,file_name,content_type,object_path").eq("brand_id", brand.id).eq("pharmacy_id", order.pharmacy_id),
       admin.from("user_gmail_connections").select("email,refresh_token_ciphertext").eq("user_id", userId).maybeSingle(),
-      admin.from("users").select("email").eq("id", order.created_by || userId).maybeSingle(),
+      admin.from("users").select("email").eq("id", creatorId).maybeSingle(),
+      admin.from("user_profiles").select("full_name").eq("user_id", creatorId).maybeSingle(),
     ]);
-    if (brandError || pharmacyError || itemsError || documentsError || gmailError) {
+    if (brandError || pharmacyError || itemsError || documentsError || gmailError || !brandData || !pharmacy) {
       throw new Error("Impossible de préparer les données de transmission.");
     }
 
-    const recipient = brandData?.order_email?.trim();
-    const pharmacyName = pharmacy?.trade_name || pharmacy?.legal_name || "Pharmacie";
+    const recipient = brandData.order_email?.trim();
     const byType = new Map((documents ?? []).map((document) => [document.document_type, document]));
     const missing: string[] = [];
     if (!recipient) missing.push("email de prise de commande de la marque");
-    if (!pharmacy?.vat_number?.trim()) missing.push("numéro de TVA pharmacie");
+    if (!pharmacy.vat_number?.trim()) missing.push("numéro de TVA pharmacie");
     if (!byType.has("kbis")) missing.push("KBIS");
     if (!byType.has("rib")) missing.push("RIB");
     if (!gmail) missing.push("connexion Gmail");
     if (!(items ?? []).length) missing.push("lignes de commande");
     if (missing.length) return { error: `Transmission bloquée : ${missing.join(", ")}.` };
 
-    const reference = order.order_number || order.external_order_id || order.id.slice(0, 8);
-    const subject = `Commande ${brandData!.name} · ${pharmacyName} · ${reference}`;
+    const productIds = [
+      ...new Set(
+        (items ?? [])
+          .map((item) => item.product_id)
+          .filter((productId): productId is string => Boolean(productId)),
+      ),
+    ];
+    const { data: products, error: productsError } = productIds.length
+      ? await supabase
+          .from("products")
+          .select("id,ean,units_per_case")
+          .eq("brand_id", brand.id)
+          .in("id", productIds)
+      : { data: [], error: null };
+    if (productsError) throw new Error("Impossible de charger le référentiel produits du bon de commande.");
+
+    const pdfPayload = buildOrderPdfPayload({
+      order,
+      brand: { ...brandData, order_email: recipient ?? null },
+      pharmacy,
+      items: items ?? [],
+      products: products ?? [],
+      commercialEmail: commercialLabel(creatorProfile?.full_name, creator?.email || gmail!.email),
+    });
+    const reference = pdfPayload.reference;
+    const pharmacyName = pdfPayload.pharmacy.name;
+    const subject = `Commande ${brandData.name} · ${pharmacyName} · ${reference}`;
     const body = [
       "Bonjour,",
       "",
       `Vous trouverez ci-joint la commande ${reference} pour ${pharmacyName}, ainsi que le KBIS et le RIB de la pharmacie.`,
       "",
-      `N° TVA : ${pharmacy!.vat_number}`,
+      `N° TVA : ${pharmacy.vat_number}`,
       `Total TTC : ${Number(order.total_ttc ?? 0).toFixed(2)} €`,
       "",
       "Bonne réception,",
@@ -198,47 +230,7 @@ export async function sendOrderByEmailAction(
       "Ceci est un message automatique, mais vous pouvez y répondre directement.",
     ].join("\n");
 
-    const pdf = buildTr1OrderPdf({
-      reference,
-      orderDate: order.order_date,
-      brandName: brandData!.name,
-      brandCode: brandData!.code,
-      brandOrderEmail: recipient,
-      commercialEmail: creator?.email || gmail!.email,
-      pharmacy: {
-        name: pharmacyName,
-        legalName: pharmacy!.legal_name,
-        code: pharmacy!.cip_code,
-        addressLine1: pharmacy!.address_line_1,
-        addressLine2: pharmacy!.address_line_2,
-        postalCode: pharmacy!.postal_code,
-        city: pharmacy!.city,
-        email: pharmacy!.email,
-        phone: pharmacy!.phone,
-        siret: pharmacy!.siret,
-        vatNumber: pharmacy!.vat_number,
-      },
-      items: (items ?? []).map((item) => ({
-        reference: item.sku_snapshot,
-        designation: item.product_name_snapshot,
-        quantity: item.quantity,
-        freeQuantity: item.free_quantity,
-        unitPriceHt: item.unit_price_ht,
-        discountRate: item.discount_rate,
-        netUnitPriceHt: item.net_unit_price_ht,
-        lineTotalHt: item.line_total_ht,
-        taxRate: item.tax_rate,
-      })),
-      totals: {
-        subtotalHt: order.subtotal_ht,
-        discountAmountHt: order.discount_amount_ht,
-        netAmountHt: order.net_amount_ht,
-        taxAmount: order.tax_amount,
-        totalTtc: order.total_ttc,
-      },
-      notes: order.notes,
-    });
-
+    const pdf = buildTr1OrderPdf(pdfPayload);
     const attachments: EmailAttachment[] = [
       { filename: `bon-de-commande-${safeFileName(reference)}.pdf`, contentType: "application/pdf", data: pdf },
     ];
