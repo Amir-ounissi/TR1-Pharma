@@ -11,6 +11,7 @@ function currency(value: number | null | undefined) {
 }
 
 export function AgentTodayCockpit({
+  brandId,
   brandName,
   monthLabel,
   revenue,
@@ -19,12 +20,13 @@ export function AgentTodayCockpit({
   targetSource,
   pendingVisitCount,
 }: {
+  brandId: string;
   brandName: string;
   monthLabel: string;
   revenue: number;
   orderCount: number;
   target: number | null;
-  targetSource: "official" | "personal" | null;
+  targetSource: "official" | null;
   pendingVisitCount: number;
 }) {
   const averageBasket = orderCount > 0 ? revenue / orderCount : 0;
@@ -34,7 +36,7 @@ export function AgentTodayCockpit({
 
   const actions = [
     {
-      href: "/dashboard/agenda/new?mode=quick",
+      href: `/dashboard/agenda/new?mode=quick&brand=${encodeURIComponent(brandId)}`,
       label: "Ajouter une visite",
       detail: "Visite imprévue en quelques secondes",
       icon: CalendarPlus,
@@ -99,11 +101,11 @@ export function AgentTodayCockpit({
               {currency(revenue)}{target ? <span className="text-lg font-medium text-white/55"> / {currency(target)}</span> : null}
             </p>
             <p className="mt-1 text-xs text-white/55">
-              {brandName}{targetSource ? ` · objectif ${targetSource === "official" ? "attribué" : "personnel"}` : ""}
+              {brandName}{targetSource ? " · objectif attribué" : ""}
             </p>
           </div>
           <span className="rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold">
-            {attainment == null ? "Définir mon objectif" : `${attainment.toFixed(0)} %`}
+            {attainment == null ? "Objectif non défini" : `${attainment.toFixed(0)} %`}
           </span>
         </div>
 
