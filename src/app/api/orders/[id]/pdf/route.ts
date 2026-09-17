@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
 import { buildTr1OrderPdf } from "@/lib/orders/order-email";
+import { buildOrderPdfPayload } from "@/lib/orders/order-pdf-payload";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const allowedRoles = new Set(["agent", "brand_user", "brand_admin", "tr1_manager", "super_admin"]);
@@ -70,61 +71,22 @@ export async function GET(
     if (productsError) {
       return NextResponse.json({ error: "Impossible de charger le référentiel produits." }, { status: 500 });
     }
-    const productById = new Map((products ?? []).map((product) => [product.id, product]));
 
-    const reference = order.order_number || order.external_order_id || order.id.slice(0, 8);
-    const pharmacyName = pharmacy.trade_name || pharmacy.legal_name || "Pharmacie";
-    const pdf = buildTr1OrderPdf({
-      reference,
-      orderDate: order.order_date,
-      brandName: brandData.name,
-      brandCode: brandData.code,
-      brandOrderEmail: brandData.order_email,
-      commercialEmail: creator?.email,
-      pharmacy: {
-        name: pharmacyName,
-        legalName: pharmacy.legal_name,
-        code: pharmacy.cip_code,
-        addressLine1: pharmacy.address_line_1,
-        addressLine2: pharmacy.address_line_2,
-        postalCode: pharmacy.postal_code,
-        city: pharmacy.city,
-        email: pharmacy.email,
-        phone: pharmacy.phone,
-        siret: pharmacy.siret,
-        vatNumber: pharmacy.vat_number,
-      },
-      items: (items ?? []).map((item) => {
-        const product = item.product_id ? productById.get(item.product_id) : undefined;
-        return {
-          reference: item.sku_snapshot,
-          ean: product?.ean ?? null,
-          designation: item.product_name_snapshot,
-          quantity: item.quantity,
-          freeQuantity: item.free_quantity,
-          unitPriceHt: item.unit_price_ht,
-          discountRate: item.discount_rate,
-          netUnitPriceHt: item.net_unit_price_ht,
-          lineTotalHt: item.line_total_ht,
-          taxRate: item.tax_rate,
-          unitsPerCase: product?.units_per_case ?? null,
-        };
-      }),
-      totals: {
-        subtotalHt: order.subtotal_ht,
-        discountAmountHt: order.discount_amount_ht,
-        netAmountHt: order.net_amount_ht,
-        taxAmount: order.tax_amount,
-        totalTtc: order.total_ttc,
-      },
-      notes: order.notes,
+    const payload = buildOrderPdfPayload({
+      order,
+      brand: brandData,
+      pharmacy,
+      items: items ?? [],
+      products: products ?? [],
+      commercialEmail: creator?.email ?? null,
     });
+    const pdf = buildTr1OrderPdf(payload);
 
     return new Response(new Uint8Array(pdf), {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename=\"bon-de-commande-${safeFileName(reference)}.pdf\"`,
+        "Content-Disposition": `inline; filename=\"bon-de-commande-${safeFileName(payload.reference)}.pdf\"`,
         "Cache-Control": "private, no-store",
       },
     });
