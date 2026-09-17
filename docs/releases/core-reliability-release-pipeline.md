@@ -10,12 +10,19 @@ Le SHA validé en staging est le SHA déployé en production. Aucun commit, chan
 
 ## État d'infrastructure constaté le 17 septembre 2026
 
+### Vercel
+
 - Le projet Vercel `tr1-pharma-staging` (`prj_qUQM4tS4vVKQtBLSOlo545y3vEjt`) sert actuellement `tr1pharma.com` et `www.tr1pharma.com`. Malgré son nom, il joue donc aujourd'hui le rôle **production**.
 - Le projet Vercel `tr-1-pharma` (`prj_KziP4kPjCBHDULmFuvGSLFOzDtVh`) ne sert pas les domaines publics. Son dernier build observé échouait parce que `APP_ENV` était vide. Il est le candidat naturel pour le rôle **staging** après configuration de ses variables.
-- Le projet Supabase `TR1 Pharma Staging` (`zhifmehctuflwfexlvkz`) existe et est actif.
-- Aucun projet Supabase explicitement identifié comme production n'était visible dans le compte connecté lors de l'audit. La base réellement utilisée par la production doit être confirmée par `PRODUCTION_DATABASE_URL` avant d'activer le workflow.
 
-Les noms de projets ne sont jamais utilisés comme source de vérité par le workflow. Les rôles staging/production sont définis uniquement par les variables GitHub ci-dessous.
+### Supabase
+
+- La production publique a été vérifiée via son flux OAuth Google : `/api/auth/google` redirige vers `https://zhifmehctuflwfexlvkz.supabase.co/auth/v1/authorize`.
+- Le projet Supabase `zhifmehctuflwfexlvkz`, actuellement nommé `TR1 Pharma Staging`, est donc **la base réellement utilisée par la production** malgré son nom.
+- Ce projet ne doit jamais être utilisé, réinitialisé ou traité comme un environnement staging.
+- Un nouveau projet Supabase ou une branche de développement isolée doit être créé pour le vrai staging avant d'activer le workflow de release.
+
+Les noms de projets ne sont jamais utilisés comme source de vérité. Les rôles staging/production sont définis par des références explicites et le workflow bloque toute tentative de faire pointer le staging vers le projet Supabase production connu.
 
 ## Configuration GitHub requise
 
@@ -25,11 +32,12 @@ Créer les environnements GitHub `staging` et `production`. La production devrai
 
 Secrets :
 
-- `STAGING_DATABASE_URL` : connexion PostgreSQL directe vers la base Supabase staging.
+- `STAGING_DATABASE_URL` : connexion PostgreSQL vers une base Supabase de staging **distincte** de `zhifmehctuflwfexlvkz`.
 - `VERCEL_TOKEN` : token Vercel autorisé à déployer le projet staging.
 
 Variables :
 
+- `STAGING_SUPABASE_PROJECT_REF` : référence du futur projet Supabase staging. Elle doit être différente de `zhifmehctuflwfexlvkz` et être présente dans `STAGING_DATABASE_URL`.
 - `VERCEL_ORG_ID` : `team_WhI0GBrg7UZgZpDsvTwUGZ8V` pour l'organisation observée pendant l'audit.
 - `VERCEL_STAGING_PROJECT_ID` : projet Vercel jouant le rôle staging. Le candidat actuel est `prj_KziP4kPjCBHDULmFuvGSLFOzDtVh`.
 - `STAGING_URL` : URL HTTPS stable du staging.
@@ -38,29 +46,50 @@ Variables :
 
 Secrets :
 
-- `STAGING_DATABASE_URL` : accès lecture de l'historique staging pour comparer les migrations juste avant la production.
-- `PRODUCTION_DATABASE_URL` : connexion PostgreSQL directe vers la base Supabase réellement utilisée en production.
+- `STAGING_DATABASE_URL` : accès à l'historique du vrai staging pour comparer les migrations juste avant la production.
+- `PRODUCTION_DATABASE_URL` : connexion PostgreSQL vers le projet Supabase production `zhifmehctuflwfexlvkz`.
 - `VERCEL_TOKEN` : token Vercel autorisé à déployer le projet production.
 
 Variables :
 
+- `STAGING_SUPABASE_PROJECT_REF` : même référence staging que dans l'environnement `staging`.
+- `PRODUCTION_SUPABASE_PROJECT_REF` : `zhifmehctuflwfexlvkz` tant que la production publique reste branchée sur ce projet.
 - `VERCEL_ORG_ID` : même organisation Vercel.
 - `VERCEL_PRODUCTION_PROJECT_ID` : projet Vercel servant les domaines publics. À la date de l'audit : `prj_qUQM4tS4vVKQtBLSOlo545y3vEjt`.
 - `PRODUCTION_URL` : `https://www.tr1pharma.com` lorsque le domaine public reste inchangé.
 
-Le projet Vercel staging doit contenir `APP_ENV=staging` et ses variables Supabase staging. Le projet production doit contenir `APP_ENV=production` et les variables Supabase production. Les clés `NEXT_PUBLIC_*` sont donc construites séparément pour chaque environnement ; on ne promeut pas un build staging précompilé vers production.
+Le projet Vercel staging doit contenir `APP_ENV=staging` et les variables du nouveau Supabase staging. Le projet production doit contenir `APP_ENV=production` et les variables du Supabase production `zhifmehctuflwfexlvkz`. Les clés `NEXT_PUBLIC_*` sont donc construites séparément pour chaque environnement ; on ne promeut pas un build staging précompilé vers production.
+
+## Garde-fous Supabase
+
+Le workflow conserve en code la référence du projet Supabase actuellement vérifié en production : `zhifmehctuflwfexlvkz`.
+
+Avant tout `db push` staging, il refuse de continuer si :
+
+- `STAGING_SUPABASE_PROJECT_REF` est égal à la référence production connue ;
+- `STAGING_DATABASE_URL` contient la référence production connue ;
+- `STAGING_DATABASE_URL` ne contient pas la référence staging déclarée.
+
+Avant tout `db push` production, il refuse de continuer si :
+
+- `PRODUCTION_SUPABASE_PROJECT_REF` ne correspond pas à la référence production vérifiée ;
+- staging et production déclarent la même référence ;
+- les URL de connexion ne correspondent pas à leurs références déclarées.
+
+Si la production change volontairement de projet Supabase, la référence connue doit être mise à jour dans le workflow via une PR revue avant la prochaine release.
 
 ## Déroulement d'une release
 
 1. Merger le code dans `main` et attendre une CI verte sur le SHA exact.
 2. Déclencher manuellement `Release production` avec ce SHA.
 3. Le job `Gate du SHA` vérifie que le SHA appartient à `main`, qu'une CI complète est verte et que le release check local passe.
-4. Staging applique uniquement les migrations Git manquantes puis exige que l'historique staging soit exactement identique à Git.
-5. Le même SHA est déployé sur le projet Vercel staging et soumis au smoke HTTP.
-6. Après validation de l'environnement GitHub `production`, le job production vérifie de nouveau que staging = Git et que la production est soit identique, soit uniquement en retard avec un historique strictement compatible.
-7. Un `db push --dry-run` est exécuté avant l'application des migrations production.
-8. Après application, le gate exige `Git = staging = production`.
-9. Le même SHA est déployé sur le projet Vercel production puis soumis au smoke HTTP public.
+4. Le job staging vérifie d'abord que sa base Supabase est distincte de la production.
+5. Staging applique uniquement les migrations Git manquantes puis exige que l'historique staging soit exactement identique à Git.
+6. Le même SHA est déployé sur le projet Vercel staging et soumis au smoke HTTP.
+7. Après validation de l'environnement GitHub `production`, le job production vérifie l'identité des deux références Supabase, puis que staging = Git et que la production est soit identique, soit uniquement en retard avec un historique strictement compatible.
+8. Un `db push --dry-run` est exécuté avant l'application des migrations production.
+9. Après application, le gate exige `Git = staging = production`.
+10. Le même SHA est déployé sur le projet Vercel production puis soumis au smoke HTTP public.
 
 ## Discipline migrations
 
@@ -90,7 +119,9 @@ Le script utilise la commande officielle `supabase migration list --db-url` et c
 
 Le workflow refuse de continuer si :
 
-- une URL requise pour le job est absente ;
+- une URL ou une référence requise pour le job est absente ;
+- staging pointe vers le projet Supabase production ;
+- une URL de base ne correspond pas à la référence déclarée ;
 - l'historique distant ne peut pas être lu ;
 - une migration distante est inconnue dans le SHA Git ;
 - les migrations production ne forment pas un préfixe exact de Git pendant le préflight ;

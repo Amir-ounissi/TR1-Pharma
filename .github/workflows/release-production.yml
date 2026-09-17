@@ -19,6 +19,7 @@ concurrency:
 env:
   RELEASE_SHA: ${{ inputs.release_sha }}
   VERCEL_CLI_VERSION: 59.19.1
+  CURRENT_PRODUCTION_SUPABASE_PROJECT_REF: zhifmehctuflwfexlvkz
 
 jobs:
   gate:
@@ -74,6 +75,7 @@ jobs:
     environment: staging
     env:
       STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+      STAGING_SUPABASE_PROJECT_REF: ${{ vars.STAGING_SUPABASE_PROJECT_REF }}
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ vars.VERCEL_STAGING_PROJECT_ID }}
@@ -92,13 +94,34 @@ jobs:
       - name: Vérifier la configuration staging
         run: |
           set -eu
-          for name in STAGING_DATABASE_URL VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID STAGING_URL; do
+          for name in STAGING_DATABASE_URL STAGING_SUPABASE_PROJECT_REF VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID STAGING_URL; do
             eval "value=\${$name:-}"
             test -n "$value" || {
               echo "::error::$name n'est pas configuré pour l'environnement staging."
               exit 1
             }
           done
+
+      - name: Interdire la base Supabase de production au staging
+        run: |
+          set -eu
+          test "$STAGING_SUPABASE_PROJECT_REF" != "$CURRENT_PRODUCTION_SUPABASE_PROJECT_REF" || {
+            echo "::error::Le projet Supabase staging ne peut pas être le projet actuellement utilisé par la production."
+            exit 1
+          }
+          case "$STAGING_DATABASE_URL" in
+            *"$CURRENT_PRODUCTION_SUPABASE_PROJECT_REF"*)
+              echo "::error::STAGING_DATABASE_URL pointe vers la base Supabase de production. Release bloquée."
+              exit 1
+              ;;
+          esac
+          case "$STAGING_DATABASE_URL" in
+            *"$STAGING_SUPABASE_PROJECT_REF"*) ;;
+            *)
+              echo "::error::STAGING_DATABASE_URL ne correspond pas à STAGING_SUPABASE_PROJECT_REF."
+              exit 1
+              ;;
+          esac
 
       - name: Prévisualiser les migrations staging
         run: npm exec -- supabase db push --db-url "$STAGING_DATABASE_URL" --dry-run
@@ -125,6 +148,7 @@ jobs:
           {
             echo "### Staging validé"
             echo "- SHA: \`$RELEASE_SHA\`"
+            echo "- Supabase staging: projet distinct de la production"
             echo "- migrations: Git = staging"
             echo "- smoke: PASS"
           } >> "$GITHUB_STEP_SUMMARY"
@@ -137,7 +161,9 @@ jobs:
     environment: production
     env:
       STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+      STAGING_SUPABASE_PROJECT_REF: ${{ vars.STAGING_SUPABASE_PROJECT_REF }}
       PRODUCTION_DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+      PRODUCTION_SUPABASE_PROJECT_REF: ${{ vars.PRODUCTION_SUPABASE_PROJECT_REF }}
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ vars.VERCEL_PRODUCTION_PROJECT_ID }}
@@ -156,7 +182,7 @@ jobs:
       - name: Vérifier la configuration production
         run: |
           set -eu
-          for name in STAGING_DATABASE_URL PRODUCTION_DATABASE_URL VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID PRODUCTION_URL; do
+          for name in STAGING_DATABASE_URL STAGING_SUPABASE_PROJECT_REF PRODUCTION_DATABASE_URL PRODUCTION_SUPABASE_PROJECT_REF VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID PRODUCTION_URL; do
             eval "value=\${$name:-}"
             test -n "$value" || {
               echo "::error::$name n'est pas configuré pour l'environnement production."
@@ -164,6 +190,28 @@ jobs:
             }
           done
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          test "$PRODUCTION_SUPABASE_PROJECT_REF" = "$CURRENT_PRODUCTION_SUPABASE_PROJECT_REF" || {
+            echo "::error::PRODUCTION_SUPABASE_PROJECT_REF ne correspond pas au projet de production actuellement vérifié."
+            exit 1
+          }
+          test "$STAGING_SUPABASE_PROJECT_REF" != "$PRODUCTION_SUPABASE_PROJECT_REF" || {
+            echo "::error::Staging et production ne peuvent pas partager le même projet Supabase."
+            exit 1
+          }
+          case "$PRODUCTION_DATABASE_URL" in
+            *"$PRODUCTION_SUPABASE_PROJECT_REF"*) ;;
+            *)
+              echo "::error::PRODUCTION_DATABASE_URL ne correspond pas à PRODUCTION_SUPABASE_PROJECT_REF."
+              exit 1
+              ;;
+          esac
+          case "$STAGING_DATABASE_URL" in
+            *"$STAGING_SUPABASE_PROJECT_REF"*) ;;
+            *)
+              echo "::error::STAGING_DATABASE_URL ne correspond pas à STAGING_SUPABASE_PROJECT_REF."
+              exit 1
+              ;;
+          esac
 
       - name: Vérifier le préflight migrations
         run: npm run release:drift:preflight
@@ -195,6 +243,7 @@ jobs:
             echo "- SHA: \`$RELEASE_SHA\`"
             echo "- CI: PASS"
             echo "- staging smoke: PASS"
+            echo "- Supabase staging/production: projets distincts et vérifiés"
             echo "- migrations Git/staging/production: identiques"
             echo "- production smoke: PASS"
           } >> "$GITHUB_STEP_SUMMARY"
