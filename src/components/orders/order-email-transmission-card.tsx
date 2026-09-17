@@ -17,16 +17,26 @@ const initialState: OrderTransmissionActionState = {};
 const pharmacyDocumentAccept = "application/pdf,image/jpeg,image/png";
 
 function Feedback({ state }: { state: OrderTransmissionActionState }) {
-  if (state.error) return <p className="text-sm text-destructive">{state.error}</p>;
-  if (state.success) return <p className="text-sm text-emerald-700">{state.success}</p>;
+  if (state.error) return <p className="text-sm text-destructive" role="alert">{state.error}</p>;
+  if (state.success) return <p className="text-sm text-emerald-700" role="status">{state.success}</p>;
   return null;
 }
 
-function Requirement({ ready, label }: { ready: boolean; label: string }) {
+function Requirement({
+  ready,
+  label,
+  optional = false,
+}: {
+  ready: boolean;
+  label: string;
+  optional?: boolean;
+}) {
   return (
     <div className="flex items-center justify-between gap-3 text-sm">
       <span>{label}</span>
-      <Badge variant={ready ? "default" : "outline"}>{ready ? "Prêt" : "À compléter"}</Badge>
+      <Badge variant={ready ? "default" : "outline"}>
+        {ready ? (optional ? "Disponible" : "Prêt") : optional ? "Optionnel" : "À compléter"}
+      </Badge>
     </div>
   );
 }
@@ -75,19 +85,24 @@ export function OrderEmailTransmissionCard({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewConfirmed, setPreviewConfirmed] = useState(false);
 
-  const ready = Boolean(gmailEmail && recipientEmail && vatNumber && hasKbis && hasRib);
+  const ready = Boolean(gmailEmail && recipientEmail);
   const canSend = ready && previewConfirmed;
   const returnTo = `/dashboard/orders/${orderId}`;
   const pdfUrl = `/api/orders/${orderId}/pdf`;
+  const attachmentLabels = [
+    "bon de commande PDF",
+    hasKbis ? "KBIS" : null,
+    hasRib ? "RIB" : null,
+  ].filter(Boolean);
 
   return (
-    <Card>
+    <Card id="transmission-commande">
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <CardTitle>Transmission de la commande</CardTitle>
             <p className="mt-1 text-sm text-muted-foreground">
-              Contrôle des pièces, prévisualisation obligatoire du bon de commande puis envoi depuis votre Gmail.
+              Prévisualisez le bon de commande puis envoyez-le à la marque depuis votre Gmail. Le KBIS, le RIB et le n° de TVA sont ajoutés lorsqu’ils sont disponibles, sans bloquer l’envoi.
             </p>
           </div>
           <Badge variant={canSend ? "default" : "outline"}>
@@ -100,9 +115,9 @@ export function OrderEmailTransmissionCard({
         <div className="grid gap-3 rounded-xl border p-4 sm:grid-cols-2">
           <Requirement ready={Boolean(gmailEmail)} label="Gmail connecté" />
           <Requirement ready={Boolean(recipientEmail)} label="Email commandes marque" />
-          <Requirement ready={Boolean(vatNumber)} label="N° TVA pharmacie" />
-          <Requirement ready={hasKbis} label="KBIS" />
-          <Requirement ready={hasRib} label="RIB" />
+          <Requirement ready={Boolean(vatNumber)} label="N° TVA pharmacie" optional />
+          <Requirement ready={hasKbis} label="KBIS" optional />
+          <Requirement ready={hasRib} label="RIB" optional />
           <Requirement ready={previewConfirmed} label="Bon de commande vérifié" />
         </div>
 
@@ -128,7 +143,7 @@ export function OrderEmailTransmissionCard({
         {!vatNumber ? (
           <form action={vatAction} className="space-y-2 rounded-xl border p-4">
             <input type="hidden" name="orderId" value={orderId} />
-            <label className="text-sm font-medium" htmlFor="vatNumber">Numéro de TVA de la pharmacie</label>
+            <label className="text-sm font-medium" htmlFor="vatNumber">Numéro de TVA de la pharmacie <span className="font-normal text-muted-foreground">· optionnel pour l’envoi</span></label>
             <div className="flex flex-col gap-2 sm:flex-row">
               <input
                 id="vatNumber"
@@ -147,9 +162,9 @@ export function OrderEmailTransmissionCard({
           <form action={kbisAction} className="space-y-2 rounded-xl border p-4">
             <input type="hidden" name="orderId" value={orderId} />
             <input type="hidden" name="documentType" value="kbis" />
-            <label className="text-sm font-medium" htmlFor={`kbis-${orderId}`}>KBIS {hasKbis ? "· enregistré" : ""}</label>
+            <label className="text-sm font-medium" htmlFor={`kbis-${orderId}`}>KBIS {hasKbis ? "· enregistré" : "· optionnel"}</label>
             <input id={`kbis-${orderId}`} name="file" type="file" accept={pharmacyDocumentAccept} required className="block w-full text-sm" />
-            <p className="text-xs text-muted-foreground">PDF ou photo · JPG/PNG · 10 Mo max. Sur mobile, vous pouvez prendre la photo directement.</p>
+            <p className="text-xs text-muted-foreground">PDF ou photo · JPG/PNG · 10 Mo max. S’il est présent, il sera joint à l’email.</p>
             <Button type="submit" variant="outline" size="sm" disabled={kbisPending}>{kbisPending ? "Envoi…" : hasKbis ? "Remplacer" : "Ajouter / photographier le KBIS"}</Button>
             <Feedback state={kbisState} />
           </form>
@@ -157,9 +172,9 @@ export function OrderEmailTransmissionCard({
           <form action={ribAction} className="space-y-2 rounded-xl border p-4">
             <input type="hidden" name="orderId" value={orderId} />
             <input type="hidden" name="documentType" value="rib" />
-            <label className="text-sm font-medium" htmlFor={`rib-${orderId}`}>RIB {hasRib ? "· enregistré" : ""}</label>
+            <label className="text-sm font-medium" htmlFor={`rib-${orderId}`}>RIB {hasRib ? "· enregistré" : "· optionnel"}</label>
             <input id={`rib-${orderId}`} name="file" type="file" accept={pharmacyDocumentAccept} required className="block w-full text-sm" />
-            <p className="text-xs text-muted-foreground">PDF ou photo · JPG/PNG · 10 Mo max. Sur mobile, vous pouvez prendre la photo directement.</p>
+            <p className="text-xs text-muted-foreground">PDF ou photo · JPG/PNG · 10 Mo max. S’il est présent, il sera joint à l’email.</p>
             <Button type="submit" variant="outline" size="sm" disabled={ribPending}>{ribPending ? "Envoi…" : hasRib ? "Remplacer" : "Ajouter / photographier le RIB"}</Button>
             <Feedback state={ribState} />
           </form>
@@ -186,7 +201,7 @@ export function OrderEmailTransmissionCard({
           <div className="grid gap-2">
             <p><span className="text-muted-foreground">À :</span> {recipientEmail || "Non configuré dans la marque"}</p>
             <p><span className="text-muted-foreground">Objet :</span> {previewSubject}</p>
-            <p><span className="text-muted-foreground">Pièces jointes :</span> bon de commande PDF, KBIS, RIB</p>
+            <p><span className="text-muted-foreground">Pièces jointes :</span> {attachmentLabels.join(", ")}</p>
           </div>
 
           {previewOpen ? (
@@ -224,14 +239,16 @@ export function OrderEmailTransmissionCard({
         <form action={sendAction} className="space-y-2">
           <input type="hidden" name="orderId" value={orderId} />
           <Button type="submit" disabled={!canSend || sendPending} className="w-full sm:w-auto">
-            {sendPending ? "Envoi en cours…" : "Envoyer la commande par Gmail"}
+            {sendPending ? "Envoi en cours…" : "Envoyer le BDC par email à la marque"}
           </Button>
           <p className="text-xs text-muted-foreground">
             {!ready
-              ? "Complétez les éléments manquants avant l’envoi."
+              ? !gmailEmail
+                ? "Connectez Gmail pour activer l’envoi."
+                : "Configurez l’email de prise de commande de la marque pour activer l’envoi."
               : !previewConfirmed
                 ? "Prévisualisez puis validez le bon de commande pour activer l’envoi."
-                : "Aucun envoi automatique : cette action nécessite votre clic."}
+                : "Le BDC partira immédiatement. Les pièces administratives disponibles seront jointes automatiquement."}
           </p>
           <Feedback state={sendState} />
         </form>
