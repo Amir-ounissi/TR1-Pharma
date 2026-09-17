@@ -25,7 +25,7 @@ test("landing desktop, CTA, preuve produit et capture du lead", async ({ page })
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Du sell-in au sell-out." })).toBeVisible();
   await expect(page.getByText("TR1 réunit visites commerciales, commandes, animations, formations et suivi du réseau dans un même cockpit terrain. Vos équipes savent où agir. Vous savez ce qui a été fait et ce qui doit suivre.")).toBeVisible();
-  await expect(page.getByText("Données de démonstration").first()).toBeVisible();
+  await expect(page.getByText("Démonstration", { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("heading", { name: /Trois métiers.*Un même suivi/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Développez vos comptes." })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Activez vos points de vente." })).toBeVisible();
