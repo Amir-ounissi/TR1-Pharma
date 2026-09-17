@@ -88,9 +88,10 @@ export async function closeFieldVisitAction(
         .maybeSingle();
 
       if (!visitBrandError && visitBrand?.brand_pharmacy_id) {
-        brandPharmacyId = visitBrand.brand_pharmacy_id;
+        const linkedBrandPharmacyId = visitBrand.brand_pharmacy_id;
+        brandPharmacyId = linkedBrandPharmacyId;
         const noteData = new FormData();
-        noteData.set("brandPharmacyId", brandPharmacyId);
+        noteData.set("brandPharmacyId", linkedBrandPharmacyId);
         noteData.set("fieldVisitId", parsed.visitId);
         noteData.set("notes", parsed.summary);
         photos.forEach((photo) => noteData.append("photos", photo, photo.name));
