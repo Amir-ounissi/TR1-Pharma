@@ -56,7 +56,7 @@ test("PWA icons, service worker and Apple install metadata are served", async ({
   );
   await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute(
     "href",
-    /\/pwa\/icon\/180\?v=official-svg-20260910/,
+    /\/pwa\/icon\/180\?v=tr1-brand-20260915/,
   );
   await expect(page.locator('meta[name="apple-mobile-web-app-capable"]')).toHaveAttribute(
     "content",
