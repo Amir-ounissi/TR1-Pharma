@@ -6,7 +6,7 @@ const providerEmail = `terrain-${Date.now()}@example.test`;
 
 test("un administrateur construit et pilote un portefeuille multi-prestataires", async ({ page }) => {
   await signIn(page, "admin@dermavita.local", /Dermavita/i);
-  await expect(page.getByRole("link", { name: "Prestataires", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Équipe & terrain", exact: true })).toBeVisible();
 
   await page.goto("/dashboard/providers");
   await expect(page.getByRole("heading", { name: "Prestataires terrain", exact: true })).toBeVisible();

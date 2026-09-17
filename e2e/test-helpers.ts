@@ -30,15 +30,16 @@ export async function signIn(page: Page, email: string, brand: RegExp | string) 
   const landingPath = new URL(page.url()).pathname;
   if (["/dashboard/field", "/dashboard/direction"].includes(landingPath)) return;
 
-  // Brand switching lives in the account workspace. Scope the locator to the
-  // actual brand-selection forms so the global "Marque active …" trigger in
-  // the application header cannot be selected by mistake.
+  // Brand switching lives in the account workspace and is now implemented as
+  // activation links rather than forms. Scope the locator to those links so
+  // the global "Marque active …" trigger in the application header cannot be
+  // selected by mistake.
   await page.goto("/dashboard/account");
-  const brandButton = page
-    .locator('form:has(input[name="brandId"])')
-    .getByRole("button", { name: brand });
-  await expect(brandButton).toHaveCount(1);
-  await brandButton.click();
+  const brandLink = page
+    .locator('a[href^="/auth/activate-brand?brandId="]')
+    .filter({ hasText: brand });
+  await expect(brandLink).toHaveCount(1);
+  await brandLink.click();
   await expect(page).toHaveURL(/\/dashboard(?:\/(?:agent|field|direction))?$/, { timeout: 30_000 });
 }
 

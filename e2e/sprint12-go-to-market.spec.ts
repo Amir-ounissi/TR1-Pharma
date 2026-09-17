@@ -23,9 +23,9 @@ test.beforeAll(() => mkdirSync(artifacts, { recursive: true }));
 
 test("landing desktop, CTA, preuve produit et capture du lead", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Du sell-in au sell-out, pilotez chaque action qui fait vendre en pharmacie." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Du sell-in au sell-out." })).toBeVisible();
   await expect(page.getByText("TR1 réunit visites commerciales, commandes, animations, formations et suivi du réseau dans un même cockpit terrain. Vos équipes savent où agir. Vous savez ce qui a été fait et ce qui doit suivre.")).toBeVisible();
-  await expect(page.getByText("Données de démonstration").first()).toBeVisible();
+  await expect(page.getByText("Démonstration", { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("heading", { name: /Trois métiers.*Un même suivi/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Développez vos comptes." })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Activez vos points de vente." })).toBeVisible();
@@ -61,8 +61,8 @@ test("landing desktop, CTA, preuve produit et capture du lead", async ({ page })
 test("landing mobile reste lisible et sans débordement", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Du sell-in au sell-out, pilotez chaque action qui fait vendre en pharmacie." })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Voir les pharmacies en liste" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Du sell-in au sell-out." })).toBeVisible();
+  await expect(page.getByRole("tablist", { name: "Choisir les informations affichées sur la carte" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Accompagnez le conseil." })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
   await page.screenshot({ path: `${artifacts}/landing-mobile.png`, fullPage: true });
@@ -136,13 +136,13 @@ test("isolation, changement autorisé et marque sans membership", async ({ brows
   const context = await browser.newContext();
   const page = await context.newPage();
   const nutrilabBrandId = "00000000-0000-0000-0000-000000000102";
-  const nutrilabForm = () => page.locator(`form:has(input[name="brandId"][value="${nutrilabBrandId}"])`);
+  const nutrilabLink = () => page.locator(`a[href^="/auth/activate-brand?brandId=${nutrilabBrandId}"]`);
 
   try {
     await signIn(page, "agent@dermavita.local", await primaryBrandName());
     await page.goto("/dashboard/account");
-    await expect(nutrilabForm()).toHaveCount(1);
-    await nutrilabForm().getByRole("button").click();
+    await expect(nutrilabLink()).toHaveCount(1);
+    await nutrilabLink().click();
     await expect(page).toHaveURL(/\/dashboard\/agent$/);
     await expect(page.getByText("Nutrilab", { exact: true }).first()).toBeVisible();
 
@@ -152,7 +152,7 @@ test("isolation, changement autorisé et marque sans membership", async ({ brows
     await service.from("memberships").delete().eq("id", temporaryMembership!.id);
 
     await page.goto("/dashboard/account");
-    await expect(nutrilabForm()).toHaveCount(0);
+    await expect(nutrilabLink()).toHaveCount(0);
     await context.addCookies([{ name: "tr1_active_brand", value: nutrilabBrandId, domain: "127.0.0.1", path: "/", httpOnly: true, sameSite: "Lax" }]);
     await page.goto("/dashboard/agent");
     // A stale inaccessible brand cookie is ignored without reintroducing a forced brand picker.

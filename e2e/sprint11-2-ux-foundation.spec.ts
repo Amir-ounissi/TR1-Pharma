@@ -27,7 +27,7 @@ test("scénario 1 — Agent desktop", async ({ page }) => {
 test("scénario 2 — Manager desktop", async ({ page }) => {
   await signIn(page, "admin@dermavita.local", /Dermavita/i);
   const sidebar = page.getByRole("navigation", { name: "Navigation principale" }).first();
-  await expect(sidebar.getByText("Priorités", { exact: true })).toBeVisible();
+  await expect(sidebar.getByText("Plan d’action", { exact: true })).toBeVisible();
   await expect(sidebar.getByText("Ma journée", { exact: true })).toHaveCount(0);
   await page.goto("/dashboard/commercial-health?filter=reorder_overdue");
   await expect(page.getByRole("heading", { name: "Priorités commerciales" })).toBeVisible();
