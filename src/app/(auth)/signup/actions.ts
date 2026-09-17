@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { shouldBlockLocalFixtureAccount } from "@/lib/auth/local-fixture-guard";
 import { buildSignupMetadata, getSignupSuccessMessage, signupIntentSchema } from "@/lib/signup-intent";
 import { createClient } from "@/lib/supabase/server";
 import { resolveOnboardingRedirectUrl } from "@/lib/runtime-environment";
@@ -49,6 +50,10 @@ export async function signUpAction(
   if (!parsed.success) {
     const message = parsed.error.issues[0]?.message ?? "Les informations saisies sont invalides.";
     return { error: message };
+  }
+
+  if (shouldBlockLocalFixtureAccount(parsed.data.email)) {
+    return { error: "Cette adresse email ne peut pas être utilisée." };
   }
 
   let emailRedirectTo: string;
