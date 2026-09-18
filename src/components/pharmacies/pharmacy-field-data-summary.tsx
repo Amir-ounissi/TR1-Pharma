@@ -87,7 +87,7 @@ export function PharmacyFieldDataSummary({
   const revenueHt = lines.reduce((total, line) => total + Number(line.revenue_ht ?? 0), 0);
 
   return (
-    <Card>
+    <Card data-testid="pharmacy-field-data-summary">
       <CardHeader>
         <CardTitle>Data terrain</CardTitle>
         <CardDescription>
