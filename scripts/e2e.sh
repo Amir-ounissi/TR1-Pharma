@@ -24,6 +24,7 @@ export LEAD_CAPTURE_SALT="tr1-e2e-lead-capture-salt"
 export LEAD_CAPTURE_ENABLED="true"
 export WHATSAPP_SIMULATOR_ENABLED="true"
 export PDF_ORDER_E2E_MOCK='{"orderNumber":"E2E-PDF-ORDER","orderDate":"2026-09-02","pharmacy":{"name":"Pharmacie République","siret":"12345678900011","cip":null,"finess":null,"address":null,"postalCode":"75003"},"lines":[{"label":"Dermacalm 50 ml","sku":"DV-DC-50","ean":"3400000000001","quantity":2,"unitPriceHt":18.5,"discountRate":null}],"totalHt":37,"totalTtc":39.04,"warnings":[]}'
+export SELL_OUT_DOCUMENT_E2E_MOCK='{"periodStart":"2026-09-01","periodEnd":"2026-09-07","personalDataDetected":false,"lines":[{"label":"Dermacalm","sourceProductCode":"DV-DC-50","ean":"3400000000001","unitsSold":7,"revenueHt":null,"revenueTtc":209.3,"unitPriceTtc":29.9,"taxRate":5.5,"confidence":0.96}],"totalUnits":7,"totalRevenueHt":null,"totalRevenueTtc":209.3,"confidence":0.96,"warnings":[]}'
 export E2E_SKIP_TYPECHECK="true"
 export NEXT_DIST_DIR="${NEXT_DIST_DIR:-.next-playwright-prod}"
 export PLAYWRIGHT_BROWSERS_PATH="${PLAYWRIGHT_BROWSERS_PATH:-/private/tmp/tr1-playwright-browsers}"
