@@ -26,10 +26,11 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 
 const OUTCOMES = [
-  ["very_good", "Très bien"],
-  ["good", "Bien"],
-  ["follow_up", "À revoir"],
-  ["problem", "Problème"],
+  ["order_taken", "Commande prise"],
+  ["no_order", "Pas de commande"],
+  ["follow_up", "À relancer"],
+  ["information", "Information / suivi"],
+  ["other", "Autre"],
 ] as const;
 
 const NEXT_VISITS = [
@@ -64,7 +65,7 @@ type SpeechRecognitionLike = {
 type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
 
 function outcomeLabel(value: Outcome) {
-  return OUTCOMES.find(([item]) => item === value)?.[1] ?? "Bien";
+  return OUTCOMES.find(([item]) => item === value)?.[1] ?? "Pas de commande";
 }
 
 function nextVisitLabel(value: NextVisit, customNext: string) {
@@ -88,7 +89,7 @@ export function AiVisitClose({ brandPharmacyId }: { brandPharmacyId: string }) {
   const [visitId, setVisitId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState("");
-  const [outcome, setOutcome] = useState<Outcome>("good");
+  const [outcome, setOutcome] = useState<Outcome>("no_order");
   const [nextVisit, setNextVisit] = useState<NextVisit>("none");
   const [customNext, setCustomNext] = useState("");
   const [summary, setSummary] = useState("");
