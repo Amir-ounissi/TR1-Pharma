@@ -60,6 +60,30 @@ function migrationList(databaseUrl, label) {
   }
 
   if (remoteVersions.length === 0) {
+    const psql = spawnSync(
+      "psql",
+      [
+        "--no-psqlrc",
+        "--tuples-only",
+        "--no-align",
+        "--set=ON_ERROR_STOP=1",
+        "--dbname",
+        databaseUrl,
+        "--command",
+        "select version from supabase_migrations.schema_migrations order by version;",
+      ],
+      { encoding: "utf8", env: process.env },
+    );
+
+    if (psql.status === 0) {
+      for (const line of psql.stdout.split(/\r?\n/)) {
+        const version = line.trim();
+        if (/^\d{14}$/.test(version)) remoteVersions.push(version);
+      }
+    }
+  }
+
+  if (remoteVersions.length === 0) {
     throw new Error(`${label}: aucune migration distante détectée. Refus de continuer.`);
   }
 
