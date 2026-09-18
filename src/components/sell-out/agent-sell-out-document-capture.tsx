@@ -144,6 +144,7 @@ export function AgentSellOutDocumentCapture({
 
   return (
     <form action={createAnalyzedSellOutCaptureAction} className="space-y-4">
+      <input type="hidden" name="brandPharmacyId" value={brandPharmacyId} />
       <input type="hidden" name="linesJson" value={serializedLines} />
       <input type="hidden" name="confidence" value={confidence} />
 
@@ -152,7 +153,7 @@ export function AgentSellOutDocumentCapture({
           <Label htmlFor="sell-out-pharmacy">Pharmacie</Label>
           <select
             id="sell-out-pharmacy"
-            name="brandPharmacyId"
+            name="analysisBrandPharmacyId"
             required
             value={brandPharmacyId}
             onChange={(event) => {
