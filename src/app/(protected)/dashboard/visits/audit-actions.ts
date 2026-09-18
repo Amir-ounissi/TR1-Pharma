@@ -141,49 +141,46 @@ export async function saveVisitAuditAction(
         .single();
       if (auditRowError) throw auditRowError;
 
-      const objectPath = `${auditRow.brand_id}/${audit.auditId}/audit.${photoExtension(auditPhoto)}`;
+      const objectPath = `${auditRow.brand_id}/${audit.auditId}/audit-${Date.now()}.${photoExtension(auditPhoto)}`;
       const { data: existing } = await supabase
         .from("field_visit_audit_attachments")
         .select("id,object_path")
         .eq("audit_id", audit.auditId)
         .is("archived_at", null)
+        .order("created_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
 
-      if (existing?.object_path && existing.object_path !== objectPath) {
-        await supabase.storage.from("audit-evidence").remove([existing.object_path]);
-        await supabase
+      const { error: uploadError } = await supabase.storage
+        .from("audit-evidence")
+        .upload(objectPath, await auditPhoto.arrayBuffer(), {
+          contentType: auditPhoto.type,
+          upsert: false,
+        });
+      if (uploadError) {
+        photoWarning = "L’audit est enregistré, mais la photo n’a pas été synchronisée.";
+      } else {
+        const { error: attachmentError } = await supabase
           .from("field_visit_audit_attachments")
-          .update({ archived_at: new Date().toISOString() })
-          .eq("id", existing.id);
-      }
-
-      if (!existing || existing.object_path !== objectPath) {
-        await supabase.storage.from("audit-evidence").remove([objectPath]);
-        const { error: uploadError } = await supabase.storage
-          .from("audit-evidence")
-          .upload(objectPath, await auditPhoto.arrayBuffer(), {
-            contentType: auditPhoto.type,
-            upsert: false,
+          .insert({
+            audit_id: audit.auditId,
+            brand_id: auditRow.brand_id,
+            bucket_id: "audit-evidence",
+            object_path: objectPath,
+            original_name: auditPhoto.name || `audit.${photoExtension(auditPhoto)}`,
+            mime_type: auditPhoto.type,
+            size_bytes: auditPhoto.size,
+            uploaded_by: userId,
           });
-        if (uploadError) {
-          photoWarning = "L’audit est enregistré, mais la photo n’a pas été synchronisée.";
-        } else {
-          const { error: attachmentError } = await supabase
+        if (attachmentError) {
+          photoWarning = "L’audit est enregistré, mais la photo n’a pas été reliée.";
+          await supabase.storage.from("audit-evidence").remove([objectPath]);
+        } else if (existing?.object_path) {
+          await supabase
             .from("field_visit_audit_attachments")
-            .insert({
-              audit_id: audit.auditId,
-              brand_id: auditRow.brand_id,
-              bucket_id: "audit-evidence",
-              object_path: objectPath,
-              original_name: auditPhoto.name || `audit.${photoExtension(auditPhoto)}`,
-              mime_type: auditPhoto.type,
-              size_bytes: auditPhoto.size,
-              uploaded_by: userId,
-            });
-          if (attachmentError) {
-            photoWarning = "L’audit est enregistré, mais la photo n’a pas été reliée.";
-            await supabase.storage.from("audit-evidence").remove([objectPath]);
-          }
+            .update({ archived_at: new Date().toISOString() })
+            .eq("id", existing.id);
+          await supabase.storage.from("audit-evidence").remove([existing.object_path]);
         }
       }
     }
