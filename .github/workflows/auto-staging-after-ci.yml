@@ -1,0 +1,33 @@
+name: Auto staging after green CI
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: tr1-auto-staging
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    name: Déclencher le staging après CI verte
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Déclencher la release du SHA validé
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -eu
+          gh workflow run release-staging.yml             --repo "$GITHUB_REPOSITORY"             --ref main             -f release_sha="$RELEASE_SHA"
+          echo "Release staging demandée automatiquement pour $RELEASE_SHA."
