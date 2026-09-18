@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export type OnboardingState = { error?: string };
 
@@ -48,7 +49,9 @@ export async function completeOnboardingAction(
       };
     }
 
-    requiresInvitationPassword = !tenantMemberships.some((membership) => membership.status === "active");
+    requiresInvitationPassword = !tenantMemberships.some(
+      (membership) => membership.status === "active",
+    );
   }
 
   if (requiresInvitationPassword) {
@@ -64,26 +67,24 @@ export async function completeOnboardingAction(
       return { error: "Les mots de passe ne correspondent pas." };
     }
 
-    // Activate the tenant access while the invitation session is still the
-    // current authenticated context. Updating the Auth password can rotate the
-    // session, so doing this first avoids a stale-token RPC immediately after it.
-    const { data: activatedCount, error: activationError } = await supabase.rpc(
-      "accept_my_invited_memberships",
-    );
-    if (activationError) {
-      return { error: "Vos accès de marque n’ont pas pu être activés." };
-    }
-    if (!Number(activatedCount ?? 0)) {
-      return {
-        error:
-          "Aucun accès de marque invité n’a été trouvé pour ce compte. Contactez votre administrateur TR1.",
-      };
-    }
-
     const { error: passwordError } = await supabase.auth.updateUser({
       password: invitedProfile.data.password,
     });
     if (passwordError) return { error: "Le mot de passe n’a pas pu être enregistré." };
+
+    // Invitation activation is deliberately server-controlled. The legacy
+    // authenticated RPC is revoked by the pre-pilot hardening migration.
+    const admin = createAdminClient();
+    const { error: activationError } = await admin
+      .from("memberships")
+      .update({ status: "active" })
+      .eq("user_id", userId)
+      .not("brand_id", "is", null)
+      .eq("status", "invited");
+
+    if (activationError) {
+      return { error: "Vos accès de marque n’ont pas pu être activés." };
+    }
   }
 
   const { error } = await supabase
