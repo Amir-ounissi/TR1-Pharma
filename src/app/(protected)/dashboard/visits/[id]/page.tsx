@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, BookOpenCheck, Building2, CalendarDays, MapPin, Navigation, Target } from "lucide-react";
+import { VisitAuditPanel, type VisitAuditSnapshot } from "@/components/visits/visit-audit-panel";
 import { VisitCloseoutPanel } from "@/components/visits/visit-closeout-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -70,6 +71,28 @@ export default async function FieldVisitPage({ params }: { params: Promise<{ id:
     return brand?.name || "Marque";
   });
   const primaryBrandPharmacyId = visitBrands[0]?.brand_pharmacy_id ?? null;
+
+  const auditFields = "id,visit_id,brand_id,brand_pharmacy_id,price_displayed,displayed_price_ttc,availability_status,stock_quantity,stock_count_mode,facings,shelf_visibility,plv_present,team_training_status,tester_samples_status,competition_visible,competition_note,notes,recommendations,audited_at";
+  const relationIds = visitBrands.map((row) => row.brand_pharmacy_id).filter(Boolean);
+  const { data: auditRows, error: auditError } = relationIds.length
+    ? await supabase
+        .from("field_visit_audits")
+        .select(auditFields)
+        .in("brand_pharmacy_id", relationIds)
+        .order("audited_at", { ascending: false })
+        .limit(Math.max(20, relationIds.length * 5))
+    : { data: [], error: null };
+
+  if (auditError) throw auditError;
+
+  const auditsByRelation = new Map<string, Array<VisitAuditSnapshot & { visit_id: string }>>();
+  for (const raw of auditRows ?? []) {
+    const row = raw as VisitAuditSnapshot & { visit_id: string; brand_pharmacy_id: string };
+    const current = auditsByRelation.get(row.brand_pharmacy_id) ?? [];
+    current.push(row);
+    auditsByRelation.set(row.brand_pharmacy_id, current);
+  }
+
   const mapsQuery = [pharmacyName, pharmacy?.city].filter(Boolean).join(", ");
   const mapsHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsQuery)}`;
   const pharmacyHref = primaryBrandPharmacyId
@@ -147,6 +170,27 @@ export default async function FieldVisitPage({ params }: { params: Promise<{ id:
               <p className="mt-2 whitespace-pre-wrap text-sm">{visit.notes}</p>
             </div>
           ) : null}
+        </section>
+      ) : null}
+
+      {visitBrands.length ? (
+        <section className="space-y-3">
+          {visitBrands.map((row) => {
+            const brand = Array.isArray(row.brands) ? row.brands[0] : row.brands;
+            const relationAudits = auditsByRelation.get(row.brand_pharmacy_id) ?? [];
+            const currentAudit = relationAudits.find((audit) => audit.visit_id === visit.id) ?? null;
+            const previousAudit = relationAudits.find((audit) => audit.visit_id !== visit.id) ?? null;
+            return (
+              <VisitAuditPanel
+                key={row.brand_pharmacy_id}
+                visitId={visit.id}
+                brandPharmacyId={row.brand_pharmacy_id}
+                brandName={brand?.name || "Marque"}
+                currentAudit={currentAudit}
+                previousAudit={previousAudit}
+              />
+            );
+          })}
         </section>
       ) : null}
 
