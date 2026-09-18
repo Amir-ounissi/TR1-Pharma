@@ -6,7 +6,7 @@ const VERCEL_AI_GATEWAY_RESPONSES_URL = "https://ai-gateway.vercel.sh/v1/respons
 export const DEFAULT_VISIT_CLOSE_MODEL = "gpt-5.6-luna";
 export const MAX_VISIT_CLOSE_NOTE_CHARS = 2_000;
 
-const visitOutcome = z.enum(["very_good", "good", "follow_up", "problem"]);
+const visitOutcome = z.enum(["order_taken", "no_order", "follow_up", "information", "other"]);
 const nextVisit = z.enum(["none", "week1", "weeks2", "month1", "custom"]);
 const visitTag = z.enum(["order", "merchandising", "stockout", "competitor", "callback", "problem"]);
 
@@ -26,7 +26,7 @@ const VISIT_CLOSE_JSON_SCHEMA = {
   required: ["summary", "outcome", "next", "customNext", "tags"],
   properties: {
     summary: { type: "string", minLength: 1, maxLength: 500 },
-    outcome: { type: "string", enum: ["very_good", "good", "follow_up", "problem"] },
+    outcome: { type: "string", enum: ["order_taken", "no_order", "follow_up", "information", "other"] },
     next: { type: "string", enum: ["none", "week1", "weeks2", "month1", "custom"] },
     customNext: { type: ["string", "null"] },
     tags: {
@@ -39,7 +39,7 @@ const VISIT_CLOSE_JSON_SCHEMA = {
 
 const VISIT_CLOSE_INSTRUCTIONS = `Tu structures une note de fin de visite d'un commercial en pharmacie. N'invente rien.
 Retourne un résumé factuel et court (500 caractères max), le résultat de visite et les suites utiles.
-outcome: very_good = succès commercial clair/commande; good = visite positive ou normale; follow_up = décision ou action à reprendre; problem = incident, refus fort ou problème.
+outcome: order_taken uniquement si une commande est explicitement obtenue; no_order si l'absence de commande ou de besoin de réassort est explicite; follow_up si une décision ou action doit être reprise; information pour une visite principalement informative/de suivi sans commande; other si aucun de ces cas ne correspond clairement.
 next: week1, weeks2 ou month1 seulement si la note l'indique clairement; custom uniquement si une date ET une heure précises sont explicites; sinon none.
 customNext doit être au format YYYY-MM-DDTHH:mm pour custom, sinon null.
 tags: uniquement les signaux réellement présents dans la note.`;
