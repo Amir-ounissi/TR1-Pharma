@@ -12,4 +12,15 @@ for (const route of routes) {
   if (body.length < 100) throw new Error(`${route} retourne un contenu anormalement court.`);
   console.log(`${route} : ${response.status}`);
 }
+const recoveryResponse = await fetch(new URL("/api/auth/forgot-password", baseUrl), {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ email: `staging-smoke-${Date.now()}@example.invalid` }),
+});
+if (recoveryResponse.status !== 200) {
+  const body = await recoveryResponse.text();
+  throw new Error(`/api/auth/forgot-password répond ${recoveryResponse.status}, attendu 200. Réponse: ${body.slice(0, 300)}`);
+}
+console.log("/api/auth/forgot-password : 200");
+
 console.log(`Smoke public réussi sur ${baseUrl.origin}`);
