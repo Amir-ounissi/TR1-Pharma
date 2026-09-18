@@ -224,7 +224,7 @@ export async function createAnalyzedSellOutCaptureAction(formData: FormData): Pr
       throw new Error(evidenceError.message);
     }
   } catch (error) {
-    await supabase.rpc("archive_sell_out_capture", { target_capture_id: captureId }).catch(() => undefined);
+    await supabase.rpc("archive_sell_out_capture", { target_capture_id: captureId });
     throw error;
   }
 
