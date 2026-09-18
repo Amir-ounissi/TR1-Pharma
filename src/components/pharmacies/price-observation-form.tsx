@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Camera, Save } from "lucide-react";
 import {
   savePriceObservationAction,
@@ -28,9 +29,14 @@ export function PriceObservationForm({
     retailPriceTtc: number | string | null;
   }>;
 }) {
+  const router = useRouter();
   const [state, action, pending] = useActionState(savePriceObservationAction, emptyState);
   const [priceType, setPriceType] = useState("regular");
   const [method, setMethod] = useState("photo");
+
+  useEffect(() => {
+    if (state.success && !state.error) router.refresh();
+  }, [state.success, state.error, router]);
 
   return (
     <form action={action} className="space-y-4">
