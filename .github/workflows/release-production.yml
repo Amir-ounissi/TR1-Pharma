@@ -123,9 +123,6 @@ jobs:
               ;;
           esac
 
-      - name: Prévisualiser les migrations staging
-        run: npm exec -- supabase db push --db-url "$STAGING_DATABASE_URL" --dry-run
-
       - name: Appliquer les migrations staging
         run: npm exec -- supabase db push --db-url "$STAGING_DATABASE_URL"
 
@@ -215,9 +212,6 @@ jobs:
 
       - name: Vérifier le préflight migrations
         run: npm run release:drift:preflight
-
-      - name: Prévisualiser les migrations production
-        run: npm exec -- supabase db push --db-url "$PRODUCTION_DATABASE_URL" --dry-run
 
       - name: Appliquer les migrations production
         run: npm exec -- supabase db push --db-url "$PRODUCTION_DATABASE_URL"
