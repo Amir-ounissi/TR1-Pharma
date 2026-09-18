@@ -150,7 +150,6 @@ test("audit 4P+ terrain : snapshot, preuve, historique et action explicite", asy
     expect(attachments).toHaveLength(1);
     expect(attachments?.[0].mime_type).toBe("image/png");
 
-    await page.getByText("Audit express 4P+").click();
     await expect(page.getByText("Depuis le passage précédent")).toBeVisible();
     await page.getByRole("button", { name: "Prévoir un réassort" }).click();
     await expect(page.getByText("Action ajoutée à vos tâches.")).toBeVisible();
