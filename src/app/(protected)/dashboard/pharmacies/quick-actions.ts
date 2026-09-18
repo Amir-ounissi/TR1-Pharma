@@ -14,8 +14,6 @@ import { syncHubSpotNoteAfterPersistence } from "@/lib/integrations/hubspot/runt
 
 const uuid = z.string().uuid();
 const planPreset = z.enum(["today", "tomorrow", "week", "custom"]);
-const finishOutcome = z.enum(["very_good", "good", "follow_up", "problem"]);
-const nextPreset = z.enum(["none", "week1", "weeks2", "month1", "custom"]);
 const noteTags = [
   "order",
   "merchandising",
@@ -48,12 +46,6 @@ function nextWeekday(date: string, minimumOffset = 1) {
 
 function addMinutes(iso: string, minutes: number) {
   return new Date(Date.parse(iso) + minutes * 60_000).toISOString();
-}
-
-function addMonthsCalendar(date: string, months: number) {
-  const [year, month, day] = date.split("-").map(Number);
-  const result = new Date(Date.UTC(year, month - 1 + months, day));
-  return result.toISOString().slice(0, 10);
 }
 
 async function getRelation(brandPharmacyId: string) {
@@ -189,79 +181,6 @@ export async function quickPlanVisitAction(
     };
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Impossible de planifier la visite." };
-  }
-}
-
-export async function startVisitAction(
-  brandPharmacyId: string,
-  visitId: string,
-): Promise<QuickActionResult> {
-  try {
-    uuid.parse(brandPharmacyId);
-    uuid.parse(visitId);
-    const { supabase } = await getRelation(brandPharmacyId);
-    const { error } = await supabase.rpc("start_field_visit", { target_visit_id: visitId });
-    if (error) throw error;
-    revalidatePath("/dashboard/agenda");
-    revalidatePath("/dashboard/field");
-    revalidatePath(`/dashboard/pharmacies/${brandPharmacyId}`);
-    return { success: "Visite démarrée." };
-  } catch (error) {
-    return { error: error instanceof Error ? error.message : "Impossible de démarrer la visite." };
-  }
-}
-
-export async function completeVisitAction(
-  brandPharmacyId: string,
-  visitId: string,
-  outcome: "very_good" | "good" | "follow_up" | "problem",
-  next: "none" | "week1" | "weeks2" | "month1" | "custom",
-  customNext?: string,
-): Promise<QuickActionResult> {
-  try {
-    const parsed = z.object({
-      brandPharmacyId: uuid,
-      visitId: uuid,
-      outcome: finishOutcome,
-      next: nextPreset,
-      customNext: z.string().optional(),
-    }).parse({ brandPharmacyId, visitId, outcome, next, customNext });
-    const { supabase, brand, userId } = await getRelation(parsed.brandPharmacyId);
-    let nextStart: string | null = null;
-    if (parsed.next !== "none") {
-      if (parsed.next === "custom") {
-        if (!parsed.customNext) throw new Error("Choisissez la prochaine date.");
-        nextStart = parisLocalToIso(parsed.customNext);
-      } else {
-        const today = todayInParis();
-        const date =
-          parsed.next === "week1"
-            ? addCalendarDays(today, 7)
-            : parsed.next === "weeks2"
-              ? addCalendarDays(today, 14)
-              : addMonthsCalendar(today, 1);
-        nextStart = await findFreeSlot(supabase, userId, date);
-      }
-    }
-    const { data: nextVisitId, error } = await supabase.rpc("complete_field_visit", {
-      target_visit_id: parsed.visitId,
-      target_outcome: parsed.outcome,
-      target_next_start_at: nextStart,
-    });
-    if (error) throw error;
-    await syncNaaliHubSpotVisitAfterPersistence(brand.id, parsed.visitId);
-    revalidatePath("/dashboard/agenda");
-    revalidatePath("/dashboard/field");
-    revalidatePath(`/dashboard/pharmacies/${parsed.brandPharmacyId}`);
-    return {
-      success: nextStart
-        ? `Visite terminée · prochain passage ${new Intl.DateTimeFormat("fr-FR", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Paris" }).format(new Date(nextStart))}`
-        : "Visite terminée.",
-      visitId: nextVisitId ? String(nextVisitId) : undefined,
-      scheduledAt: nextStart ?? undefined,
-    };
-  } catch (error) {
-    return { error: error instanceof Error ? error.message : "Impossible de terminer la visite." };
   }
 }
 
