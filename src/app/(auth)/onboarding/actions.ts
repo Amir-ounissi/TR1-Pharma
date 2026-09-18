@@ -64,11 +64,9 @@ export async function completeOnboardingAction(
       return { error: "Les mots de passe ne correspondent pas." };
     }
 
-    const { error: passwordError } = await supabase.auth.updateUser({
-      password: invitedProfile.data.password,
-    });
-    if (passwordError) return { error: "Le mot de passe n’a pas pu être enregistré." };
-
+    // Activate the tenant access while the invitation session is still the
+    // current authenticated context. Updating the Auth password can rotate the
+    // session, so doing this first avoids a stale-token RPC immediately after it.
     const { data: activatedCount, error: activationError } = await supabase.rpc(
       "accept_my_invited_memberships",
     );
@@ -81,6 +79,11 @@ export async function completeOnboardingAction(
           "Aucun accès de marque invité n’a été trouvé pour ce compte. Contactez votre administrateur TR1.",
       };
     }
+
+    const { error: passwordError } = await supabase.auth.updateUser({
+      password: invitedProfile.data.password,
+    });
+    if (passwordError) return { error: "Le mot de passe n’a pas pu être enregistré." };
   }
 
   const { error } = await supabase
