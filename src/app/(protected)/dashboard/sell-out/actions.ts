@@ -31,6 +31,31 @@ const captureSchema = z.object({
   confidence: z.string().trim().max(16).optional(),
   tradeCampaignId: z.union([uuid, z.literal("")]).optional(),
 });
+const analyzedSellOutLineSchema = z.object({
+  productId: z.union([uuid, z.literal("")]).optional(),
+  sourceProductCode: z.string().trim().max(120).nullable().optional(),
+  ean: z.string().trim().max(32).nullable().optional(),
+  label: z.string().trim().max(300).nullable().optional(),
+  unitsSold: z.number().int().min(0).nullable(),
+  revenueHt: z.number().min(0).nullable(),
+  confidence: z.number().min(0).max(1).nullable(),
+}).refine(
+  (line) =>
+    Boolean(line.productId)
+    || Boolean(line.sourceProductCode?.trim())
+    || Boolean(line.ean?.trim())
+    || Boolean(line.label?.trim()),
+  "Chaque ligne doit identifier un produit.",
+);
+
+const analyzedSellOutSchema = z.object({
+  brandPharmacyId: uuid,
+  periodStart: z.string().date(),
+  periodEnd: z.string().date(),
+  sourceLabel: z.string().trim().max(300).optional(),
+  confidence: z.number().min(0).max(1).nullable(),
+  lines: z.array(analyzedSellOutLineSchema).min(1).max(250),
+});
 
 async function requireSellOutBrand() {
   const [{ supabase, brand }] = await Promise.all([
@@ -96,6 +121,113 @@ export async function saveSellOutCaptureFormAction(formData: FormData): Promise<
   if (error) throw new Error(error.message);
 
   const captureId = uuid.parse(data);
+  revalidatePath("/dashboard/sell-out");
+  redirect(`/dashboard/sell-out/${captureId}`);
+}
+
+export async function createAnalyzedSellOutCaptureAction(formData: FormData): Promise<void> {
+  const document = formData.get("document");
+  if (!(document instanceof File) || document.size < 1) {
+    throw new Error("Ajoutez le document sell-out analysé.");
+  }
+  if (document.size > maxEvidenceBytes) {
+    throw new Error("Le justificatif ne doit pas dépasser 10 Mo.");
+  }
+  if (!["image/jpeg", "image/png", "application/pdf"].includes(document.type)) {
+    throw new Error("Le document analysé doit être une photo JPG/PNG ou un PDF.");
+  }
+
+  let rawLines: unknown;
+  try {
+    rawLines = JSON.parse(String(formData.get("linesJson") ?? "[]"));
+  } catch {
+    throw new Error("Les lignes sell-out corrigées sont invalides.");
+  }
+
+  const confidenceRaw = String(formData.get("confidence") ?? "").trim();
+  const parsed = analyzedSellOutSchema.parse({
+    brandPharmacyId: String(formData.get("brandPharmacyId") ?? "").trim(),
+    periodStart: String(formData.get("periodStart") ?? "").trim(),
+    periodEnd: String(formData.get("periodEnd") ?? "").trim(),
+    sourceLabel: String(formData.get("sourceLabel") ?? "").trim(),
+    confidence: confidenceRaw ? Number(confidenceRaw) : null,
+    lines: rawLines,
+  });
+  if (parsed.periodEnd < parsed.periodStart) {
+    throw new Error("La date de fin doit suivre la date de début.");
+  }
+  if (parsed.lines.some((line) => line.unitsSold === null)) {
+    throw new Error("Confirmez la quantité vendue de chaque ligne avant de créer le relevé.");
+  }
+
+  const { supabase, brand } = await requireSellOutBrand();
+  const { data, error } = await supabase.rpc("save_sell_out_capture", {
+    target_capture_id: null,
+    target_brand_id: brand.id,
+    target_brand_pharmacy_id: parsed.brandPharmacyId,
+    target_method: "document",
+    target_period_start: parsed.periodStart,
+    target_period_end: parsed.periodEnd,
+    target_source_label: parsed.sourceLabel || "Document pharmacie analysé par TR1",
+    target_confidence: parsed.confidence,
+    target_extraction_version: "field-agent-v1",
+    target_raw_extraction: null,
+    target_trade_campaign_id: null,
+  });
+  if (error) throw new Error(error.message);
+
+  const captureId = uuid.parse(data);
+  try {
+    for (const line of parsed.lines) {
+      const { error: lineError } = await supabase.rpc("save_sell_out_line", {
+        target_line_id: null,
+        target_capture_id: captureId,
+        target_product_id: line.productId || null,
+        target_source_product_code: line.sourceProductCode || null,
+        target_ean: line.ean || null,
+        target_label: line.label || null,
+        target_units_sold: line.unitsSold,
+        target_revenue_ht: line.revenueHt,
+        target_stock_before: null,
+        target_delivered_units: null,
+        target_stock_current: null,
+        target_confidence: line.confidence,
+      });
+      if (lineError) throw new Error(lineError.message);
+    }
+
+    const bytes = Buffer.from(await document.arrayBuffer());
+    const sha256 = createHash("sha256").update(bytes).digest("hex");
+    const fileName = safeFileName(document.name);
+    const storagePath = `${brand.id}/${captureId}/${randomUUID()}-${fileName}`;
+    const { error: uploadError } = await supabase.storage
+      .from("sell-out-evidence")
+      .upload(storagePath, bytes, {
+        contentType: document.type,
+        upsert: false,
+      });
+    if (uploadError) throw new Error(uploadError.message);
+
+    const kind = evidenceKind.parse(evidenceKindForMime(document.type));
+    const { error: evidenceError } = await supabase.rpc("add_sell_out_evidence", {
+      target_capture_id: captureId,
+      target_kind: kind,
+      target_storage_path: storagePath,
+      target_file_name: fileName,
+      target_mime_type: document.type,
+      target_byte_size: document.size,
+      target_sha256: sha256,
+      target_extraction_payload_hash: null,
+    });
+    if (evidenceError) {
+      await supabase.storage.from("sell-out-evidence").remove([storagePath]);
+      throw new Error(evidenceError.message);
+    }
+  } catch (error) {
+    await supabase.rpc("archive_sell_out_capture", { target_capture_id: captureId }).catch(() => undefined);
+    throw error;
+  }
+
   revalidatePath("/dashboard/sell-out");
   redirect(`/dashboard/sell-out/${captureId}`);
 }
