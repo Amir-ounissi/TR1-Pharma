@@ -41,7 +41,7 @@ type RpcResult<T> = Promise<{ data: T | null; error: { message: string } | null 
 export default async function NewMissionPage({
   searchParams,
 }: {
-  searchParams: Promise<{ mode?: string }>;
+  searchParams: Promise<{ mode?: string; pharmacy?: string }>;
 }) {
   const filters = await searchParams;
   const [session, contexts] = await Promise.all([
@@ -139,7 +139,13 @@ export default async function NewMissionPage({
           </p>
         </div>
         {pharmacies.length ? (
-          <AnimationRequestForm pharmacies={pharmacies} products={products} facilitators={facilitators} requesterRole={role} />
+          <AnimationRequestForm
+            pharmacies={pharmacies}
+            products={products}
+            facilitators={facilitators}
+            requesterRole={role}
+            defaultPharmacyId={pharmacies.some((item) => item.id === filters.pharmacy) ? filters.pharmacy : undefined}
+          />
         ) : (
           <Card><CardContent className="p-6 text-sm text-muted-foreground">
             {role === "agent" ? "Aucune pharmacie active de votre portefeuille n’est disponible pour une demande d’animation." : "Aucune pharmacie active n’est disponible pour cette marque."}
