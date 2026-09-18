@@ -463,6 +463,18 @@ export default async function PharmacyDetailPage({
           country_code: pharmacy.country_code,
         }}
       />
+      {canCreateOrder ? (
+        <div className="flex flex-wrap gap-2 rounded-xl border bg-white p-3 shadow-sm">
+          <Button asChild size="sm" variant="outline">
+            <Link href={`/dashboard/sell-out?pharmacy=${id}`}>Ajouter du sell-out</Link>
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <Link href={`/dashboard/pharmacies/${id}/prices${activeVisit ? `?visit=${activeVisit.id}` : ""}`}>
+              Relever un prix
+            </Link>
+          </Button>
+        </div>
+      ) : null}
       {canManageAccount ? (
         <div className="flex justify-end">
           <ArchiveButton id={id} />
