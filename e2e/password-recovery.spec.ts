@@ -72,9 +72,9 @@ test("mot de passe oublié — demande, email, nouveau mot de passe et reconnexi
 
     await expect(page).toHaveURL(/\/reset-password(?:#|$)/, { timeout: 30_000 });
     await expect(page.getByRole("heading", { name: "Choisissez un nouveau mot de passe." })).toBeVisible();
-    await expect(page.getByLabel("Nouveau mot de passe")).toBeVisible();
+    await expect(page.getByLabel("Nouveau mot de passe", { exact: true })).toBeVisible();
 
-    await page.getByLabel("Nouveau mot de passe").fill(newPassword);
+    await page.getByLabel("Nouveau mot de passe", { exact: true }).fill(newPassword);
     await page.getByLabel("Confirmer le mot de passe").fill(newPassword);
     await page.getByRole("button", { name: "Enregistrer le nouveau mot de passe" }).click();
 
