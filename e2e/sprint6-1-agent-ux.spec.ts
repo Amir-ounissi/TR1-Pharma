@@ -1,85 +1,53 @@
-import { expect, test, type Page } from "@playwright/test";
-import { adminClient, signIn } from "./test-helpers";
+import { expect, test } from "@playwright/test";
+import { signIn } from "./test-helpers";
 
-async function completeVisit(page: Page, suffix: string) {
-  const note = `Polish Agent 6.1 ${suffix} ${Date.now()}`;
-  await page.getByRole("button", { name: "Démarrer", exact: true }).click();
-  await expect(page.getByTestId("active-visit-card")).toContainText("Visite en cours");
-  await page.getByRole("button", { name: "Terminer la visite", exact: true }).click();
-  await expect(page.getByTestId("visit-completion-form")).toBeVisible();
-  await expect(page.getByLabel("Type")).toHaveValue("visit");
-  await page.getByLabel("Résultat").selectOption("interested");
-  await page.getByLabel("Note courte").fill(note);
-  await page.getByLabel("Prochaine action", { exact: true }).selectOption("call");
-  await page.getByLabel("Quand").fill(new Date(Date.now() + 86_400_000).toISOString().slice(0, 16));
-  await page.getByRole("button", { name: "Enregistrer et revenir à ma journée" }).click();
-  await expect(page.getByRole("status")).toContainText("Visite terminée");
-  await expect(page.getByTestId("active-visit-card")).toHaveCount(0);
-  return note;
+function todayVisitLink(page: import("@playwright/test").Page) {
+  return page.locator('a[href^="/dashboard/visits/"]').filter({ hasText: "Pharmacie République" }).first();
 }
 
-test("Sprint 6.1 desktop — mode visite et retour journée", async ({ browser }) => {
-  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
-  const page = await context.newPage();
+test("Sprint 6.1 desktop — journée simplifiée et clôture directe", async ({ page }) => {
   await signIn(page, "agent@dermavita.local", /Dermavita/i);
   await page.goto("/dashboard/agent");
 
-  const card = page.getByTestId("next-visit-card");
-  await expect(card).toContainText("Stratégique");
-  await expect(card).toContainText("Très fort potentiel");
-  await expect(card).not.toContainText("very_high");
-  await expect(card).not.toContainText("strategic");
-  const note = await completeVisit(page, "desktop");
+  await expect(page.getByRole("heading", { name: "Aujourd’hui", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Mon programme", exact: true })).toBeVisible();
+  await expect(page.getByTestId("next-visit-card")).toHaveCount(0);
+  await expect(page.getByTestId("active-visit-card")).toHaveCount(0);
 
-  const interaction = await adminClient().from("interactions").select("duration_minutes,interaction_type,notes").eq("notes", note).single();
-  expect(interaction.error).toBeNull();
-  expect(interaction.data?.interaction_type).toBe("visit");
-  expect(Number(interaction.data?.duration_minutes)).toBeGreaterThanOrEqual(1);
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await page.screenshot({ path: "artifacts/sprint6-1/agent-ux-desktop.png" });
-  await context.close();
+  const link = todayVisitLink(page);
+  await expect(link).toContainText("Pharmacie République");
+  await expect(link).toContainText("Clôturer");
+  await link.click();
+
+  await expect(page.getByRole("heading", { name: "Clôturer la visite", exact: true })).toBeVisible();
+  await expect(page.getByLabel("Résultat")).toBeVisible();
+  await expect(page.getByLabel("Notes / compte rendu")).toBeVisible();
+  await expect(page.locator('input[name="photos"]')).toHaveCount(1);
+  await expect(page.getByText("Planifier la prochaine visite", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Démarrer la visite", exact: true })).toHaveCount(0);
 });
 
-test("Sprint 6.1 mobile — compacité, restauration et CTA non masqué", async ({ browser }) => {
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
-  const page = await context.newPage();
+test("Sprint 6.1 mobile — CTA clôturer accessible sans étape intermédiaire", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
   await signIn(page, "agent@dermavita.local", /Dermavita/i);
   await page.goto("/dashboard/agent");
 
-  const card = page.getByTestId("next-visit-card");
-  await expect(card).toBeVisible();
-  const cardBox = await card.boundingBox();
-  expect(cardBox!.height).toBeLessThan(720);
-  await expect(card.getByText("Voir le contexte")).toBeVisible();
-  await page.screenshot({ path: "artifacts/sprint6-1/agent-ux-mobile-compact-390.png" });
-  await page.getByRole("button", { name: "Démarrer", exact: true }).click();
-  await page.reload();
-  await expect(page.getByTestId("active-visit-card")).toContainText("Visite en cours");
-  await expect(page.getByTestId("active-visit-card")).toContainText("Pharmacie République");
+  const link = todayVisitLink(page);
+  await expect(link).toBeVisible();
+  await link.click();
 
-  for (const label of ["Appel", "Waze", "Maps"]) {
-    const action = page.getByTestId("active-visit-card").getByRole("link", { name: label, exact: true });
-    const box = await action.boundingBox();
-    expect(box?.height).toBeGreaterThanOrEqual(44);
-  }
+  await expect(page.getByRole("heading", { name: "Clôturer la visite", exact: true })).toBeVisible();
+  const submit = page.getByRole("button", { name: "Clôturer la visite", exact: true });
+  await expect(submit).toBeVisible();
 
-  await page.getByRole("button", { name: "Terminer la visite", exact: true }).click();
-  const submit = page.getByRole("button", { name: "Enregistrer et revenir à ma journée" });
-  await submit.scrollIntoViewIfNeeded();
-  const [headerBox, submitBox] = await Promise.all([
-    page.getByTestId("mobile-sticky-header").boundingBox(),
+  const [navBox, submitBox] = await Promise.all([
+    page.getByRole("navigation", { name: "Navigation mobile" }).boundingBox(),
     submit.boundingBox(),
   ]);
-  expect(submitBox!.y).toBeGreaterThanOrEqual(headerBox!.y + headerBox!.height);
-  expect(submitBox!.y + submitBox!.height).toBeLessThanOrEqual(845);
+  expect(submitBox).not.toBeNull();
+  expect(navBox).not.toBeNull();
+  expect(submitBox!.y + submitBox!.height).toBeLessThanOrEqual(navBox!.y + 1);
 
-  await page.getByLabel("Résultat").selectOption("interested");
-  await page.getByLabel("Note courte").fill(`Polish Agent 6.1 mobile ${Date.now()}`);
-  await page.getByLabel("Prochaine action", { exact: true }).selectOption("call");
-  await page.getByLabel("Quand").fill(new Date(Date.now() + 86_400_000).toISOString().slice(0, 16));
-  await page.screenshot({ path: "artifacts/sprint6-1/agent-ux-mobile-390.png" });
-  await submit.click();
-  await expect(page.getByRole("status")).toContainText("Visite terminée");
-  await expect(page.getByTestId("active-visit-card")).toHaveCount(0);
-  await context.close();
+  await page.screenshot({ path: "artifacts/sprint6-1/agent-ux-mobile-390.png", fullPage: true });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
 });
