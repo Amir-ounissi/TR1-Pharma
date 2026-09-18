@@ -126,14 +126,9 @@ export function PharmacyFieldDataSummary({
               </Button>
             </>
           ) : (
-            <>
-              <p className="mt-4 text-sm text-muted-foreground">
-                Aucun relevé sell-out pour cette pharmacie.
-              </p>
-              <Button asChild size="sm" variant="outline" className="mt-4">
-                <Link href={"/dashboard/sell-out?pharmacy=" + brandPharmacyId}>Ajouter du sell-out</Link>
-              </Button>
-            </>
+            <p className="mt-4 text-sm text-muted-foreground">
+              Aucun relevé sell-out pour cette pharmacie.
+            </p>
           )}
         </div>
 
