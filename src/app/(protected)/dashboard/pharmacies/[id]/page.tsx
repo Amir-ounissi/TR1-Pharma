@@ -12,7 +12,7 @@ import {
   type ImpactRow,
 } from "@/components/missions/mission-impact";
 import { PharmacyCockpit } from "@/components/pharmacies/pharmacy-cockpit";
-import { PharmacyFieldDataSummary } from "@/components/pharmacies/pharmacy-field-data-summary";
+import { PharmacyFieldDataSummary, type FieldDataFreshness } from "@/components/pharmacies/pharmacy-field-data-summary";
 import { PharmacySectionNav } from "@/components/pharmacies/pharmacy-section-nav";
 import { TerrainPharmacyHeader } from "@/components/agent/terrain-pharmacy-header";
 import {
@@ -183,6 +183,7 @@ export default async function PharmacyDetailPage({
     { data: missionImpacts, error: missionImpactsError },
     { data: latestSellOut, error: latestSellOutError },
     { data: latestPrices, error: latestPricesError },
+    { data: fieldDataFreshness, error: fieldDataFreshnessError },
   ] = await Promise.all([
     dataNeeds.contacts
       ? supabase
@@ -335,6 +336,11 @@ export default async function PharmacyDetailPage({
           .order("observed_at", { ascending: false })
           .limit(3)
       : Promise.resolve({ data: null, error: null }),
+    tab === "overview"
+      ? supabase.rpc("get_pharmacy_field_data_freshness", {
+          target_brand_pharmacy_id: id,
+        })
+      : Promise.resolve({ data: null, error: null }),
   ]);
   const tabLoadError = [
     contactsError,
@@ -355,6 +361,7 @@ export default async function PharmacyDetailPage({
     missionImpactsError,
     latestSellOutError,
     latestPricesError,
+    fieldDataFreshnessError,
   ].find(Boolean);
   if (tabLoadError)
     console.error("Impossible de charger une section de la pharmacie.", {
@@ -549,6 +556,11 @@ export default async function PharmacyDetailPage({
             brandPharmacyId={id}
             sellOut={latestSellOut}
             prices={latestPrices ?? []}
+            freshness={
+              Array.isArray(fieldDataFreshness)
+                ? ((fieldDataFreshness[0] as FieldDataFreshness | undefined) ?? null)
+                : null
+            }
           />
           <div className="grid gap-6 xl:grid-cols-[1.1fr_.9fr]">
             {canManageAccount ? (
