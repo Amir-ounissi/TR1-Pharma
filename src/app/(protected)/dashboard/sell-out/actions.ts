@@ -261,8 +261,8 @@ export async function confirmSellOutDocumentAnalysisAction(
       ean: line.ean || null,
       label: line.label || null,
       units_sold: line.unitsSold,
-      revenue_ht: line.revenueHt === "" || line.revenueHt == null ? null : Number(line.revenueHt),
-      confidence: line.confidence === "" || line.confidence == null ? null : Number(line.confidence),
+      revenue_ht: line.revenueHt == null ? null : Number(line.revenueHt),
+      confidence: line.confidence == null ? null : Number(line.confidence),
     }));
 
     const { data: appliedCount, error: applyError } = await supabase.rpc("apply_sell_out_document_preview", {
