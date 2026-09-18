@@ -11,7 +11,7 @@ const tinyPng = Buffer.from(
   "base64",
 );
 
-test("golden path visite : démarrage, compte rendu, preuve et clôture idempotente", async ({ page }) => {
+test("golden path visite : accès direct, compte rendu, preuve et clôture idempotente", async ({ page }) => {
   const admin = adminClient();
   const runId = String(Date.now());
   const summary = `Golden path visite ${runId}`;
@@ -53,8 +53,7 @@ test("golden path visite : démarrage, compte rendu, preuve et clôture idempote
     await page.goto(`/dashboard/visits/${visitId}`);
 
     await expect(page.getByRole("heading", { name: "Pharmacie République" })).toBeVisible();
-    await page.getByRole("button", { name: "Démarrer la visite", exact: true }).click();
-    await expect(page.getByRole("heading", { name: "Clôturer sans ressaisie inutile" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Clôturer la visite", exact: true })).toBeVisible();
 
     await page.locator('select[name="outcome"]').selectOption("follow_up");
     await page.getByLabel("Notes / compte rendu").fill(summary);
