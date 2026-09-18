@@ -1,10 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Sparkles } from "lucide-react";
+import { BellRing, CalendarPlus, CheckCircle2, Megaphone, ShoppingCart, Sparkles } from "lucide-react";
 import {
   closeFieldVisitAction,
+  createPostVisitFollowUpAction,
   type VisitCloseoutActionState,
 } from "@/app/(protected)/dashboard/visits/actions";
 import { Button } from "@/components/ui/button";
@@ -19,9 +21,11 @@ export function VisitCloseoutPanel({
   visitId,
   status,
   closeout,
+  brandPharmacyId,
 }: {
   visitId: string;
   status: string;
+  brandPharmacyId: string | null;
   closeout: {
     outcome: string;
     summary: string;
@@ -32,6 +36,7 @@ export function VisitCloseoutPanel({
 }) {
   const router = useRouter();
   const [closeState, closeAction, closing] = useActionState(closeFieldVisitAction, emptyState);
+  const [followUpState, followUpAction, followUpPending] = useActionState(createPostVisitFollowUpAction, emptyState);
   const closeFormId = `visit-close-${visitId}`;
   const outcomeId = `visit-outcome-${visitId}`;
   const summaryId = `visit-summary-${visitId}`;
@@ -46,7 +51,7 @@ export function VisitCloseoutPanel({
 
   if (status === "completed" || closeout) {
     return (
-      <section id="visit-execution" className="scroll-mt-24 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5">
+      <section id="visit-execution" className="scroll-mt-24 space-y-4 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5">
         <div className="flex items-start gap-3">
           <CheckCircle2 className="mt-0.5 size-5 text-emerald-700" />
           <div className="min-w-0">
@@ -61,6 +66,58 @@ export function VisitCloseoutPanel({
             ) : null}
           </div>
         </div>
+
+        {brandPharmacyId ? (
+          <div className="rounded-xl border border-emerald-200 bg-white p-4">
+            <div>
+              <p className="font-mono text-[0.62rem] font-bold uppercase tracking-[0.14em] text-[var(--tr1-orange)]">
+                Suite de visite
+              </p>
+              <h3 className="mt-1 font-bold text-[var(--tr1-navy)]">Qu’est-ce qu’on fait maintenant ?</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Déclenchez l’action suivante sans repasser par les menus.
+              </p>
+            </div>
+
+            {followUpState.error ? <Feedback tone="error">{followUpState.error}</Feedback> : null}
+            {followUpState.success ? <Feedback tone="success">{followUpState.success}</Feedback> : null}
+
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              <Button asChild variant="outline" className="min-h-12 justify-start">
+                <Link href={`/dashboard/orders/new?pharmacy=${brandPharmacyId}`}>
+                  <ShoppingCart className="size-4 text-[var(--tr1-orange)]" />
+                  Créer une commande
+                </Link>
+              </Button>
+
+              <form action={followUpAction}>
+                <input type="hidden" name="visitId" value={visitId} />
+                <input type="hidden" name="brandPharmacyId" value={brandPharmacyId} />
+                <input type="hidden" name="delayDays" value="7" />
+                <Button type="submit" variant="outline" disabled={followUpPending} className="min-h-12 w-full justify-start">
+                  <BellRing className="size-4 text-[var(--tr1-orange)]" />
+                  {followUpPending ? "Planification…" : "Relancer dans 7 jours"}
+                </Button>
+              </form>
+
+              <Button asChild variant="outline" className="min-h-12 justify-start">
+                <Link href={`/dashboard/missions/new?mode=animation&pharmacy=${brandPharmacyId}`}>
+                  <Megaphone className="size-4 text-[var(--tr1-orange)]" />
+                  Proposer une animation
+                </Link>
+              </Button>
+
+              {closeout?.next_visit_id ? (
+                <Button asChild variant="outline" className="min-h-12 justify-start">
+                  <Link href={`/dashboard/visits/${closeout.next_visit_id}`}>
+                    <CalendarPlus className="size-4 text-[var(--tr1-orange)]" />
+                    Voir la prochaine visite
+                  </Link>
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
       </section>
     );
   }

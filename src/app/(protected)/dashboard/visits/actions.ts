@@ -26,6 +26,8 @@ type CloseoutRpcResult = {
 type SupabaseSessionClient = Awaited<ReturnType<typeof requireCompletedOnboarding>>["supabase"];
 
 const uuid = z.string().uuid();
+const databaseUuid = z.string().regex(/^[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$/, "Identifiant invalide.");
+const postVisitDelay = z.enum(["3", "7", "14"]);
 const allowedPhotoTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_PHOTO_BYTES = 3 * 1024 * 1024;
 
@@ -261,6 +263,78 @@ export async function closeFieldVisitAction(
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "Impossible de clôturer la visite.",
+    };
+  }
+}
+
+
+export async function createPostVisitFollowUpAction(
+  _state: VisitCloseoutActionState,
+  formData: FormData,
+): Promise<VisitCloseoutActionState> {
+  try {
+    const parsed = z.object({
+      visitId: databaseUuid,
+      brandPharmacyId: databaseUuid,
+      delayDays: postVisitDelay,
+    }).parse(Object.fromEntries(formData));
+
+    const { supabase, userId } = await requireCompletedOnboarding();
+    const { data: link, error: linkError } = await supabase
+      .from("field_visit_brands")
+      .select("brand_id,brand_pharmacy_id,field_visits!inner(id,status,owner_user_id,archived_at)")
+      .eq("visit_id", parsed.visitId)
+      .eq("brand_pharmacy_id", parsed.brandPharmacyId)
+      .eq("field_visits.owner_user_id", userId)
+      .eq("field_visits.status", "completed")
+      .is("field_visits.archived_at", null)
+      .maybeSingle();
+
+    if (linkError) throw linkError;
+    if (!link) throw new Error("Cette visite clôturée n’est plus disponible.");
+
+    const dedupeKey = `post_visit_follow_up:${parsed.visitId}:${parsed.brandPharmacyId}`;
+    const { data: existing, error: existingError } = await supabase
+      .from("tasks")
+      .select("id,due_at")
+      .eq("dedupe_key", dedupeKey)
+      .in("status", ["open", "in_progress"])
+      .is("archived_at", null)
+      .maybeSingle();
+
+    if (existingError) throw existingError;
+    if (existing) {
+      return { success: "La relance après visite est déjà planifiée." };
+    }
+
+    const dueAt = new Date(Date.now() + Number(parsed.delayDays) * 86_400_000).toISOString();
+    const { error } = await supabase.from("tasks").insert({
+      brand_id: link.brand_id,
+      brand_pharmacy_id: parsed.brandPharmacyId,
+      task_type: "follow_up",
+      title: "Relance après visite",
+      description: "Suite créée directement depuis la clôture de visite.",
+      priority: "normal",
+      due_at: dueAt,
+      assigned_to: userId,
+      created_by: userId,
+      source: "interaction",
+      action_code: "post_visit_follow_up",
+      trigger_type: "field_visit",
+      trigger_id: parsed.visitId,
+      dedupe_key: dedupeKey,
+      rule_code: "user_action_v1",
+    });
+    if (error) throw error;
+
+    revalidatePath("/dashboard/tasks");
+    revalidatePath(`/dashboard/pharmacies/${parsed.brandPharmacyId}`);
+    revalidatePath(`/dashboard/visits/${parsed.visitId}`);
+
+    return { success: `Relance planifiée dans ${parsed.delayDays} jours.` };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Impossible de planifier la relance.",
     };
   }
 }

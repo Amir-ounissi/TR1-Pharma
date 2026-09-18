@@ -154,6 +154,7 @@ export default async function FieldVisitPage({ params }: { params: Promise<{ id:
         visitId={visit.id}
         status={visit.status}
         closeout={closeoutResult.data}
+        brandPharmacyId={primaryBrandPharmacyId}
       />
     </main>
   );

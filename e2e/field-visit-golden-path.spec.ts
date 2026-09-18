@@ -73,6 +73,37 @@ test("golden path visite : accès direct, compte rendu, preuve et clôture idemp
 
     await expect(page.getByRole("heading", { name: "Visite clôturée" })).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText(summary)).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Qu’est-ce qu’on fait maintenant ?" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Créer une commande" })).toHaveAttribute(
+      "href",
+      `/dashboard/orders/new?pharmacy=${republiqueBrandPharmacyId}`,
+    );
+    await expect(page.getByRole("link", { name: "Proposer une animation" })).toHaveAttribute(
+      "href",
+      `/dashboard/missions/new?mode=animation&pharmacy=${republiqueBrandPharmacyId}`,
+    );
+
+    const followUpButton = page.getByRole("button", { name: "Relancer dans 7 jours" });
+    await followUpButton.click();
+    await expect(page.getByText("Relance planifiée dans 7 jours.")).toBeVisible();
+    await followUpButton.click();
+    await expect(page.getByText("La relance après visite est déjà planifiée.")).toBeVisible();
+
+    const followUpDedupeKey = `post_visit_follow_up:${visitId}:${republiqueBrandPharmacyId}`;
+    const { data: followUpTasks, error: followUpError } = await admin
+      .from("tasks")
+      .select("id,task_type,status,dedupe_key,trigger_id,action_code")
+      .eq("dedupe_key", followUpDedupeKey)
+      .is("archived_at", null);
+    expect(followUpError).toBeNull();
+    expect(followUpTasks).toHaveLength(1);
+    expect(followUpTasks?.[0]).toMatchObject({
+      task_type: "follow_up",
+      status: "open",
+      dedupe_key: followUpDedupeKey,
+      trigger_id: visitId,
+      action_code: "post_visit_follow_up",
+    });
 
     const { data: persistedVisit, error: persistedVisitError } = await admin
       .from("field_visits")
@@ -148,6 +179,11 @@ test("golden path visite : accès direct, compte rendu, preuve et clôture idemp
     expect(interactionCount).toBe(1);
     expect(attachmentCount).toBe(1);
   } finally {
+    await admin
+      .from("tasks")
+      .delete()
+      .eq("dedupe_key", `post_visit_follow_up:${visitId}:${republiqueBrandPharmacyId}`);
+
     const { data: interactions } = await admin
       .from("interactions")
       .select("id")
