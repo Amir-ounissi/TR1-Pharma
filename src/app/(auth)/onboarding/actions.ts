@@ -29,12 +29,26 @@ export async function completeOnboardingAction(
   let requiresInvitationPassword = false;
 
   if (user.invited_at) {
-    const { data: activeContexts, error: contextsError } = await supabase.rpc("get_my_brand_contexts");
-    if (contextsError) {
+    const { data: memberships, error: membershipsError } = await supabase
+      .from("memberships")
+      .select("id,status")
+      .eq("user_id", userId)
+      .not("brand_id", "is", null)
+      .in("status", ["invited", "active"]);
+
+    if (membershipsError) {
       return { error: "Vos accès TR1 n’ont pas pu être vérifiés. Réessayez dans quelques instants." };
     }
 
-    requiresInvitationPassword = (activeContexts ?? []).length === 0;
+    const tenantMemberships = memberships ?? [];
+    if (!tenantMemberships.length) {
+      return {
+        error:
+          "Aucun accès de marque invité n’a été trouvé pour ce compte. Contactez votre administrateur TR1.",
+      };
+    }
+
+    requiresInvitationPassword = !tenantMemberships.some((membership) => membership.status === "active");
   }
 
   if (requiresInvitationPassword) {
