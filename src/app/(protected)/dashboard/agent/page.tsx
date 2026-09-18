@@ -1,24 +1,14 @@
-import Link from "next/link";
-import { BookOpenCheck, CalendarPlus, MapPin, ShoppingCart } from "lucide-react";
-import { AgentDayExperience, type AgentNextVisit, type AgentTodayData } from "@/components/agent/agent-day-experience";
+import type { AgentNextVisit, AgentTodayData } from "@/components/agent/agent-day-experience";
 import {
   AgentMultibrandOverview,
   type AgentMultibrandDay,
-  type AgentMultibrandNextVisit,
   type AgentMultibrandVisitSummary,
 } from "@/components/agent/agent-multibrand-overview";
 import { AgentTodayCockpit } from "@/components/agent/agent-today-cockpit";
-import {
-  AgentVisitCloseoutQueue,
-  type AgentPendingCloseoutVisit,
-} from "@/components/agent/agent-visit-closeout-queue";
 import { DashboardTracker } from "@/components/agent/dashboard-tracker";
-import { StockAlertsPanel } from "@/components/agent/stock-alerts-panel";
-import { TerrainActivityFeed, type TerrainImpact } from "@/components/agent/terrain-activity-feed";
 import { OfflineDayPreloader } from "@/components/pwa/offline-day-preloader";
-import { buildGoogleMapsUrl, buildWazeUrl } from "@/lib/agent-experience";
 import { addCalendarDays } from "@/lib/agenda";
-import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
+import { requireActiveBrand } from "@/lib/auth";
 import { nextIsoDate, parisBusinessDate } from "@/lib/business-date";
 import { requireActiveBrandCapability } from "@/lib/saas/server";
 import { loadStockAlerts } from "@/lib/stock-alerts-server";
@@ -46,11 +36,6 @@ type RelationRow = {
   pharmacy_id: string;
 };
 
-type CapabilityRow = {
-  capability_key: string;
-  enabled: boolean;
-};
-
 type ObjectiveProgressRow = {
   metric_key: string;
   target_value: number;
@@ -58,41 +43,25 @@ type ObjectiveProgressRow = {
 };
 
 export default async function AgentPage() {
-  const [saas, session, contexts] = await Promise.all([
+  const [saas, session] = await Promise.all([
     requireActiveBrandCapability("agent_day"),
     requireActiveBrand(),
-    getBrandContexts(),
   ]);
   const { supabase, brand, profile, userId } = session;
-  const agentRoleBrands = contexts.filter((context) => context.role === "agent");
-  const agentCapabilityChecks = await Promise.all(
-    agentRoleBrands.map(async (context) => {
-      const { data, error } = await supabase.rpc("get_my_brand_capabilities", { target_brand_id: context.id });
-      if (error) throw error;
-      const enabled = ((data ?? []) as CapabilityRow[]).some(
-        (row) => row.capability_key === "agent_day" && row.enabled,
-      );
-      return enabled ? context : null;
-    }),
-  );
-  const agentBrands = agentCapabilityChecks.filter((context): context is NonNullable<typeof context> => context !== null);
-  const activeAgentBrands = agentBrands.filter((context) => context.id === brand.id);
-  const brandFilter = brand.id;
 
   const today = parisBusinessDate();
   const monthStart = `${today.slice(0, 7)}-01`;
   const planningHorizon = addCalendarDays(today, 90);
   const now = new Date();
+
   const [
     { data: agenda },
     { data: nextVisit },
-    recentImpactResult,
     multibrandFieldAgendaResult,
     upcomingFieldAgendaResult,
     activeFieldAgendaResult,
     stockAlerts,
     multibrandDayResult,
-    multibrandNextVisitResult,
     monthOverviewResult,
     monthObjectivesResult,
     monthOrdersResult,
@@ -100,18 +69,15 @@ export default async function AgentPage() {
   ] = await Promise.all([
     supabase.rpc("get_agent_today", { target_brand_id: brand.id, target_date: today }),
     supabase.rpc("get_next_agent_visit", { target_brand_id: brand.id }),
-    saas.capabilities.has("missions")
-      ? supabase.from("mission_impact").select("mission_id,mission_title,mission_date,mission_type,sell_out_units,first_order_after_at,days_to_first_order_after,observation_maturity").eq("brand_id", brand.id).eq("assigned_user_id", userId).order("mission_date", { ascending: false }).limit(3)
-      : Promise.resolve({ data: [] }),
     supabase.rpc("get_my_field_agenda", {
       start_date: today,
       end_date: today,
-      brand_filter: brandFilter,
+      brand_filter: brand.id,
     }),
     supabase.rpc("get_my_field_agenda", {
       start_date: today,
       end_date: planningHorizon,
-      brand_filter: brandFilter,
+      brand_filter: brand.id,
     }),
     supabase.rpc("get_my_field_agenda", {
       start_date: today,
@@ -123,10 +89,7 @@ export default async function AgentPage() {
       : Promise.resolve([]),
     supabase.rpc("get_agent_today_multibrand", {
       target_date: today,
-      brand_filter: brandFilter,
-    }),
-    supabase.rpc("get_my_next_field_visit", {
-      brand_filter: brandFilter,
+      brand_filter: brand.id,
     }),
     supabase.rpc("get_performance_overview", {
       target_brand_id: brand.id,
@@ -163,7 +126,6 @@ export default async function AgentPage() {
   if (upcomingFieldAgendaResult.error) throw new Error(upcomingFieldAgendaResult.error.message);
   if (activeFieldAgendaResult.error) throw new Error(activeFieldAgendaResult.error.message);
   if (multibrandDayResult.error) throw new Error(multibrandDayResult.error.message);
-  if (multibrandNextVisitResult.error) throw new Error(multibrandNextVisitResult.error.message);
   if (monthOverviewResult.error) throw new Error(monthOverviewResult.error.message);
   if (monthObjectivesResult.error) throw new Error(monthObjectivesResult.error.message);
   if (monthOrdersResult.error) throw new Error(monthOrdersResult.error.message);
@@ -172,23 +134,18 @@ export default async function AgentPage() {
   const day = (agenda ?? { tasks: [], missions: [], reports: [], follow_ups: [] }) as AgentTodayData;
   const visit = nextVisit as AgentNextVisit | null;
   const multibrandDay = (multibrandDayResult.data ?? { tasks: [], missions: [], reports: [], follow_ups: [] }) as AgentMultibrandDay;
-  const multibrandNextVisit = multibrandNextVisitResult.data as AgentMultibrandNextVisit | null;
-  const nextVisitBriefRelationId = multibrandNextVisit?.brands.find((item) => item.brand_id === brand.id)?.brand_pharmacy_id ?? null;
-  const navigation = visit ? { latitude: visit.latitude, longitude: visit.longitude, address_line_1: visit.address } : null;
   const firstName = profile.full_name.split(" ")[0];
-  const dayLabel = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/Paris" }).format(now);
-  const monthLabel = new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric", timeZone: "Europe/Paris" }).format(now);
-  const quickActions = [
-    saas.capabilities.has("orders")
-      ? { href: "/dashboard/orders/new", label: "Créer une commande", description: "Saisir une commande terrain", icon: ShoppingCart }
-      : null,
-    saas.capabilities.has("core_crm")
-      ? { href: "/dashboard/tasks", label: "Planifier une relance", description: "Créer une prochaine action", icon: CalendarPlus }
-      : null,
-    saas.capabilities.has("core_crm")
-      ? { href: "/dashboard/pharmacies", label: "Consulter une pharmacie", description: "Retrouver un compte et son suivi", icon: MapPin }
-      : null,
-  ].filter((action): action is NonNullable<typeof action> => action !== null);
+  const dayLabel = new Intl.DateTimeFormat("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: "Europe/Paris",
+  }).format(now);
+  const monthLabel = new Intl.DateTimeFormat("fr-FR", {
+    month: "long",
+    year: "numeric",
+    timeZone: "Europe/Paris",
+  }).format(now);
 
   const multibrandFieldVisits = ((multibrandFieldAgendaResult.data ?? []) as FieldAgendaEvent[]).filter(
     (event) => event.ownership === "mine" && event.source_kind === "field_visit" && Boolean(event.pharmacy_id),
@@ -202,7 +159,7 @@ export default async function AgentPage() {
     endAt: event.end_at || null,
     status: event.status,
     brandNames: event.brand_names ?? [],
-    href: event.detail_url || "/dashboard/agenda",
+    href: `/dashboard/visits/${event.source_id}`,
   }));
 
   const upcomingFieldVisits = ((upcomingFieldAgendaResult.data ?? []) as FieldAgendaEvent[]).filter(
@@ -217,22 +174,16 @@ export default async function AgentPage() {
     endAt: event.end_at || null,
     status: event.status,
     brandNames: event.brand_names ?? [],
-    href: event.detail_url || `/dashboard/agenda?date=${event.start_at.slice(0, 10)}`,
+    href: `/dashboard/visits/${event.source_id}`,
   }));
 
   const activeFieldVisits = ((activeFieldAgendaResult.data ?? []) as FieldAgendaEvent[]).filter(
     (event) => event.ownership === "mine" && event.source_kind === "field_visit" && Boolean(event.pharmacy_id),
   );
-  const pendingCloseouts: AgentPendingCloseoutVisit[] = activeFieldVisits
-    .filter((event) => !["completed", "cancelled"].includes(event.status) && new Date(event.start_at).getTime() <= now.getTime())
-    .sort((left, right) => new Date(left.start_at).getTime() - new Date(right.start_at).getTime())
-    .map((event) => ({
-      id: event.source_id,
-      pharmacyName: event.pharmacy_name || event.title,
-      city: event.city,
-      startAt: event.start_at,
-      href: event.detail_url || `/dashboard/visits/${event.source_id}`,
-    }));
+  const pendingVisitCount = activeFieldVisits.filter(
+    (event) => !["completed", "cancelled"].includes(event.status)
+      && new Date(event.start_at).getTime() <= now.getTime(),
+  ).length;
 
   const monthSummary = (monthOverviewResult.data ?? {}) as Record<string, number | null>;
   const revenueObjective = ((monthObjectivesResult.data ?? []) as ObjectiveProgressRow[]).find(
@@ -306,71 +257,18 @@ export default async function AgentPage() {
         orderCount={monthOrderCount}
         target={monthTarget}
         targetSource={monthTargetSource}
-        pendingVisitCount={pendingCloseouts.length}
-      />
-
-      {nextVisitBriefRelationId && multibrandNextVisit ? (
-        <Link
-          href={`/dashboard/pharmacies/${nextVisitBriefRelationId}/brief`}
-          className="flex min-h-16 items-center justify-between gap-4 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 transition hover:border-[var(--tr1-orange)] hover:bg-orange-100/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-navy)]"
-        >
-          <span className="flex min-w-0 items-center gap-3">
-            <BookOpenCheck className="size-5 shrink-0 text-[var(--tr1-orange)]" />
-            <span className="min-w-0">
-              <span className="block text-xs font-bold uppercase tracking-wide text-[var(--tr1-orange)]">Prochaine visite</span>
-              <span className="block truncate font-semibold text-[var(--tr1-navy)]">Préparer {multibrandNextVisit.name}</span>
-            </span>
-          </span>
-          <span className="shrink-0 text-sm font-semibold text-[var(--tr1-navy)]">Ouvrir le brief →</span>
-        </Link>
-      ) : null}
-
-      <AgentMultibrandOverview
-        brands={activeAgentBrands}
-        selectedBrandId={brandFilter}
-        day={multibrandDay}
-        nextVisit={multibrandNextVisit}
-        visits={overviewVisits}
-        plannedVisits={plannedVisits}
+        pendingVisitCount={pendingVisitCount}
+        plannedVisitCount={overviewVisits.length}
         firstName={firstName}
         dayLabel={dayLabel}
-        canPlanVisit={saas.capabilities.has("core_crm")}
-        canRequestAnimation={saas.capabilities.has("missions")}
       />
 
-      <AgentVisitCloseoutQueue visits={pendingCloseouts} />
-
-      <section className="space-y-4 border-t pt-6" aria-labelledby="active-brand-execution-title">
-        <div>
-          <h2 id="active-brand-execution-title" className="text-lg font-semibold text-[var(--tr1-navy)]">Actions pour {brand.name}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Ces actions concernent {brand.name}. Pour travailler pour une autre marque, utilisez « Marque active » en haut de l’écran.</p>
-        </div>
-        {quickActions.length ? (
-          <nav aria-label={`Actions pour ${brand.name}`} className="grid gap-3 sm:grid-cols-2">
-            {quickActions.map((action) => (
-              <Link key={action.href} href={action.href} className="flex min-h-20 items-center gap-3 rounded-xl border bg-white/60 p-4 transition hover:border-[var(--tr1-orange)] hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-navy)]">
-                <action.icon className="size-5 shrink-0 text-[var(--tr1-navy)]" aria-hidden="true" />
-                <span><span className="block text-base font-semibold">{action.label}</span><span className="mt-1 block text-sm text-muted-foreground">{action.description}</span></span>
-              </Link>
-            ))}
-          </nav>
-        ) : null}
-        <StockAlertsPanel alerts={stockAlerts} />
-        {saas.capabilities.has("missions") ? <TerrainActivityFeed impacts={(recentImpactResult.data ?? []) as TerrainImpact[]} /> : null}
-        <div className="min-w-0">
-          <AgentDayExperience
-            showDayLists={false}
-            showQuickActions={false}
-            brandId={brand.id}
-            userId={userId}
-            day={day}
-            visit={visit}
-            opportunities={[]}
-            wazeUrl={navigation ? buildWazeUrl(navigation) : ""}
-            mapsUrl={navigation ? buildGoogleMapsUrl(navigation) : ""}
-          />
-        </div>
-      </section>
+      <AgentMultibrandOverview
+        day={multibrandDay}
+        visits={overviewVisits}
+        plannedVisits={plannedVisits}
+        canPlanVisit={saas.capabilities.has("core_crm")}
+      />
 
       <style>{`
         .tr1-product-da main.agent-day-home h1,
@@ -378,10 +276,6 @@ export default async function AgentPage() {
           font-family: var(--font-sans);
           text-transform: none;
           letter-spacing: -0.025em;
-        }
-
-        .tr1-product-da main.agent-day-home [aria-label="Marques affichées dans la journée"] {
-          display: none;
         }
       `}</style>
     </main>

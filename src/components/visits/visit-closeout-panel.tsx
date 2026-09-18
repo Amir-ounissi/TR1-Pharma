@@ -2,10 +2,9 @@
 
 import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Play, Sparkles } from "lucide-react";
+import { CheckCircle2, Sparkles } from "lucide-react";
 import {
   closeFieldVisitAction,
-  startFieldVisitAction,
   type VisitCloseoutActionState,
 } from "@/app/(protected)/dashboard/visits/actions";
 import { Button } from "@/components/ui/button";
@@ -32,9 +31,7 @@ export function VisitCloseoutPanel({
   } | null;
 }) {
   const router = useRouter();
-  const [startState, startAction, starting] = useActionState(startFieldVisitAction, emptyState);
   const [closeState, closeAction, closing] = useActionState(closeFieldVisitAction, emptyState);
-  const startFormId = `visit-start-${visitId}`;
   const closeFormId = `visit-close-${visitId}`;
   const outcomeId = `visit-outcome-${visitId}`;
   const summaryId = `visit-summary-${visitId}`;
@@ -42,11 +39,10 @@ export function VisitCloseoutPanel({
   const nextObjectiveId = `visit-next-objective-${visitId}`;
 
   useEffect(() => {
-    if (startState.success) router.refresh();
     // When evidence upload is incomplete, keep the form and selected photos in
     // place so the user can safely retry the idempotent closeout action.
     if (closeState.success && !closeState.warning) router.refresh();
-  }, [startState.success, closeState.success, closeState.warning, router]);
+  }, [closeState.success, closeState.warning, router]);
 
   if (status === "completed" || closeout) {
     return (
@@ -74,48 +70,18 @@ export function VisitCloseoutPanel({
       <section id="visit-execution" className="scroll-mt-24 rounded-2xl border bg-muted/40 p-5">
         <h2 className="font-bold text-[var(--tr1-navy)]">Visite annulée</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Cette visite ne peut plus être démarrée ni clôturée. Planifiez une nouvelle visite si un passage reste nécessaire.
+          Cette visite ne peut plus être clôturée. Planifiez une nouvelle visite si un passage reste nécessaire.
         </p>
       </section>
     );
   }
 
-  if (["planned", "confirmed"].includes(status)) {
-    return (
-      <section id="visit-execution" className="scroll-mt-24 rounded-2xl border bg-white p-5 shadow-sm">
-        <h2 className="font-bold text-[var(--tr1-navy)]">Exécuter la visite</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Démarrez la visite au moment d’entrer en pharmacie. TR1 distinguera ainsi une visite planifiée d’une visite réellement exécutée.
-        </p>
-        <form id={startFormId} action={startAction} className="mt-4">
-          <input type="hidden" name="visitId" value={visitId} />
-          {startState.error ? <Feedback tone="error">{startState.error}</Feedback> : null}
-          <Button disabled={starting} className="hidden min-h-11 sm:inline-flex">
-            <Play className="size-4" />
-            {starting ? "Démarrage…" : "Démarrer la visite"}
-          </Button>
-        </form>
-        <MobilePrimaryBar>
-          <Button
-            type="submit"
-            form={startFormId}
-            disabled={starting}
-            className="min-h-12 w-full touch-manipulation text-sm"
-          >
-            <Play className="size-5" />
-            {starting ? "Démarrage…" : "Démarrer la visite"}
-          </Button>
-        </MobilePrimaryBar>
-      </section>
-    );
-  }
-
-  if (status !== "in_progress") {
+  if (!["planned", "confirmed", "in_progress"].includes(status)) {
     return (
       <section id="visit-execution" className="scroll-mt-24 rounded-2xl border bg-muted/40 p-5">
         <h2 className="font-bold text-[var(--tr1-navy)]">Visite indisponible</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Le statut actuel de cette visite ne permet pas d’exécuter une action terrain.
+          Le statut actuel de cette visite ne permet pas de la clôturer.
         </p>
       </section>
     );
@@ -128,9 +94,9 @@ export function VisitCloseoutPanel({
           <Sparkles className="size-4 text-[var(--tr1-orange)]" />
         </div>
         <div>
-          <h2 className="font-bold text-[var(--tr1-navy)]">Clôturer sans ressaisie inutile</h2>
+          <h2 className="font-bold text-[var(--tr1-navy)]">Clôturer la visite</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Un résultat, tes notes et éventuellement jusqu’à 3 photos, puis la prochaine visite si nécessaire.
+            Saisissez le résultat, le compte rendu et les preuves utiles. Aucun bouton « démarrer » n’est nécessaire.
           </p>
         </div>
       </div>
@@ -182,7 +148,7 @@ export function VisitCloseoutPanel({
               <Textarea id={nextObjectiveId} name="nextObjective" rows={3} className="text-base sm:text-sm" placeholder="Optionnel" />
             </div>
             <p className="text-xs text-muted-foreground">
-              Si une date est renseignée, TR1 crée directement une vraie visite dans l’Agenda — pas une simple tâche.
+              Si une date est renseignée, TR1 crée directement une vraie visite dans l’Agenda.
             </p>
           </div>
         </details>

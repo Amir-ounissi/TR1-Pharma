@@ -12,16 +12,11 @@ test("scénario 1 — Agent desktop", async ({ page }) => {
   const sidebar = page.getByRole("navigation", { name: "Navigation principale" }).first();
   await expect(sidebar.getByText("Ma journée", { exact: true })).toBeVisible();
   await expect(sidebar.getByText("Priorités", { exact: true })).toHaveCount(0);
-  await expect(page.getByTestId("next-visit-card")).toContainText("Pharmacie République");
-  await expect(page.getByRole("button", { name: "Démarrer", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Mon programme", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Démarrer", exact: true })).toHaveCount(0);
+  await expect(page.getByTestId("next-visit-card")).toHaveCount(0);
+  await expect(page.getByTestId("active-visit-card")).toHaveCount(0);
   await page.screenshot({ path: `${artifacts}/agent-day-desktop.png`, fullPage: true });
-
-  await page.getByRole("button", { name: "Démarrer", exact: true }).click();
-  await expect(page.getByTestId("active-visit-card")).toBeVisible();
-  await page.getByRole("link", { name: "Créer une commande" }).first().click();
-  await expect(page.getByRole("heading", { name: "Nouvelle commande" })).toBeVisible();
-  await page.goBack();
-  await expect(page.getByTestId("active-visit-card")).toBeVisible();
 });
 
 test("scénario 2 — Manager desktop", async ({ page }) => {
@@ -77,9 +72,9 @@ test("scénario 4 — Mobile Agent", async ({ page }) => {
   await expect(mobileNav.locator('a[href="/dashboard/agent/more"]')).toBeVisible();
   await expect(mobileNav.locator('a[href="/dashboard/orders"]')).toBeVisible();
   await expect(mobileNav.locator('a[href="/dashboard/agent/performance"]')).toHaveCount(0);
-  await expect(page.getByTestId("next-visit-card")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Démarrer", exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Waze", exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Mon programme", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Démarrer", exact: true })).toHaveCount(0);
+  await expect(page.getByTestId("next-visit-card")).toHaveCount(0);
   await expect(page.getByText("Priorités", { exact: true })).toHaveCount(0);
   await page.screenshot({ path: `${artifacts}/agent-day-mobile.png`, fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
