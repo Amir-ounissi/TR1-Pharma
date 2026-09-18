@@ -26,6 +26,7 @@ type CloseoutRpcResult = {
 type SupabaseSessionClient = Awaited<ReturnType<typeof requireCompletedOnboarding>>["supabase"];
 
 const uuid = z.string().uuid();
+const databaseUuid = z.string().regex(/^[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$/, "Identifiant invalide.");
 const postVisitDelay = z.enum(["3", "7", "14"]);
 const allowedPhotoTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_PHOTO_BYTES = 3 * 1024 * 1024;
@@ -273,8 +274,8 @@ export async function createPostVisitFollowUpAction(
 ): Promise<VisitCloseoutActionState> {
   try {
     const parsed = z.object({
-      visitId: uuid,
-      brandPharmacyId: uuid,
+      visitId: databaseUuid,
+      brandPharmacyId: databaseUuid,
       delayDays: postVisitDelay,
     }).parse(Object.fromEntries(formData));
 
