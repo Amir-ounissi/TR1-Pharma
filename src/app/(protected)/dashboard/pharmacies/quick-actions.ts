@@ -15,6 +15,8 @@ import { syncHubSpotNoteAfterPersistence } from "@/lib/integrations/hubspot/runt
 const uuid = z.string().uuid();
 const planPreset = z.enum(["today", "tomorrow", "week", "custom"]);
 const finishOutcome = z.enum(["very_good", "good", "follow_up", "problem"]);
+const canonicalFinishOutcome = z.enum(["order_taken", "no_order", "follow_up", "information", "other"]);
+const inputMode = z.enum(["manual", "dictation", "assistant"]);
 const nextPreset = z.enum(["none", "week1", "weeks2", "month1", "custom"]);
 const noteTags = [
   "order",
@@ -214,18 +216,41 @@ export async function startVisitAction(
 export async function completeVisitAction(
   brandPharmacyId: string,
   visitId: string,
-  outcome: "very_good" | "good" | "follow_up" | "problem",
+  outcome:
+    | "very_good"
+    | "good"
+    | "follow_up"
+    | "problem"
+    | "order_taken"
+    | "no_order"
+    | "information"
+    | "other",
   next: "none" | "week1" | "weeks2" | "month1" | "custom",
   customNext?: string,
+  summary?: string,
+  closeoutInputMode: "manual" | "dictation" | "assistant" = "manual",
+  tags: string[] = [],
 ): Promise<QuickActionResult> {
   try {
     const parsed = z.object({
       brandPharmacyId: uuid,
       visitId: uuid,
-      outcome: finishOutcome,
+      outcome: z.union([finishOutcome, canonicalFinishOutcome]),
       next: nextPreset,
       customNext: z.string().optional(),
-    }).parse({ brandPharmacyId, visitId, outcome, next, customNext });
+      summary: z.string().trim().max(4_000).optional(),
+      inputMode,
+      tags: z.array(z.enum(noteTags)).max(6),
+    }).parse({
+      brandPharmacyId,
+      visitId,
+      outcome,
+      next,
+      customNext,
+      summary,
+      inputMode: closeoutInputMode,
+      tags,
+    });
     const { supabase, brand, userId } = await getRelation(parsed.brandPharmacyId);
     let nextStart: string | null = null;
     if (parsed.next !== "none") {
@@ -243,21 +268,69 @@ export async function completeVisitAction(
         nextStart = await findFreeSlot(supabase, userId, date);
       }
     }
-    const { data: nextVisitId, error } = await supabase.rpc("complete_field_visit", {
+
+    const canonicalOutcome =
+      parsed.outcome === "very_good" || parsed.outcome === "good"
+        ? "other"
+        : parsed.outcome === "problem"
+          ? "follow_up"
+          : parsed.outcome;
+    const fallbackSummary =
+      parsed.outcome === "very_good"
+        ? "Clôture rapide : très bien."
+        : parsed.outcome === "good"
+          ? "Clôture rapide : bien."
+          : parsed.outcome === "problem"
+            ? "Clôture rapide : problème signalé."
+            : canonicalOutcome === "order_taken"
+              ? "Commande prise."
+              : canonicalOutcome === "no_order"
+                ? "Pas de commande."
+                : canonicalOutcome === "follow_up"
+                  ? "Visite à relancer."
+                  : canonicalOutcome === "information"
+                    ? "Information / suivi."
+                    : "Visite clôturée.";
+    const legacyOutcome = finishOutcome.safeParse(parsed.outcome).success ? parsed.outcome : null;
+
+    const { data, error } = await supabase.rpc("close_field_visit", {
       target_visit_id: parsed.visitId,
-      target_outcome: parsed.outcome,
-      target_next_start_at: nextStart,
+      closeout_payload: {
+        outcome: canonicalOutcome,
+        summary: parsed.summary || fallbackSummary,
+        input_mode: parsed.inputMode,
+        structured_payload: {
+          source: parsed.inputMode === "assistant" ? "visit_close_assistant" : "pharmacy_quick_action",
+          tags: parsed.tags,
+          legacy_outcome: legacyOutcome,
+        },
+        next_visit_at: nextStart,
+        next_objective: null,
+      },
     });
     if (error) throw error;
+
+    const closeoutResult =
+      data && typeof data === "object" && !Array.isArray(data)
+        ? data as Record<string, unknown>
+        : {};
+    const nextVisitId =
+      typeof closeoutResult.next_visit_id === "string"
+        ? closeoutResult.next_visit_id
+        : null;
+
     await syncNaaliHubSpotVisitAfterPersistence(brand.id, parsed.visitId);
     revalidatePath("/dashboard/agenda");
     revalidatePath("/dashboard/field");
+    revalidatePath("/dashboard/agent");
+    revalidatePath(`/dashboard/visits/${parsed.visitId}`);
     revalidatePath(`/dashboard/pharmacies/${parsed.brandPharmacyId}`);
+    revalidatePath(`/dashboard/pharmacies/${parsed.brandPharmacyId}/notes`);
     return {
       success: nextStart
         ? `Visite terminée · prochain passage ${new Intl.DateTimeFormat("fr-FR", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Paris" }).format(new Date(nextStart))}`
         : "Visite terminée.",
-      visitId: nextVisitId ? String(nextVisitId) : undefined,
+      visitId: nextVisitId ?? undefined,
       scheduledAt: nextStart ?? undefined,
     };
   } catch (error) {
