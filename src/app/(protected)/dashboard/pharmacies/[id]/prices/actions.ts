@@ -37,6 +37,7 @@ export async function savePriceObservationAction(
       captureMethod,
       confidence: z.string().trim().optional(),
       notes: z.string().trim().max(2000).optional(),
+      analysisPayload: z.string().trim().max(32768).optional(),
     }).parse({
       brandPharmacyId: String(formData.get("brandPharmacyId") ?? ""),
       visitId: String(formData.get("visitId") ?? ""),
@@ -48,7 +49,21 @@ export async function savePriceObservationAction(
       captureMethod: String(formData.get("captureMethod") ?? "photo"),
       confidence: String(formData.get("confidence") ?? ""),
       notes: String(formData.get("notes") ?? ""),
+      analysisPayload: String(formData.get("analysisPayload") ?? ""),
     });
+
+    let rawExtraction: Record<string, unknown> | null = null;
+    if (parsed.analysisPayload) {
+      try {
+        const candidate = JSON.parse(parsed.analysisPayload);
+        if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
+          throw new Error("invalid_analysis_payload");
+        }
+        rawExtraction = candidate as Record<string, unknown>;
+      } catch {
+        throw new Error("La prévisualisation automatique est invalide. Relancez l’analyse ou saisissez le prix manuellement.");
+      }
+    }
 
     const bundleQuantity = parsed.priceType === "bundle"
       ? z.coerce.number().int().min(2).max(100).parse(parsed.bundleQuantity)
@@ -91,7 +106,7 @@ export async function savePriceObservationAction(
       target_bundle_quantity: bundleQuantity,
       target_capture_method: parsed.captureMethod,
       target_confidence: confidence,
-      target_raw_extraction: null,
+      target_raw_extraction: rawExtraction,
       target_notes: parsed.notes || null,
     });
     if (error) throw error;

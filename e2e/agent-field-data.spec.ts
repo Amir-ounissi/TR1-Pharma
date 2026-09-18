@@ -32,11 +32,6 @@ test("agent terrain : prix observé avec photo et historique", async ({ page }) 
     await expect(page).toHaveURL(`/dashboard/pharmacies/${brandPharmacyId}/prices`);
     await expect(page.getByRole("heading", { name: "Pharmacie République" })).toBeVisible();
 
-    await page.locator('select[name="productId"]').selectOption(productId);
-    await page.locator('input[name="priceTtc"]').fill("31.90");
-    await page.locator('select[name="priceType"]').selectOption("regular");
-    await page.locator('input[name="observedEan"]').fill("3400000000001");
-    await page.locator('input[name="confidence"]').fill("0.95");
     await page.locator('textarea[name="notes"]').fill(`Prix terrain E2E ${runId}`);
     await page.locator('input[name="photo"]').setInputFiles({
       name: `prix-${runId}.png`,
@@ -44,13 +39,27 @@ test("agent terrain : prix observé avec photo et historique", async ({ page }) 
       buffer: tinyPng,
     });
 
+    await page.getByRole("button", { name: "Analyser la photo" }).click();
+    await expect(page.getByText("Détecté : Dermacalm")).toBeVisible();
+    await expect(page.locator('select[name="productId"]')).toHaveValue(productId);
+    await expect(page.locator('input[name="priceTtc"]')).toHaveValue("31.9");
+    await expect(page.locator('input[name="observedEan"]')).toHaveValue("3400000000001");
+    await expect(page.locator('input[name="confidence"]')).toHaveValue("0.95");
+
+    const preSaveCount = await admin
+      .from("pharmacy_price_observations")
+      .select("id", { count: "exact", head: true })
+      .eq("brand_pharmacy_id", brandPharmacyId)
+      .eq("notes", `Prix terrain E2E ${runId}`);
+    expect(preSaveCount.count).toBe(0);
+
     await page.getByRole("button", { name: "Enregistrer le prix observé" }).click();
     await expect(page.getByText("Prix observé et preuve terrain enregistrés.")).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText(`Prix terrain E2E ${runId}`)).toBeVisible({ timeout: 30_000 });
 
     const { data: rows, error } = await admin
       .from("pharmacy_price_observations")
-      .select("id,brand_id,brand_pharmacy_id,product_id,observed_price_ttc,unit_price_ttc,capture_method,confidence")
+      .select("id,brand_id,brand_pharmacy_id,product_id,observed_price_ttc,unit_price_ttc,capture_method,confidence,raw_extraction")
       .eq("brand_pharmacy_id", brandPharmacyId)
       .eq("brand_id", brandId)
       .eq("product_id", productId)
@@ -66,6 +75,11 @@ test("agent terrain : prix observé avec photo et historique", async ({ page }) 
     expect(Number(rows?.[0].observed_price_ttc)).toBe(31.9);
     expect(Number(rows?.[0].unit_price_ttc)).toBe(31.9);
     expect(Number(rows?.[0].confidence)).toBe(0.95);
+    expect(rows?.[0].raw_extraction).toMatchObject({
+      productLabel: "Dermacalm",
+      ean: "3400000000001",
+      priceTtc: 31.9,
+    });
 
     const observationId = String(rows![0].id);
     const { data: attachments, error: attachmentsError } = await admin
