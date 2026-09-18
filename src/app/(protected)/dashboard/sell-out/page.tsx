@@ -184,7 +184,7 @@ export default async function SellOutPage({ searchParams }: { searchParams: Sear
             </details>
 
             <details className="rounded-xl border bg-background p-4">
-              <summary className="cursor-pointer font-semibold">Saisir sans document</summary>
+              <summary className="cursor-pointer font-semibold">Saisir un relevé</summary>
               <form action={saveSellOutCaptureFormAction} className="mt-4 grid gap-3 sm:grid-cols-2">
                 <label className="space-y-1 text-sm sm:col-span-2"><span>Pharmacie</span><select required name="brandPharmacyId" className="h-10 w-full rounded-md border bg-background px-3" defaultValue={selectedPharmacyId}><option value="" disabled>Choisir une pharmacie</option>{pharmacyRows.map((row) => <option key={row.id} value={row.id}>{pharmacyName(row)}{row.city ? ` · ${row.city}` : ""}</option>)}</select></label>
                 <label className="space-y-1 text-sm"><span>Source</span><select name="method" className="h-10 w-full rounded-md border bg-background px-3" defaultValue={selectedMethod}><option value="manual">Déclaration terrain</option><option value="stock_inference">Inférence par stock</option><option value="import">Import externe</option></select></label>
