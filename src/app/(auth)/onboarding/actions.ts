@@ -20,47 +20,79 @@ export async function completeOnboardingAction(
   const { supabase, userId } = await requireUser();
   const { data: authData, error: authError } = await supabase.auth.getUser();
   const user = authData.user;
-  if (authError || !user || user.id !== userId) return { error: "Votre session n’est plus valide. Reconnectez-vous." };
+  if (authError || !user || user.id !== userId) {
+    return { error: "Votre session n’est plus valide. Reconnectez-vous." };
+  }
 
   const profile = profileSchema.safeParse({ fullName: formData.get("fullName") });
   if (!profile.success) return { error: "Renseignez un nom complet valide." };
 
+  let requiresInvitationPassword = false;
+
   if (user.invited_at) {
-    const invitedProfile = invitedProfileSchema.safeParse({
-      fullName: formData.get("fullName"),
-      password: formData.get("password"),
-      confirmPassword: formData.get("confirmPassword"),
-    });
-    if (!invitedProfile.success) return { error: "Renseignez un mot de passe d’au moins 8 caractères." };
-    if (invitedProfile.data.password !== invitedProfile.data.confirmPassword) return { error: "Les mots de passe ne correspondent pas." };
-
-    const { error: passwordError } = await supabase.auth.updateUser({ password: invitedProfile.data.password });
-    if (passwordError) return { error: "Le mot de passe n’a pas pu être enregistré." };
-
-    const admin = createAdminClient();
-    const { data: memberships, error: membershipsError } = await admin
+    const { data: memberships, error: membershipsError } = await supabase
       .from("memberships")
       .select("id,status")
       .eq("user_id", userId)
       .not("brand_id", "is", null)
       .in("status", ["invited", "active"]);
 
-    if (membershipsError || !memberships?.length) {
-      return { error: "Aucun accès de marque invité n’a été trouvé pour ce compte. Contactez votre administrateur TR1." };
+    if (membershipsError) {
+      return { error: "Vos accès TR1 n’ont pas pu être vérifiés. Réessayez dans quelques instants." };
     }
 
+    const tenantMemberships = memberships ?? [];
+    if (!tenantMemberships.length) {
+      return {
+        error:
+          "Aucun accès de marque invité n’a été trouvé pour ce compte. Contactez votre administrateur TR1.",
+      };
+    }
+
+    requiresInvitationPassword = !tenantMemberships.some(
+      (membership) => membership.status === "active",
+    );
+  }
+
+  if (requiresInvitationPassword) {
+    const invitedProfile = invitedProfileSchema.safeParse({
+      fullName: formData.get("fullName"),
+      password: formData.get("password"),
+      confirmPassword: formData.get("confirmPassword"),
+    });
+    if (!invitedProfile.success) {
+      return { error: "Renseignez un mot de passe d’au moins 8 caractères." };
+    }
+    if (invitedProfile.data.password !== invitedProfile.data.confirmPassword) {
+      return { error: "Les mots de passe ne correspondent pas." };
+    }
+
+    const { error: passwordError } = await supabase.auth.updateUser({
+      password: invitedProfile.data.password,
+    });
+    if (passwordError) return { error: "Le mot de passe n’a pas pu être enregistré." };
+
+    // Invitation activation is deliberately server-controlled. The legacy
+    // authenticated RPC is revoked by the pre-pilot hardening migration.
+    const admin = createAdminClient();
     const { error: activationError } = await admin
       .from("memberships")
       .update({ status: "active" })
       .eq("user_id", userId)
       .not("brand_id", "is", null)
       .eq("status", "invited");
-    if (activationError) return { error: "Vos accès de marque n’ont pas pu être activés." };
+
+    if (activationError) {
+      return { error: "Vos accès de marque n’ont pas pu être activés." };
+    }
   }
 
   const { error } = await supabase
     .from("user_profiles")
-    .update({ full_name: profile.data.fullName, onboarding_completed_at: new Date().toISOString() })
+    .update({
+      full_name: profile.data.fullName,
+      onboarding_completed_at: new Date().toISOString(),
+    })
     .eq("user_id", userId);
 
   if (error) return { error: "Le profil n’a pas pu être enregistré." };
