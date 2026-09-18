@@ -79,6 +79,8 @@ jobs:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ vars.VERCEL_STAGING_PROJECT_ID }}
+      STAGING_SUPABASE_URL: https://ehptapmuzckazyxmnmnm.supabase.co
+      STAGING_SUPABASE_PUBLISHABLE_KEY: sb_publishable_j0dQKIs2SDsBgytuZj8vGw_LRBuA5Mv
     steps:
       - uses: actions/checkout@v6
         with:
@@ -93,7 +95,7 @@ jobs:
       - name: Vérifier la configuration staging
         run: |
           set -eu
-          for name in STAGING_DATABASE_URL STAGING_SUPABASE_PROJECT_REF VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID; do
+          for name in STAGING_DATABASE_URL STAGING_SUPABASE_PROJECT_REF VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID STAGING_SUPABASE_URL STAGING_SUPABASE_PUBLISHABLE_KEY; do
             eval "value=\${$name:-}"
             test -n "$value" || {
               echo "::error::$name n'est pas configuré pour l'environnement staging."
@@ -121,6 +123,19 @@ jobs:
               exit 1
               ;;
           esac
+          case "$STAGING_SUPABASE_URL" in
+            *"$STAGING_SUPABASE_PROJECT_REF"*) ;;
+            *)
+              echo "::error::STAGING_SUPABASE_URL ne correspond pas à STAGING_SUPABASE_PROJECT_REF."
+              exit 1
+              ;;
+          esac
+          case "$STAGING_SUPABASE_URL" in
+            *"$CURRENT_PRODUCTION_SUPABASE_PROJECT_REF"*)
+              echo "::error::STAGING_SUPABASE_URL pointe vers la production. Release bloquée."
+              exit 1
+              ;;
+          esac
 
       - name: Préparer la connexion session Supabase
         run: |
@@ -142,7 +157,11 @@ jobs:
         run: |
           set -eu
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
-          deployment_url="$(npx --yes "vercel@${VERCEL_CLI_VERSION}" deploy --prod --yes --token "$VERCEL_TOKEN" | tail -n 1)"
+          deployment_url="$(npx --yes "vercel@${VERCEL_CLI_VERSION}" deploy --prod --yes --token "$VERCEL_TOKEN" \
+            --build-env "NEXT_PUBLIC_SUPABASE_URL=$STAGING_SUPABASE_URL" \
+            --build-env "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$STAGING_SUPABASE_PUBLISHABLE_KEY" \
+            --env "NEXT_PUBLIC_SUPABASE_URL=$STAGING_SUPABASE_URL" \
+            --env "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$STAGING_SUPABASE_PUBLISHABLE_KEY" | tail -n 1)"
           case "$deployment_url" in
             https://*.vercel.app) ;;
             *)
