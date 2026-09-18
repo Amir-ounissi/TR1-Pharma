@@ -153,7 +153,7 @@ export async function sendOrderByEmailAction(
   try {
     const { supabase, brand, userId, order } = await requireTransmissionOrder(parsed.data.orderId);
     if (["draft", "needs_correction", "rejected", "cancelled"].includes(order.order_status)) {
-      return { error: "La commande doit être validée avant transmission." };
+      return { error: "La commande doit être soumise à la marque avant transmission par email." };
     }
 
     const admin = createAdminClient();
@@ -183,9 +183,6 @@ export async function sendOrderByEmailAction(
     const byType = new Map((documents ?? []).map((document) => [document.document_type, document]));
     const missing: string[] = [];
     if (!recipient) missing.push("email de prise de commande de la marque");
-    if (!pharmacy.vat_number?.trim()) missing.push("numéro de TVA pharmacie");
-    if (!byType.has("kbis")) missing.push("KBIS");
-    if (!byType.has("rib")) missing.push("RIB");
     if (!gmail) missing.push("connexion Gmail");
     if (!(items ?? []).length) missing.push("lignes de commande");
     if (missing.length) return { error: `Transmission bloquée : ${missing.join(", ")}.` };
@@ -217,18 +214,29 @@ export async function sendOrderByEmailAction(
     const reference = pdfPayload.reference;
     const pharmacyName = pdfPayload.pharmacy.name;
     const subject = `Commande ${brandData.name} · ${pharmacyName} · ${reference}`;
-    const body = [
+    const administrativeDocuments = ["kbis", "rib"].filter((type) => byType.has(type));
+    const bodyLines = [
       "Bonjour,",
       "",
-      `Vous trouverez ci-joint la commande ${reference} pour ${pharmacyName}, ainsi que le KBIS et le RIB de la pharmacie.`,
-      "",
-      `N° TVA : ${pharmacy.vat_number}`,
+      `Vous trouverez ci-joint la commande ${reference} pour ${pharmacyName}.`,
+    ];
+    if (administrativeDocuments.length) {
+      bodyLines.push(
+        `Les pièces administratives disponibles (${administrativeDocuments.map((type) => type.toUpperCase()).join(", ")}) sont également jointes.`,
+      );
+    }
+    bodyLines.push("");
+    if (pharmacy.vat_number?.trim()) {
+      bodyLines.push(`N° TVA : ${pharmacy.vat_number}`);
+    }
+    bodyLines.push(
       `Total TTC : ${Number(order.total_ttc ?? 0).toFixed(2)} €`,
       "",
       "Bonne réception,",
       "",
       "Ceci est un message automatique, mais vous pouvez y répondre directement.",
-    ].join("\n");
+    );
+    const body = bodyLines.join("\n");
 
     const pdf = buildTr1OrderPdf(pdfPayload);
     const attachments: EmailAttachment[] = [
@@ -236,7 +244,8 @@ export async function sendOrderByEmailAction(
     ];
 
     for (const type of ["kbis", "rib"] as const) {
-      const document = byType.get(type)!;
+      const document = byType.get(type);
+      if (!document) continue;
       const { data, error } = await admin.storage.from("pharmacy-documents").download(document.object_path);
       if (error || !data) throw new Error(`Impossible de charger le ${type.toUpperCase()}.`);
       attachments.push({
@@ -286,6 +295,11 @@ export async function sendOrderByEmailAction(
         updated_at: new Date().toISOString(),
       }).eq("id", transmissionId);
     }
+    console.error("[order_email_transmission_error]", {
+      orderId: parsed.data.orderId,
+      transmissionId,
+      error: error instanceof Error ? error.message : "unknown_error",
+    });
     return { error: error instanceof Error ? error.message : "Impossible d’envoyer la commande." };
   }
 }
