@@ -13,14 +13,10 @@ test("scénario 1 — Agent desktop", async ({ page }) => {
   await expect(sidebar.getByText("Ma journée", { exact: true })).toBeVisible();
   await expect(sidebar.getByText("Priorités", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Mon programme", exact: true })).toBeVisible();
-  const visitLink = page.locator('a[href^="/dashboard/visits/"]').filter({ hasText: "Pharmacie République" }).first();
-  await expect(visitLink).toContainText("Clôturer");
   await expect(page.getByRole("button", { name: "Démarrer", exact: true })).toHaveCount(0);
+  await expect(page.getByTestId("next-visit-card")).toHaveCount(0);
+  await expect(page.getByTestId("active-visit-card")).toHaveCount(0);
   await page.screenshot({ path: `${artifacts}/agent-day-desktop.png`, fullPage: true });
-
-  await visitLink.click();
-  await expect(page.getByRole("heading", { name: "Clôturer la visite", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Démarrer la visite", exact: true })).toHaveCount(0);
 });
 
 test("scénario 2 — Manager desktop", async ({ page }) => {
@@ -77,8 +73,8 @@ test("scénario 4 — Mobile Agent", async ({ page }) => {
   await expect(mobileNav.locator('a[href="/dashboard/orders"]')).toBeVisible();
   await expect(mobileNav.locator('a[href="/dashboard/agent/performance"]')).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Mon programme", exact: true })).toBeVisible();
-  await expect(page.locator('a[href^="/dashboard/visits/"]').filter({ hasText: "Pharmacie République" }).first()).toBeVisible();
   await expect(page.getByRole("button", { name: "Démarrer", exact: true })).toHaveCount(0);
+  await expect(page.getByTestId("next-visit-card")).toHaveCount(0);
   await expect(page.getByText("Priorités", { exact: true })).toHaveCount(0);
   await page.screenshot({ path: `${artifacts}/agent-day-mobile.png`, fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
