@@ -87,6 +87,15 @@ test("fiche pharmacie : synthèse sell-out et prix terrain", async ({ page }) =>
     await expect(summary.getByText(/129,50/)).toBeVisible();
     await expect(summary.getByText(/33,33/)).toBeVisible();
     await expect(summary.getByText("Dermacalm", { exact: true })).toBeVisible();
+
+    const freshness = summary.getByTestId("field-data-freshness");
+    await expect(freshness).toBeVisible();
+    await expect(freshness.getByText("Sell-out", { exact: true })).toBeVisible();
+    await expect(freshness.getByText("Prix", { exact: true })).toBeVisible();
+    await expect(freshness.getByText("Audit 4P+", { exact: true })).toBeVisible();
+    await expect(freshness.getByText("Frais", { exact: true })).toHaveCount(2);
+    await expect(freshness.getByText("Jamais collecté", { exact: true })).toBeVisible();
+
     await expect(summary.getByRole("link", { name: "Voir le relevé" })).toHaveAttribute(
       "href",
       `/dashboard/sell-out/${captureId}`,
