@@ -54,6 +54,65 @@ export class SellOutDocumentImportError extends Error {
 
 type Fetcher = typeof fetch;
 
+type ExtractionProvider = {
+  apiKey: string;
+  endpoint: string;
+  model: string;
+};
+
+function resolveExtractionProvider(): ExtractionProvider | null {
+  const requestedModel =
+    process.env.OPENAI_SELL_OUT_MODEL
+    ?? process.env.OPENAI_PDF_ORDER_MODEL
+    ?? "gpt-5-mini";
+  const directApiKey = process.env.OPENAI_API_KEY ?? process.env.OPEN_API_PREVIEW_KEY;
+  if (directApiKey) {
+    return {
+      apiKey: directApiKey,
+      endpoint: "https://api.openai.com/v1/responses",
+      model: requestedModel.startsWith("openai/")
+        ? requestedModel.slice("openai/".length)
+        : requestedModel,
+    };
+  }
+
+  const gatewayApiKey = process.env.AI_GATEWAY_API_KEY ?? process.env.VERCEL_OIDC_TOKEN;
+  if (gatewayApiKey) {
+    return {
+      apiKey: gatewayApiKey,
+      endpoint: "https://ai-gateway.vercel.sh/v1/responses",
+      model: requestedModel.includes("/") ? requestedModel : "openai/" + requestedModel,
+    };
+  }
+
+  return null;
+}
+
+async function toDocumentInput(file: File, isPdf: boolean) {
+  const base64 = Buffer.from(await file.arrayBuffer()).toString("base64");
+  if (isPdf) {
+    return {
+      type: "input_file",
+      filename: file.name || "sell-out.pdf",
+      file_data: "data:application/pdf;base64," + base64,
+    };
+  }
+  return {
+    type: "input_image",
+    image_url: "data:" + file.type + ";base64," + base64,
+    detail: "high",
+  };
+}
+
+function outputTextFromPayload(payload: {
+  output_text?: string;
+  output?: Array<{ content?: Array<{ type?: string; text?: string }> }>;
+}) {
+  return payload.output_text
+    ?? payload.output?.flatMap((item) => item.content ?? []).find((item) => item.type === "output_text")?.text;
+}
+
+
 export async function extractSellOutDocument(file: File, fetcher: Fetcher = fetch): Promise<SellOutDocumentExtraction> {
   const isPdf = file.type === "application/pdf";
   const isImage = imageTypes.has(file.type);
@@ -72,39 +131,24 @@ export async function extractSellOutDocument(file: File, fetcher: Fetcher = fetc
     return mock;
   }
 
-  if (process.env.SELL_OUT_DOCUMENT_EXTRACTION_ENABLED !== "true") {
-    throw new SellOutDocumentImportError("openai_unavailable", "L’analyse automatique des sorties de caisse n’est pas activée sur cet environnement.");
+  const provider = resolveExtractionProvider();
+  if (!provider) {
+    throw new SellOutDocumentImportError(
+      "openai_unavailable",
+      "L’analyse automatique de la sortie de caisse est indisponible pour le moment.",
+    );
   }
 
-  const apiKey = process.env.OPENAI_API_KEY ?? process.env.OPEN_API_PREVIEW_KEY;
-  if (!apiKey) {
-    throw new SellOutDocumentImportError("openai_unavailable", "L’analyse automatique de la sortie de caisse est indisponible pour le moment.");
-  }
-
-  let fileId: string | null = null;
   try {
-    const upload = new FormData();
-    upload.set("purpose", isPdf ? "user_data" : "vision");
-    upload.set("file", file);
-    const uploadResponse = await fetcher("https://api.openai.com/v1/files", {
+    const documentInput = await toDocumentInput(file, isPdf);
+    const response = await fetcher(provider.endpoint, {
       method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}` },
-      body: upload,
-    });
-    if (!uploadResponse.ok) {
-      throw new SellOutDocumentImportError("openai_unavailable", "L’analyse automatique de la sortie de caisse est indisponible pour le moment.");
-    }
-    fileId = (await uploadResponse.json() as { id?: string }).id ?? null;
-    if (!fileId) throw new SellOutDocumentImportError("extraction_failed", "Le document n’a pas pu être préparé pour analyse.");
-
-    const documentInput = isPdf
-      ? { type: "input_file", file_id: fileId }
-      : { type: "input_image", file_id: fileId, detail: "original" };
-    const response = await fetcher("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      headers: {
+        Authorization: "Bearer " + provider.apiKey,
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
-        model: process.env.OPENAI_SELL_OUT_MODEL ?? process.env.OPENAI_PDF_ORDER_MODEL ?? "gpt-5",
+        model: provider.model,
         store: false,
         instructions: SELL_OUT_EXTRACTION_INSTRUCTIONS,
         input: [{
@@ -114,34 +158,58 @@ export async function extractSellOutDocument(file: File, fetcher: Fetcher = fetc
             documentInput,
           ],
         }],
-        text: { format: { type: "json_schema", name: "sell_out_document", strict: true, schema: SELL_OUT_DOCUMENT_JSON_SCHEMA } },
+        text: {
+          format: {
+            type: "json_schema",
+            name: "sell_out_document",
+            strict: true,
+            schema: SELL_OUT_DOCUMENT_JSON_SCHEMA,
+          },
+        },
       }),
     });
     if (!response.ok) {
-      throw new SellOutDocumentImportError("openai_unavailable", "L’analyse automatique de la sortie de caisse est indisponible pour le moment.");
+      const responseBody = await response.text().catch(() => "");
+      console.error("[sell_out_document_analysis] provider rejected request", {
+        model: provider.model,
+        status: response.status,
+        response: responseBody.slice(0, 500),
+      });
+      throw new SellOutDocumentImportError(
+        "openai_unavailable",
+        "L’analyse automatique de la sortie de caisse est indisponible pour le moment.",
+      );
     }
+
     const payload = await response.json() as {
       output_text?: string;
       output?: Array<{ content?: Array<{ type?: string; text?: string }> }>;
     };
-    const outputText = payload.output_text
-      ?? payload.output?.flatMap((item) => item.content ?? []).find((item) => item.type === "output_text")?.text;
-    if (!outputText) throw new SellOutDocumentImportError("extraction_failed", "Aucune donnée de sell-out exploitable n’a été détectée.");
+    const outputText = outputTextFromPayload(payload);
+    if (!outputText) {
+      throw new SellOutDocumentImportError(
+        "extraction_failed",
+        "Aucune donnée de sell-out exploitable n’a été détectée.",
+      );
+    }
 
     const extraction = parseSellOutDocumentExtraction(JSON.parse(outputText));
     if (sellOutExtractionHasPotentialPii(extraction)) {
-      throw new SellOutDocumentImportError("pii_detected", "Le document contient des données client ou patient et ne peut pas être analysé automatiquement. Utilisez un export anonymisé.");
+      throw new SellOutDocumentImportError(
+        "pii_detected",
+        "Le document contient des données client ou patient et ne peut pas être analysé automatiquement. Utilisez un export anonymisé.",
+      );
     }
     return extraction;
   } catch (error) {
     if (error instanceof SellOutDocumentImportError) throw error;
-    throw new SellOutDocumentImportError("extraction_failed", "La sortie de caisse n’a pas pu être interprétée de façon fiable.");
-  } finally {
-    if (fileId) {
-      await fetcher(`https://api.openai.com/v1/files/${fileId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${apiKey}` },
-      }).catch(() => undefined);
-    }
+    console.error("[sell_out_document_analysis] unexpected extraction failure", {
+      model: provider.model,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw new SellOutDocumentImportError(
+      "extraction_failed",
+      "La sortie de caisse n’a pas pu être interprétée de façon fiable.",
+    );
   }
 }
