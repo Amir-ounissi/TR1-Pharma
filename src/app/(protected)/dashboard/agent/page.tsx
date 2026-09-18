@@ -5,10 +5,6 @@ import {
   type AgentMultibrandVisitSummary,
 } from "@/components/agent/agent-multibrand-overview";
 import { AgentTodayCockpit } from "@/components/agent/agent-today-cockpit";
-import {
-  AgentVisitCloseoutQueue,
-  type AgentPendingCloseoutVisit,
-} from "@/components/agent/agent-visit-closeout-queue";
 import { DashboardTracker } from "@/components/agent/dashboard-tracker";
 import { OfflineDayPreloader } from "@/components/pwa/offline-day-preloader";
 import { addCalendarDays } from "@/lib/agenda";
@@ -184,16 +180,10 @@ export default async function AgentPage() {
   const activeFieldVisits = ((activeFieldAgendaResult.data ?? []) as FieldAgendaEvent[]).filter(
     (event) => event.ownership === "mine" && event.source_kind === "field_visit" && Boolean(event.pharmacy_id),
   );
-  const pendingCloseouts: AgentPendingCloseoutVisit[] = activeFieldVisits
-    .filter((event) => !["completed", "cancelled"].includes(event.status) && new Date(event.start_at).getTime() <= now.getTime())
-    .sort((left, right) => new Date(left.start_at).getTime() - new Date(right.start_at).getTime())
-    .map((event) => ({
-      id: event.source_id,
-      pharmacyName: event.pharmacy_name || event.title,
-      city: event.city,
-      startAt: event.start_at,
-      href: `/dashboard/visits/${event.source_id}`,
-    }));
+  const pendingVisitCount = activeFieldVisits.filter(
+    (event) => !["completed", "cancelled"].includes(event.status)
+      && new Date(event.start_at).getTime() <= now.getTime(),
+  ).length;
 
   const monthSummary = (monthOverviewResult.data ?? {}) as Record<string, number | null>;
   const revenueObjective = ((monthObjectivesResult.data ?? []) as ObjectiveProgressRow[]).find(
@@ -267,7 +257,7 @@ export default async function AgentPage() {
         orderCount={monthOrderCount}
         target={monthTarget}
         targetSource={monthTargetSource}
-        pendingVisitCount={pendingCloseouts.length}
+        pendingVisitCount={pendingVisitCount}
         plannedVisitCount={overviewVisits.length}
         firstName={firstName}
         dayLabel={dayLabel}
@@ -279,8 +269,6 @@ export default async function AgentPage() {
         plannedVisits={plannedVisits}
         canPlanVisit={saas.capabilities.has("core_crm")}
       />
-
-      <AgentVisitCloseoutQueue visits={pendingCloseouts} />
 
       <style>{`
         .tr1-product-da main.agent-day-home h1,
