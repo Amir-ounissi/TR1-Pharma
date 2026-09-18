@@ -57,7 +57,11 @@ async function requireOwnedVisit(brandPharmacyId: string, visitId?: string) {
   const visits = (links ?? [])
     .map((link) => Array.isArray(link.field_visits) ? link.field_visits[0] : link.field_visits)
     .filter(Boolean)
-    .sort((left, right) => Date.parse(left.scheduled_start_at) - Date.parse(right.scheduled_start_at));
+    .sort((left, right) => {
+      if (left.status === "in_progress" && right.status !== "in_progress") return -1;
+      if (right.status === "in_progress" && left.status !== "in_progress") return 1;
+      return Date.parse(left.scheduled_start_at) - Date.parse(right.scheduled_start_at);
+    });
   const visit = visits[0];
   if (!visit) throw new Error("Aucune visite à clôturer pour cette pharmacie.");
   return visit;
