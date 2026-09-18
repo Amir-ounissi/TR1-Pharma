@@ -7,6 +7,7 @@ import {
   uploadSellOutEvidenceFormAction,
   validateSellOutCaptureFormAction,
 } from "../actions";
+import { SellOutDocumentAnalyzer } from "@/components/sell-out/sell-out-document-analyzer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -166,6 +167,24 @@ export default async function SellOutCapturePage({ params }: { params: Promise<{
           </CardDescription>
         </CardHeader>
       </Card>
+
+      {editable && capture.method === "document" ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Lecture automatique du relevé</CardTitle>
+            <CardDescription>
+              TR1 prépare les lignes depuis la photo ou le PDF. Vous devez les vérifier avant enregistrement.
+              {lines.length ? " Une nouvelle validation remplacera les lignes brouillon actuelles de ce relevé." : ""}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SellOutDocumentAnalyzer
+              captureId={capture.id}
+              products={products}
+            />
+          </CardContent>
+        </Card>
+      ) : null}
 
       {editable ? (
         <section className="grid gap-4 xl:grid-cols-2">
