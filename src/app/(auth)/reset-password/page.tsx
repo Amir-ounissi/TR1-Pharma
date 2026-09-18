@@ -14,11 +14,47 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getSession().then(({ data }) => setReady(Boolean(data.session)));
+    let active = true;
+
+    async function bootstrapRecoverySession() {
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+      const accessToken = hashParams.get("access_token");
+      const refreshToken = hashParams.get("refresh_token");
+      const type = hashParams.get("type");
+
+      if (type === "recovery" && accessToken && refreshToken) {
+        const { data, error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+
+        if (!active) return;
+
+        if (!error && data.session) {
+          setReady(true);
+          window.history.replaceState(
+            null,
+            "",
+            `${window.location.pathname}${window.location.search}`,
+          );
+          return;
+        }
+      }
+
+      const { data } = await supabase.auth.getSession();
+      if (active) setReady(Boolean(data.session));
+    }
+
+    void bootstrapRecoverySession();
+
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setReady(Boolean(session));
+      if (active) setReady(Boolean(session));
     });
-    return () => listener.subscription.unsubscribe();
+
+    return () => {
+      active = false;
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {

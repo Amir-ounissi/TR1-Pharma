@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { ArrowLeft, Mail, ShieldCheck } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+
+const REQUEST_TIMEOUT_MS = 15_000;
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -20,19 +21,40 @@ export default function ForgotPasswordPage() {
     setPending(true);
     setErrorMessage(null);
 
-    const supabase = createClient();
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: window.location.origin,
-    });
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(
+      () => controller.abort(),
+      REQUEST_TIMEOUT_MS,
+    );
 
-    setPending(false);
+    try {
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: email.trim() }),
+        signal: controller.signal,
+      });
 
-    if (error) {
-      setErrorMessage("Impossible d’envoyer le lien pour le moment. Réessayez dans quelques instants.");
-      return;
+      if (!response.ok) {
+        setErrorMessage(
+          response.status === 429
+            ? "Trop de demandes ont été envoyées. Réessayez dans quelques instants."
+            : "Impossible d’envoyer le lien pour le moment. Réessayez dans quelques instants.",
+        );
+        return;
+      }
+
+      setSent(true);
+    } catch {
+      setErrorMessage(
+        "La demande a pris trop de temps. Vérifiez votre connexion puis réessayez.",
+      );
+    } finally {
+      window.clearTimeout(timeoutId);
+      setPending(false);
     }
-
-    setSent(true);
   }
 
   return (
