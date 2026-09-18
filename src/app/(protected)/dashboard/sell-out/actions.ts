@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireActiveBrand } from "@/lib/auth";
 import { assertActiveBrandCapability } from "@/lib/saas/server";
+import { parseSellOutDocumentExtraction, sellOutExtractionHasPotentialPii } from "@/lib/sell-out/document-schema";
 
 // PostgreSQL accepts canonical UUID text regardless of RFC version/variant bits.
 // Seeded deterministic IDs use that broader PostgreSQL domain, so validate shape here.
@@ -20,6 +21,22 @@ const allowedMimeTypes = new Set([
   "application/vnd.ms-excel",
 ]);
 const maxEvidenceBytes = 10 * 1024 * 1024;
+
+export type SellOutDocumentActionState = {
+  error?: string;
+  success?: string;
+  warning?: string;
+};
+
+const documentLineSchema = z.object({
+  productId: z.union([uuid, z.literal("")]),
+  sourceProductCode: z.string().trim().max(120).optional().default(""),
+  ean: z.string().trim().max(32).optional().default(""),
+  label: z.string().trim().max(300).optional().default(""),
+  unitsSold: z.coerce.number().int().min(0),
+  revenueHt: z.union([z.coerce.number().min(0), z.literal(""), z.null()]).optional(),
+  confidence: z.union([z.coerce.number().min(0).max(1), z.literal(""), z.null()]).optional(),
+});
 
 const captureSchema = z.object({
   captureId: z.union([uuid, z.literal("")]).optional(),
@@ -132,6 +149,159 @@ export async function saveSellOutLineFormAction(formData: FormData): Promise<voi
   if (error) throw new Error(error.message);
   revalidatePath(`/dashboard/sell-out/${captureId}`);
   revalidatePath("/dashboard/sell-out");
+}
+
+export async function confirmSellOutDocumentAnalysisAction(
+  _state: SellOutDocumentActionState,
+  formData: FormData,
+): Promise<SellOutDocumentActionState> {
+  try {
+    const captureId = uuid.parse(String(formData.get("captureId") ?? ""));
+    const periodStart = z.string().date().parse(String(formData.get("periodStart") ?? ""));
+    const periodEnd = z.string().date().parse(String(formData.get("periodEnd") ?? ""));
+    if (periodEnd < periodStart) throw new Error("La date de fin doit suivre la date de début.");
+
+    const confidenceRaw = String(formData.get("confidence") ?? "").trim();
+    const confidence = confidenceRaw ? z.coerce.number().min(0).max(1).parse(confidenceRaw) : null;
+
+    const document = formData.get("document");
+    if (!(document instanceof File) || document.size < 1) {
+      throw new Error("Ajoutez le document analysé.");
+    }
+    if (document.size > maxEvidenceBytes) throw new Error("Le justificatif ne doit pas dépasser 10 Mo.");
+    if (!["image/jpeg", "image/png", "application/pdf"].includes(document.type)) {
+      throw new Error("L’analyse automatique accepte les photos JPG/PNG et les PDF.");
+    }
+
+    let extraction: ReturnType<typeof parseSellOutDocumentExtraction>;
+    try {
+      extraction = parseSellOutDocumentExtraction(
+        JSON.parse(String(formData.get("extractionPayload") ?? "{}")),
+      );
+    } catch {
+      throw new Error("La prévisualisation du document est invalide. Relancez l’analyse.");
+    }
+    if (sellOutExtractionHasPotentialPii(extraction)) {
+      throw new Error("Le document contient des données client ou patient et ne peut pas être enregistré automatiquement.");
+    }
+
+    let linesInput: unknown;
+    try {
+      linesInput = JSON.parse(String(formData.get("linesPayload") ?? "[]"));
+    } catch {
+      throw new Error("Les lignes du relevé sont invalides.");
+    }
+    const lines = z.array(documentLineSchema).min(1).max(150).parse(linesInput);
+    if (lines.some((line) => !line.productId && !line.sourceProductCode && !line.ean && !line.label)) {
+      throw new Error("Chaque ligne doit identifier un produit.");
+    }
+
+    const { supabase, brand } = await requireSellOutBrand();
+    const { data: capture, error: captureError } = await supabase
+      .from("sell_out_captures")
+      .select("id,brand_id,brand_pharmacy_id,method,status")
+      .eq("id", captureId)
+      .eq("brand_id", brand.id)
+      .is("archived_at", null)
+      .maybeSingle();
+    if (captureError) throw new Error(captureError.message);
+    if (!capture) throw new Error("Relevé sell-out introuvable.");
+    if (capture.method !== "document") throw new Error("Ce relevé n’est pas un relevé Photo / PDF.");
+    if (!["draft", "review_required"].includes(capture.status)) {
+      throw new Error("Ce relevé a déjà été relu.");
+    }
+
+    const selectedProductIds = [...new Set(lines.map((line) => line.productId).filter(Boolean))];
+    if (selectedProductIds.length) {
+      const { data: products, error: productsError } = await supabase
+        .from("products")
+        .select("id")
+        .eq("brand_id", brand.id)
+        .eq("is_active", true)
+        .is("discontinued_at", null)
+        .in("id", selectedProductIds);
+      if (productsError || (products ?? []).length !== selectedProductIds.length) {
+        throw new Error("Un produit sélectionné n’est plus disponible dans le catalogue.");
+      }
+    }
+
+    const bytes = Buffer.from(await document.arrayBuffer());
+    const sha256 = createHash("sha256").update(bytes).digest("hex");
+    const extractionHash = createHash("sha256").update(JSON.stringify(extraction)).digest("hex");
+    const { data: existingEvidence, error: existingEvidenceError } = await supabase
+      .from("sell_out_evidence")
+      .select("id,storage_path")
+      .eq("capture_id", captureId)
+      .eq("sha256", sha256)
+      .maybeSingle();
+    if (existingEvidenceError) throw new Error(existingEvidenceError.message);
+
+    let storagePath: string | null = null;
+    if (!existingEvidence) {
+      const fileName = safeFileName(document.name);
+      storagePath = `${brand.id}/${captureId}/${randomUUID()}-${fileName}`;
+      const { error: uploadError } = await supabase.storage
+        .from("sell-out-evidence")
+        .upload(storagePath, bytes, { contentType: document.type, upsert: false });
+      if (uploadError) throw new Error(uploadError.message);
+    }
+
+    const rpcLines = lines.map((line) => ({
+      product_id: line.productId || null,
+      source_product_code: line.sourceProductCode || null,
+      ean: line.ean || null,
+      label: line.label || null,
+      units_sold: line.unitsSold,
+      revenue_ht: line.revenueHt === "" || line.revenueHt == null ? null : Number(line.revenueHt),
+      confidence: line.confidence === "" || line.confidence == null ? null : Number(line.confidence),
+    }));
+
+    const { data: appliedCount, error: applyError } = await supabase.rpc("apply_sell_out_document_preview", {
+      target_capture_id: captureId,
+      target_period_start: periodStart,
+      target_period_end: periodEnd,
+      target_confidence: confidence,
+      target_extraction_version: "agent-web-document-v1",
+      target_raw_extraction: extraction,
+      target_lines: rpcLines,
+    });
+    if (applyError) {
+      if (storagePath) await supabase.storage.from("sell-out-evidence").remove([storagePath]);
+      throw new Error(applyError.message);
+    }
+
+    if (storagePath) {
+      const kind = evidenceKind.parse(evidenceKindForMime(document.type));
+      const { error: evidenceError } = await supabase.rpc("add_sell_out_evidence", {
+        target_capture_id: captureId,
+        target_kind: kind,
+        target_storage_path: storagePath,
+        target_file_name: safeFileName(document.name),
+        target_mime_type: document.type,
+        target_byte_size: document.size,
+        target_sha256: sha256,
+        target_extraction_payload_hash: extractionHash,
+      });
+      if (evidenceError) {
+        await supabase.storage.from("sell-out-evidence").remove([storagePath]);
+        revalidatePath(`/dashboard/sell-out/${captureId}`);
+        return {
+          success: `${Number(appliedCount ?? lines.length)} ligne(s) enregistrée(s).`,
+          warning: "Le document n’a pas pu être relié comme preuve. Réessayez avant de soumettre le relevé.",
+        };
+      }
+    }
+
+    revalidatePath(`/dashboard/sell-out/${captureId}`);
+    revalidatePath("/dashboard/sell-out");
+    return {
+      success: `${Number(appliedCount ?? lines.length)} ligne(s) et justificatif enregistrés. Vérifiez puis soumettez le relevé pour relecture humaine.`,
+    };
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Impossible d’enregistrer l’analyse du document.",
+    };
+  }
 }
 
 export async function uploadSellOutEvidenceFormAction(formData: FormData): Promise<void> {
