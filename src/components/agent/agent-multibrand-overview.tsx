@@ -272,22 +272,25 @@ export function AgentMultibrandOverview({
         <CardContent>
           {visits.length ? (
             <ol className="divide-y">
-              {visits.map((visit) => (
-                <li key={visit.id}>
-                  <Link href={visit.href} className="flex min-h-[4.75rem] touch-manipulation items-start gap-3 rounded-md py-4 transition active:bg-muted/50 hover:bg-muted/30 focus-visible:ring-2">
-                    <time dateTime={visit.startAt} className="w-12 shrink-0 text-sm font-semibold tabular-nums">{formatTime(visit.startAt)}</time>
-                    <div className="min-w-0 flex-1">
-                      <p className="break-words text-base font-semibold">{visit.pharmacyName}</p>
-                      {visit.city ? <p className="mt-1 text-sm text-muted-foreground">{visit.city}</p> : null}
-                      <div className="mt-2 flex flex-wrap gap-1.5">{visit.brandNames.map((name) => <BrandBadge key={`${visit.id}:${name}`} name={name} />)}</div>
-                      <p className="mt-2 text-sm text-muted-foreground">{visitStatusLabel(visit.status)}</p>
-                    </div>
-                    <span className="mt-1 inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-[var(--tr1-navy)]">
-                      Clôturer <ArrowRight className="size-4" aria-hidden="true" />
-                    </span>
-                  </Link>
-                </li>
-              ))}
+              {visits.map((visit) => {
+                const closed = ["completed", "cancelled", "canceled", "missed"].includes(visit.status.toLowerCase());
+                return (
+                  <li key={visit.id}>
+                    <Link href={visit.href} className="flex min-h-[4.75rem] touch-manipulation items-start gap-3 rounded-md py-4 transition active:bg-muted/50 hover:bg-muted/30 focus-visible:ring-2">
+                      <time dateTime={visit.startAt} className="w-12 shrink-0 text-sm font-semibold tabular-nums">{formatTime(visit.startAt)}</time>
+                      <div className="min-w-0 flex-1">
+                        <p className="break-words text-base font-semibold">{visit.pharmacyName}</p>
+                        {visit.city ? <p className="mt-1 text-sm text-muted-foreground">{visit.city}</p> : null}
+                        <div className="mt-2 flex flex-wrap gap-1.5">{visit.brandNames.map((name) => <BrandBadge key={`${visit.id}:${name}`} name={name} />)}</div>
+                        <p className="mt-2 text-sm text-muted-foreground">{visitStatusLabel(visit.status)}</p>
+                      </div>
+                      <span className="mt-1 inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-[var(--tr1-navy)]">
+                        {closed ? "Voir" : "Clôturer"} <ArrowRight className="size-4" aria-hidden="true" />
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
             </ol>
           ) : (
             <div className="flex items-start gap-3 pb-2">
