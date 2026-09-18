@@ -3,6 +3,7 @@ import { completeOnboardingAction } from "./actions";
 
 const mocks = vi.hoisted(() => ({
   requireUser: vi.fn(),
+  createAdminClient: vi.fn(),
   redirect: vi.fn(() => {
     throw new Error("redirect");
   }),
@@ -10,6 +11,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("@/lib/auth", () => ({ requireUser: mocks.requireUser }));
+vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.createAdminClient }));
 
 const invitedUser = {
   id: "00000000-0000-4000-8000-000000000001",
@@ -42,22 +44,32 @@ function membershipTable(rows: Array<{ id: string; status: "invited" | "active" 
   return query;
 }
 
+function adminMembershipTable() {
+  const query = {
+    eq: vi.fn(),
+    not: vi.fn(),
+  };
+  query.eq.mockImplementation((column: string) => {
+    if (column === "status") return Promise.resolve({ error: null });
+    return query;
+  });
+  query.not.mockReturnValue(query);
+  return {
+    update: vi.fn(() => query),
+    query,
+  };
+}
+
 function makeSupabase({
   user,
   memberships = [],
-  activatedCount = 1,
 }: {
   user: typeof invitedUser | { id: string; invited_at: null; user_metadata?: Record<string, string> };
   memberships?: Array<{ id: string; status: "invited" | "active" }>;
-  activatedCount?: number;
 }) {
   const profile = profileTable();
   const membership = membershipTable(memberships);
   const updateUser = vi.fn(async () => ({ error: null }));
-  const rpc = vi.fn(async (name: string) => {
-    if (name === "accept_my_invited_memberships") return { data: activatedCount, error: null };
-    return { data: null, error: null };
-  });
   const from = vi.fn((table: string) => {
     if (table === "user_profiles") return profile;
     if (table === "memberships") return membership;
@@ -71,12 +83,23 @@ function makeSupabase({
         updateUser,
       },
       from,
-      rpc,
     },
     profile,
     membership,
     updateUser,
-    rpc,
+  };
+}
+
+function makeAdmin() {
+  const membership = adminMembershipTable();
+  return {
+    client: {
+      from: vi.fn((table: string) => {
+        if (table === "memberships") return membership;
+        throw new Error(`unexpected admin table ${table}`);
+      }),
+    },
+    membership,
   };
 }
 
@@ -104,16 +127,17 @@ describe("completeOnboardingAction", () => {
       }),
     );
     expect(ctx.membership.select).not.toHaveBeenCalled();
-    expect(ctx.rpc).not.toHaveBeenCalled();
+    expect(mocks.createAdminClient).not.toHaveBeenCalled();
     expect(mocks.redirect).toHaveBeenCalledWith("/setup");
   });
 
-  it("sets the invited password and activates the tenant invitation", async () => {
+  it("sets the invited password and activates the tenant invitation server-side", async () => {
     const ctx = makeSupabase({
       user: invitedUser,
       memberships: [{ id: "tenant-membership", status: "invited" }],
-      activatedCount: 1,
     });
+    const admin = makeAdmin();
+    mocks.createAdminClient.mockReturnValue(admin.client);
     mocks.requireUser.mockResolvedValue({
       userId: invitedUser.id,
       supabase: ctx.supabase,
@@ -122,7 +146,9 @@ describe("completeOnboardingAction", () => {
     await expect(completeOnboardingAction({}, formData())).rejects.toThrow("redirect");
 
     expect(ctx.updateUser).toHaveBeenCalledWith({ password: "InviteTR1!2026" });
-    expect(ctx.rpc).toHaveBeenCalledWith("accept_my_invited_memberships");
+    expect(mocks.createAdminClient).toHaveBeenCalledOnce();
+    expect(admin.client.from).toHaveBeenCalledWith("memberships");
+    expect(admin.membership.update).toHaveBeenCalledWith({ status: "active" });
     expect(ctx.profile.update).toHaveBeenCalledWith(
       expect.objectContaining({
         full_name: "Marie Invitée",
@@ -145,7 +171,7 @@ describe("completeOnboardingAction", () => {
     await expect(completeOnboardingAction({}, formData("", ""))).rejects.toThrow("redirect");
 
     expect(ctx.updateUser).not.toHaveBeenCalled();
-    expect(ctx.rpc).not.toHaveBeenCalled();
+    expect(mocks.createAdminClient).not.toHaveBeenCalled();
     expect(ctx.profile.update).toHaveBeenCalledOnce();
     expect(mocks.redirect).toHaveBeenCalledWith("/select-brand");
   });
@@ -154,7 +180,6 @@ describe("completeOnboardingAction", () => {
     const ctx = makeSupabase({
       user: invitedUser,
       memberships: [],
-      activatedCount: 0,
     });
     mocks.requireUser.mockResolvedValue({
       userId: invitedUser.id,
@@ -167,6 +192,7 @@ describe("completeOnboardingAction", () => {
     });
 
     expect(ctx.updateUser).not.toHaveBeenCalled();
+    expect(mocks.createAdminClient).not.toHaveBeenCalled();
     expect(ctx.profile.update).not.toHaveBeenCalled();
     expect(mocks.redirect).not.toHaveBeenCalled();
   });
