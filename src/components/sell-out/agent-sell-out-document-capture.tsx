@@ -300,8 +300,9 @@ export function AgentSellOutDocumentCapture({
                     </select>
                   </div>
                   <div>
-                    <Label>Unités vendues</Label>
+                    <Label htmlFor={"sell-out-units-" + index}>Unités vendues</Label>
                     <Input
+                      id={"sell-out-units-" + index}
                       type="number"
                       min="0"
                       step="1"
@@ -312,8 +313,9 @@ export function AgentSellOutDocumentCapture({
                     />
                   </div>
                   <div>
-                    <Label>CA HT</Label>
+                    <Label htmlFor={"sell-out-revenue-" + index}>CA HT</Label>
                     <Input
+                      id={"sell-out-revenue-" + index}
                       type="number"
                       min="0"
                       step="0.01"
