@@ -224,9 +224,9 @@ export function AiVisitClose({ brandPharmacyId }: { brandPharmacyId: string }) {
         <div className="min-w-0">
           <p className="flex items-center gap-2 text-sm font-bold text-[var(--tr1-navy)]">
             <Sparkles className="size-4 text-[var(--tr1-orange)]" />
-            TR1 Assistant · visite en cours
+            TR1 Assistant · clôture de visite
           </p>
-          <p className="mt-0.5 text-xs text-muted-foreground">Raconte ta visite. TR1 s’occupe de la clôture.</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">Raconte ta visite. TR1 prépare le compte rendu et la suite.</p>
         </div>
         <Button type="button" size="sm" onClick={() => setOpen(true)}>
           Parler à TR1
