@@ -29,7 +29,7 @@ test("agent sell-out : document analysé puis validé avant toute persistance", 
     captureId = new URL(page.url()).pathname.split("/").pop() ?? null;
     expect(captureId).toBeTruthy();
 
-    await expect(page.getByRole("heading", { name: "Lecture automatique du relevé" })).toBeVisible();
+    await expect(page.getByText("Lecture automatique du relevé", { exact: true })).toBeVisible();
     const analyzerInput = page.locator('input[type="file"]').first();
     await analyzerInput.setInputFiles({
       name: `sell-out-${runId}.png`,
