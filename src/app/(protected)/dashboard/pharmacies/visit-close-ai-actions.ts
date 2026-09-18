@@ -1,10 +1,8 @@
 "use server";
 
 import { z } from "zod";
-import {
-  completeVisitAction,
-  createQuickNoteAction,
-} from "@/app/(protected)/dashboard/pharmacies/quick-actions";
+import { closeFieldVisitAction } from "@/app/(protected)/dashboard/visits/actions";
+import { addCalendarDays, isoToParisLocal } from "@/lib/agenda";
 import { analyzeVisitCloseNote, type VisitCloseDraft } from "@/lib/assistant/visit-close-ai";
 import { requireActiveBrand } from "@/lib/auth";
 
@@ -12,6 +10,15 @@ const uuid = z.string().uuid();
 const finishOutcome = z.enum(["very_good", "good", "follow_up", "problem"]);
 const nextPreset = z.enum(["none", "week1", "weeks2", "month1", "custom"]);
 const noteTag = z.enum(["order", "merchandising", "stockout", "competitor", "callback", "problem"]);
+const TAG_OBJECTIVES: Record<string, string> = {
+  order: "Suivre la commande",
+  merchandising: "Revoir le merchandising",
+  stockout: "Contrôler le réassort / la rupture",
+  competitor: "Revoir la présence concurrente",
+  callback: "Relancer la pharmacie",
+  problem: "Résoudre le point signalé",
+};
+
 
 export type VisitCloseAvailability = {
   active: boolean;
@@ -51,7 +58,7 @@ async function requireOwnedVisit(brandPharmacyId: string, visitId?: string) {
     .eq("brand_pharmacy_id", brandPharmacyId)
     .eq("field_visits.owner_user_id", userId)
     .eq("field_visits.pharmacy_id", relation.pharmacy_id)
-    .eq("field_visits.status", "in_progress")
+    .in("field_visits.status", ["planned", "confirmed", "in_progress"])
     .is("field_visits.archived_at", null);
   if (visitId) query = query.eq("visit_id", visitId);
 
@@ -90,18 +97,7 @@ export async function analyzeVisitCloseAction(
       note: z.string().trim().min(1).max(2_000),
     }).parse({ brandPharmacyId, visitId, note });
 
-    // Authorization and visit state are checked before spending any AI tokens.
-    await requireOwnedVisit(parsed.brandPharmacyId, parsed.visitId);
-    const draft = await analyzeVisitCloseNote(parsed.note);
-    return { draft };
-  } catch (error) {
-    return {
-      error: error instanceof Error ? error.message : "TR1 n’a pas pu préparer la clôture.",
-    };
-  }
-}
-
-export async function completeVisitWithAssistantAction(input: {
+    // Authorization and visit state are checked before spending anyexport async function completeVisitWithAssistantAction(input: {
   brandPharmacyId: string;
   visitId: string;
   outcome: "very_good" | "good" | "follow_up" | "problem";
@@ -117,35 +113,43 @@ export async function completeVisitWithAssistantAction(input: {
       outcome: finishOutcome,
       next: nextPreset,
       customNext: z.string().optional(),
-      note: z.string().trim().max(4_000).optional(),
+      note: z.string().trim().min(2, "Ajoutez un compte rendu court.").max(4_000),
       tags: z.array(noteTag).max(6).optional(),
     }).parse(input);
 
-    const completion = await completeVisitAction(
-      parsed.brandPharmacyId,
-      parsed.visitId,
-      parsed.outcome,
-      parsed.next,
-      parsed.next === "custom" ? parsed.customNext : undefined,
-    );
-    if (completion.error) return completion;
+    await requireOwnedVisit(parsed.brandPharmacyId, parsed.visitId);
 
-    if (parsed.note) {
-      const formData = new FormData();
-      formData.set("brandPharmacyId", parsed.brandPharmacyId);
-      formData.set("fieldVisitId", parsed.visitId);
-      formData.set("notes", parsed.note);
-      for (const tag of parsed.tags ?? []) formData.append("tags", tag);
-      const noteResult = await createQuickNoteAction(formData);
-      if (noteResult.error) {
-        return {
-          ...completion,
-          warning: "Visite clôturée, mais le compte rendu n’a pas pu être enregistré.",
-        };
-      }
+    const outcome = parsed.outcome === "follow_up" || parsed.outcome === "problem"
+      ? "follow_up"
+      : "other";
+    let nextVisitAt = "";
+    if (parsed.next === "custom") {
+      if (!parsed.customNext) throw new Error("Choisissez la prochaine date.");
+      nextVisitAt = parsed.customNext;
+    } else if (parsed.next !== "none") {
+      const days = parsed.next === "week1" ? 7 : parsed.next === "weeks2" ? 14 : 30;
+      const local = isoToParisLocal(new Date().toISOString());
+      nextVisitAt = `${addCalendarDays(local.slice(0, 10), days)}T09:00`;
     }
 
-    return completion;
+    const formData = new FormData();
+    formData.set("visitId", parsed.visitId);
+    formData.set("outcome", outcome);
+    formData.set("summary", parsed.note);
+    formData.set("inputMode", "assistant");
+    if (nextVisitAt) formData.set("nextVisitAt", nextVisitAt);
+    if (parsed.tags?.length) {
+      formData.set("nextObjective", parsed.tags.map((tag) => TAG_OBJECTIVES[tag] ?? tag).join(" · "));
+    }
+
+    const completion = await closeFieldVisitAction({}, formData);
+    if (completion.error) return { error: completion.error };
+    return {
+      success: completion.success,
+      warning: completion.warning,
+      visitId: parsed.visitId,
+      scheduledAt: nextVisitAt || undefined,
+    };
   } catch (error) {
     return {
       error: error instanceof Error ? error.message : "Impossible de terminer la visite.",
