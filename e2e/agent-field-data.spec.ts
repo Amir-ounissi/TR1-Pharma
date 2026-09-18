@@ -32,18 +32,22 @@ test("agent terrain : prix observé avec photo et historique", async ({ page }) 
     await expect(page).toHaveURL(`/dashboard/pharmacies/${brandPharmacyId}/prices`);
     await expect(page.getByRole("heading", { name: "Pharmacie République" })).toBeVisible();
 
-    await page.locator('select[name="productId"]').selectOption(productId);
-    await page.locator('input[name="priceTtc"]').fill("31.90");
-    await page.locator('select[name="priceType"]').selectOption("regular");
-    await page.locator('input[name="observedEan"]').fill("3400000000001");
-    await page.locator('input[name="confidence"]').fill("0.95");
-    await page.locator('textarea[name="notes"]').fill(`Prix terrain E2E ${runId}`);
     await page.locator('input[name="photo"]').setInputFiles({
       name: `prix-${runId}.png`,
       mimeType: "image/png",
       buffer: tinyPng,
     });
+    await page.getByRole("button", { name: "Analyser la photo" }).click();
 
+    await expect(page.getByText("Prévisualisation TR1")).toBeVisible();
+    await expect(page.getByText(/produit proposé : Dermacalm/i)).toBeVisible();
+    await expect(page.locator('select[name="productId"]')).toHaveValue(productId);
+    await expect(page.locator('input[name="priceTtc"]')).toHaveValue("31.9");
+    await expect(page.locator('select[name="priceType"]')).toHaveValue("regular");
+    await expect(page.locator('input[name="observedEan"]')).toHaveValue("3400000000001");
+    await expect(page.locator('input[name="confidence"]')).toHaveValue("0.95");
+
+    await page.locator('textarea[name="notes"]').fill(`Prix terrain E2E ${runId}`);
     await page.getByRole("button", { name: "Enregistrer le prix observé" }).click();
     await expect(page.getByText("Prix observé et preuve terrain enregistrés.")).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText(`Prix terrain E2E ${runId}`)).toBeVisible({ timeout: 30_000 });
