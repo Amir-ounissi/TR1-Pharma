@@ -8,7 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export function LoginForm({ oauthError }: { oauthError?: string | null }) {
+export function LoginForm({
+  oauthError,
+  passwordUpdated = false,
+}: {
+  oauthError?: string | null;
+  passwordUpdated?: boolean;
+}) {
   const [state, action, pending] = useActionState(loginAction, {});
 
   return (
@@ -16,6 +22,12 @@ export function LoginForm({ oauthError }: { oauthError?: string | null }) {
       {oauthError ? (
         <Alert variant="destructive" className="border-[#d95034]/35 bg-[#fff1ec] text-[#8f2e19]">
           <AlertDescription>{oauthError}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      {passwordUpdated ? (
+        <Alert className="border-[#2f7d5a]/25 bg-[#eef9f2] text-[#1e5f42]">
+          <AlertDescription>Votre mot de passe a bien été modifié. Vous pouvez vous connecter.</AlertDescription>
         </Alert>
       ) : null}
 
@@ -55,7 +67,12 @@ export function LoginForm({ oauthError }: { oauthError?: string | null }) {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="password" className="text-xs font-black uppercase tracking-[.12em] text-[#445265]">Mot de passe</Label>
+          <div className="flex items-center justify-between gap-3">
+            <Label htmlFor="password" className="text-xs font-black uppercase tracking-[.12em] text-[#445265]">Mot de passe</Label>
+            <Link className="text-xs font-black text-[#0b1e32] hover:text-[#c84f24]" href="/forgot-password">
+              Mot de passe oublié ?
+            </Link>
+          </div>
           <Input
             id="password"
             name="password"
