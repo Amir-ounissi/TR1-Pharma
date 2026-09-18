@@ -55,7 +55,12 @@ export function LoginForm({ oauthError }: { oauthError?: string | null }) {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="password" className="text-xs font-black uppercase tracking-[.12em] text-[#445265]">Mot de passe</Label>
+          <div className="flex items-center justify-between gap-3">
+            <Label htmlFor="password" className="text-xs font-black uppercase tracking-[.12em] text-[#445265]">Mot de passe</Label>
+            <Link className="text-xs font-black text-[#0b1e32] hover:text-[#c84f24]" href="/mot-de-passe-oublie">
+              Mot de passe oublié ?
+            </Link>
+          </div>
           <Input
             id="password"
             name="password"
