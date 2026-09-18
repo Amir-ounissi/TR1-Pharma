@@ -8,17 +8,25 @@ export default async function OnboardingPage() {
   const [
     { data: profile },
     { data: authData, error: authError },
-    { data: activeContexts, error: contextsError },
+    { data: memberships, error: membershipsError },
   ] = await Promise.all([
     supabase.from("user_profiles").select("full_name").eq("user_id", userId).maybeSingle(),
     supabase.auth.getUser(),
-    supabase.rpc("get_my_brand_contexts"),
+    supabase
+      .from("memberships")
+      .select("status")
+      .eq("user_id", userId)
+      .not("brand_id", "is", null)
+      .in("status", ["invited", "active"]),
   ]);
 
   if (authError || !authData.user || authData.user.id !== userId) redirect("/login");
 
   const requiresPassword = Boolean(
-    authData.user.invited_at && !contextsError && (activeContexts ?? []).length === 0,
+    authData.user.invited_at
+      && !membershipsError
+      && (memberships ?? []).length > 0
+      && !(memberships ?? []).some((membership) => membership.status === "active"),
   );
 
   return (
