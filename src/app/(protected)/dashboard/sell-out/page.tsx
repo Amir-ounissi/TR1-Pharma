@@ -10,7 +10,7 @@ import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
 import { formatCompactNumber, formatCompactPercent } from "@/lib/performance";
 import { presentationLabel } from "@/lib/presentation";
 
-type SearchParams = Promise<{ from?: string; to?: string }>;
+type SearchParams = Promise<{ from?: string; to?: string; pharmacy?: string; method?: string }>;
 
 type PharmacyRow = {
   id: string;
@@ -128,6 +128,10 @@ export default async function SellOutPage({ searchParams }: { searchParams: Sear
   }
 
   const pharmacyRows = (pharmacies ?? []) as PharmacyRow[];
+  const selectedPharmacyId = pharmacyRows.some((row) => row.id === params.pharmacy) ? params.pharmacy ?? "" : "";
+  const selectedMethod = ["manual", "document", "stock_inference", "import"].includes(params.method ?? "")
+    ? params.method!
+    : "manual";
   const captureRows = (captures ?? []) as CaptureRow[];
   const pharmacyById = new Map(pharmacyRows.map((row) => [row.id, row]));
   const pendingCount = captureRows.filter((capture) => capture.status === "review_required").length;
@@ -160,11 +164,11 @@ export default async function SellOutPage({ searchParams }: { searchParams: Sear
         </Card>
 
         {canCapture ? (
-          <details className="rounded-xl border bg-background p-4">
+          <details open={Boolean(selectedPharmacyId)} className="rounded-xl border bg-background p-4">
             <summary className="cursor-pointer font-semibold">Saisir un relevé</summary>
             <form action={saveSellOutCaptureFormAction} className="mt-4 grid gap-3 sm:grid-cols-2">
-              <label className="space-y-1 text-sm sm:col-span-2"><span>Pharmacie</span><select required name="brandPharmacyId" className="h-10 w-full rounded-md border bg-background px-3" defaultValue=""><option value="" disabled>Choisir une pharmacie</option>{pharmacyRows.map((row) => <option key={row.id} value={row.id}>{pharmacyName(row)}{row.city ? ` · ${row.city}` : ""}</option>)}</select></label>
-              <label className="space-y-1 text-sm"><span>Source</span><select name="method" className="h-10 w-full rounded-md border bg-background px-3" defaultValue="manual"><option value="manual">Déclaration terrain</option><option value="document">Photo / PDF</option><option value="stock_inference">Inférence par stock</option><option value="import">Import externe</option></select></label>
+              <label className="space-y-1 text-sm sm:col-span-2"><span>Pharmacie</span><select required name="brandPharmacyId" className="h-10 w-full rounded-md border bg-background px-3" defaultValue={selectedPharmacyId}><option value="" disabled>Choisir une pharmacie</option>{pharmacyRows.map((row) => <option key={row.id} value={row.id}>{pharmacyName(row)}{row.city ? ` · ${row.city}` : ""}</option>)}</select></label>
+              <label className="space-y-1 text-sm"><span>Source</span><select name="method" className="h-10 w-full rounded-md border bg-background px-3" defaultValue={selectedMethod}><option value="manual">Déclaration terrain</option><option value="document">Photo / PDF</option><option value="stock_inference">Inférence par stock</option><option value="import">Import externe</option></select></label>
               <label className="space-y-1 text-sm"><span>Confiance (0–1)</span><input name="confidence" type="number" min="0" max="1" step="0.01" className="h-10 w-full rounded-md border bg-background px-3" placeholder="0,90" /></label>
               <label className="space-y-1 text-sm"><span>Début période</span><input required name="periodStart" type="date" defaultValue={to} className="h-10 w-full rounded-md border bg-background px-3" /></label>
               <label className="space-y-1 text-sm"><span>Fin période</span><input required name="periodEnd" type="date" defaultValue={to} className="h-10 w-full rounded-md border bg-background px-3" /></label>
