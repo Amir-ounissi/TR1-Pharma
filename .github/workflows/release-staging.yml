@@ -19,6 +19,7 @@ concurrency:
 env:
   RELEASE_SHA: ${{ inputs.release_sha }}
   VERCEL_CLI_VERSION: 59.19.1
+  VERCEL_STAGING_PUBLIC_URL: https://tr-1-pharma-dusky.vercel.app
   CURRENT_PRODUCTION_SUPABASE_PROJECT_REF: zhifmehctuflwfexlvkz
 
 jobs:
@@ -155,7 +156,7 @@ jobs:
           test -z "$(git status --porcelain)"
 
       - name: Smoke staging
-        run: BASE_URL="$STAGING_DEPLOYMENT_URL" npm run staging:smoke
+        run: BASE_URL="$VERCEL_STAGING_PUBLIC_URL" npm run staging:smoke
 
       - name: Preuve staging
         run: |
@@ -164,7 +165,8 @@ jobs:
             echo "- SHA: \`$RELEASE_SHA\`"
             echo "- Supabase: staging distinct de la production"
             echo "- migrations: Git = staging"
-            echo "- URL testée: \`$STAGING_DEPLOYMENT_URL\`"
+            echo "- déploiement créé: \`$STAGING_DEPLOYMENT_URL\`"
+            echo "- URL publique testée: \`$VERCEL_STAGING_PUBLIC_URL\`"
             echo "- smoke: PASS"
             echo "- production: NON TOUCHÉE"
           } >> "$GITHUB_STEP_SUMMARY"
