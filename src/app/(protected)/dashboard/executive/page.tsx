@@ -34,6 +34,18 @@ type PriorityRow = {
   recommendation: string;
 };
 
+type FieldDataCoverage = {
+  panel_pharmacies: number;
+  sell_out_pharmacies: number;
+  price_pharmacies: number;
+  combined_pharmacies: number;
+  sell_out_coverage_rate: number;
+  price_coverage_rate: number;
+  combined_coverage_rate: number;
+  latest_sell_out_at: string | null;
+  latest_price_at: string | null;
+};
+
 function asOverview(value: unknown): ExecutiveOverview {
   const source = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
   const number = (key: keyof ExecutiveOverview) => Number(source[key] ?? 0);
@@ -70,13 +82,39 @@ function alertClasses(tone: ExecutiveAlertTone) {
   return "border-sky-200 bg-sky-50/70";
 }
 
+function asFieldDataCoverage(value: unknown): FieldDataCoverage {
+  const row = Array.isArray(value) ? value[0] : value;
+  const source = row && typeof row === "object" ? row as Record<string, unknown> : {};
+  return {
+    panel_pharmacies: Number(source.panel_pharmacies ?? 0),
+    sell_out_pharmacies: Number(source.sell_out_pharmacies ?? 0),
+    price_pharmacies: Number(source.price_pharmacies ?? 0),
+    combined_pharmacies: Number(source.combined_pharmacies ?? 0),
+    sell_out_coverage_rate: Number(source.sell_out_coverage_rate ?? 0),
+    price_coverage_rate: Number(source.price_coverage_rate ?? 0),
+    combined_coverage_rate: Number(source.combined_coverage_rate ?? 0),
+    latest_sell_out_at: typeof source.latest_sell_out_at === "string" ? source.latest_sell_out_at : null,
+    latest_price_at: typeof source.latest_price_at === "string" ? source.latest_price_at : null,
+  };
+}
+
+function dateTimeLabel(value: string | null) {
+  if (!value) return "Aucune donnée";
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone: "Europe/Paris",
+  }).format(new Date(value));
+}
+
 export default async function ExecutiveCockpitPage() {
   const periods = getExecutivePeriods();
   const [{ supabase, brand }, contexts] = await Promise.all([requireActiveBrand(), getBrandContexts()]);
   const role = contexts.find((context) => context.id === brand.id)?.role ?? "brand_user";
   if (!["brand_admin", "tr1_manager", "brand_user", "super_admin"].includes(role)) notFound();
 
-  const [currentResult, previousResult, objectivesResult, prioritiesResult] = await Promise.all([
+  const [currentResult, previousResult, objectivesResult, prioritiesResult, fieldDataCoverageResult] = await Promise.all([
     supabase.rpc("get_performance_overview", {
       target_brand_id: brand.id,
       target_period_start: periods.current.start,
@@ -104,17 +142,24 @@ export default async function ExecutiveCockpitPage() {
       target_filter: null,
       result_limit: 5,
     }),
+    supabase.rpc("get_field_data_coverage", {
+      target_brand_id: brand.id,
+      target_period_start: periods.current.start,
+      target_period_end: periods.current.end,
+    }),
   ]);
 
   if (currentResult.error) throw currentResult.error;
   if (previousResult.error) throw previousResult.error;
   if (objectivesResult.error) throw objectivesResult.error;
   if (prioritiesResult.error) throw prioritiesResult.error;
+  if (fieldDataCoverageResult.error) throw fieldDataCoverageResult.error;
 
   const current = asOverview(currentResult.data);
   const previous = asOverview(previousResult.data);
   const objectives = (objectivesResult.data ?? []) as ExecutiveObjective[];
   const priorities = (prioritiesResult.data ?? []) as PriorityRow[];
+  const fieldDataCoverage = asFieldDataCoverage(fieldDataCoverageResult.data);
   const annualRevenueObjective = pickExecutiveObjective(
     objectives,
     "revenue_ht",
@@ -177,6 +222,45 @@ export default async function ExecutiveCockpitPage() {
         <MiniMetric label="Premier réassort" value={formatCompactPercent(current.first_reorder_rate)} />
         <MiniMetric label="Pharmacies actives" value={formatCompactNumber(current.active_pharmacies)} />
       </section>
+
+      <Card data-testid="field-data-coverage">
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <CardTitle>Couverture Data terrain</CardTitle>
+              <CardDescription>
+                Fraîcheur des données remontées par le réseau sur la période YTD.
+              </CardDescription>
+            </div>
+            <Button asChild variant="outline" size="sm">
+              <Link href="/dashboard/sell-out">Explorer le sell-out</Link>
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-3">
+          <CoverageMetric
+            label="Sell-out récent"
+            value={fieldDataCoverage.sell_out_coverage_rate}
+            count={fieldDataCoverage.sell_out_pharmacies}
+            total={fieldDataCoverage.panel_pharmacies}
+            detail={`Dernière remontée : ${dateTimeLabel(fieldDataCoverage.latest_sell_out_at)}`}
+          />
+          <CoverageMetric
+            label="Prix récents"
+            value={fieldDataCoverage.price_coverage_rate}
+            count={fieldDataCoverage.price_pharmacies}
+            total={fieldDataCoverage.panel_pharmacies}
+            detail={`Dernier relevé : ${dateTimeLabel(fieldDataCoverage.latest_price_at)}`}
+          />
+          <CoverageMetric
+            label="Sell-out + prix"
+            value={fieldDataCoverage.combined_coverage_rate}
+            count={fieldDataCoverage.combined_pharmacies}
+            total={fieldDataCoverage.panel_pharmacies}
+            detail="Pharmacies disposant des deux signaux sur la période"
+          />
+        </CardContent>
+      </Card>
 
       <section className="grid gap-6 xl:grid-cols-[1.1fr_.9fr]">
         <Card>
@@ -301,5 +385,37 @@ function MiniMetric({ label, value }: { label: string; value: string }) {
         <p className="text-xl font-bold">{value}</p>
       </CardContent>
     </Card>
+  );
+}
+
+
+function CoverageMetric({
+  label,
+  value,
+  count,
+  total,
+  detail,
+}: {
+  label: string;
+  value: number;
+  count: number;
+  total: number;
+  detail: string;
+}) {
+  return (
+    <div className="rounded-xl border p-4">
+      <p className="text-sm font-semibold text-[var(--tr1-navy)]">{label}</p>
+      <div className="mt-3 flex items-end justify-between gap-3">
+        <p className="text-2xl font-black">{formatCompactPercent(value)}</p>
+        <p className="text-xs text-muted-foreground">{count} / {total}</p>
+      </div>
+      <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+        <div
+          className="h-full rounded-full bg-[var(--tr1-orange)]"
+          style={{ width: `${Math.min(100, Math.max(0, value))}%` }}
+        />
+      </div>
+      <p className="mt-2 text-xs text-muted-foreground">{detail}</p>
+    </div>
   );
 }
