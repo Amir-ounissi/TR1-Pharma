@@ -3,7 +3,7 @@ import { ArrowRight, LockKeyhole } from "lucide-react";
 import { LoginForm } from "@/components/auth/login-form";
 import { Card, CardContent } from "@/components/ui/card";
 
-type SearchParams = Promise<{ oauth?: string }>;
+type SearchParams = Promise<{ oauth?: string; password?: string }>;
 
 const oauthMessages: Record<string, string> = {
   google_unavailable: "La connexion Google n’est pas encore disponible sur cet environnement.",
@@ -14,8 +14,9 @@ const oauthMessages: Record<string, string> = {
 };
 
 export default async function LoginPage({ searchParams }: { searchParams: SearchParams }) {
-  const { oauth } = await searchParams;
+  const { oauth, password } = await searchParams;
   const oauthError = oauth ? oauthMessages[oauth] ?? "La connexion Google a échoué." : null;
+  const passwordUpdated = password === "updated";
 
   return (
     <section className="mx-auto grid min-h-[calc(100vh-4.6rem)] max-w-7xl items-center gap-12 px-5 py-10 lg:grid-cols-[.9fr_.7fr] lg:px-8 lg:py-16">
@@ -49,7 +50,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
             <h2 className="mt-3 text-2xl font-black tracking-[-.05em]">Accédez à votre espace.</h2>
           </div>
           <div className="bg-[#fffefa] px-6 py-7 sm:px-8">
-            <LoginForm oauthError={oauthError} />
+            <LoginForm oauthError={oauthError} passwordUpdated={passwordUpdated} />
           </div>
         </CardContent>
       </Card>
