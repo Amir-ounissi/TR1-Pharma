@@ -32,11 +32,11 @@ test("agent terrain : document sell-out analysé puis enregistré avec preuve", 
 
     await expect(page.getByText("Prévisualisation TR1")).toBeVisible();
     await expect(page.getByText("Dermacalm 50 ml")).toBeVisible();
-    await expect(page.getByLabel("Début période")).toHaveValue("2026-09-01");
-    await expect(page.getByLabel("Fin période")).toHaveValue("2026-09-05");
+    await expect(page.locator("#sell-out-period-start")).toHaveValue("2026-09-01");
+    await expect(page.locator("#sell-out-period-end")).toHaveValue("2026-09-05");
     await expect(page.getByLabel("Unités vendues")).toHaveValue("4");
 
-    await page.getByLabel("Source / contexte").fill(sourceLabel);
+    await page.locator("#sell-out-source-label").fill(sourceLabel);
     await page.getByRole("button", { name: "Créer le relevé avec ce document" }).click();
 
     await expect(page).toHaveURL(/\/dashboard\/sell-out\/[0-9a-f-]+$/);
