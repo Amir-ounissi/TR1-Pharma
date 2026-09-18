@@ -39,11 +39,13 @@ export function AnimationRequestForm({
   products,
   facilitators,
   requesterRole,
+  defaultPharmacyId,
 }: {
   pharmacies: Option[];
   products: Option[];
   facilitators: FacilitatorOption[];
   requesterRole: string;
+  defaultPharmacyId?: string;
 }) {
   const [state, action, pending] = useActionState(createAnimationRequestAction, {});
   const [remunerationModel, setRemunerationModel] = useState<RemunerationModel>("fixed");
@@ -74,7 +76,7 @@ export function AnimationRequestForm({
         />
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <Field label="Pharmacie">
-            <select name="brandPharmacyId" required className="h-10 w-full rounded-md border bg-white px-3 text-sm">
+            <select name="brandPharmacyId" required defaultValue={defaultPharmacyId ?? ""} className="h-10 w-full rounded-md border bg-white px-3 text-sm">
               <option value="">Choisir une pharmacie</option>
               {pharmacies.map((item) => (
                 <option value={item.id} key={item.id}>
