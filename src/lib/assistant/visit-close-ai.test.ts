@@ -26,7 +26,7 @@ function restoreEnv(
 
 const draft = {
   summary: "Commande obtenue. Sommeil à revoir car stock concurrent.",
-  outcome: "very_good",
+  outcome: "order_taken",
   next: "weeks2",
   customNext: null,
   tags: ["order", "competitor", "callback"],
