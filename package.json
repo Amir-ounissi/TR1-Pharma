@@ -28,6 +28,7 @@
     "benchmark:sprint11": "sh scripts/benchmark-sprint11.sh",
     "security:secrets": "sh scripts/check-secrets.sh",
     "security:release": "sh scripts/check-release-config.sh",
+    "security:production-auth": "node scripts/check-production-auth.mjs",
     "staging:check-env": "node scripts/check-staging-env.mjs",
     "staging:smoke": "node scripts/smoke-staging.mjs",
     "staging:reset-demo": "sh scripts/reset-demo-environment.sh",

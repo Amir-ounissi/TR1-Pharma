@@ -82,7 +82,7 @@ jobs:
         run: sh scripts/supabase-local.sh stop --no-backup
 
   e2e:
-    name: E2E production
+    name: E2E local — build production
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:

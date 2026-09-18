@@ -36,6 +36,9 @@ if (level === "pilot") {
 
   if (hasRemoteEnvironment) {
     run("Configuration environnement distant", npm, ["run", "staging:check-env"]);
+    if (process.env.APP_ENV === "production") {
+      run("Comptes de seed absents de la production", npm, ["run", "security:production-auth"]);
+    }
   } else {
     results.push({ label: "Variables environnement distant présentes", passed: false });
   }
