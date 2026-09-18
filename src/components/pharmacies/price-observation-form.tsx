@@ -43,6 +43,7 @@ export function PriceObservationForm({
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [analysisWarnings, setAnalysisWarnings] = useState<string[]>([]);
   const [analysisLabel, setAnalysisLabel] = useState<string | null>(null);
+  const [analysisPayload, setAnalysisPayload] = useState("");
 
   useEffect(() => {
     if (state.success && !state.error) router.refresh();
@@ -92,6 +93,15 @@ export function PriceObservationForm({
       setPriceType(preview.priceType);
       setBundleQuantity(preview.bundleQuantity == null ? "" : String(preview.bundleQuantity));
       setConfidence(preview.confidence == null ? "" : String(preview.confidence));
+      setAnalysisPayload(JSON.stringify({
+        productLabel: preview.productLabel,
+        ean: preview.ean,
+        priceTtc: preview.priceTtc,
+        priceType: preview.priceType,
+        bundleQuantity: preview.bundleQuantity,
+        confidence: preview.confidence,
+        warnings: preview.warnings,
+      }));
       setAnalysisWarnings([
         ...preview.warnings,
         ...(preview.product.status === "unmatched"
@@ -112,6 +122,7 @@ export function PriceObservationForm({
     <form action={action} className="space-y-4">
       <input type="hidden" name="brandPharmacyId" value={brandPharmacyId} />
       <input type="hidden" name="visitId" value={visitId ?? ""} />
+      <input type="hidden" name="analysisPayload" value={analysisPayload} />
 
       {state.error ? <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{state.error}</p> : null}
       {state.success ? <p className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-700">{state.success}</p> : null}
@@ -211,6 +222,7 @@ export function PriceObservationForm({
               setAnalysisError(null);
               setAnalysisWarnings([]);
               setAnalysisLabel(null);
+              setAnalysisPayload("");
             }}
           />
           <div className="mt-3 flex flex-wrap items-center gap-2">
