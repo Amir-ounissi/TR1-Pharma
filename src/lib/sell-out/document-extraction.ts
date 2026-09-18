@@ -131,10 +131,6 @@ export async function extractSellOutDocument(file: File, fetcher: Fetcher = fetc
     return mock;
   }
 
-  if (process.env.SELL_OUT_DOCUMENT_EXTRACTION_ENABLED !== "true") {
-    throw new SellOutDocumentImportError("openai_unavailable", "L’analyse automatique des sorties de caisse n’est pas activée sur cet environnement.");
-  }
-
   const provider = resolveExtractionProvider();
   if (!provider) {
     throw new SellOutDocumentImportError(
