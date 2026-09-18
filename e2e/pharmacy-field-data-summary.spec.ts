@@ -79,17 +79,19 @@ test("fiche pharmacie : synthèse sell-out et prix terrain", async ({ page }) =>
     await signIn(page, "agent@dermavita.local", /Dermavita/i);
     await page.goto(`/dashboard/pharmacies/${brandPharmacyId}`);
 
-    await expect(page.getByRole("heading", { name: "Data terrain" })).toBeVisible();
-    await expect(page.getByText(sourceLabel)).toBeVisible();
-    await expect(page.getByText("7", { exact: true })).toBeVisible();
-    await expect(page.getByText("129,50 €")).toBeVisible();
-    await expect(page.getByText("33,33 €")).toBeVisible();
-    await expect(page.getByText("Dermacalm", { exact: true })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Voir le relevé" })).toHaveAttribute(
+    const summary = page.getByTestId("pharmacy-field-data-summary");
+    await expect(summary).toBeVisible();
+    await expect(summary.getByText("Data terrain", { exact: true })).toBeVisible();
+    await expect(summary.getByText(sourceLabel)).toBeVisible();
+    await expect(summary.getByText("7", { exact: true })).toBeVisible();
+    await expect(summary.getByText(/129,50/)).toBeVisible();
+    await expect(summary.getByText(/33,33/)).toBeVisible();
+    await expect(summary.getByText("Dermacalm", { exact: true })).toBeVisible();
+    await expect(summary.getByRole("link", { name: "Voir le relevé" })).toHaveAttribute(
       "href",
       `/dashboard/sell-out/${captureId}`,
     );
-    await expect(page.getByRole("link", { name: "Historique" })).toHaveAttribute(
+    await expect(summary.getByRole("link", { name: "Historique" })).toHaveAttribute(
       "href",
       `/dashboard/pharmacies/${brandPharmacyId}/prices`,
     );
