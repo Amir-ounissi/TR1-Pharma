@@ -3,6 +3,7 @@ import { ArrowRight, BriefcaseBusiness, CalendarDays, Check, Clock3, GraduationC
 import { LandingPilotageMap } from "@/components/marketing/landing-pilotage-map";
 import { LeadForm } from "@/components/marketing/lead-form";
 import { MarketingPageEvent, MarketingTrackedLink } from "@/components/marketing/marketing-events";
+import { RecoveryHashRedirect } from "@/components/auth/recovery-hash-redirect";
 import { demoPharmacyById } from "@/lib/marketing/demo-network";
 import styles from "./landing.module.css";
 
@@ -45,6 +46,7 @@ const priorities = [
 export default function LandingPage() {
   return (
     <main className="bg-transparent text-[#0b1e32]">
+      <RecoveryHashRedirect />
       <MarketingPageEvent event="landing_view" />
 
       <section className="px-5 pb-12 pt-9 sm:py-14 lg:px-8 lg:py-16">
