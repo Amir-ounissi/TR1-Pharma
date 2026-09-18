@@ -99,7 +99,7 @@ export function VisitAuditPanel({
 
   return (
     <section className="rounded-2xl border bg-white p-4 shadow-sm sm:p-5">
-      <details open={!currentAudit}>
+      <details open={!currentAudit || Boolean(state.success)}>
         <summary className="cursor-pointer list-none">
           <div className="flex items-start justify-between gap-3">
             <div className="flex gap-3">
