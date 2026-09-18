@@ -24,70 +24,106 @@ function formData(password = "InviteTR1!2026", confirmPassword = password) {
   return data;
 }
 
-function buildProfileQuery() {
+function profileTable() {
   const query = { eq: vi.fn(async () => ({ error: null })) };
   return { update: vi.fn(() => query), query };
+}
+
+function membershipTable(rows: Array<{ id: string; status: "invited" | "active" }>) {
+  const query = {
+    select: vi.fn(),
+    eq: vi.fn(),
+    not: vi.fn(),
+    in: vi.fn(async () => ({ data: rows, error: null })),
+  };
+  query.select.mockReturnValue(query);
+  query.eq.mockReturnValue(query);
+  query.not.mockReturnValue(query);
+  return query;
+}
+
+function makeSupabase({
+  user,
+  memberships = [],
+  activatedCount = 1,
+}: {
+  user: typeof invitedUser | { id: string; invited_at: null; user_metadata?: Record<string, string> };
+  memberships?: Array<{ id: string; status: "invited" | "active" }>;
+  activatedCount?: number;
+}) {
+  const profile = profileTable();
+  const membership = membershipTable(memberships);
+  const updateUser = vi.fn(async () => ({ error: null }));
+  const rpc = vi.fn(async (name: string) => {
+    if (name === "accept_my_invited_memberships") return { data: activatedCount, error: null };
+    return { data: null, error: null };
+  });
+  const from = vi.fn((table: string) => {
+    if (table === "user_profiles") return profile;
+    if (table === "memberships") return membership;
+    throw new Error(`unexpected table ${table}`);
+  });
+
+  return {
+    supabase: {
+      auth: {
+        getUser: vi.fn(async () => ({ data: { user }, error: null })),
+        updateUser,
+      },
+      from,
+      rpc,
+    },
+    profile,
+    membership,
+    updateUser,
+    rpc,
+  };
 }
 
 describe("completeOnboardingAction", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("routes a confirmed brand signup into autonomous setup after completing the personal profile", async () => {
-    const profile = buildProfileQuery();
     const selfServiceUser = {
       id: "00000000-0000-4000-8000-000000000009",
       invited_at: null,
       user_metadata: { requested_profile_type: "brand" },
     };
-    const rpc = vi.fn();
-
+    const ctx = makeSupabase({ user: selfServiceUser });
     mocks.requireUser.mockResolvedValue({
       userId: selfServiceUser.id,
-      supabase: {
-        auth: { getUser: vi.fn(async () => ({ data: { user: selfServiceUser }, error: null })) },
-        from: vi.fn(() => profile),
-        rpc,
-      },
+      supabase: ctx.supabase,
     });
 
     await expect(completeOnboardingAction({}, formData())).rejects.toThrow("redirect");
 
-    expect(profile.update).toHaveBeenCalledWith(
+    expect(ctx.profile.update).toHaveBeenCalledWith(
       expect.objectContaining({
         full_name: "Marie Invitée",
         onboarding_completed_at: expect.any(String),
       }),
     );
-    expect(rpc).not.toHaveBeenCalled();
+    expect(ctx.membership.select).not.toHaveBeenCalled();
+    expect(ctx.rpc).not.toHaveBeenCalled();
     expect(mocks.redirect).toHaveBeenCalledWith("/setup");
   });
 
-  it("sets the invited password and activates the invitation without an admin client", async () => {
-    const profile = buildProfileQuery();
-    const updateUser = vi.fn(async () => ({ error: null }));
-    const rpc = vi.fn(async (name: string) => {
-      if (name === "get_my_brand_contexts") return { data: [], error: null };
-      if (name === "accept_my_invited_memberships") return { data: 1, error: null };
-      return { data: null, error: null };
+  it("sets the invited password and activates the tenant invitation", async () => {
+    const ctx = makeSupabase({
+      user: invitedUser,
+      memberships: [{ id: "tenant-membership", status: "invited" }],
+      activatedCount: 1,
     });
-
     mocks.requireUser.mockResolvedValue({
       userId: invitedUser.id,
-      supabase: {
-        auth: {
-          getUser: vi.fn(async () => ({ data: { user: invitedUser }, error: null })),
-          updateUser,
-        },
-        from: vi.fn(() => profile),
-        rpc,
-      },
+      supabase: ctx.supabase,
     });
 
     await expect(completeOnboardingAction({}, formData())).rejects.toThrow("redirect");
 
-    expect(updateUser).toHaveBeenCalledWith({ password: "InviteTR1!2026" });
-    expect(rpc).toHaveBeenCalledWith("accept_my_invited_memberships");
-    expect(profile.update).toHaveBeenCalledWith(
+    expect(ctx.updateUser).toHaveBeenCalledWith({ password: "InviteTR1!2026" });
+    expect(ctx.rpc).toHaveBeenCalledWith("accept_my_invited_memberships");
+    expect(ctx.profile.update).toHaveBeenCalledWith(
       expect.objectContaining({
         full_name: "Marie Invitée",
         onboarding_completed_at: expect.any(String),
@@ -96,64 +132,33 @@ describe("completeOnboardingAction", () => {
     expect(mocks.redirect).toHaveBeenCalledWith("/select-brand");
   });
 
-  it("does not ask for another password when an invited user already has an active brand context", async () => {
-    const profile = buildProfileQuery();
-    const updateUser = vi.fn(async () => ({ error: null }));
-    const rpc = vi.fn(async (name: string) => {
-      if (name === "get_my_brand_contexts") {
-        return {
-          data: [
-            {
-              brand_id: "00000000-0000-4000-8000-000000000010",
-              brand_name: "Naali",
-              brand_slug: "naali",
-              role_key: "agent",
-            },
-          ],
-          error: null,
-        };
-      }
-      return { data: null, error: null };
+  it("does not ask for another password after recovery when the membership is already active", async () => {
+    const ctx = makeSupabase({
+      user: invitedUser,
+      memberships: [{ id: "tenant-membership", status: "active" }],
     });
-
     mocks.requireUser.mockResolvedValue({
       userId: invitedUser.id,
-      supabase: {
-        auth: {
-          getUser: vi.fn(async () => ({ data: { user: invitedUser }, error: null })),
-          updateUser,
-        },
-        from: vi.fn(() => profile),
-        rpc,
-      },
+      supabase: ctx.supabase,
     });
 
     await expect(completeOnboardingAction({}, formData("", ""))).rejects.toThrow("redirect");
 
-    expect(updateUser).not.toHaveBeenCalled();
-    expect(rpc).not.toHaveBeenCalledWith("accept_my_invited_memberships");
-    expect(profile.update).toHaveBeenCalledOnce();
+    expect(ctx.updateUser).not.toHaveBeenCalled();
+    expect(ctx.rpc).not.toHaveBeenCalled();
+    expect(ctx.profile.update).toHaveBeenCalledOnce();
     expect(mocks.redirect).toHaveBeenCalledWith("/select-brand");
   });
 
   it("does not complete the profile when no tenant invitation exists", async () => {
-    const profile = buildProfileQuery();
-    const rpc = vi.fn(async (name: string) => {
-      if (name === "get_my_brand_contexts") return { data: [], error: null };
-      if (name === "accept_my_invited_memberships") return { data: 0, error: null };
-      return { data: null, error: null };
+    const ctx = makeSupabase({
+      user: invitedUser,
+      memberships: [],
+      activatedCount: 0,
     });
-
     mocks.requireUser.mockResolvedValue({
       userId: invitedUser.id,
-      supabase: {
-        auth: {
-          getUser: vi.fn(async () => ({ data: { user: invitedUser }, error: null })),
-          updateUser: vi.fn(async () => ({ error: null })),
-        },
-        from: vi.fn(() => profile),
-        rpc,
-      },
+      supabase: ctx.supabase,
     });
 
     await expect(completeOnboardingAction({}, formData())).resolves.toEqual({
@@ -161,7 +166,8 @@ describe("completeOnboardingAction", () => {
         "Aucun accès de marque invité n’a été trouvé pour ce compte. Contactez votre administrateur TR1.",
     });
 
-    expect(profile.update).not.toHaveBeenCalled();
+    expect(ctx.updateUser).not.toHaveBeenCalled();
+    expect(ctx.profile.update).not.toHaveBeenCalled();
     expect(mocks.redirect).not.toHaveBeenCalled();
   });
 });
