@@ -26,10 +26,11 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 
 const OUTCOMES = [
-  ["very_good", "Très bien"],
-  ["good", "Bien"],
-  ["follow_up", "À revoir"],
-  ["problem", "Problème"],
+  ["order_taken", "Commande prise"],
+  ["no_order", "Pas de commande"],
+  ["follow_up", "À relancer"],
+  ["information", "Information / suivi"],
+  ["other", "Autre"],
 ] as const;
 
 const NEXT_VISITS = [
@@ -64,7 +65,7 @@ type SpeechRecognitionLike = {
 type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
 
 function outcomeLabel(value: Outcome) {
-  return OUTCOMES.find(([item]) => item === value)?.[1] ?? "Bien";
+  return OUTCOMES.find(([item]) => item === value)?.[1] ?? "Information / suivi";
 }
 
 function nextVisitLabel(value: NextVisit, customNext: string) {
@@ -88,7 +89,7 @@ export function AiVisitClose({ brandPharmacyId }: { brandPharmacyId: string }) {
   const [visitId, setVisitId] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState("");
-  const [outcome, setOutcome] = useState<Outcome>("good");
+  const [outcome, setOutcome] = useState<Outcome>("information");
   const [nextVisit, setNextVisit] = useState<NextVisit>("none");
   const [customNext, setCustomNext] = useState("");
   const [summary, setSummary] = useState("");
@@ -224,7 +225,7 @@ export function AiVisitClose({ brandPharmacyId }: { brandPharmacyId: string }) {
         <div className="min-w-0">
           <p className="flex items-center gap-2 text-sm font-bold text-[var(--tr1-navy)]">
             <Sparkles className="size-4 text-[var(--tr1-orange)]" />
-            TR1 Assistant · visite en cours
+            TR1 Assistant · visite à clôturer
           </p>
           <p className="mt-0.5 text-xs text-muted-foreground">Raconte ta visite. TR1 s’occupe de la clôture.</p>
         </div>

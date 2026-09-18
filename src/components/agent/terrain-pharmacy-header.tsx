@@ -14,15 +14,11 @@ import {
   Mic,
   Navigation,
   Phone,
-  Play,
   ShoppingCart,
-  Square,
 } from "lucide-react";
 import {
-  completeVisitAction,
   createQuickNoteAction,
   quickPlanVisitAction,
-  startVisitAction,
 } from "@/app/(protected)/dashboard/pharmacies/quick-actions";
 import { resolveVisitAction } from "@/app/(protected)/dashboard/pharmacies/visit-context-actions";
 import { TrackedLink } from "@/components/agent/tracked-link";
@@ -91,20 +87,6 @@ const TAGS = [
   ["problem", "Problème"],
 ] as const;
 
-const OUTCOMES = [
-  ["very_good", "Très bien"],
-  ["good", "Bien"],
-  ["follow_up", "À revoir"],
-  ["problem", "Problème"],
-] as const;
-
-const NEXT_VISITS = [
-  ["none", "Pas maintenant"],
-  ["week1", "Dans 1 semaine"],
-  ["weeks2", "Dans 2 semaines"],
-  ["month1", "Dans 1 mois"],
-] as const;
-
 function date(value?: string | null) {
   return value
     ? new Intl.DateTimeFormat("fr-FR", { dateStyle: "medium" }).format(new Date(value))
@@ -166,11 +148,7 @@ export function TerrainPharmacyHeader(props: TerrainPharmacyHeaderProps) {
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [planOpen, setPlanOpen] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
-  const [finishOpen, setFinishOpen] = useState(false);
   const [customPlanAt, setCustomPlanAt] = useState("");
-  const [customNextAt, setCustomNextAt] = useState("");
-  const [finishOutcome, setFinishOutcome] = useState<(typeof OUTCOMES)[number][0]>("good");
-  const [nextVisit, setNextVisit] = useState<(typeof NEXT_VISITS)[number][0] | "custom">("none");
   const [noteText, setNoteText] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [noteFiles, setNoteFiles] = useState<File[]>([]);
@@ -213,21 +191,9 @@ export function TerrainPharmacyHeader(props: TerrainPharmacyHeaderProps) {
     });
   }
 
-  function startVisit(visit: ActiveVisit) {
-    startTransition(async () => {
-      const result = await startVisitAction(props.brandPharmacyId, visit.id);
-      applyResult(result);
-      if (result.success) {
-        setResolvedVisit({ ...visit, status: "in_progress" });
-        router.refresh();
-      }
-    });
-  }
-
   function resolvePrimaryVisitAction() {
     if (resolvedVisit) {
-      if (resolvedVisit.status === "in_progress") setFinishOpen(true);
-      else startVisit(resolvedVisit);
+      router.push(`/dashboard/visits/${resolvedVisit.id}#visit-execution`);
       return;
     }
     startTransition(async () => {
@@ -240,45 +206,8 @@ export function TerrainPharmacyHeader(props: TerrainPharmacyHeaderProps) {
         setPlanOpen(true);
         return;
       }
-      if (result.visitId && result.scheduledAt) {
-        const visit: ActiveVisit = {
-          id: result.visitId,
-          status: "in_progress",
-          scheduledStartAt: result.scheduledAt,
-        };
-        setResolvedVisit(visit);
-        if (result.mode === "finish") setFinishOpen(true);
-      }
-      if (result.mode === "started") {
-        setFeedback({ kind: "success", text: result.message || "Visite démarrée." });
-        router.refresh();
-      }
-    });
-  }
-
-  function completeVisit() {
-    if (!resolvedVisit) return;
-    startTransition(async () => {
-      const result = await completeVisitAction(
-        props.brandPharmacyId,
-        resolvedVisit.id,
-        finishOutcome,
-        nextVisit,
-        nextVisit === "custom" ? customNextAt : undefined,
-      );
-      applyResult(result);
-      if (result.success) {
-        if (result.visitId && result.scheduledAt) {
-          setResolvedVisit({
-            id: result.visitId,
-            status: "planned",
-            scheduledStartAt: result.scheduledAt,
-          });
-        } else {
-          setResolvedVisit(null);
-        }
-        setFinishOpen(false);
-        router.refresh();
+      if (result.visitId) {
+        router.push(`/dashboard/visits/${result.visitId}#visit-execution`);
       }
     });
   }
@@ -371,11 +300,7 @@ export function TerrainPharmacyHeader(props: TerrainPharmacyHeaderProps) {
     });
   }
 
-  const visitLabel = resolvedVisit
-    ? resolvedVisit.status === "in_progress"
-      ? "Terminer"
-      : "Démarrer"
-    : "Visite";
+  const visitLabel = resolvedVisit ? "Clôturer" : "Visite";
 
   return (
     <section className="tr1-da-panel overflow-hidden" data-testid="terrain-pharmacy-header">
@@ -430,7 +355,7 @@ export function TerrainPharmacyHeader(props: TerrainPharmacyHeaderProps) {
               disabled={pending}
               onClick={resolvePrimaryVisitAction}
             >
-              {resolvedVisit?.status === "in_progress" ? <Square className="size-5" /> : resolvedVisit ? <Play className="size-5" /> : <CalendarPlus className="size-5" />}
+              {resolvedVisit ? <CheckCircle2 className="size-5" /> : <CalendarPlus className="size-5" />}
               {visitLabel}
             </Button>
           ) : (
@@ -596,36 +521,7 @@ export function TerrainPharmacyHeader(props: TerrainPharmacyHeaderProps) {
         </SheetContent>
       </Sheet>
 
-      <Sheet open={finishOpen} onOpenChange={setFinishOpen}>
-        <SheetContent side="bottom" className="max-h-[92dvh] overflow-y-auto rounded-t-2xl px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <SheetHeader><SheetTitle>Terminer la visite</SheetTitle></SheetHeader>
-          <div className="space-y-5 py-4">
-            <div>
-              <p className="mb-2 text-sm font-medium">Comment s’est passée la visite ?</p>
-              <div className="grid grid-cols-2 gap-2">
-                {OUTCOMES.map(([value, label]) => (
-                  <Button key={value} type="button" variant={finishOutcome === value ? "default" : "outline"} onClick={() => setFinishOutcome(value)}>{label}</Button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <p className="mb-2 text-sm font-medium">Prochain passage</p>
-              <div className="grid grid-cols-2 gap-2">
-                {NEXT_VISITS.map(([value, label]) => (
-                  <Button key={value} type="button" variant={nextVisit === value ? "default" : "outline"} onClick={() => setNextVisit(value)}>{label}</Button>
-                ))}
-                <Button type="button" variant={nextVisit === "custom" ? "default" : "outline"} onClick={() => setNextVisit("custom")}>Choisir une date</Button>
-              </div>
-              {nextVisit === "custom" ? (
-                <Input className="mt-3" type="datetime-local" value={customNextAt} onChange={(event) => setCustomNextAt(event.target.value)} />
-              ) : null}
-            </div>
-            <Button size="lg" className="w-full" disabled={pending || (nextVisit === "custom" && !customNextAt)} onClick={completeVisit}>
-              <CheckCircle2 className="size-5" /> {pending ? "Validation…" : "Terminer la visite"}
-            </Button>
-          </div>
-        </SheetContent>
-      </Sheet>
+
     </section>
   );
 }

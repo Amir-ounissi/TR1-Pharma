@@ -26,7 +26,7 @@ function restoreEnv(
 
 const draft = {
   summary: "Commande obtenue. Sommeil à revoir car stock concurrent.",
-  outcome: "very_good",
+  outcome: "order_taken",
   next: "weeks2",
   customNext: null,
   tags: ["order", "competitor", "callback"],
@@ -86,6 +86,13 @@ describe("visit close AI", () => {
         },
       },
     });
+    expect(body.text.format.schema.properties.outcome.enum).toEqual([
+      "order_taken",
+      "no_order",
+      "follow_up",
+      "information",
+      "other",
+    ]);
     expect(body.input).toContain("Commande 12 unités");
     expect(body.input).not.toContain("historique complet");
     expect(body.input).not.toContain("chiffre d’affaires");
