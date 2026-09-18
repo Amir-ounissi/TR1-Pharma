@@ -33,9 +33,18 @@ const documentLineSchema = z.object({
   sourceProductCode: z.string().trim().max(120).optional().default(""),
   ean: z.string().trim().max(32).optional().default(""),
   label: z.string().trim().max(300).optional().default(""),
-  unitsSold: z.coerce.number().int().min(0),
-  revenueHt: z.union([z.coerce.number().min(0), z.literal(""), z.null()]).optional(),
-  confidence: z.union([z.coerce.number().min(0).max(1), z.literal(""), z.null()]).optional(),
+  unitsSold: z.preprocess(
+    (value) => value === "" || value == null ? undefined : value,
+    z.coerce.number().int().min(0),
+  ),
+  revenueHt: z.preprocess(
+    (value) => value === "" || value == null ? null : value,
+    z.union([z.null(), z.coerce.number().min(0)]),
+  ),
+  confidence: z.preprocess(
+    (value) => value === "" || value == null ? null : value,
+    z.union([z.null(), z.coerce.number().min(0).max(1)]),
+  ),
 });
 
 const captureSchema = z.object({
