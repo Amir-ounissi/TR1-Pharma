@@ -54,58 +54,7 @@ test("golden path visite : accès direct, compte rendu, preuve et clôture idemp
 
     const terrainHeader = page.getByTestId("terrain-pharmacy-header");
     await terrainHeader.getByRole("button", { name: "Visite", exact: true }).click();
-    await expect(page).toHaveURL(new RegExp(`/dashboard/visits/${visitId}#visit-executionimport { expect, test } from "@playwright/test";
-import { adminClient, signIn, userClient } from "./test-helpers";
-
-const agentUserId = "00000000-0000-0000-0000-0000000000a3";
-const dermavitaBrandId = "00000000-0000-0000-0000-000000000101";
-const republiquePharmacyId = "00000000-0000-0000-0000-000000000401";
-const republiqueBrandPharmacyId = "00000000-0000-0000-0000-000000000411";
-
-const tinyPng = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9WlqY+0AAAAASUVORK5CYII=",
-  "base64",
-);
-
-test("golden path visite : accès direct, compte rendu, preuve et clôture idempotente", async ({ page }) => {
-  const admin = adminClient();
-  const runId = String(Date.now());
-  const summary = `Golden path visite ${runId}`;
-  const scheduledStart = new Date(Date.now() + 30 * 86_400_000);
-  scheduledStart.setUTCHours(9, 0, 0, 0);
-  const scheduledEnd = new Date(scheduledStart.getTime() + 45 * 60_000);
-
-  const { data: visit, error: visitError } = await admin
-    .from("field_visits")
-    .insert({
-      owner_user_id: agentUserId,
-      pharmacy_id: republiquePharmacyId,
-      visit_kind: "client_visit",
-      status: "planned",
-      title: `Visite Golden Path ${runId}`,
-      objective: "Valider le workflow de clôture terrain",
-      scheduled_start_at: scheduledStart.toISOString(),
-      scheduled_end_at: scheduledEnd.toISOString(),
-      source: "manual",
-      created_by: agentUserId,
-    })
-    .select("id")
-    .single();
-  expect(visitError).toBeNull();
-  expect(visit?.id).toBeTruthy();
-  const visitId = String(visit!.id);
-
-  const { error: brandError } = await admin.from("field_visit_brands").insert({
-    visit_id: visitId,
-    brand_id: dermavitaBrandId,
-    brand_pharmacy_id: republiqueBrandPharmacyId,
-    objective: "Valider le workflow de clôture terrain",
-    is_primary: true,
-  });
-  expect(brandError).toBeNull();
-
-  try {
-));
+    await expect(page).toHaveURL(new RegExp(`/dashboard/visits/${visitId}#visit-execution$`));
 
     await expect(page.getByRole("heading", { name: "Pharmacie République" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Clôturer la visite", exact: true })).toBeVisible();
