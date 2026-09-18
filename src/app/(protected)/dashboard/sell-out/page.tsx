@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Activity, Building2, ClipboardCheck, PackageCheck, Scale } from "lucide-react";
+import { Activity, Building2, ClipboardCheck, FileSearch, PackageCheck, Scale } from "lucide-react";
+import { AgentSellOutDocumentCapture } from "@/components/sell-out/agent-sell-out-document-capture";
 import { saveSellOutCaptureFormAction } from "./actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -129,7 +130,7 @@ export default async function SellOutPage({ searchParams }: { searchParams: Sear
 
   const pharmacyRows = (pharmacies ?? []) as PharmacyRow[];
   const selectedPharmacyId = pharmacyRows.some((row) => row.id === params.pharmacy) ? params.pharmacy ?? "" : "";
-  const selectedMethod = ["manual", "document", "stock_inference", "import"].includes(params.method ?? "")
+  const selectedMethod = ["manual", "stock_inference", "import"].includes(params.method ?? "")
     ? params.method!
     : "manual";
   const captureRows = (captures ?? []) as CaptureRow[];
@@ -164,19 +165,38 @@ export default async function SellOutPage({ searchParams }: { searchParams: Sear
         </Card>
 
         {canCapture ? (
-          <details open={Boolean(selectedPharmacyId)} className="rounded-xl border bg-background p-4">
-            <summary className="cursor-pointer font-semibold">Saisir un relevé</summary>
-            <form action={saveSellOutCaptureFormAction} className="mt-4 grid gap-3 sm:grid-cols-2">
-              <label className="space-y-1 text-sm sm:col-span-2"><span>Pharmacie</span><select required name="brandPharmacyId" className="h-10 w-full rounded-md border bg-background px-3" defaultValue={selectedPharmacyId}><option value="" disabled>Choisir une pharmacie</option>{pharmacyRows.map((row) => <option key={row.id} value={row.id}>{pharmacyName(row)}{row.city ? ` · ${row.city}` : ""}</option>)}</select></label>
-              <label className="space-y-1 text-sm"><span>Source</span><select name="method" className="h-10 w-full rounded-md border bg-background px-3" defaultValue={selectedMethod}><option value="manual">Déclaration terrain</option><option value="document">Photo / PDF</option><option value="stock_inference">Inférence par stock</option><option value="import">Import externe</option></select></label>
-              <label className="space-y-1 text-sm"><span>Confiance (0–1)</span><input name="confidence" type="number" min="0" max="1" step="0.01" className="h-10 w-full rounded-md border bg-background px-3" placeholder="0,90" /></label>
-              <label className="space-y-1 text-sm"><span>Début période</span><input required name="periodStart" type="date" defaultValue={to} className="h-10 w-full rounded-md border bg-background px-3" /></label>
-              <label className="space-y-1 text-sm"><span>Fin période</span><input required name="periodEnd" type="date" defaultValue={to} className="h-10 w-full rounded-md border bg-background px-3" /></label>
-              <label className="space-y-1 text-sm sm:col-span-2"><span>Source / contexte</span><input name="sourceLabel" maxLength={300} className="h-10 w-full rounded-md border bg-background px-3" placeholder="Ex. relevé caisse communiqué lors de la visite" /></label>
-              <p className="text-xs text-muted-foreground sm:col-span-2">Ne saisissez aucune donnée patient ou client. Les justificatifs doivent être recadrés sur les informations produit/vente utiles.</p>
-              <Button type="submit" className="sm:col-span-2">Créer le relevé</Button>
-            </form>
-          </details>
+          <div className="space-y-3">
+            <details open={Boolean(selectedPharmacyId)} className="rounded-xl border bg-background p-4">
+              <summary className="flex cursor-pointer list-none items-center gap-2 font-semibold">
+                <FileSearch className="size-4 text-[var(--tr1-orange)]" />
+                Analyser un document pharmacie
+              </summary>
+              <div className="mt-4">
+                <AgentSellOutDocumentCapture
+                  defaultPharmacyId={selectedPharmacyId}
+                  pharmacies={pharmacyRows.map((row) => ({
+                    id: row.id,
+                    name: pharmacyName(row),
+                    city: row.city,
+                  }))}
+                />
+              </div>
+            </details>
+
+            <details className="rounded-xl border bg-background p-4">
+              <summary className="cursor-pointer font-semibold">Saisir sans document</summary>
+              <form action={saveSellOutCaptureFormAction} className="mt-4 grid gap-3 sm:grid-cols-2">
+                <label className="space-y-1 text-sm sm:col-span-2"><span>Pharmacie</span><select required name="brandPharmacyId" className="h-10 w-full rounded-md border bg-background px-3" defaultValue={selectedPharmacyId}><option value="" disabled>Choisir une pharmacie</option>{pharmacyRows.map((row) => <option key={row.id} value={row.id}>{pharmacyName(row)}{row.city ? ` · ${row.city}` : ""}</option>)}</select></label>
+                <label className="space-y-1 text-sm"><span>Source</span><select name="method" className="h-10 w-full rounded-md border bg-background px-3" defaultValue={selectedMethod}><option value="manual">Déclaration terrain</option><option value="stock_inference">Inférence par stock</option><option value="import">Import externe</option></select></label>
+                <label className="space-y-1 text-sm"><span>Confiance (0–1)</span><input name="confidence" type="number" min="0" max="1" step="0.01" className="h-10 w-full rounded-md border bg-background px-3" placeholder="0,90" /></label>
+                <label className="space-y-1 text-sm"><span>Début période</span><input required name="periodStart" type="date" defaultValue={to} className="h-10 w-full rounded-md border bg-background px-3" /></label>
+                <label className="space-y-1 text-sm"><span>Fin période</span><input required name="periodEnd" type="date" defaultValue={to} className="h-10 w-full rounded-md border bg-background px-3" /></label>
+                <label className="space-y-1 text-sm sm:col-span-2"><span>Source / contexte</span><input name="sourceLabel" maxLength={300} className="h-10 w-full rounded-md border bg-background px-3" placeholder="Ex. déclaration communiquée lors de la visite" /></label>
+                <p className="text-xs text-muted-foreground sm:col-span-2">Ne saisissez aucune donnée patient ou client.</p>
+                <Button type="submit" className="sm:col-span-2">Créer le relevé</Button>
+              </form>
+            </details>
+          </div>
         ) : null}
       </div>
 
