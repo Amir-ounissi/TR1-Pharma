@@ -11,6 +11,12 @@ test("le cockpit Direction consolide trajectoire, N-1, DN et alertes", async ({ 
   await expect(page.getByText("Atterrissage CA", { exact: true })).toBeVisible();
   await expect(page.getByText("DN moyenne", { exact: true })).toBeVisible();
   await expect(page.getByText("Alertes Direction", { exact: true })).toBeVisible();
+  const coverage = page.getByTestId("field-data-coverage");
+  await expect(coverage).toBeVisible();
+  await expect(coverage.getByText("Couverture Data terrain", { exact: true })).toBeVisible();
+  await expect(coverage.getByText("Sell-out récent", { exact: true })).toBeVisible();
+  await expect(coverage.getByText("Prix récents", { exact: true })).toBeVisible();
+  await expect(coverage.getByText("Sell-out + prix", { exact: true })).toBeVisible();
   await expect(page.getByText("Comptes qui demandent une décision", { exact: true })).toBeVisible();
 });
 
