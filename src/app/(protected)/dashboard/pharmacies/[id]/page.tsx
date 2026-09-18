@@ -139,6 +139,30 @@ export default async function PharmacyDetailPage({
     ? relation.pharmacies[0]
     : relation.pharmacies;
   if (!pharmacy) notFound();
+
+  const { data: activeVisitLinks, error: activeVisitError } = await supabase
+    .from("field_visit_brands")
+    .select("visit_id,field_visits!inner(id,status,scheduled_start_at,owner_user_id,pharmacy_id,archived_at)")
+    .eq("brand_pharmacy_id", id)
+    .eq("field_visits.owner_user_id", userId)
+    .eq("field_visits.pharmacy_id", pharmacy.id)
+    .is("field_visits.archived_at", null);
+  if (activeVisitError) {
+    console.error("Impossible de charger la visite active de la pharmacie.", {
+      code: activeVisitError.code,
+      message: activeVisitError.message,
+    });
+  }
+  const activeVisit = (activeVisitLinks ?? [])
+    .map((link) => Array.isArray(link.field_visits) ? link.field_visits[0] : link.field_visits)
+    .filter(Boolean)
+    .filter((visit) => ["planned", "confirmed", "in_progress"].includes(String(visit.status)))
+    .sort((left, right) => {
+      if (left.status === "in_progress" && right.status !== "in_progress") return -1;
+      if (right.status === "in_progress" && left.status !== "in_progress") return 1;
+      return Date.parse(left.scheduled_start_at) - Date.parse(right.scheduled_start_at);
+    })[0] ?? null;
+
   const [
     { data: contacts, error: contactsError },
     { data: implanted, error: implantedError },
@@ -425,6 +449,11 @@ export default async function PharmacyDetailPage({
         nextActionAt={relation.next_action_at}
         objective={cockpit.objectiveLabel}
         primaryAction={cockpit.primaryAction}
+        activeVisit={activeVisit ? {
+          id: String(activeVisit.id),
+          status: activeVisit.status as "planned" | "confirmed" | "in_progress",
+          scheduledStartAt: String(activeVisit.scheduled_start_at),
+        } : null}
         navigation={{
           latitude: pharmacy.latitude,
           longitude: pharmacy.longitude,

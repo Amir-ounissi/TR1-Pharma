@@ -1,13 +1,12 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireActiveBrand } from "@/lib/auth";
 
 const uuid = z.string().uuid();
 
 export type VisitContextResult = {
-  mode: "plan" | "started" | "finish" | "error";
+  mode: "plan" | "finish" | "error";
   visitId?: string;
   scheduledAt?: string;
   message?: string;
@@ -47,20 +46,11 @@ export async function resolveVisitAction(brandPharmacyId: string): Promise<Visit
 
     const visit = visits[0];
     if (!visit) return { mode: "plan" };
-    if (visit.status === "in_progress") {
-      return { mode: "finish", visitId: visit.id, scheduledAt: visit.scheduled_start_at };
-    }
 
-    const { error: startError } = await supabase.rpc("start_field_visit", { target_visit_id: visit.id });
-    if (startError) throw startError;
-    revalidatePath("/dashboard/agenda");
-    revalidatePath("/dashboard/field");
-    revalidatePath(`/dashboard/pharmacies/${brandPharmacyId}`);
     return {
-      mode: "started",
+      mode: "finish",
       visitId: visit.id,
       scheduledAt: visit.scheduled_start_at,
-      message: "Visite démarrée.",
     };
   } catch (error) {
     return {

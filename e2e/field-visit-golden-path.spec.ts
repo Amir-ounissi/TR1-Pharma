@@ -50,8 +50,15 @@ test("golden path visite : accès direct, compte rendu, preuve et clôture idemp
 
   try {
     await signIn(page, "agent@dermavita.local", /Dermavita/i);
-    await page.goto(`/dashboard/visits/${visitId}`);
+    await page.goto(`/dashboard/pharmacies/${republiqueBrandPharmacyId}`);
 
+    const terrainHeader = page.getByTestId("terrain-pharmacy-header");
+    await expect(terrainHeader).toBeVisible();
+    await expect(terrainHeader.getByRole("button", { name: "Démarrer", exact: true })).toHaveCount(0);
+    await expect(terrainHeader.getByRole("button", { name: "Terminer", exact: true })).toHaveCount(0);
+    await terrainHeader.getByRole("button", { name: "Ouvrir la visite", exact: true }).click();
+
+    await expect(page).toHaveURL(`/dashboard/visits/${visitId}`);
     await expect(page.getByRole("heading", { name: "Pharmacie République" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Clôturer la visite", exact: true })).toBeVisible();
 
