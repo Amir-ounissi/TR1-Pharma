@@ -12,6 +12,7 @@ import {
   type ImpactRow,
 } from "@/components/missions/mission-impact";
 import { PharmacyCockpit } from "@/components/pharmacies/pharmacy-cockpit";
+import { PharmacyFieldDataSummary } from "@/components/pharmacies/pharmacy-field-data-summary";
 import { PharmacySectionNav } from "@/components/pharmacies/pharmacy-section-nav";
 import { TerrainPharmacyHeader } from "@/components/agent/terrain-pharmacy-header";
 import {
@@ -180,6 +181,8 @@ export default async function PharmacyDetailPage({
     { data: healthRows, error: healthError },
     { data: missions, error: missionsError },
     { data: missionImpacts, error: missionImpactsError },
+    { data: latestSellOut, error: latestSellOutError },
+    { data: latestPrices, error: latestPricesError },
   ] = await Promise.all([
     dataNeeds.contacts
       ? supabase
@@ -311,6 +314,27 @@ export default async function PharmacyDetailPage({
           .order("mission_date", { ascending: false })
           .limit(8)
       : Promise.resolve({ data: null, error: null }),
+    tab === "overview"
+      ? supabase
+          .from("sell_out_captures")
+          .select("id,method,quality,status,period_start,period_end,observed_at,source_label,sell_out_lines(units_sold,revenue_ht)")
+          .eq("brand_id", brand.id)
+          .eq("brand_pharmacy_id", id)
+          .is("archived_at", null)
+          .order("observed_at", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    tab === "overview"
+      ? supabase
+          .from("pharmacy_price_observations")
+          .select("id,observed_price_ttc,unit_price_ttc,price_type,capture_method,observed_at,products(name,retail_price_ttc)")
+          .eq("brand_id", brand.id)
+          .eq("brand_pharmacy_id", id)
+          .is("archived_at", null)
+          .order("observed_at", { ascending: false })
+          .limit(3)
+      : Promise.resolve({ data: null, error: null }),
   ]);
   const tabLoadError = [
     contactsError,
@@ -329,6 +353,8 @@ export default async function PharmacyDetailPage({
     healthError,
     missionsError,
     missionImpactsError,
+    latestSellOutError,
+    latestPricesError,
   ].find(Boolean);
   if (tabLoadError)
     console.error("Impossible de charger une section de la pharmacie.", {
@@ -519,6 +545,11 @@ export default async function PharmacyDetailPage({
             isOperational={role === "agent"}
           />
           <CommercialHealthSummary health={health} />
+          <PharmacyFieldDataSummary
+            brandPharmacyId={id}
+            sellOut={latestSellOut}
+            prices={latestPrices ?? []}
+          />
           <div className="grid gap-6 xl:grid-cols-[1.1fr_.9fr]">
             {canManageAccount ? (
               <Card>
