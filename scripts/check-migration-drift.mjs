@@ -41,15 +41,22 @@ function migrationList(databaseUrl, label) {
   }
 
   const remoteVersions = [];
-  for (const line of result.stdout.split(/\r?\n/)) {
-    const columns = line.split(/[│|]/).map((value) => value.trim());
-    if (columns.length < 2) continue;
-    // Supabase CLI renders "Local | Remote | Time". On some CLI/output
-    // variants (including pooler-backed connections), the remote version can
-    // be the first timestamp column instead of a fixed second column.
-    const versions = columns.filter((value) => /^\d{14}$/.test(value));
-    const remote = versions.length >= 2 ? versions[1] : versions[0] ?? null;
-    if (remote) remoteVersions.push(remote);
+  const output = [result.stdout, result.stderr].filter(Boolean).join("\n");
+  const lines = output.split(/\r?\n/);
+  const headerIndex = lines.findIndex(
+    (line) => /\bLocal\b/.test(line) && /\bRemote\b/.test(line),
+  );
+
+  if (headerIndex >= 0) {
+    const headerColumns = lines[headerIndex].split(/[│┃|]/).map((value) => value.trim());
+    const remoteIndex = headerColumns.findIndex((value) => value === "Remote");
+    if (remoteIndex >= 0) {
+      for (const line of lines.slice(headerIndex + 1)) {
+        const columns = line.split(/[│┃|]/).map((value) => value.trim());
+        const remote = columns[remoteIndex] ?? "";
+        if (/^\d{14}$/.test(remote)) remoteVersions.push(remote);
+      }
+    }
   }
 
   if (remoteVersions.length === 0) {
