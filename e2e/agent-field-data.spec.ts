@@ -10,14 +10,95 @@ const tinyPng = Buffer.from(
   "base64",
 );
 
-test("agent terrain : sell-out prérempli depuis la pharmacie", async ({ page }) => {
-  await signIn(page, "agent@dermavita.local", /Dermavita/i);
-  await page.goto(`/dashboard/pharmacies/${brandPharmacyId}`);
+test("agent terrain : document sell-out analysé puis enregistré avec preuve", async ({ page }) => {
+  const admin = adminClient();
+  const runId = String(Date.now());
+  const sourceLabel = `Document sell-out E2E ${runId}`;
 
-  await page.getByRole("link", { name: "Ajouter du sell-out" }).click();
-  await expect(page).toHaveURL(new RegExp(`/dashboard/sell-out\\?pharmacy=${brandPharmacyId}`));
-  await expect(page.locator('select[name="brandPharmacyId"]')).toHaveValue(brandPharmacyId);
-  await expect(page.getByRole("button", { name: "Créer le relevé" })).toBeVisible();
+  try {
+    await signIn(page, "agent@dermavita.local", /Dermavita/i);
+    await page.goto(`/dashboard/pharmacies/${brandPharmacyId}`);
+
+    await page.getByRole("link", { name: "Ajouter du sell-out" }).click();
+    await expect(page).toHaveURL(new RegExp(`/dashboard/sell-out\\?pharmacy=${brandPharmacyId}`));
+    await expect(page.locator('select[name="brandPharmacyId"]').first()).toHaveValue(brandPharmacyId);
+
+    await page.locator('input[name="document"]').setInputFiles({
+      name: `sell-out-${runId}.png`,
+      mimeType: "image/png",
+      buffer: tinyPng,
+    });
+    await page.getByRole("button", { name: "Analyser le document" }).click();
+
+    await expect(page.getByText("Prévisualisation TR1")).toBeVisible();
+    await expect(page.getByText("Dermacalm 50 ml")).toBeVisible();
+    await expect(page.getByLabel("Début période")).toHaveValue("2026-09-01");
+    await expect(page.getByLabel("Fin période")).toHaveValue("2026-09-05");
+    await expect(page.getByLabel("Unités vendues")).toHaveValue("4");
+
+    await page.getByLabel("Source / contexte").fill(sourceLabel);
+    await page.getByRole("button", { name: "Créer le relevé avec ce document" }).click();
+
+    await expect(page).toHaveURL(/\/dashboard\/sell-out\/[0-9a-f-]+$/);
+    await expect(page.getByText(sourceLabel)).toBeVisible();
+
+    const { data: captures, error: captureError } = await admin
+      .from("sell_out_captures")
+      .select("id,brand_id,brand_pharmacy_id,method,status,period_start,period_end,source_label,confidence")
+      .eq("brand_id", brandId)
+      .eq("brand_pharmacy_id", brandPharmacyId)
+      .eq("source_label", sourceLabel);
+    expect(captureError).toBeNull();
+    expect(captures).toHaveLength(1);
+    expect(captures?.[0]).toMatchObject({
+      brand_id: brandId,
+      brand_pharmacy_id: brandPharmacyId,
+      method: "document",
+      status: "draft",
+      period_start: "2026-09-01",
+      period_end: "2026-09-05",
+    });
+    expect(Number(captures?.[0].confidence)).toBe(0.96);
+
+    const captureId = String(captures![0].id);
+    const [{ data: lines, error: linesError }, { data: evidence, error: evidenceError }] = await Promise.all([
+      admin
+        .from("sell_out_lines")
+        .select("product_id,ean,label,units_sold,revenue_ht,confidence")
+        .eq("capture_id", captureId),
+      admin
+        .from("sell_out_evidence")
+        .select("storage_path,mime_type,kind")
+        .eq("capture_id", captureId),
+    ]);
+    expect(linesError).toBeNull();
+    expect(evidenceError).toBeNull();
+    expect(lines).toHaveLength(1);
+    expect(lines?.[0]).toMatchObject({
+      product_id: productId,
+      ean: "3400000000001",
+      units_sold: 4,
+    });
+    expect(Number(lines?.[0].revenue_ht)).toBe(74);
+    expect(evidence).toHaveLength(1);
+    expect(evidence?.[0]).toMatchObject({ mime_type: "image/png", kind: "photo" });
+  } finally {
+    const { data: captures } = await admin
+      .from("sell_out_captures")
+      .select("id")
+      .eq("source_label", sourceLabel)
+      .eq("brand_id", brandId);
+    const captureIds = (captures ?? []).map((row) => String(row.id));
+    if (captureIds.length) {
+      const { data: evidence } = await admin
+        .from("sell_out_evidence")
+        .select("storage_path")
+        .in("capture_id", captureIds);
+      const paths = (evidence ?? []).map((row) => String(row.storage_path));
+      if (paths.length) await admin.storage.from("sell-out-evidence").remove(paths);
+      await admin.from("sell_out_captures").delete().in("id", captureIds);
+    }
+  }
 });
 
 test("agent terrain : prix observé avec photo et historique", async ({ page }) => {
