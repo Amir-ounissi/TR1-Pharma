@@ -122,14 +122,21 @@ jobs:
               ;;
           esac
 
+      - name: Préparer la connexion session Supabase
+        run: |
+          set -eu
+          session_url="$(node -e 'const u = new URL(process.env.STAGING_DATABASE_URL); if (u.port === "6543") u.port = "5432"; process.stdout.write(u.toString())')"
+          echo "::add-mask::$session_url"
+          echo "STAGING_SESSION_DATABASE_URL=$session_url" >> "$GITHUB_ENV"
+
       - name: Prévisualiser les migrations staging
-        run: npm exec -- supabase db push --db-url "$STAGING_DATABASE_URL" --dry-run
+        run: npm exec -- supabase db push --db-url "$STAGING_SESSION_DATABASE_URL" --dry-run
 
       - name: Appliquer les migrations staging
-        run: npm exec -- supabase db push --db-url "$STAGING_DATABASE_URL"
+        run: npm exec -- supabase db push --db-url "$STAGING_SESSION_DATABASE_URL"
 
       - name: Exiger Git = staging
-        run: npm run release:drift:staging
+        run: STAGING_DATABASE_URL="$STAGING_SESSION_DATABASE_URL" npm run release:drift:staging
 
       - name: Déployer exactement le SHA sur Vercel staging
         run: |
