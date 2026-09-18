@@ -20,6 +20,19 @@ type SellOutCapture = {
   sell_out_lines: SellOutLine[] | null;
 };
 
+export type FieldDataFreshness = {
+  sell_out_status: string;
+  sell_out_days: number | null;
+  sell_out_as_of: string | null;
+  sell_out_quality: string | null;
+  price_status: string;
+  price_days: number | null;
+  price_as_of: string | null;
+  audit_status: string;
+  audit_days: number | null;
+  audit_as_of: string | null;
+};
+
 type PriceObservation = {
   id: string;
   observed_price_ttc: number | string;
@@ -73,14 +86,36 @@ function priceTypeLabel(value: string) {
   return "Autre";
 }
 
+function freshnessLabel(value: string) {
+  if (value === "fresh") return "Frais";
+  if (value === "refresh") return "À actualiser";
+  if (value === "stale") return "Obsolète";
+  return "Jamais collecté";
+}
+
+function freshnessClasses(value: string) {
+  if (value === "fresh") return "border-emerald-200 bg-emerald-50 text-emerald-800";
+  if (value === "refresh") return "border-amber-200 bg-amber-50 text-amber-800";
+  if (value === "stale") return "border-red-200 bg-red-50 text-red-800";
+  return "border-slate-200 bg-slate-50 text-slate-700";
+}
+
+function freshnessDetail(days: number | null) {
+  if (days === null) return "Aucune donnée";
+  if (days === 0) return "Mis à jour aujourd’hui";
+  return `Il y a ${days} j`;
+}
+
 export function PharmacyFieldDataSummary({
   brandPharmacyId,
   sellOut,
   prices,
+  freshness,
 }: {
   brandPharmacyId: string;
   sellOut: SellOutCapture | null;
   prices: PriceObservation[];
+  freshness: FieldDataFreshness | null;
 }) {
   const lines = sellOut?.sell_out_lines ?? [];
   const units = lines.reduce((total, line) => total + Number(line.units_sold ?? 0), 0);
@@ -94,7 +129,28 @@ export function PharmacyFieldDataSummary({
           Dernières données collectées dans l’officine, avec leur provenance et leur statut.
         </CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-4 xl:grid-cols-2">
+      <CardContent className="space-y-4">
+        {freshness ? (
+          <div className="grid gap-2 sm:grid-cols-3" data-testid="field-data-freshness">
+            <FreshnessSignal
+              label="Sell-out"
+              status={freshness.sell_out_status}
+              days={freshness.sell_out_days}
+            />
+            <FreshnessSignal
+              label="Prix"
+              status={freshness.price_status}
+              days={freshness.price_days}
+            />
+            <FreshnessSignal
+              label="Audit 4P+"
+              status={freshness.audit_status}
+              days={freshness.audit_days}
+            />
+          </div>
+        ) : null}
+
+        <div className="grid gap-4 xl:grid-cols-2">
         <div className="rounded-xl border p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -180,7 +236,28 @@ export function PharmacyFieldDataSummary({
             </p>
           )}
         </div>
+        </div>
       </CardContent>
     </Card>
+  );
+}
+
+function FreshnessSignal({
+  label,
+  status,
+  days,
+}: {
+  label: string;
+  status: string;
+  days: number | null;
+}) {
+  return (
+    <div className={`rounded-xl border px-3 py-2 ${freshnessClasses(status)}`}>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs font-semibold">{label}</p>
+        <span className="text-xs font-bold">{freshnessLabel(status)}</span>
+      </div>
+      <p className="mt-1 text-[0.68rem] opacity-80">{freshnessDetail(days)}</p>
+    </div>
   );
 }
