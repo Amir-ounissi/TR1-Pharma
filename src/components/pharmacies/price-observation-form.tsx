@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, Save } from "lucide-react";
+import { Camera, Save, Sparkles } from "lucide-react";
 import {
   savePriceObservationAction,
   type PriceObservationActionState,
@@ -33,10 +33,80 @@ export function PriceObservationForm({
   const [state, action, pending] = useActionState(savePriceObservationAction, emptyState);
   const [priceType, setPriceType] = useState("regular");
   const [method, setMethod] = useState("photo");
+  const [productId, setProductId] = useState("");
+  const [priceTtc, setPriceTtc] = useState("");
+  const [observedEan, setObservedEan] = useState("");
+  const [bundleQuantity, setBundleQuantity] = useState("");
+  const [confidence, setConfidence] = useState("");
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+  const [analysisWarnings, setAnalysisWarnings] = useState<string[]>([]);
+  const [analysisLabel, setAnalysisLabel] = useState<string | null>(null);
 
   useEffect(() => {
     if (state.success && !state.error) router.refresh();
   }, [state.success, state.error, router]);
+
+  async function analyzePhoto() {
+    if (!photo) {
+      setAnalysisError("Ajoutez d’abord la photo du produit et de son prix.");
+      return;
+    }
+    setAnalyzing(true);
+    setAnalysisError(null);
+    setAnalysisWarnings([]);
+    try {
+      const data = new FormData();
+      data.set("brandPharmacyId", brandPharmacyId);
+      data.set("photo", photo);
+      const response = await fetch("/api/price-observations/analyze", {
+        method: "POST",
+        body: data,
+      });
+      const payload = await response.json() as {
+        error?: string;
+        preview?: {
+          productLabel: string | null;
+          ean: string | null;
+          priceTtc: number | null;
+          priceType: "regular" | "promotion" | "bundle" | "other";
+          bundleQuantity: number | null;
+          confidence: number | null;
+          warnings: string[];
+          product: {
+            status: "matched" | "unmatched" | "ambiguous";
+            selectedId: string | null;
+            candidates: Array<{ id: string; name: string }>;
+          };
+        };
+      };
+      if (!response.ok || !payload.preview) {
+        throw new Error(payload.error || "La photo n’a pas pu être analysée.");
+      }
+
+      const preview = payload.preview;
+      setAnalysisLabel(preview.productLabel);
+      setObservedEan(preview.ean ?? "");
+      setPriceTtc(preview.priceTtc == null ? "" : String(preview.priceTtc));
+      setPriceType(preview.priceType);
+      setBundleQuantity(preview.bundleQuantity == null ? "" : String(preview.bundleQuantity));
+      setConfidence(preview.confidence == null ? "" : String(preview.confidence));
+      setAnalysisWarnings([
+        ...preview.warnings,
+        ...(preview.product.status === "unmatched"
+          ? ["Produit non rapproché automatiquement : choisissez-le dans le catalogue."]
+          : preview.product.status === "ambiguous"
+            ? ["Plusieurs produits sont possibles : confirmez le bon produit."]
+            : []),
+      ]);
+      if (preview.product.selectedId) setProductId(preview.product.selectedId);
+    } catch (error) {
+      setAnalysisError(error instanceof Error ? error.message : "La photo n’a pas pu être analysée.");
+    } finally {
+      setAnalyzing(false);
+    }
+  }
 
   return (
     <form action={action} className="space-y-4">
@@ -53,7 +123,8 @@ export function PriceObservationForm({
             id="price-product"
             name="productId"
             required
-            defaultValue=""
+            value={productId}
+            onChange={(event) => setProductId(event.target.value)}
             className="mt-1.5 h-11 w-full rounded-md border bg-background px-3 text-sm"
           >
             <option value="" disabled>Choisir un produit</option>
@@ -69,7 +140,7 @@ export function PriceObservationForm({
 
         <div>
           <Label htmlFor="price-ttc">Prix TTC observé</Label>
-          <Input id="price-ttc" name="priceTtc" type="number" min="0.01" max="10000" step="0.01" required className="mt-1.5" placeholder="19,90" />
+          <Input id="price-ttc" name="priceTtc" type="number" min="0.01" max="10000" step="0.01" required className="mt-1.5" placeholder="19,90" value={priceTtc} onChange={(event) => setPriceTtc(event.target.value)} />
         </div>
 
         <div>
@@ -91,13 +162,13 @@ export function PriceObservationForm({
         {priceType === "bundle" ? (
           <div>
             <Label htmlFor="bundle-quantity">Quantité dans le lot</Label>
-            <Input id="bundle-quantity" name="bundleQuantity" type="number" min="2" max="100" step="1" required className="mt-1.5" />
+            <Input id="bundle-quantity" name="bundleQuantity" type="number" min="2" max="100" step="1" required className="mt-1.5" value={bundleQuantity} onChange={(event) => setBundleQuantity(event.target.value)} />
           </div>
         ) : null}
 
         <div>
           <Label htmlFor="observed-ean">EAN observé</Label>
-          <Input id="observed-ean" name="observedEan" maxLength={32} className="mt-1.5" placeholder="Facultatif" />
+          <Input id="observed-ean" name="observedEan" maxLength={32} className="mt-1.5" placeholder="Facultatif" value={observedEan} onChange={(event) => setObservedEan(event.target.value)} />
         </div>
 
         <div>
@@ -117,7 +188,7 @@ export function PriceObservationForm({
 
         <div>
           <Label htmlFor="price-confidence">Confiance</Label>
-          <Input id="price-confidence" name="confidence" type="number" min="0" max="1" step="0.01" className="mt-1.5" placeholder="Facultatif" />
+          <Input id="price-confidence" name="confidence" type="number" min="0" max="1" step="0.01" className="mt-1.5" placeholder="Facultatif" value={confidence} onChange={(event) => setConfidence(event.target.value)} />
         </div>
       </div>
 
@@ -135,7 +206,26 @@ export function PriceObservationForm({
             capture="environment"
             required
             className="mt-2"
+            onChange={(event) => {
+              setPhoto(event.target.files?.[0] ?? null);
+              setAnalysisError(null);
+              setAnalysisWarnings([]);
+              setAnalysisLabel(null);
+            }}
           />
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Button type="button" variant="outline" size="sm" disabled={!photo || analyzing} onClick={() => void analyzePhoto()}>
+              <Sparkles className="size-4 text-[var(--tr1-orange)]" />
+              {analyzing ? "Analyse…" : "Analyser la photo"}
+            </Button>
+            {analysisLabel ? <span className="text-xs text-muted-foreground">Détecté : {analysisLabel}</span> : null}
+          </div>
+          {analysisError ? <p className="mt-2 text-sm text-red-700">{analysisError}</p> : null}
+          {analysisWarnings.length ? (
+            <div className="mt-2 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
+              {analysisWarnings.map((warning) => <p key={warning}>{warning}</p>)}
+            </div>
+          ) : null}
           <p className="mt-2 text-xs text-muted-foreground">
             La photo est une preuve privée. Évitez toute personne ou donnée client dans le cadre.
           </p>
