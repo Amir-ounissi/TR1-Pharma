@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { HubSpotClient, type HubSpotClientMode } from "./client";
+import { HubSpotClient } from "./client";
 
 type HubSpotConnection = {
   id: string;
@@ -48,31 +48,7 @@ export type NaaliPharmacyPricing = {
   overrideNote: string | null;
 };
 
-function configuredMode(connection: HubSpotConnection) {
-  const value = connection.configuration?.mode;
-  return typeof value === "string" ? value.trim().toLowerCase() : null;
-}
-
-function syncMode(connection: HubSpotConnection): HubSpotClientMode {
-  const requested = process.env.TR1_HUBSPOT_MODE?.trim().toLowerCase();
-  const configured = configuredMode(connection);
-  const writeEnabled = connection.configuration?.write_enabled === true;
-
-  if (requested === "dry_run") return "dry_run";
-  if (!requested && configured === "dry_run") return "dry_run";
-  if (
-    requested === "write" &&
-    configured === "write" &&
-    writeEnabled &&
-    process.env.TR1_HUBSPOT_WRITE_ENABLED === "true"
-  ) {
-    return "write";
-  }
-  return "disabled";
-}
-
-function accessToken(connection: HubSpotConnection, mode: HubSpotClientMode) {
-  if (mode !== "write") return null;
+function accessToken(connection: HubSpotConnection) {
   const reference = connection.credential_reference?.trim();
   if (reference && /^[A-Z][A-Z0-9_]*$/.test(reference)) {
     return process.env[reference] ?? null;
@@ -208,9 +184,8 @@ export async function getNaaliHubSpotPharmacyPricing(brandId: string, pharmacyId
   if (connectionError || !connection || !relation?.id) return fallback;
 
   const typedConnection = connection as HubSpotConnection;
-  const mode = syncMode(typedConnection);
-  const token = accessToken(typedConnection, mode);
-  if (mode !== "write" || !token) return fallback;
+  const token = accessToken(typedConnection);
+  if (!token) return fallback;
 
   const { data: link } = await admin
     .from("connector_external_links")
@@ -225,7 +200,7 @@ export async function getNaaliHubSpotPharmacyPricing(brandId: string, pharmacyId
 
   try {
     const client = new HubSpotClient({
-      mode,
+      mode: "dry_run",
       accessToken: token,
       baseUrl: typedConnection.base_url ?? undefined,
     });
