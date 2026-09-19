@@ -181,6 +181,7 @@ export function mapMeetingToHubSpot(input: HubSpotMeetingSyncInput, config: HubS
   set(properties, map.activityType, input.activityType);
   set(properties, map.body, input.body);
   set(properties, map.internalNotes, input.internalNotes);
+  if (input.attachmentExternalIds?.length) set(properties, map.attachmentIds, input.attachmentExternalIds.join(";"));
   return externalRecord(input.id, map, properties);
 }
 
@@ -189,5 +190,6 @@ export function mapNoteToHubSpot(input: HubSpotNoteSyncInput, config: HubSpotBra
   const properties: Record<string, string> = {};
   set(properties, map.body, input.body);
   set(properties, map.timestamp, input.timestamp);
+  if (input.attachmentExternalIds?.length) set(properties, map.attachmentIds, input.attachmentExternalIds.join(";"));
   return externalRecord(input.id, map, properties);
 }
