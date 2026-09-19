@@ -203,9 +203,8 @@ jobs:
 
       - name: Smoke applicatif du preview Vercel protégé
         env:
-          BASE_URL: ${{ env.STAGING_DEPLOYMENT_URL }}
           VERCEL_TRUSTED_OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
-        run: npm run staging:smoke
+        run: BASE_URL="$STAGING_DEPLOYMENT_URL" npm run staging:smoke
 
       - name: Preuve staging
         run: |
