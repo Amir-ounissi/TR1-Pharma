@@ -17,6 +17,8 @@ jobs:
     name: Captures des cinq espaces
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: /home/runner/.cache/ms-playwright
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
