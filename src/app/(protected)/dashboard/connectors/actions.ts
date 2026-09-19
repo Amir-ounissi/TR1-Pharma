@@ -15,10 +15,7 @@ import {
   isHubSpotFieldMappingEntity,
   normalizeHubSpotFieldMapping,
 } from "@/lib/integrations/hubspot/mapping-profile";
-import {
-  reconcileHubSpotConnection,
-  reconcileHubSpotConnectionAfterActivation,
-} from "@/lib/integrations/hubspot/reconciliation";
+import { reconcileHubSpotConnection } from "@/lib/integrations/hubspot/reconciliation";
 import { assertActiveBrandCapability } from "@/lib/saas/server";
 
 const uuid = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
@@ -101,9 +98,6 @@ export async function setConnectorStatusFormAction(formData: FormData): Promise<
   });
   if (error) throw new Error(error.message);
 
-  if (status === "active" && connection.provider === "hubspot") {
-    await reconcileHubSpotConnectionAfterActivation(brand.id, connectionId);
-  }
   revalidatePath("/dashboard/connectors");
 }
 
