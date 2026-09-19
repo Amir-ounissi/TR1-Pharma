@@ -5,7 +5,7 @@ describe("role navigation", () => {
   it("keeps agent navigation focused on field work", () => {
     const links = getNavigationItems("agent").map((item) => item.href);
     expect(links).toContain("/dashboard/agent");
-    expect(links).toEqual(["/dashboard/agent", "/dashboard/pharmacies", "/dashboard/orders", "/dashboard/agent/performance", "/dashboard/agent/more"]);
+    expect(links).toEqual(["/dashboard/agent", "/dashboard/agenda", "/dashboard/pharmacies", "/dashboard/orders", "/dashboard/agent/performance", "/dashboard/agent/more"]);
     expect(links).not.toContain("/dashboard/missions");
     expect(getAgentMoreItems().map((item) => item.href)).toEqual(["/dashboard/agent/performance", "/dashboard/products", "/dashboard/missions", "/dashboard/tasks", "/dashboard/sell-out", "/dashboard/reports", "/dashboard/agent/assistant", "/dashboard/agent/settings"]);
     expect(links).not.toContain("/dashboard/users");
