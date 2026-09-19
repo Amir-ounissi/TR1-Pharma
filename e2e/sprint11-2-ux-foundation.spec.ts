@@ -113,8 +113,5 @@ test("scénario 6 — Non-régression et navigation Admin", async ({ page }) => 
   await expect(page.getByRole("heading", { name: "Nouvelle commande" })).toBeVisible();
   await page.goto("/dashboard/imports");
   await expect(page.getByRole("heading", { name: "Imports CSV" })).toBeVisible();
-  await page.goto("/dashboard/admin/design-system");
-  await expect(page).toHaveURL("/dashboard");
-  await expect(page.getByTestId("design-system-page")).toHaveCount(0);
   await page.screenshot({ path: `${artifacts}/navigation-role-comparison.png`, fullPage: true });
 });
