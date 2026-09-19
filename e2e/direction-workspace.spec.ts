@@ -50,10 +50,10 @@ test.afterAll(async () => {
 test("la Direction dispose d’un workspace exécutif dédié et en lecture seule", async ({ page }) => {
   await signIn(page, email, /Dermavita/i);
   await expect(page).toHaveURL(/\/dashboard\/direction$/);
-  await expect(page.getByRole("heading", { name: "Piloter la trajectoire, sans bruit opérationnel" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Trajectoire de la marque" })).toBeVisible();
   await expect(page.getByText("CA réalisé YTD", { exact: true })).toBeVisible();
   await expect(page.getByText("Évolution vs N-1", { exact: true })).toBeVisible();
-  await expect(page.getByText("Atterrissage déterministe", { exact: true })).toBeVisible();
+  await expect(page.getByText("Atterrissage", { exact: true })).toBeVisible();
   await expect(page.getByText("Comparaison des territoires", { exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Vue Direction", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: /Commandes/i })).toHaveCount(0);
