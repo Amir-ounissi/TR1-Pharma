@@ -96,10 +96,11 @@ export default async function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">{title}</h1>
-        <p className="text-muted-foreground">{description}</p>
-      </div>
+      <header className="border-b border-[var(--tr1-line)] pb-5">
+        <p className="text-xs font-semibold text-[var(--tr1-orange)]">Terrain</p>
+        <h1 className="mt-1 text-[2rem] font-bold tracking-[-0.035em] text-[var(--tr1-navy)]">{title}</h1>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">{description}</p>
+      </header>
 
       {error ? (
         <p className="rounded-md border border-destructive p-4 text-destructive">
@@ -117,11 +118,11 @@ export default async function ReportsPage() {
           : `/dashboard/missions/${report.mission_id}`;
 
         return (
-          <Card key={report.id} data-mission-id={report.mission_id}>
+          <Card key={report.id} data-mission-id={report.mission_id} className="border-[var(--tr1-line)] bg-white">
             <CardHeader>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <CardTitle>{mission?.title || "Mission"}</CardTitle>
+                  <CardTitle className="text-base">{mission?.title || "Mission"}</CardTitle>
                   {facilitatorOnly && brand?.name ? (
                     <p className="mt-1 text-xs text-muted-foreground">
                       {brand.name}
