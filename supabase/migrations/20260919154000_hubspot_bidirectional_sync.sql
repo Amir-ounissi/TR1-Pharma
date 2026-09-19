@@ -43,14 +43,17 @@ alter table public.connector_external_child_links
 update public.connector_entity_mappings mapping
 set
   direction = 'bidirectional',
+  conflict_strategy = 'tr1_wins',
+  cursor_field = 'hs_lastmodifieddate',
   updated_at = now()
 from public.connector_connections connection
 join public.brands brand on brand.id = connection.brand_id
 where mapping.connection_id = connection.id
+  and mapping.brand_id = brand.id
   and connection.provider = 'hubspot'
   and brand.slug = 'naali'
   and mapping.entity_type in ('orders', 'visits', 'notes')
-  and mapping.direction = 'outbound';
+  and mapping.is_enabled = true;
 
 comment on column public.brand_pharmacy_commercial_terms.hubspot_discount_rate is
   'Dernière remise HubSpot synchronisée. Le champ discount_rate reste un override TR1 manuel prioritaire.';
