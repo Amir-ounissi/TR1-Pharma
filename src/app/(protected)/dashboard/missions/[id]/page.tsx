@@ -289,26 +289,9 @@ export default async function MissionPage({
 
           <Card>
             <CardHeader>
-              <CardTitle>Compte rendu</CardTitle>
+              <CardTitle>Rapport de mission</CardTitle>
             </CardHeader>
             <CardContent>
-              {requiresFacilitatorMerchEvidence ? (
-                <div className="mb-4 rounded-md border bg-muted/30 p-3 text-sm">
-                  <p className="font-medium">Preuves de clôture</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <Badge variant={hasMerchPlan ? "secondary" : "outline"}>
-                      {hasMerchPlan ? "Plan merch ajouté" : "Plan merch requis"}
-                    </Badge>
-                    <Badge variant={hasMerchResult ? "secondary" : "outline"}>
-                      {hasMerchResult ? "Résultat ajouté" : "Résultat merch requis"}
-                    </Badge>
-                  </div>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Ajoutez ces deux preuves dans « Pièces de mission » avant de soumettre le rapport.
-                  </p>
-                </div>
-              ) : null}
-
               {reportEditable ? (
                 <MissionReportForm
                   missionId={id}
