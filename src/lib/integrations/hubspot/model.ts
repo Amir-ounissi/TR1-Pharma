@@ -129,6 +129,7 @@ export type HubSpotMeetingSyncInput = {
   activityType?: string | null;
   body?: string | null;
   internalNotes?: string | null;
+  attachmentExternalIds?: string[];
 };
 
 export type HubSpotNoteSyncInput = {
