@@ -247,12 +247,6 @@ export async function createQuickNoteAction(formData: FormData): Promise<QuickAc
       .eq("id", String(interactionId))
       .eq("created_by", userId);
     if (enrichError) throw enrichError;
-    if (parsed.fieldVisitId) {
-      await syncNaaliHubSpotVisitAfterPersistence(brand.id, parsed.fieldVisitId);
-    } else {
-      await syncHubSpotNoteAfterPersistence(brand.id, String(interactionId));
-    }
-
     let uploaded = 0;
     const failed: string[] = [];
     for (const [index, photo] of photos.entries()) {
@@ -280,6 +274,13 @@ export async function createQuickNoteAction(formData: FormData): Promise<QuickAc
         continue;
       }
       uploaded += 1;
+    }
+
+    // Synchronize only after evidence persistence so HubSpot can attach the
+    // exact files to the note on the company timeline.
+    await syncHubSpotNoteAfterPersistence(brand.id, String(interactionId));
+    if (parsed.fieldVisitId) {
+      await syncNaaliHubSpotVisitAfterPersistence(brand.id, parsed.fieldVisitId);
     }
 
     revalidatePath(`/dashboard/pharmacies/${parsed.brandPharmacyId}`);
