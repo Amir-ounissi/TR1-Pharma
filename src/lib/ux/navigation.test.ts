@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getAgentMoreItems, getMobileAgentNavigationItems, getNavigationItems, getNavigationSections, getRoleFamily, getRoleLandingPath, isNavigationItemActive } from "./navigation";
+import { getAgentMoreItems, getMobileAgentNavigationItems, getMobileFacilitatorNavigationItems, getNavigationItems, getNavigationSections, getRoleFamily, getRoleLandingPath, isNavigationItemActive } from "./navigation";
 
 describe("role navigation", () => {
   it("keeps agent navigation focused on field work", () => {
@@ -121,6 +121,16 @@ describe("role navigation", () => {
     expect(managerLinks).toContain("/dashboard/missions");
     expect(adminLinks).toContain("/dashboard/connectors");
     expect(adminLinks).toContain("/dashboard/subscription");
+  });
+
+  it("gives facilitators a dedicated mobile navigation", () => {
+    expect(getMobileFacilitatorNavigationItems().map((item) => item.href)).toEqual([
+      "/dashboard/field",
+      "/dashboard/agenda",
+      "/dashboard/missions",
+      "/dashboard/reports",
+      "/dashboard/account",
+    ]);
   });
 
   it("puts the daily agenda directly under the commercial's thumb on mobile", () => {
