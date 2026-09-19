@@ -57,5 +57,6 @@ jobs:
 # Triggered after workflow registration on main.
 
 # Use staging environment only to access the already-configured Vercel deploy token.
+# Recovery retry triggered after detecting staging OAuth on the public production domain.
 
 # P0 runtime recovery trigger: verify production Supabase routing after deployment.
