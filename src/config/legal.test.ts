@@ -27,8 +27,13 @@ describe("legal configuration", () => {
     expect(configuration.missingFields).toContain("legalEntityName");
   });
 
-  it("blocks production when required information is missing", () => {
-    expect(() => validateLegalConfiguration({ APP_ENV: "production" }, vi.fn())).toThrow(/Build production interdit/);
+  it("uses explicit temporary information when production legal data is missing", () => {
+    const warn = vi.fn();
+    const configuration = validateLegalConfiguration({ APP_ENV: "production" }, warn);
+    expect(configuration.informationStatus).toBe("temporary");
+    expect(configuration.missingFields).toEqual([]);
+    expect(configuration.information.registrationNumber).toBe("982 728 917 R.C.S. Lyon");
+    expect(warn).toHaveBeenCalled();
   });
 
   it("accepts a complete production configuration", () => {
