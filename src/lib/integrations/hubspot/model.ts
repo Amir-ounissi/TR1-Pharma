@@ -41,6 +41,7 @@ export type HubSpotPropertyMap = {
   startAt?: string;
   endAt?: string;
   outcome?: string;
+  attachmentIds?: string;
 };
 
 export type HubSpotBrandConfiguration = {
@@ -128,12 +129,15 @@ export type HubSpotMeetingSyncInput = {
   activityType?: string | null;
   body?: string | null;
   internalNotes?: string | null;
+  attachmentExternalIds?: string[];
 };
 
 export type HubSpotNoteSyncInput = {
   id: string;
   body: string;
   timestamp: string;
+  ownerExternalId?: string | null;
+  attachmentExternalIds?: string[];
 };
 
 export type HubSpotMappedRecord = {

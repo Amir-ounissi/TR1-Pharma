@@ -1,13 +1,17 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { createFieldVisitAction } from "./actions";
 
-const mocks = vi.hoisted(() => ({ rpc: vi.fn(), revalidate: vi.fn() }));
+const mocks = vi.hoisted(() => ({ rpc: vi.fn(), revalidate: vi.fn(), syncVisit: vi.fn() }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidate }));
 vi.mock("@/lib/auth", () => ({ requireCompletedOnboarding: async () => ({ supabase: { rpc: mocks.rpc } }) }));
+vi.mock("@/lib/integrations/hubspot/naali-visit-runtime", () => ({
+  syncNaaliHubSpotVisitByVisitId: mocks.syncVisit,
+}));
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.rpc.mockResolvedValue({ error: null });
+  mocks.rpc.mockResolvedValue({ data: "00000000-0000-4000-8000-000000000099", error: null });
+  mocks.syncVisit.mockResolvedValue(undefined);
 });
 
 function form(duration?: string) {
@@ -29,6 +33,7 @@ it("creates a one-hour visit by default without an explicit end field", async ()
       scheduled_end_at: "2026-09-10T22:30:00.000Z",
     }),
   }));
+  expect(mocks.syncVisit).toHaveBeenCalledWith("00000000-0000-4000-8000-000000000099");
   expect(mocks.revalidate).toHaveBeenCalledWith("/dashboard/agenda");
 });
 

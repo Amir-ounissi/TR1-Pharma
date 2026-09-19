@@ -153,6 +153,110 @@ async function saveExternalIdFor(
   if (error) throw error;
 }
 
+async function externalAttachmentIdFor(
+  admin: ReturnType<typeof createAdminClient>,
+  connectionId: string,
+  parentEntityType: Extract<ConnectorEntityType, "visits" | "notes">,
+  parentTr1RecordId: string,
+  attachmentId: string,
+) {
+  const { data, error } = await admin
+    .from("connector_external_child_links")
+    .select("external_id")
+    .eq("connection_id", connectionId)
+    .eq("parent_entity_type", parentEntityType)
+    .eq("parent_tr1_record_id", parentTr1RecordId)
+    .eq("child_type", "attachment")
+    .eq("child_key", attachmentId)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.external_id ? String(data.external_id) : null;
+}
+
+async function saveAttachmentExternalId(
+  admin: ReturnType<typeof createAdminClient>,
+  connectionId: string,
+  parentEntityType: Extract<ConnectorEntityType, "visits" | "notes">,
+  parentTr1RecordId: string,
+  attachmentId: string,
+  externalId: string,
+) {
+  const { error } = await admin.rpc("upsert_connector_external_child_link", {
+    target_connection_id: connectionId,
+    target_parent_entity_type: parentEntityType,
+    target_parent_tr1_record_id: parentTr1RecordId,
+    target_child_type: "attachment",
+    target_child_key: attachmentId,
+    target_external_id: externalId,
+    target_external_updated_at: null,
+    target_sync_hash: null,
+  });
+  if (error) throw error;
+}
+
+async function syncInteractionAttachmentsToHubSpot(options: {
+  admin: ReturnType<typeof createAdminClient>;
+  client: HubSpotClient;
+  connectionId: string;
+  brandId: string;
+  interactionId: string;
+}) {
+  const { admin, client, connectionId, brandId, interactionId } = options;
+  const { data: attachments, error } = await admin
+    .from("interaction_attachments")
+    .select("id,bucket_id,object_path,original_name,mime_type")
+    .eq("interaction_id", interactionId)
+    .eq("brand_id", brandId)
+    .is("archived_at", null)
+    .order("created_at");
+  if (error) throw error;
+
+  const externalIds: string[] = [];
+  for (const attachment of attachments ?? []) {
+    const attachmentId = String(attachment.id);
+    const existing = await externalAttachmentIdFor(
+      admin,
+      connectionId,
+      "notes",
+      interactionId,
+      attachmentId,
+    );
+    if (existing) {
+      externalIds.push(existing);
+      continue;
+    }
+
+    if (client.getMode() !== "write") continue;
+    const { data: file, error: downloadError } = await admin.storage
+      .from(String(attachment.bucket_id))
+      .download(String(attachment.object_path));
+    if (downloadError || !file) {
+      throw downloadError ?? new Error(`TR1 attachment ${attachmentId} could not be downloaded`);
+    }
+
+    const uploaded = await client.uploadPrivateFile({
+      blob: file,
+      fileName: String(attachment.original_name || `tr1-${attachmentId}`),
+      folderPath: `/TR1 Pharma/${brandId}/interactions/${interactionId}`,
+    });
+    const rawId = uploaded.data?.id;
+    const externalId = rawId === null || rawId === undefined ? null : String(rawId);
+    if (!externalId) throw new Error(`HubSpot file upload returned no id for TR1 attachment ${attachmentId}`);
+
+    await saveAttachmentExternalId(
+      admin,
+      connectionId,
+      "notes",
+      interactionId,
+      attachmentId,
+      externalId,
+    );
+    externalIds.push(externalId);
+  }
+
+  return externalIds;
+}
+
 function searchedExternalId(search: HubSpotSearchResponse, label: string) {
   const results = search.results ?? [];
   const total = search.total ?? results.length;
@@ -596,7 +700,7 @@ export async function syncHubSpotNoteAfterPersistence(brandId: string, interacti
         .is("archived_at", null)
         .maybeSingle();
       if (interactionError) throw interactionError;
-      if (!interaction || interaction.interaction_type !== "internal_note") return;
+      if (!interaction || !["internal_note", "visit"].includes(String(interaction.interaction_type))) return;
 
       let pharmacyId: string | null = null;
       if (interaction.brand_pharmacy_id) {
@@ -611,12 +715,21 @@ export async function syncHubSpotNoteAfterPersistence(brandId: string, interacti
         pharmacyId = relation?.pharmacy_id ? String(relation.pharmacy_id) : null;
       }
 
+      const attachmentExternalIds = await syncInteractionAttachmentsToHubSpot({
+        admin,
+        client,
+        connectionId: connection.id,
+        brandId,
+        interactionId,
+      });
+
       const subject = String(interaction.subject || "Note terrain");
       const notes = interaction.notes ? String(interaction.notes).trim() : "";
       const payload: HubSpotNoteSyncInput = {
         id: String(interaction.id),
         body: notes ? `${subject}\n\n${notes}` : subject,
         timestamp: String(interaction.occurred_at),
+        attachmentExternalIds,
       };
       const pharmacyExternalId = pharmacyId
         ? await externalIdFor(admin, connection.id, "pharmacies", pharmacyId)

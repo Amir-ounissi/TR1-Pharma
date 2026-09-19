@@ -9,7 +9,10 @@ import {
   parisLocalToIso,
   todayInParis,
 } from "@/lib/agenda";
-import { syncNaaliHubSpotVisitAfterPersistence } from "@/lib/integrations/hubspot/naali-visit-runtime";
+import {
+  syncNaaliHubSpotVisitAfterPersistence,
+  syncNaaliHubSpotVisitByVisitId,
+} from "@/lib/integrations/hubspot/naali-visit-runtime";
 import { syncHubSpotNoteAfterPersistence } from "@/lib/integrations/hubspot/runtime";
 
 const uuid = z.string().uuid();
@@ -171,6 +174,7 @@ export async function quickPlanVisitAction(
       },
     });
     if (error) throw error;
+    if (visitId) await syncNaaliHubSpotVisitByVisitId(String(visitId));
     revalidatePath("/dashboard/agenda");
     revalidatePath("/dashboard/field");
     revalidatePath(`/dashboard/pharmacies/${parsed.brandPharmacyId}`);
@@ -247,12 +251,6 @@ export async function createQuickNoteAction(formData: FormData): Promise<QuickAc
       .eq("id", String(interactionId))
       .eq("created_by", userId);
     if (enrichError) throw enrichError;
-    if (parsed.fieldVisitId) {
-      await syncNaaliHubSpotVisitAfterPersistence(brand.id, parsed.fieldVisitId);
-    } else {
-      await syncHubSpotNoteAfterPersistence(brand.id, String(interactionId));
-    }
-
     let uploaded = 0;
     const failed: string[] = [];
     for (const [index, photo] of photos.entries()) {
@@ -280,6 +278,13 @@ export async function createQuickNoteAction(formData: FormData): Promise<QuickAc
         continue;
       }
       uploaded += 1;
+    }
+
+    // Synchronize only after evidence persistence so HubSpot can attach the
+    // exact files to the note on the company timeline.
+    await syncHubSpotNoteAfterPersistence(brand.id, String(interactionId));
+    if (parsed.fieldVisitId) {
+      await syncNaaliHubSpotVisitAfterPersistence(brand.id, parsed.fieldVisitId);
     }
 
     revalidatePath(`/dashboard/pharmacies/${parsed.brandPharmacyId}`);
