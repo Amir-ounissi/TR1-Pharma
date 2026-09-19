@@ -197,12 +197,12 @@ export async function syncNaaliHubSpotVisitAfterPersistence(brandId: string, vis
         .is("archived_at", null)
         .maybeSingle();
       if (visitError) throw visitError;
-      if (!visit || visit.status !== "completed") {
+      if (!visit) {
         const { error: skippedError } = await admin.rpc("complete_connector_sync_run", {
           target_run_id: run,
           target_status: "succeeded",
-          target_records_seen: 1,
-          target_records_succeeded: 1,
+          target_records_seen: 0,
+          target_records_succeeded: 0,
           target_records_failed: 0,
           target_cursor_after: null,
           target_error_summary: null,
@@ -240,12 +240,17 @@ export async function syncNaaliHubSpotVisitAfterPersistence(brandId: string, vis
         .order("occurred_at", { ascending: true });
       if (notesError) throw notesError;
 
+      const outcome = visit.status === "completed"
+        ? "COMPLETED"
+        : visit.status === "cancelled"
+          ? "CANCELED"
+          : "SCHEDULED";
       const payload: HubSpotMeetingSyncInput = {
         id: String(visit.id),
         title: String(visit.title || "Visite terrain"),
         startAt: String(visit.actual_start_at || visit.scheduled_start_at),
         endAt: (visit.actual_end_at || visit.scheduled_end_at) ? String(visit.actual_end_at || visit.scheduled_end_at) : null,
-        outcome: "COMPLETED",
+        outcome,
         ownerExternalId,
         activityType: resolveNaaliHubSpotVisitType(String(visit.visit_kind)),
         body: formatMeetingBody(visit.notes, notes),
