@@ -1,0 +1,46 @@
+name: Visual QA refonte finale
+
+on:
+  push:
+    branches:
+      - visual-qa/refonte-visuelle-final
+
+permissions:
+  contents: read
+
+concurrency:
+  group: visual-qa-refonte-final
+  cancel-in-progress: true
+
+jobs:
+  visual:
+    name: Captures finales des cinq espaces
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: /home/runner/.cache/ms-playwright
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Installer Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Démarrer Supabase local
+        run: npm run db:start
+      - name: Réinitialiser les fixtures
+        run: npm run db:reset
+      - name: Générer les captures finales
+        run: npm run test:e2e -- e2e/visual-refonte.spec.ts
+      - name: Publier les captures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-refonte-final-screenshots
+          path: artifacts/visual-refonte/
+          if-no-files-found: error
+      - name: Arrêter Supabase
+        if: always()
+        run: npm exec -- supabase stop --no-backup
