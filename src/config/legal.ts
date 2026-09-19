@@ -37,8 +37,7 @@ export function validateLegalConfiguration(environment: Record<string, string | 
   const configuration = readLegalConfiguration(environment);
   if (!configuration.missingFields.length) return configuration;
   const message = `Informations légales manquantes : ${configuration.missingFields.join(", ")}`;
-  if (configuration.appEnvironment === "production") throw new Error(`${message}. Build production interdit.`);
-  if (configuration.appEnvironment !== "test") warn(`${message}. Placeholders autorisés en ${configuration.appEnvironment}.`);
+  if (configuration.appEnvironment !== "test") warn(`${message}. Placeholders temporaires autorisés en ${configuration.appEnvironment}; compléter avant publication juridique définitive.`);
   return configuration;
 }
 

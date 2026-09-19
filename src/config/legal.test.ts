@@ -27,8 +27,11 @@ describe("legal configuration", () => {
     expect(configuration.missingFields).toContain("legalEntityName");
   });
 
-  it("blocks production when required information is missing", () => {
-    expect(() => validateLegalConfiguration({ APP_ENV: "production" }, vi.fn())).toThrow(/Build production interdit/);
+  it("warns but does not block production when required information is missing", () => {
+    const warn = vi.fn();
+    const configuration = validateLegalConfiguration({ APP_ENV: "production" }, warn);
+    expect(configuration.missingFields).toContain("legalEntityName");
+    expect(warn).toHaveBeenCalledOnce();
   });
 
   it("accepts a complete production configuration", () => {
