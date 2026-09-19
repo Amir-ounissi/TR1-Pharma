@@ -46,12 +46,12 @@ const agentMoreItems: NavigationItem[] = [
 ];
 
 const managerItems: NavigationItem[] = [
-  { href: "/dashboard", label: "Vue d’ensemble", shortLabel: "Accueil", icon: "layout" },
-  { href: "/dashboard/network/commercial", label: "Performance & prévisions", shortLabel: "Performance", icon: "chart", capability: "performance" },
-  { href: "/dashboard/pharmacies", label: "Réseau pharmacies", shortLabel: "Réseau", icon: "building", capability: "core_crm" },
-  { href: "/dashboard/missions", label: "Équipe & terrain", shortLabel: "Terrain", icon: "users", capability: "missions" },
-  { href: "/dashboard/commercial-health", label: "Plan d’action", shortLabel: "Actions", icon: "target", capability: "next_best_action" },
+  { href: "/dashboard", label: "Synthèse", shortLabel: "Synthèse", icon: "layout" },
+  { href: "/dashboard/pharmacies", label: "Réseau", shortLabel: "Réseau", icon: "building", capability: "core_crm" },
   { href: "/dashboard/orders", label: "Commandes", icon: "clipboard", capability: "orders" },
+  { href: "/dashboard/missions", label: "Équipe & missions", shortLabel: "Missions", icon: "users", capability: "missions" },
+  { href: "/dashboard/commercial-health", label: "Plan d’action", shortLabel: "Actions", icon: "target", capability: "next_best_action" },
+  { href: "/dashboard/network/commercial", label: "Performance", shortLabel: "Performance", icon: "chart", capability: "performance" },
 ];
 
 const directionItems: NavigationItem[] = [
@@ -73,6 +73,7 @@ const facilitatorItems: NavigationItem[] = [
   { href: "/dashboard/agenda", label: "Agenda", icon: "calendar", capability: "missions" },
   { href: "/dashboard/missions", label: "Missions", icon: "route", capability: "missions" },
   { href: "/dashboard/reports", label: "Rapports", icon: "file", capability: "missions" },
+  { href: "/dashboard/account", label: "Plus", icon: "menu" },
 ];
 
 const facilitatorMobileItems: NavigationItem[] = [
