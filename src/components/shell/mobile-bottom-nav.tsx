@@ -5,13 +5,16 @@ import { usePathname, useRouter } from "next/navigation";
 import { NavigationIcon } from "@/components/shell/navigation-icons";
 import type { SaasCapability } from "@/lib/saas/capabilities";
 import { cn } from "@/lib/utils";
-import { getMobileAgentNavigationItems, getRoleFamily, isNavigationItemActive, type NavigationItem } from "@/lib/ux/navigation";
+import { getMobileAgentNavigationItems, getMobileFacilitatorNavigationItems, getRoleFamily, isNavigationItemActive, type NavigationItem } from "@/lib/ux/navigation";
 
 export function MobileBottomNav({ role, capabilities }: { role: string; capabilities?: SaasCapability[] }) {
   const pathname = usePathname();
-  if (getRoleFamily(role) !== "agent") return null;
-
-  const destinations = getMobileAgentNavigationItems(capabilities);
+  const family = getRoleFamily(role);
+  const destinations = family === "agent"
+    ? getMobileAgentNavigationItems(capabilities)
+    : family === "facilitator"
+      ? getMobileFacilitatorNavigationItems(capabilities)
+      : [];
   if (!destinations.length) return null;
 
   return (
