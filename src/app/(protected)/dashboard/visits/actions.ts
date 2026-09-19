@@ -6,7 +6,6 @@ import { requireCompletedOnboarding } from "@/lib/auth";
 import { parisLocalToIso } from "@/lib/agenda";
 import { syncNaaliHubSpotVisitAfterPersistence } from "@/lib/integrations/hubspot/naali-visit-runtime";
 import { syncHubSpotNoteAfterPersistence } from "@/lib/integrations/hubspot/runtime";
-import { syncHubSpotNoteAfterPersistence } from "@/lib/integrations/hubspot/runtime";
 
 export type VisitCloseoutActionState = {
   error?: string;
