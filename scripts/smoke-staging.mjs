@@ -41,7 +41,15 @@ const oauthLocation = oauthResponse.headers.get("location") ?? "";
 if (!oauthLocation.includes(".supabase.co/auth/v1/authorize")) {
   throw new Error(`/api/auth/google redirige vers une cible inattendue: ${oauthLocation || "(vide)"}.`);
 }
-console.log(`/api/auth/google : ${oauthResponse.status}`);
+const expectedSupabaseProjectRef = process.env.EXPECTED_SUPABASE_PROJECT_REF?.trim();
+if (expectedSupabaseProjectRef) {
+  const oauthUrl = new URL(oauthLocation);
+  const expectedHost = `${expectedSupabaseProjectRef}.supabase.co`;
+  if (oauthUrl.hostname !== expectedHost) {
+    throw new Error(`/api/auth/google cible ${oauthUrl.hostname}, attendu ${expectedHost}.`);
+  }
+}
+console.log(`/api/auth/google : ${oauthResponse.status}${expectedSupabaseProjectRef ? ` — Supabase ${expectedSupabaseProjectRef}` : ""}`);
 
 const agentResponse = await fetch(new URL("/dashboard/agent", baseUrl), {
   redirect: "manual",
