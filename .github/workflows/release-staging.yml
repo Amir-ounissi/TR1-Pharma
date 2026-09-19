@@ -11,6 +11,7 @@ on:
 permissions:
   contents: read
   actions: read
+  id-token: write
 
 concurrency:
   group: tr1-staging-release
@@ -191,39 +192,20 @@ jobs:
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
           test -z "$(git status --porcelain)"
 
-      - name: Vérifier le preview Vercel protégé
-        run: |
-          set -eu
-          for route in / /connexion /mentions-legales /politique-de-confidentialite /api/auth/google /dashboard/agent; do
-            headers="$(mktemp)"
-            status="$(curl --silent --show-error --output /dev/null --dump-header "$headers" --write-out '%{http_code}' "$STAGING_DEPLOYMENT_URL$route")"
-            location="$(tr -d '\r' < "$headers" | awk 'BEGIN{IGNORECASE=1} /^location:/{sub(/^location:[[:space:]]*/, ""); print; exit}')"
-            rm -f "$headers"
+      - name: Obtenir un jeton OIDC GitHub pour le preview protégé
+        id: oidc
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const token = await core.getIDToken();
+            core.setSecret(token);
+            core.setOutput("token", token);
 
-            case "$status" in
-              200|204)
-                echo "$route : PASS ($status)"
-                ;;
-              301|302|303|307|308)
-                case "$location" in
-                  https://vercel.com/sso-api*|*"ehptapmuzckazyxmnmnm.supabase.co"*)
-                    echo "$route : PASS ($status, redirection attendue)"
-                    ;;
-                  *)
-                    echo "::error::$route redirige vers une cible inattendue: $location"
-                    exit 1
-                    ;;
-                esac
-                ;;
-              401|403)
-                echo "$route : PASS ($status, preview protégé par Vercel)"
-                ;;
-              *)
-                echo "::error::$route retourne HTTP $status."
-                exit 1
-                ;;
-            esac
-          done
+      - name: Smoke applicatif du preview Vercel protégé
+        env:
+          BASE_URL: ${{ env.STAGING_DEPLOYMENT_URL }}
+          VERCEL_TRUSTED_OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        run: npm run staging:smoke
 
       - name: Preuve staging
         run: |
