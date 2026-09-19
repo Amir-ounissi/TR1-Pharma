@@ -31,9 +31,9 @@ describe("role navigation", () => {
       "/dashboard",
       "/dashboard/admin/access-requests",
       "/dashboard/admin/onboarding",
+      "/dashboard/admin/users",
       "/dashboard/admin/saas",
       "/dashboard/admin/saas-commercial",
-      "/dashboard/admin/users",
       "/dashboard/admin/leads",
     ]);
     expect(globalLinks).not.toContain("/dashboard/users");
