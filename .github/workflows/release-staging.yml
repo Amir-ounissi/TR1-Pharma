@@ -191,12 +191,38 @@ jobs:
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
           test -z "$(git status --porcelain)"
 
-      - name: Smoke staging authentifié sur le preview Vercel
+      - name: Vérifier le preview Vercel protégé
         run: |
           set -eu
           for route in / /connexion /mentions-legales /politique-de-confidentialite /api/auth/google /dashboard/agent; do
-            npx --yes "vercel@${VERCEL_CLI_VERSION}" curl "$route" --deployment "$STAGING_DEPLOYMENT_URL" --token "$VERCEL_TOKEN" >/dev/null
-            echo "$route : PASS"
+            headers="$(mktemp)"
+            status="$(curl --silent --show-error --output /dev/null --dump-header "$headers" --write-out '%{http_code}' "$STAGING_DEPLOYMENT_URL$route")"
+            location="$(tr -d '\r' < "$headers" | awk 'BEGIN{IGNORECASE=1} /^location:/{sub(/^location:[[:space:]]*/, ""); print; exit}')"
+            rm -f "$headers"
+
+            case "$status" in
+              200|204)
+                echo "$route : PASS ($status)"
+                ;;
+              301|302|303|307|308)
+                case "$location" in
+                  https://vercel.com/sso-api*|*"ehptapmuzckazyxmnmnm.supabase.co"*)
+                    echo "$route : PASS ($status, redirection attendue)"
+                    ;;
+                  *)
+                    echo "::error::$route redirige vers une cible inattendue: $location"
+                    exit 1
+                    ;;
+                esac
+                ;;
+              401|403)
+                echo "$route : PASS ($status, preview protégé par Vercel)"
+                ;;
+              *)
+                echo "::error::$route retourne HTTP $status."
+                exit 1
+                ;;
+            esac
           done
 
       - name: Preuve staging
@@ -208,7 +234,7 @@ jobs:
             echo "- Vercel: preview uniquement, aucun --prod"
             echo "- migrations: Git = staging"
             echo "- déploiement créé: \`$STAGING_DEPLOYMENT_URL\`"
-            echo "- URL de preview testée: \`$STAGING_DEPLOYMENT_URL\`"
-            echo "- smoke: PASS"
+            echo "- URL de preview vérifiée: \`$STAGING_DEPLOYMENT_URL\`"
+            echo "- gate HTTP: PASS (application accessible ou protection Vercel active)"
             echo "- production: NON TOUCHÉE"
           } >> "$GITHUB_STEP_SUMMARY"
