@@ -159,19 +159,25 @@ export function AgentTodayCockpit({
         </aside>
       </div>
 
-      <nav aria-label="Raccourcis de la journée" className="flex flex-wrap gap-2">
-        <Link href={`/dashboard/agenda/new?mode=quick&brand=${encodeURIComponent(brandId)}`} className="inline-flex min-h-11 items-center gap-2 rounded-[0.65rem] border bg-white px-3.5 py-2 text-sm font-semibold text-[var(--tr1-navy)] hover:bg-muted">
-          <CalendarPlus className="size-4 text-[var(--tr1-orange)]" /> Ajouter une visite
-        </Link>
-        <Link href="/dashboard/agenda" className="inline-flex min-h-11 items-center gap-2 rounded-[0.65rem] border bg-white px-3.5 py-2 text-sm font-semibold text-[var(--tr1-navy)] hover:bg-muted">
-          <CalendarDays className="size-4" /> Agenda
-        </Link>
-        {pendingVisitCount > 0 ? (
-          <Link href="/dashboard/agent/closeouts" className="inline-flex min-h-11 items-center gap-2 rounded-[0.65rem] border bg-white px-3.5 py-2 text-sm font-semibold text-[var(--tr1-navy)] hover:bg-muted">
-            <CheckCircle2 className="size-4" /> Clôturer
-          </Link>
-        ) : null}
-      </nav>
+      {!nextVisit || pendingVisitCount > 0 ? (
+        <nav aria-label="Raccourcis de la journée" className="flex flex-wrap gap-2">
+          {!nextVisit ? (
+            <>
+              <Link href={`/dashboard/agenda/new?mode=quick&brand=${encodeURIComponent(brandId)}`} className="inline-flex min-h-11 items-center gap-2 rounded-[0.65rem] border bg-white px-3.5 py-2 text-sm font-semibold text-[var(--tr1-navy)] hover:bg-muted">
+                <CalendarPlus className="size-4 text-[var(--tr1-orange)]" /> Ajouter une visite
+              </Link>
+              <Link href="/dashboard/agenda" className="inline-flex min-h-11 items-center gap-2 rounded-[0.65rem] border bg-white px-3.5 py-2 text-sm font-semibold text-[var(--tr1-navy)] hover:bg-muted">
+                <CalendarDays className="size-4" /> Agenda
+              </Link>
+            </>
+          ) : null}
+          {pendingVisitCount > 0 ? (
+            <Link href="/dashboard/agent/closeouts" className="inline-flex min-h-11 items-center gap-2 rounded-[0.65rem] border bg-white px-3.5 py-2 text-sm font-semibold text-[var(--tr1-navy)] hover:bg-muted">
+              <CheckCircle2 className="size-4" /> Clôturer
+            </Link>
+          ) : null}
+        </nav>
+      ) : null}
     </section>
   );
 }
