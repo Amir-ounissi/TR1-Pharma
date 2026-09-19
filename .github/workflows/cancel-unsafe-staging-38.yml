@@ -1,0 +1,32 @@
+name: Cancel unsafe staging 38
+
+on:
+  push:
+    branches:
+      - ops/cancel-unsafe-staging-38
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  cancel:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cancel staging and waiting release orchestrator
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          for run_id in 35454800125 35454791018; do
+            state="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}" --jq '.status' 2>/dev/null || echo missing)"
+            case "$state" in
+              queued|pending|in_progress|waiting|requested)
+                gh api --method POST "/repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/cancel" >/dev/null
+                echo "Cancel requested: ${run_id}"
+                ;;
+              *)
+                echo "No cancel needed: ${run_id} (${state})"
+                ;;
+            esac
+          done
