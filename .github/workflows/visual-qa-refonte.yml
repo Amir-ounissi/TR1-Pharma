@@ -1,0 +1,44 @@
+name: Visual QA refonte
+
+on:
+  push:
+    branches:
+      - visual-qa/refonte-visuelle-5-espaces
+
+permissions:
+  contents: read
+
+concurrency:
+  group: visual-qa-refonte
+  cancel-in-progress: true
+
+jobs:
+  visual:
+    name: Captures des cinq espaces
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Installer Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Démarrer Supabase local
+        run: npm run db:start
+      - name: Réinitialiser les fixtures
+        run: npm run db:reset
+      - name: Générer les captures de recette
+        run: npm run test:e2e -- e2e/visual-refonte.spec.ts
+      - name: Publier les captures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-refonte-screenshots
+          path: artifacts/visual-refonte/
+          if-no-files-found: error
+      - name: Arrêter Supabase
+        if: always()
+        run: npm exec -- supabase stop --no-backup
