@@ -196,6 +196,36 @@ function orderStatus(stage: unknown) {
   return "pending";
 }
 
+function inboundOrderType(value: unknown) {
+  const normalized = normalize(value);
+  if (normalized === "complement d'implantation" || normalized === "complement de reassort") {
+    return "complementary";
+  }
+  // Initial/reorder classification is rebuilt by TR1 from the chronological
+  // order history once the imported order becomes commercially valid.
+  return "other";
+}
+
+async function lastSuccessfulInboundSyncAt(
+  admin: AdminClient,
+  connectionId: string,
+  entityType: "orders" | "visits" | "notes",
+) {
+  const { data, error } = await admin
+    .from("connector_sync_runs")
+    .select("completed_at")
+    .eq("connection_id", connectionId)
+    .eq("entity_type", entityType)
+    .eq("direction", "inbound")
+    .eq("status", "succeeded")
+    .not("completed_at", "is", null)
+    .order("completed_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.completed_at ? String(data.completed_at) : null;
+}
+
 function searchFiltersSince(since: string | null) {
   if (!since) return [];
   const milliseconds = new Date(since).getTime();
@@ -573,6 +603,7 @@ async function importOrder(options: {
   admin: AdminClient;
   client: HubSpotClient;
   brandId: string;
+  organizationId: string;
   connectionId: string;
   actorId: string;
   pharmacy: PharmacyContext;
@@ -580,7 +611,7 @@ async function importOrder(options: {
   orderLinks: Map<string, string>;
   products: Awaited<ReturnType<typeof productMaps>>;
 }) {
-  const { admin, client, brandId, connectionId, actorId, pharmacy, remote, orderLinks, products } = options;
+  const { admin, client, brandId, organizationId, connectionId, actorId, pharmacy, remote, orderLinks, products } = options;
   const remoteId = externalId(remote);
   if (!remoteId) throw new Error("HubSpot deal has no id");
 
@@ -624,7 +655,7 @@ async function importOrder(options: {
     ],
   });
 
-  const freeByEan = new Map<string, number>();
+  const freeByEan = new Map<string, { quantity: number; externalId: string | null }>();
   for (const line of lineRecords) {
     const properties = line.properties ?? {};
     const type = normalize(properties.type_de_produit_naali);
@@ -632,7 +663,11 @@ async function importOrder(options: {
     const ean = text(properties.code_ean);
     const quantity = integerValue(properties.quantity);
     if (type === "ug" && reason.includes("conditions commerciale") && ean && quantity !== null && quantity >= 0) {
-      freeByEan.set(ean, (freeByEan.get(ean) ?? 0) + quantity);
+      const previous = freeByEan.get(ean);
+      freeByEan.set(ean, {
+        quantity: (previous?.quantity ?? 0) + quantity,
+        externalId: previous?.externalId ?? externalId(line),
+      });
     }
   }
 
@@ -643,6 +678,8 @@ async function importOrder(options: {
     unit_price_ht: number;
     discount_rate: number | null;
     tax_rate: number;
+    remote_line_id: string | null;
+    remote_free_line_id: string | null;
   }> = [];
   const unresolved: string[] = [];
 
@@ -663,13 +700,16 @@ async function importOrder(options: {
       continue;
     }
 
+    const free = ean ? freeByEan.get(ean) : null;
     items.push({
       product_id: product.id,
       quantity,
-      free_quantity: ean ? freeByEan.get(ean) ?? 0 : 0,
+      free_quantity: free?.quantity ?? 0,
       unit_price_ht: price,
       discount_rate: parsePercentage(properties.hs_discount_percentage),
       tax_rate: taxRateFor(properties.hs_tax_rate_group_id, product),
+      remote_line_id: externalId(line),
+      remote_free_line_id: free?.externalId ?? null,
     });
   }
 
@@ -681,7 +721,7 @@ async function importOrder(options: {
     : text(properties.createdate) ?? remote.createdAt ?? text(properties.closedate);
   if (!date) throw new Error(`HubSpot deal ${remoteId} has no usable date`);
 
-  const initialStatus = items.length && !unresolved.length ? "pending" : "needs_correction";
+  const needsCorrectionBeforeTotals = !items.length || unresolved.length > 0;
   const notes = [
     "Import HubSpot Naali bidirectionnel",
     text(properties.hubspot_owner_id) ? `propriétaire HubSpot ${text(properties.hubspot_owner_id)}` : null,
@@ -692,60 +732,90 @@ async function importOrder(options: {
   const { data: inserted, error: insertError } = await admin
     .from("orders")
     .insert({
+      organization_id: organizationId,
       brand_id: brandId,
       brand_pharmacy_id: pharmacy.brandPharmacyId,
       pharmacy_id: pharmacy.pharmacyId,
       created_by: actorId,
-      order_status: initialStatus,
+      source_user_id: actorId,
+      order_status: "pending",
       order_date: date,
       external_order_id: remoteId,
-      order_number: text(properties.dealname),
-      order_type: "other",
+      order_number: `HS-${remoteId}`,
+      order_type: inboundOrderType(properties.type_de_commande),
       source: "import",
       currency_code: text(properties.deal_currency_code) ?? "EUR",
-      notes,
+      notes: text(properties.dealname) ? `${notes} · ${text(properties.dealname)}` : notes,
       imported_at: new Date().toISOString(),
-      line_items_complete: items.length > 0 && unresolved.length === 0,
+      line_items_complete: !needsCorrectionBeforeTotals,
     })
     .select("id")
     .single();
   if (insertError || !inserted) throw insertError ?? new Error(`Unable to import HubSpot deal ${remoteId}`);
   const orderId = String(inserted.id);
 
-  if (items.length) {
-    const { error: itemsError } = await admin
+  for (const item of items) {
+    const { remote_line_id, remote_free_line_id, ...persistedItem } = item;
+    const { data: insertedItem, error: itemError } = await admin
       .from("order_items")
-      .insert(items.map((item) => ({
-        ...item,
+      .insert({
+        ...persistedItem,
         brand_id: brandId,
         order_id: orderId,
-      })));
-    if (itemsError) throw itemsError;
+      })
+      .select("id")
+      .single();
+    if (itemError || !insertedItem) throw itemError ?? new Error(`Unable to import HubSpot line for deal ${remoteId}`);
+
+    const itemId = String(insertedItem.id);
+    if (remote_line_id) {
+      const { error: linkError } = await admin.rpc("upsert_connector_external_child_link", {
+        target_connection_id: connectionId,
+        target_parent_entity_type: "orders",
+        target_parent_tr1_record_id: orderId,
+        target_child_type: "line_item",
+        target_child_key: itemId,
+        target_external_id: remote_line_id,
+        target_external_updated_at: null,
+        target_sync_hash: null,
+      });
+      if (linkError) throw linkError;
+    }
+    if (remote_free_line_id && item.free_quantity > 0) {
+      const { error: freeLinkError } = await admin.rpc("upsert_connector_external_child_link", {
+        target_connection_id: connectionId,
+        target_parent_entity_type: "orders",
+        target_parent_tr1_record_id: orderId,
+        target_child_type: "line_item",
+        target_child_key: `${itemId}:free`,
+        target_external_id: remote_free_line_id,
+        target_external_updated_at: null,
+        target_sync_hash: null,
+      });
+      if (freeLinkError) throw freeLinkError;
+    }
   }
 
-  let finalStatus = initialStatus;
-  if (initialStatus === "pending") {
-    const { data: totals, error: totalsError } = await admin
-      .from("orders")
-      .select("net_amount_ht")
-      .eq("id", orderId)
-      .single();
-    if (totalsError) throw totalsError;
-    const calculated = Number(totals?.net_amount_ht ?? 0);
-    const mismatch = sourceAmount !== null && Math.abs(calculated - sourceAmount) > 0.15;
-    finalStatus = mismatch ? "needs_correction" : targetStatus;
-    const { error: updateError } = await admin
-      .from("orders")
-      .update({
-        order_status: finalStatus,
-        line_items_complete: !mismatch,
-        notes: mismatch
-          ? `${notes} · écart lignes/source ${calculated.toFixed(2)} vs ${sourceAmount?.toFixed(2)}`
-          : notes,
-      })
-      .eq("id", orderId);
-    if (updateError) throw updateError;
-  }
+  const { data: totals, error: totalsError } = await admin
+    .from("orders")
+    .select("net_amount_ht")
+    .eq("id", orderId)
+    .single();
+  if (totalsError) throw totalsError;
+  const calculated = Number(totals?.net_amount_ht ?? 0);
+  const mismatch = sourceAmount !== null && Math.abs(calculated - sourceAmount) > 0.15;
+  const finalStatus = needsCorrectionBeforeTotals || mismatch ? "needs_correction" : targetStatus;
+  const { error: updateError } = await admin
+    .from("orders")
+    .update({
+      order_status: finalStatus,
+      line_items_complete: !needsCorrectionBeforeTotals && !mismatch,
+      notes: mismatch
+        ? `${notes} · écart lignes/source ${calculated.toFixed(2)} vs ${sourceAmount?.toFixed(2)}`
+        : notes,
+    })
+    .eq("id", orderId);
+  if (updateError) throw updateError;
 
   await saveExternalLink({
     admin,
@@ -1006,10 +1076,12 @@ async function syncInboundOrders(options: {
   admin: AdminClient;
   client: HubSpotClient;
   brandId: string;
+  organizationId: string;
   connection: HubSpotConnection;
   pharmacies: PharmacyContext[];
   actorId: string;
 }) {
+  const since = await lastSuccessfulInboundSyncAt(options.admin, options.connection.id, "orders" as const);
   const products = await productMaps(options.admin, options.brandId);
   const links = await existingExternalLinks(options.admin, options.connection.id, "orders");
 
@@ -1020,7 +1092,7 @@ async function syncInboundOrders(options: {
           filters: [
             { propertyName: "associations.company", operator: "EQ", value: pharmacy.companyId },
             { propertyName: "pipeline", operator: "IN", values: NAALI_PIPELINES },
-            ...searchFiltersSince(options.connection.last_synced_at),
+            ...searchFiltersSince(since),
           ],
         }],
         properties: [
@@ -1045,6 +1117,7 @@ async function syncInboundOrders(options: {
             admin: options.admin,
             client: options.client,
             brandId: options.brandId,
+            organizationId: options.organizationId,
             connectionId: options.connection.id,
             actorId: options.actorId,
             pharmacy,
@@ -1073,6 +1146,7 @@ async function syncInboundVisits(options: {
   actorId: string;
   owners: Map<string, string>;
 }) {
+  const since = await lastSuccessfulInboundSyncAt(options.admin, options.connection.id, "visits" as const);
   const links = await existingExternalLinks(options.admin, options.connection.id, "visits");
   return runInbound(options.admin, options.connection.id, "visits", async (counter) => {
     for (const pharmacy of options.pharmacies) {
@@ -1080,7 +1154,7 @@ async function syncInboundVisits(options: {
         filterGroups: [{
           filters: [
             { propertyName: "associations.company", operator: "EQ", value: pharmacy.companyId },
-            ...searchFiltersSince(options.connection.last_synced_at),
+            ...searchFiltersSince(since),
           ],
         }],
         properties: [
@@ -1133,6 +1207,7 @@ async function syncInboundNotes(options: {
   actorId: string;
   owners: Map<string, string>;
 }) {
+  const since = await lastSuccessfulInboundSyncAt(options.admin, options.connection.id, "notes" as const);
   const links = await existingExternalLinks(options.admin, options.connection.id, "notes");
   return runInbound(options.admin, options.connection.id, "notes", async (counter) => {
     for (const pharmacy of options.pharmacies) {
@@ -1140,7 +1215,7 @@ async function syncInboundNotes(options: {
         filterGroups: [{
           filters: [
             { propertyName: "associations.company", operator: "EQ", value: pharmacy.companyId },
-            ...searchFiltersSince(options.connection.last_synced_at),
+            ...searchFiltersSince(since),
           ],
         }],
         properties: [
@@ -1251,13 +1326,21 @@ export async function reconcileHubSpotConnection(
   if (!runtime) throw new Error("HubSpot connection is not active");
   const { admin, connection, client } = runtime;
 
+  const { data: brand, error: brandError } = await admin
+    .from("brands")
+    .select("organization_id")
+    .eq("id", brandId)
+    .single();
+  if (brandError || !brand?.organization_id) throw brandError ?? new Error("Brand organization unavailable");
+  const organizationId = String(brand.organization_id);
+
   const pharmacies = await mappedPharmacies(admin, brandId, connectionId);
   const actorId = await syncActorUserId(admin, brandId, connection);
   const owners = await ownerMap(admin, connectionId);
 
   await syncNaaliCatalog(admin, client, brandId, connectionId);
   const terms = await syncCommercialTerms(admin, client, brandId, pharmacies);
-  const orders = await syncInboundOrders({ admin, client, brandId, connection, pharmacies, actorId });
+  const orders = await syncInboundOrders({ admin, client, brandId, organizationId, connection, pharmacies, actorId });
   const visits = await syncInboundVisits({ admin, client, brandId, connection, pharmacies, actorId, owners });
   const notes = await syncInboundNotes({ admin, client, brandId, connection, pharmacies, actorId, owners });
   await replayOrdersCreatedWhilePaused(brandId, connectionId);
