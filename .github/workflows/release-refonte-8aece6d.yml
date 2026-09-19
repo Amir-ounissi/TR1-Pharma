@@ -1,0 +1,174 @@
+name: Release refonte contrôlée
+
+on:
+  push:
+    branches:
+      - ops/release-refonte-8aece6d
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: release-refonte-8aece6d
+  cancel-in-progress: false
+
+env:
+  RELEASE_SHA: 8aece6de872a4f12bf7a4e89e147eab9099bac32
+  STALE_AUTO_RUN_1: "35454242010"
+  STALE_AUTO_RUN_2: "35454608222"
+
+jobs:
+  release:
+    name: Staging puis production du SHA exact
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - name: Annuler les orchestrateurs obsolètes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          for run_id in "$STALE_AUTO_RUN_1" "$STALE_AUTO_RUN_2"; do
+            state="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}" --jq '.status' 2>/dev/null || echo missing)"
+            case "$state" in
+              queued|pending|in_progress|waiting|requested)
+                gh api --method POST "/repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/cancel" >/dev/null || true
+                echo "Annulation demandée pour l'orchestrateur obsolète ${run_id}."
+                ;;
+              *)
+                echo "Orchestrateur ${run_id}: ${state}; aucune annulation nécessaire."
+                ;;
+            esac
+          done
+
+      - name: Exiger main = SHA validé
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          current="$(gh api "/repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
+          test "$current" = "$RELEASE_SHA" || {
+            echo "::error::main a changé: $current != $RELEASE_SHA"
+            exit 1
+          }
+          echo "main confirmé sur $RELEASE_SHA."
+
+      - name: Déclencher et attendre le staging exact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          started="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          gh workflow run release-staging.yml             --repo "$GITHUB_REPOSITORY"             --ref main             -f release_sha="$RELEASE_SHA"
+          echo "Staging demandé pour $RELEASE_SHA."
+
+          state=""
+          run_id=""
+          for attempt in $(seq 1 100); do
+            payload="$(gh api               -H "Accept: application/vnd.github+json"               "/repos/${GITHUB_REPOSITORY}/actions/workflows/release-staging.yml/runs?head_sha=${RELEASE_SHA}&event=workflow_dispatch&per_page=20")"
+            run_id="$(printf '%s' "$payload" | jq -r --arg started "$started" '
+              [.workflow_runs[] | select(.created_at >= $started)]
+              | sort_by(.created_at)
+              | reverse
+              | .[0].id // empty
+            ')"
+            if [ -n "$run_id" ]; then
+              state="$(printf '%s' "$payload" | jq -r --argjson id "$run_id" '
+                .workflow_runs[]
+                | select(.id == $id)
+                | if .status == "completed" then (.conclusion // "unknown") else .status end
+              ')"
+            else
+              state="missing"
+            fi
+            case "$state" in
+              success)
+                echo "Staging vert: run $run_id."
+                echo "STAGING_RUN_ID=$run_id" >> "$GITHUB_ENV"
+                break
+                ;;
+              failure|cancelled|timed_out|action_required|startup_failure)
+                echo "::error::Staging $run_id terminé avec $state."
+                exit 1
+                ;;
+              *)
+                echo "Staging: $state"
+                sleep 15
+                ;;
+            esac
+          done
+          test "$state" = "success" || {
+            echo "::error::Le staging exact n'est pas devenu vert."
+            exit 1
+          }
+
+      - name: Revalider main avant production
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          current="$(gh api "/repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
+          test "$current" = "$RELEASE_SHA" || {
+            echo "::error::main a changé avant production: $current != $RELEASE_SHA"
+            exit 1
+          }
+
+      - name: Déclencher et attendre la production exacte
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          started="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          gh workflow run release-production.yml             --repo "$GITHUB_REPOSITORY"             --ref main             -f release_sha="$RELEASE_SHA"
+          echo "Production demandée pour $RELEASE_SHA."
+
+          state=""
+          run_id=""
+          for attempt in $(seq 1 140); do
+            payload="$(gh api               -H "Accept: application/vnd.github+json"               "/repos/${GITHUB_REPOSITORY}/actions/workflows/release-production.yml/runs?head_sha=${RELEASE_SHA}&event=workflow_dispatch&per_page=20")"
+            run_id="$(printf '%s' "$payload" | jq -r --arg started "$started" '
+              [.workflow_runs[] | select(.created_at >= $started)]
+              | sort_by(.created_at)
+              | reverse
+              | .[0].id // empty
+            ')"
+            if [ -n "$run_id" ]; then
+              state="$(printf '%s' "$payload" | jq -r --argjson id "$run_id" '
+                .workflow_runs[]
+                | select(.id == $id)
+                | if .status == "completed" then (.conclusion // "unknown") else .status end
+              ')"
+            else
+              state="missing"
+            fi
+            case "$state" in
+              success)
+                echo "Production verte: run $run_id."
+                echo "PRODUCTION_RUN_ID=$run_id" >> "$GITHUB_ENV"
+                break
+                ;;
+              failure|cancelled|timed_out|action_required|startup_failure)
+                echo "::error::Production $run_id terminée avec $state."
+                exit 1
+                ;;
+              *)
+                echo "Production: $state"
+                sleep 15
+                ;;
+            esac
+          done
+          test "$state" = "success" || {
+            echo "::error::La production exacte n'est pas devenue verte."
+            exit 1
+          }
+
+      - name: Preuve
+        run: |
+          {
+            echo "### Refonte livrée"
+            echo "- SHA: `$RELEASE_SHA`"
+            echo "- staging: run `$STAGING_RUN_ID` PASS"
+            echo "- production: run `$PRODUCTION_RUN_ID` PASS"
+            echo "- main resté inchangé pendant la promotion"
+          } >> "$GITHUB_STEP_SUMMARY"
