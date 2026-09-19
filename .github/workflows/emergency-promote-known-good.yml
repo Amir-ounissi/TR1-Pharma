@@ -19,7 +19,7 @@ jobs:
     name: Promote known-good production runtime
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    environment: production
+    environment: staging
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: team_WhI0GBrg7UZgZpDsvTwUGZ8V
@@ -55,3 +55,5 @@ jobs:
           echo "Production rétablie sur le runtime connu comme sain."
 
 # Triggered after workflow registration on main.
+
+# Use staging environment only to access the already-configured Vercel deploy token.
