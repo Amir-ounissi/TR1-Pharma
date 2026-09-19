@@ -115,7 +115,7 @@ export default async function DashboardPage() {
             <CardHeader><CardTitle>Déploiements récents</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               {recentOnboardingSessions.length ? recentOnboardingSessions.map((sessionItem) => (
-                <div key={sessionItem.id} className="rounded-[0.4rem] border border-[var(--tr1-line)] p-3">
+                <div key={sessionItem.id} className="rounded-[0.75rem] border border-[var(--tr1-line)] bg-white p-3.5">
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="font-medium">{sessionItem.brandName}</p>
