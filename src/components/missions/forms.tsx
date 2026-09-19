@@ -457,7 +457,7 @@ export function MissionReportForm({
                 defaultValue={value("duration_minutes")}
               />
             </Field>
-            <Field label="Connaissance avant %">
+            <Field label="Connaissance avant (%)">
               <Input
                 name="knowledgeBefore"
                 type="number"
@@ -466,7 +466,7 @@ export function MissionReportForm({
                 defaultValue={value("knowledge_before")}
               />
             </Field>
-            <Field label="Connaissance après %">
+            <Field label="Connaissance après (%)">
               <Input
                 name="knowledgeAfter"
                 type="number"
@@ -505,6 +505,12 @@ export function MissionReportForm({
           </>
         ) : null}
       </div>
+
+      {missionType === "training" ? (
+        <p className="rounded-[0.7rem] border border-[var(--tr1-line)] bg-muted/30 px-3.5 py-3 text-xs leading-5 text-muted-foreground">
+          Durée en minutes et connaissances déclarées de 0 à 100 %. Laissez une valeur vide si elle n’est pas connue ; ces données décrivent le bilan de session et ne constituent pas une certification.
+        </p>
+      ) : null}
 
       <Field label="Retour pharmacie">
         <Textarea
