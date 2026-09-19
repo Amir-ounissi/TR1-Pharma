@@ -7,6 +7,10 @@ on:
         description: "SHA Git exact à valider en staging puis déployer en production"
         required: true
         type: string
+      confirm_production:
+        description: "Saisir DEPLOY_PRODUCTION pour autoriser la production"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -18,6 +22,7 @@ concurrency:
 
 env:
   RELEASE_SHA: ${{ inputs.release_sha }}
+  CONFIRM_PRODUCTION: ${{ inputs.confirm_production }}
   VERCEL_CLI_VERSION: 59.19.1
   CURRENT_PRODUCTION_SUPABASE_PROJECT_REF: zhifmehctuflwfexlvkz
   CURRENT_STAGING_SUPABASE_PROJECT_REF: ehptapmuzckazyxmnmnm
@@ -31,6 +36,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      - name: Exiger une confirmation production explicite
+        run: |
+          set -eu
+          test "$CONFIRM_PRODUCTION" = "DEPLOY_PRODUCTION" || {
+            echo "::error::Confirmation production invalide."
+            exit 1
+          }
+
       - uses: actions/checkout@v6
         with:
           ref: ${{ env.RELEASE_SHA }}
