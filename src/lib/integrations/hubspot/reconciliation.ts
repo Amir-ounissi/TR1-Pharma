@@ -1064,7 +1064,7 @@ async function importVisit(options: {
       actual_end_at: status === "completed" ? end : null,
       started_at: status === "completed" ? start : null,
       completed_at: status === "completed" ? end : null,
-      outcome: status === "cancelled" ? String(properties.hs_meeting_outcome ?? "").toLowerCase() : null,
+      outcome: null,
     })
     .select("id")
     .single();
@@ -1081,6 +1081,21 @@ async function importVisit(options: {
       is_primary: true,
     });
   if (brandLinkError) throw brandLinkError;
+
+  if (status === "completed") {
+    const { error: closeoutError } = await options.admin
+      .from("field_visit_closeouts")
+      .insert({
+        visit_id: visitId,
+        created_by: options.actorId,
+        outcome: "other",
+        summary: body || text(properties.hs_meeting_title) || "Meeting HubSpot complété.",
+        input_mode: "manual",
+        structured_payload: { source: "hubspot", external_id: remoteId },
+        completed_at: end,
+      });
+    if (closeoutError) throw closeoutError;
+  }
 
   await saveExternalLink({
     admin: options.admin,
