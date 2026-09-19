@@ -78,10 +78,10 @@ const facilitatorItems: NavigationItem[] = [
 const platformAdminItems: NavigationItem[] = [
   { href: "/dashboard", label: "Vue globale", shortLabel: "Accueil", icon: "layout" },
   { href: "/dashboard/admin/access-requests", label: "Demandes d’accès", icon: "users" },
-  { href: "/dashboard/admin/onboarding", label: "Marques & onboardings", icon: "badge" },
-  { href: "/dashboard/admin/saas", label: "SaaS & capacités", icon: "boxes" },
-  { href: "/dashboard/admin/saas-commercial", label: "Quotas & billing", icon: "chart" },
+  { href: "/dashboard/admin/onboarding", label: "Marques & déploiements", icon: "badge" },
   { href: "/dashboard/admin/users", label: "Utilisateurs & accès", icon: "users" },
+  { href: "/dashboard/admin/saas", label: "Offres & capacités", icon: "boxes" },
+  { href: "/dashboard/admin/saas-commercial", label: "Quotas & facturation", icon: "chart" },
   { href: "/dashboard/admin/leads", label: "Leads TR1", icon: "leads" },
 ];
 
