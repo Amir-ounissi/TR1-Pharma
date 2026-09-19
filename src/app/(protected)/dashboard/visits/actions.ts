@@ -5,7 +5,6 @@ import { z } from "zod";
 import { requireCompletedOnboarding } from "@/lib/auth";
 import { parisLocalToIso } from "@/lib/agenda";
 import { syncNaaliHubSpotVisitAfterPersistence } from "@/lib/integrations/hubspot/naali-visit-runtime";
-import { syncNaaliHubSpotInteractionAfterPersistence } from "@/lib/integrations/hubspot/naali-note-runtime";
 import { syncHubSpotNoteAfterPersistence } from "@/lib/integrations/hubspot/runtime";
 
 export type VisitCloseoutActionState = {
