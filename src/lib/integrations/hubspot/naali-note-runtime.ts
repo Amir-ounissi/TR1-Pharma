@@ -210,11 +210,10 @@ export async function syncNaaliHubSpotInteractionAfterPersistence(brandId: strin
           .download(String(attachment.object_path));
         if (downloadError || !blob) throw downloadError ?? new Error("Unable to read TR1 evidence file");
 
-        const upload = await client.uploadFile({
-          file: blob,
-          filename: safeFilename(String(attachment.original_name)),
+        const upload = await client.uploadPrivateFile({
+          blob,
+          fileName: safeFilename(String(attachment.original_name)),
           folderPath: `/TR1-Pharma/${brandId}/${interactionId}`,
-          access: "PRIVATE",
         });
         externalId = providerId(upload.data);
         if (!externalId) throw new Error(`HubSpot file upload returned no file ID for attachment ${attachment.id}`);
