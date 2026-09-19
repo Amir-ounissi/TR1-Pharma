@@ -101,6 +101,11 @@ export default async function AnimationInvoicePage({
   const expectedAmountHt = Number(
     mission.cost_actual_ht ?? mission.cost_estimated_ht ?? 0,
   );
+  const eligibility = [
+    { label: "Animation datée", complete: isDatedAnimation },
+    { label: "Mission terminée", complete: mission.status === "completed" },
+    { label: "Compte rendu validé", complete: reportValidated },
+  ];
 
   return (
     <div className="space-y-6">
@@ -113,11 +118,30 @@ export default async function AnimationInvoicePage({
             </span>
           ) : null}
         </div>
-        <h1 className="mt-2 text-2xl font-semibold">Facturation · {mission.title}</h1>
+        <h1 className="mt-2 text-[2rem] font-bold tracking-[-0.035em] text-[var(--tr1-navy)]">Facturation · {mission.title}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Une facture correspond à une journée d’animation réalisée, clôturée et validée.
         </p>
       </header>
+
+      {isAssigned && isFacilitator ? (
+        <section className="rounded-[0.9rem] border border-[var(--tr1-line)] bg-white p-5" aria-label="Éligibilité à la facturation">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground">Éligibilité à la facturation</p>
+              <h2 className="mt-1 text-lg font-semibold text-[var(--tr1-navy)]">{canSubmit ? "Facture prête à être déposée" : "Étapes avant dépôt"}</h2>
+            </div>
+            <span className="text-sm font-semibold tabular-nums">{eligibility.filter((item) => item.complete).length}/{eligibility.length}</span>
+          </div>
+          <div className="mt-4 grid gap-2 sm:grid-cols-3">
+            {eligibility.map((item) => (
+              <div key={item.label} className={`rounded-[0.65rem] border px-3 py-3 text-sm ${item.complete ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-[var(--tr1-line)] bg-muted/30 text-muted-foreground"}`}>
+                <span className="font-medium">{item.complete ? "✓ " : "○ "}{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {!isDatedAnimation ? (
         <div className="rounded-xl border bg-muted/30 p-4 text-sm text-muted-foreground">
