@@ -43,7 +43,7 @@ async function openTodayVisit(page: Page, visitId: string) {
   await signIn(page, "agent@dermavita.local", /Dermavita/i);
   await page.goto("/dashboard/agent");
 
-  await expect(page.getByRole("heading", { name: "Aujourd’hui", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Ma journée", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Mon programme", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Démarrer", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Terminer la visite", exact: true })).toHaveCount(0);
