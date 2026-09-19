@@ -2,11 +2,6 @@ name: Emergency promote known-good production
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - .github/workflows/emergency-promote-known-good.yml
 
 permissions:
   contents: read
@@ -20,7 +15,7 @@ jobs:
     name: Promote known-good production runtime
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    environment: staging
+    environment: production
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: team_WhI0GBrg7UZgZpDsvTwUGZ8V
@@ -57,7 +52,6 @@ jobs:
 
 # Triggered after workflow registration on main.
 
-# Use staging environment only to access the already-configured Vercel deploy token.
 # Recovery retry triggered after detecting staging OAuth on the public production domain.
 
 # P0 runtime recovery trigger: verify production Supabase routing after deployment.

@@ -64,6 +64,14 @@ export function readRuntimeEnvironment(environment: Record<string, string | unde
     NEXT_PUBLIC_ANALYTICS_PROVIDER: environment.NEXT_PUBLIC_ANALYTICS_PROVIDER ?? "",
   });
 
+  if (environment.VERCEL_ENV === "production" && parsed.APP_ENV !== "production") {
+    throw new Error(`APP_ENV doit être production lorsque VERCEL_ENV=production (reçu: ${parsed.APP_ENV}).`);
+  }
+
+  if (environment.VERCEL_ENV === "preview" && parsed.APP_ENV === "production") {
+    throw new Error("APP_ENV=production est interdit sur un déploiement Vercel preview.");
+  }
+
   if (parsed.APP_ENV === "staging" || parsed.APP_ENV === "production") {
     for (const [name, value] of [["NEXT_PUBLIC_SUPABASE_URL", parsed.NEXT_PUBLIC_SUPABASE_URL], ["NEXT_PUBLIC_APP_URL", parsed.NEXT_PUBLIC_APP_URL], ["BOOKING_URL", parsed.BOOKING_URL]] as const) {
       if (value && new URL(value).protocol !== "https:") throw new Error(`${name} doit utiliser HTTPS en ${parsed.APP_ENV}.`);
