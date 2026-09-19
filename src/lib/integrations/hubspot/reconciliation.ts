@@ -615,26 +615,44 @@ async function importOrder(options: {
   const remoteId = externalId(remote);
   if (!remoteId) throw new Error("HubSpot deal has no id");
 
-  if (orderLinks.has(remoteId)) return;
+  const linkedOrderId = orderLinks.get(remoteId) ?? null;
   const { data: existingOrder, error: existingError } = await admin
     .from("orders")
-    .select("id")
+    .select("id,source,order_status")
     .eq("brand_id", brandId)
-    .eq("external_order_id", remoteId)
+    .eq(linkedOrderId ? "id" : "external_order_id", linkedOrderId ?? remoteId)
     .is("archived_at", null)
     .limit(1)
     .maybeSingle();
   if (existingError) throw existingError;
   if (existingOrder?.id) {
+    const existingOrderId = String(existingOrder.id);
     await saveExternalLink({
       admin,
       connectionId,
       entityType: "orders",
       externalId: remoteId,
-      tr1RecordId: String(existingOrder.id),
-      externalUpdatedAt: remote.updatedAt ?? null,
+      tr1RecordId: existingOrderId,
+      externalUpdatedAt: remote.updatedAt ?? text(remote.properties?.hs_lastmodifieddate),
     });
-    orderLinks.set(remoteId, String(existingOrder.id));
+    orderLinks.set(remoteId, existingOrderId);
+
+    // HubSpot remains the source for records originally imported from HubSpot.
+    // Never overwrite a TR1 correction workflow.
+    if (existingOrder.source === "import" && existingOrder.order_status !== "needs_correction") {
+      const desiredStatus = orderStatus(remote.properties?.dealstage);
+      if (desiredStatus !== existingOrder.order_status) {
+        const { error: statusError } = await admin
+          .from("orders")
+          .update({
+            order_status: desiredStatus,
+            cancellation_reason: desiredStatus === "cancelled" ? "Abandonnée dans HubSpot" : null,
+          })
+          .eq("id", existingOrderId)
+          .eq("brand_id", brandId);
+        if (statusError) throw statusError;
+      }
+    }
     return;
   }
 
@@ -910,19 +928,103 @@ async function importVisit(options: {
 }) {
   const remoteId = externalId(options.remote);
   if (!remoteId) throw new Error("HubSpot meeting has no id");
-  if (options.visitLinks.has(remoteId)) return;
 
   const properties = options.remote.properties ?? {};
   const start = text(properties.hs_meeting_start_time) ?? text(properties.hs_timestamp);
   if (!start) throw new Error(`HubSpot meeting ${remoteId} has no start time`);
-  const end = text(properties.hs_meeting_end_time)
-    ?? new Date(new Date(start).getTime() + 30 * 60_000).toISOString();
+  const rawEnd = text(properties.hs_meeting_end_time);
+  const startMs = new Date(start).getTime();
+  const rawEndMs = rawEnd ? new Date(rawEnd).getTime() : Number.NaN;
+  const end = Number.isFinite(rawEndMs) && rawEndMs > startMs
+    ? rawEnd!
+    : new Date(startMs + 30 * 60_000).toISOString();
   const ownerExternalId = text(properties.hubspot_owner_id);
   const ownerUserId = (ownerExternalId ? options.owners.get(ownerExternalId) : null) ?? options.actorId;
   const status = visitStatus(properties.hs_meeting_outcome);
   const body = [stripHtml(properties.hs_meeting_body), stripHtml(properties.hs_internal_meeting_notes)]
     .filter(Boolean)
     .join("\n\n");
+  const attachmentIds = hubSpotAttachmentIds(properties.hs_attachment_ids);
+
+  let existingVisitId = options.visitLinks.get(remoteId) ?? null;
+  if (!existingVisitId) {
+    const lower = new Date(startMs - 5 * 60_000).toISOString();
+    const upper = new Date(startMs + 5 * 60_000).toISOString();
+    const { data: candidates, error: candidateError } = await options.admin
+      .from("field_visits")
+      .select("id")
+      .eq("pharmacy_id", options.pharmacy.pharmacyId)
+      .is("archived_at", null)
+      .gte("scheduled_start_at", lower)
+      .lte("scheduled_start_at", upper)
+      .limit(2);
+    if (candidateError) throw candidateError;
+    if (candidates?.length === 1) existingVisitId = String(candidates[0].id);
+  }
+
+  if (existingVisitId) {
+    await saveExternalLink({
+      admin: options.admin,
+      connectionId: options.connectionId,
+      entityType: "visits",
+      externalId: remoteId,
+      tr1RecordId: existingVisitId,
+      externalUpdatedAt: options.remote.updatedAt ?? text(properties.hs_lastmodifieddate),
+    });
+    options.visitLinks.set(remoteId, existingVisitId);
+
+    const { data: existingInteraction, error: existingInteractionError } = await options.admin
+      .from("interactions")
+      .select("id")
+      .eq("brand_id", options.brandId)
+      .eq("field_visit_id", existingVisitId)
+      .eq("interaction_type", "visit")
+      .is("archived_at", null)
+      .limit(1)
+      .maybeSingle();
+    if (existingInteractionError) throw existingInteractionError;
+
+    let interactionId = existingInteraction?.id ? String(existingInteraction.id) : null;
+    if (!interactionId) {
+      const { data: createdInteraction, error: createInteractionError } = await options.admin
+        .from("interactions")
+        .insert({
+          brand_id: options.brandId,
+          brand_pharmacy_id: options.pharmacy.brandPharmacyId,
+          created_by: options.actorId,
+          interaction_type: "visit",
+          occurred_at: start,
+          subject: text(properties.hs_meeting_title) ?? "Meeting HubSpot",
+          notes: body || "Meeting importé depuis HubSpot.",
+          outcome: status === "completed" ? "completed" : "other",
+          assigned_user_id: ownerUserId,
+          visibility: "shared",
+          field_visit_id: existingVisitId,
+          tags: ["hubspot_meeting_import"],
+        })
+        .select("id")
+        .single();
+      if (createInteractionError || !createdInteraction) {
+        throw createInteractionError ?? new Error("Unable to create imported meeting interaction");
+      }
+      interactionId = String(createdInteraction.id);
+    }
+
+    if (attachmentIds.length) {
+      await importHubSpotAttachments({
+        admin: options.admin,
+        client: options.client,
+        connectionId: options.connectionId,
+        brandId: options.brandId,
+        actorId: options.actorId,
+        parentEntityType: "visits",
+        parentTr1RecordId: existingVisitId,
+        interactionId,
+        externalIds: attachmentIds,
+      });
+    }
+    return;
+  }
 
   const { data: inserted, error } = await options.admin
     .from("field_visits")
@@ -973,27 +1075,27 @@ async function importVisit(options: {
   });
   options.visitLinks.set(remoteId, visitId);
 
-  const attachmentIds = hubSpotAttachmentIds(properties.hs_attachment_ids);
+  const { data: interaction, error: interactionError } = await options.admin
+    .from("interactions")
+    .insert({
+      brand_id: options.brandId,
+      brand_pharmacy_id: options.pharmacy.brandPharmacyId,
+      created_by: options.actorId,
+      interaction_type: "visit",
+      occurred_at: start,
+      subject: text(properties.hs_meeting_title) ?? "Meeting HubSpot",
+      notes: body || "Meeting importé depuis HubSpot.",
+      outcome: status === "completed" ? "completed" : "other",
+      assigned_user_id: ownerUserId,
+      visibility: "shared",
+      field_visit_id: visitId,
+      tags: ["hubspot_meeting_import"],
+    })
+    .select("id")
+    .single();
+  if (interactionError || !interaction) throw interactionError ?? new Error("Unable to create meeting interaction");
+
   if (attachmentIds.length) {
-    const { data: interaction, error: interactionError } = await options.admin
-      .from("interactions")
-      .insert({
-        brand_id: options.brandId,
-        brand_pharmacy_id: options.pharmacy.brandPharmacyId,
-        created_by: options.actorId,
-        interaction_type: "visit",
-        occurred_at: start,
-        subject: text(properties.hs_meeting_title) ?? "Meeting HubSpot",
-        notes: body || "Pièce jointe importée depuis HubSpot.",
-        outcome: status === "completed" ? "completed" : "other",
-        assigned_user_id: ownerUserId,
-        visibility: "shared",
-        field_visit_id: visitId,
-        tags: ["hubspot_meeting_import"],
-      })
-      .select("id")
-      .single();
-    if (interactionError || !interaction) throw interactionError ?? new Error("Unable to create meeting attachment interaction");
     await importHubSpotAttachments({
       admin: options.admin,
       client: options.client,
@@ -1021,13 +1123,58 @@ async function importNote(options: {
 }) {
   const remoteId = externalId(options.remote);
   if (!remoteId) throw new Error("HubSpot note has no id");
-  if (options.noteLinks.has(remoteId)) return;
 
   const properties = options.remote.properties ?? {};
   const body = stripHtml(properties.hs_note_body);
   const occurredAt = text(properties.hs_timestamp) ?? options.remote.createdAt ?? new Date().toISOString();
   const ownerExternalId = text(properties.hubspot_owner_id);
   const ownerUserId = (ownerExternalId ? options.owners.get(ownerExternalId) : null) ?? options.actorId;
+  const remoteAttachments = hubSpotAttachmentIds(properties.hs_attachment_ids);
+
+  let existingInteractionId = options.noteLinks.get(remoteId) ?? null;
+  if (!existingInteractionId) {
+    const lower = new Date(new Date(occurredAt).getTime() - 60_000).toISOString();
+    const upper = new Date(new Date(occurredAt).getTime() + 60_000).toISOString();
+    const { data: candidates, error: candidatesError } = await options.admin
+      .from("interactions")
+      .select("id,notes")
+      .eq("brand_id", options.brandId)
+      .eq("brand_pharmacy_id", options.pharmacy.brandPharmacyId)
+      .eq("interaction_type", "internal_note")
+      .is("archived_at", null)
+      .gte("occurred_at", lower)
+      .lte("occurred_at", upper)
+      .limit(3);
+    if (candidatesError) throw candidatesError;
+    const matching = (candidates ?? []).filter((candidate) => (candidate.notes ?? "") === (body || "Note HubSpot sans contenu texte."));
+    if (matching.length === 1) existingInteractionId = String(matching[0].id);
+  }
+
+  if (existingInteractionId) {
+    await saveExternalLink({
+      admin: options.admin,
+      connectionId: options.connectionId,
+      entityType: "notes",
+      externalId: remoteId,
+      tr1RecordId: existingInteractionId,
+      externalUpdatedAt: options.remote.updatedAt ?? text(properties.hs_lastmodifieddate),
+    });
+    options.noteLinks.set(remoteId, existingInteractionId);
+    if (remoteAttachments.length) {
+      await importHubSpotAttachments({
+        admin: options.admin,
+        client: options.client,
+        connectionId: options.connectionId,
+        brandId: options.brandId,
+        actorId: ownerUserId,
+        parentEntityType: "notes",
+        parentTr1RecordId: existingInteractionId,
+        interactionId: existingInteractionId,
+        externalIds: remoteAttachments,
+      });
+    }
+    return;
+  }
 
   const { data: interaction, error } = await options.admin
     .from("interactions")
@@ -1068,7 +1215,7 @@ async function importNote(options: {
     parentEntityType: "notes",
     parentTr1RecordId: interactionId,
     interactionId,
-    externalIds: hubSpotAttachmentIds(properties.hs_attachment_ids),
+    externalIds: remoteAttachments,
   });
 }
 
