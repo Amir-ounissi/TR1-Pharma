@@ -170,7 +170,7 @@ jobs:
         run: |
           {
             echo "### P0 runtime recovery validé"
-            echo "- SHA: `$RELEASE_SHA`"
+            echo "- SHA: \\`$RELEASE_SHA\\`"
             echo "- staging officiel: PASS"
             echo "- Vercel production: déployé"
             echo "- runtime Supabase production: injecté"
