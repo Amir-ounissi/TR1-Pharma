@@ -9,7 +9,7 @@ test("animateur accède directement à son espace et prépare plusieurs animatio
 
   await expect(page).toHaveURL(/\/dashboard\/field$/, { timeout: 30_000 });
   await expect(page.getByRole("heading", { name: "Aujourd’hui" })).toBeVisible();
-  await expect(page.getByText("Toutes vos marques, animations et rapports dans un seul espace.")).toBeVisible();
+  await expect(page.getByText("Vos animations, formations et rapports, toutes marques confondues.")).toBeVisible();
 
   await page.goto("/dashboard/reports");
   await expect(page).toHaveURL(/\/dashboard\/reports$/);
