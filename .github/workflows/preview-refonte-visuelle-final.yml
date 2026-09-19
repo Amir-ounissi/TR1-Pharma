@@ -27,7 +27,7 @@ jobs:
     env:
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: team_WhI0GBrg7UZgZpDsvTwUGZ8V
-      VERCEL_PROJECT_ID: prj_qUQM4tS4vVKQtBLSOlo545y3vEjt
+      VERCEL_PROJECT_ID: prj_KziP4kPjCBHDULmFuvGSLFOzDtVh
     steps:
       - uses: actions/checkout@v6
         with:
@@ -42,7 +42,7 @@ jobs:
         run: |
           set -eu
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
-          test "$VERCEL_PROJECT_ID" = "prj_qUQM4tS4vVKQtBLSOlo545y3vEjt"
+          test "$VERCEL_PROJECT_ID" = "prj_KziP4kPjCBHDULmFuvGSLFOzDtVh"
       - name: Déployer en preview uniquement
         run: |
           set -eu
@@ -64,7 +64,7 @@ jobs:
           {
             echo "### Preview finale"
             echo "- SHA: `$RELEASE_SHA`"
-            echo "- projet Vercel: staging séparé"
+            echo "- projet Vercel: principal, cible preview sans alias"
             echo "- cible: preview uniquement"
             echo "- URL: `$PREVIEW_URL`"
             echo "- production: NON TOUCHÉE"
