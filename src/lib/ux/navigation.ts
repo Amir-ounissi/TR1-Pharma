@@ -69,10 +69,10 @@ const tenantAdminItems: NavigationItem[] = [
 ];
 
 const facilitatorItems: NavigationItem[] = [
-  { href: "/dashboard/field", label: "Aujourd’hui", shortLabel: "Aujourd’hui", icon: "sun", capability: "missions" },
-  { href: "/dashboard/missions", label: "Mes missions", icon: "route", capability: "missions" },
+  { href: "/dashboard/field", label: "Terrain", shortLabel: "Terrain", icon: "sun", capability: "missions" },
   { href: "/dashboard/agenda", label: "Agenda", icon: "calendar", capability: "missions" },
-  { href: "/dashboard/reports", label: "Mes rapports", icon: "file", capability: "missions" },
+  { href: "/dashboard/missions", label: "Missions", icon: "route", capability: "missions" },
+  { href: "/dashboard/reports", label: "Rapports", icon: "file", capability: "missions" },
 ];
 
 const platformAdminItems: NavigationItem[] = [
