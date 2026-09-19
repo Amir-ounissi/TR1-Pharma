@@ -1,10 +1,6 @@
 name: Release production
 
 on:
-  workflow_run:
-    workflows: ["Release staging"]
-    types: [completed]
-    branches: [main]
   workflow_dispatch:
     inputs:
       release_sha:
@@ -21,7 +17,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  RELEASE_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.release_sha || github.event.workflow_run.head_sha }}
+  RELEASE_SHA: ${{ inputs.release_sha }}
   VERCEL_CLI_VERSION: 59.19.1
   CURRENT_PRODUCTION_SUPABASE_PROJECT_REF: zhifmehctuflwfexlvkz
   CURRENT_STAGING_SUPABASE_PROJECT_REF: ehptapmuzckazyxmnmnm
@@ -31,7 +27,6 @@ env:
 jobs:
   gate:
     name: Gate du SHA
-    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.actor.login == 'github-actions[bot]')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -50,16 +45,6 @@ jobs:
           git fetch origin main
           git merge-base --is-ancestor "$RELEASE_SHA" origin/main || {
             echo "::error::Le SHA demandé n'appartient pas à l'historique de main."
-            exit 1
-          }
-
-      - name: Exiger la tête actuelle de main pour une release automatique
-        if: github.event_name == 'workflow_run'
-        run: |
-          set -eu
-          git fetch origin main
-          test "$(git rev-parse origin/main)" = "$RELEASE_SHA" || {
-            echo "::error::Une version plus récente existe sur main. Cette release automatique est abandonnée."
             exit 1
           }
 
