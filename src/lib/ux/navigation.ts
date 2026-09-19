@@ -75,6 +75,14 @@ const facilitatorItems: NavigationItem[] = [
   { href: "/dashboard/reports", label: "Rapports", icon: "file", capability: "missions" },
 ];
 
+const facilitatorMobileItems: NavigationItem[] = [
+  { href: "/dashboard/field", label: "Terrain", shortLabel: "Terrain", icon: "sun", capability: "missions" },
+  { href: "/dashboard/agenda", label: "Agenda", icon: "calendar", capability: "missions" },
+  { href: "/dashboard/missions", label: "Missions", icon: "route", capability: "missions" },
+  { href: "/dashboard/reports", label: "Rapports", icon: "file", capability: "missions" },
+  { href: "/dashboard/account", label: "Plus", shortLabel: "Plus", icon: "menu" },
+];
+
 const platformAdminItems: NavigationItem[] = [
   { href: "/dashboard", label: "Vue globale", shortLabel: "Accueil", icon: "layout" },
   { href: "/dashboard/admin/access-requests", label: "Demandes d’accès", icon: "users" },
@@ -156,6 +164,10 @@ export function getAgentMoreItems(enabledCapabilities?: readonly SaasCapability[
 
 export function getMobileAgentNavigationItems(enabledCapabilities?: readonly SaasCapability[]) {
   return filterItems(agentMobileItems, enabledCapabilities);
+}
+
+export function getMobileFacilitatorNavigationItems(enabledCapabilities?: readonly SaasCapability[]) {
+  return filterItems(facilitatorMobileItems, enabledCapabilities);
 }
 
 export function getNavigationItems(
