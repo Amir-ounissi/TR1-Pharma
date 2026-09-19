@@ -68,6 +68,7 @@ export default async function MissionPage({
     { data: history },
     { data: attachments },
     { data: impactRows },
+    { data: invoice },
   ] = await Promise.all([
     supabase
       .from("missions")
@@ -97,6 +98,11 @@ export default async function MissionPage({
     supabase.rpc("get_mission_impact", {
       target_mission_id: id,
     }),
+    supabase
+      .from("animation_invoices")
+      .select("status")
+      .eq("mission_id", id)
+      .maybeSingle(),
   ]);
 
   if (!mission) notFound();
@@ -200,6 +206,18 @@ export default async function MissionPage({
       attachment.evidence_kind ?? "",
     ),
   );
+  const missingEvidence = [
+    requiresFacilitatorMerchEvidence && !hasMerchPlan ? "plan merchandising" : null,
+    requiresFacilitatorMerchEvidence && !hasMerchResult ? "résultat merchandising" : null,
+  ].filter((item): item is string => Boolean(item));
+  const invoicePrerequisites = mission.mission_type === "animation"
+    ? [
+        !mission.scheduled_start_at ? "animation non datée" : null,
+        mission.status !== "completed" ? "mission non terminée" : null,
+        report?.report_status !== "validated" ? "rapport non validé" : null,
+      ].filter((item): item is string => Boolean(item))
+    : [];
+  const invoiceReady = mission.mission_type === "animation" && invoicePrerequisites.length === 0;
 
   return (
     <div className="space-y-6">
@@ -298,6 +316,11 @@ export default async function MissionPage({
                   pharmacyId={mission.pharmacy_id}
                   report={report}
                   draftScope={`${brand.id}:${userId}`}
+                  evidenceState={{
+                    required: requiresFacilitatorMerchEvidence,
+                    ready: missingEvidence.length === 0,
+                    missing: missingEvidence,
+                  }}
                 />
               ) : report ? (
                 <div className="space-y-3">
@@ -466,6 +489,36 @@ export default async function MissionPage({
                   missionId={id}
                   options={transitionOptions}
                 />
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {mission.mission_type === "animation" ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Facturation animation</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {invoice?.status ? (
+                  <div>
+                    <Badge variant="secondary">{presentationLabel(invoice.status)}</Badge>
+                    <p className="mt-2 text-sm text-muted-foreground">Une facture est déjà rattachée à cette animation.</p>
+                  </div>
+                ) : invoiceReady ? (
+                  <div className="rounded-[0.7rem] border border-[var(--tr1-line)] bg-muted/30 p-3 text-sm">
+                    <p className="font-medium text-[var(--tr1-navy)]">Pré-requis métier réunis</p>
+                    <p className="mt-1 text-muted-foreground">Animation datée et terminée, compte rendu validé.</p>
+                  </div>
+                ) : (
+                  <div className="rounded-[0.7rem] border border-[var(--tr1-line)] bg-muted/30 p-3 text-sm">
+                    <p className="font-medium text-[var(--tr1-navy)]">Facturation pas encore disponible</p>
+                    <p className="mt-1 text-muted-foreground">À terminer : {invoicePrerequisites.join(" · ")}.</p>
+                  </div>
+                )}
+                <Button asChild variant={invoiceReady || invoice?.status ? "default" : "outline"} className="w-full">
+                  <Link href={`/dashboard/missions/${id}/invoice`}>Ouvrir la facturation</Link>
+                </Button>
+                <p className="text-xs leading-5 text-muted-foreground">Le statut « payée » suit l’état administratif ; TR1 n’exécute pas le paiement bancaire.</p>
               </CardContent>
             </Card>
           ) : null}
