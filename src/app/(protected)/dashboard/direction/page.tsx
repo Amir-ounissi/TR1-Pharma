@@ -191,7 +191,7 @@ function MiniMetric({ label, value }: { label: string; value: string }) {
 }
 
 function Breakdown({ label, value, detail }: { label: string; value: string; detail?: string }) {
-  return <div className="rounded-xl border p-4"><p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p><p className="mt-2 text-xl font-semibold">{value}</p>{detail ? <p className="text-xs text-muted-foreground">{detail}</p> : null}</div>;
+  return <div className="rounded-xl border p-4"><p className="text-xs font-medium text-muted-foreground">{label}</p><p className="mt-2 text-xl font-semibold">{value}</p>{detail ? <p className="text-xs text-muted-foreground">{detail}</p> : null}</div>;
 }
 
 function Signal({ label, value }: { label: string; value: number }) {
