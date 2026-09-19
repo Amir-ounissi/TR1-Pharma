@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { PageHeader } from "@/components/ux/page-header";
 import { requirePlatformAdmin } from "@/lib/auth";
 import { resolveBrandTerminology } from "@/lib/saas/capabilities";
 
@@ -133,13 +134,12 @@ export default async function SaasAdministrationPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <p className="text-sm font-medium text-primary">Plateforme TR1</p>
-        <h1 className="text-2xl font-semibold tracking-tight">SaaS & capacités</h1>
-        <p className="text-muted-foreground">
-          Plans, modules et vocabulaire sont configurés par marque sans règle spécifique dans le code.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Plateforme TR1"
+        title="Offres & capacités"
+        description="Plans, modules, vocabulaire et exceptions sont configurés par marque sans modifier les règles métier."
+        tone="dark"
+      />
 
       <Card>
         <CardHeader>
