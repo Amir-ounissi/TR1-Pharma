@@ -129,7 +129,11 @@ export function getNavigationSections(
   const family = getRoleFamily(role);
 
   if (scope === "platform") {
-    return [{ label: "Plateforme TR1", items: platformAdminItems }];
+    return compactSections([
+      { label: "Pilotage plateforme", items: platformAdminItems.slice(0, 3) },
+      { label: "Administration", items: platformAdminItems.slice(3, 4) },
+      { label: "Offre & revenus", items: platformAdminItems.slice(4) },
+    ], enabledCapabilities);
   }
 
   if (family === "agent") {
@@ -145,7 +149,8 @@ export function getNavigationSections(
   }
 
   const sections: NavigationSection[] = [
-    { label: "Pilotage", items: managerItems },
+    { label: "Pilotage", items: managerItems.slice(0, 3) },
+    { label: "Exécution", items: managerItems.slice(3) },
   ];
 
   if (family === "admin") {
