@@ -201,7 +201,7 @@ jobs:
             echo "- Supabase: staging distinct de la production"
             echo "- migrations: Git = staging"
             echo "- déploiement créé: \`$STAGING_DEPLOYMENT_URL\`"
-            echo "- URL publique testée: \`$VERCEL_STAGING_PUBLIC_URL\`"
+            echo "- URL de preview testée: \`$STAGING_DEPLOYMENT_URL\`"
             echo "- smoke: PASS"
             echo "- production: NON TOUCHÉE"
           } >> "$GITHUB_STEP_SUMMARY"
