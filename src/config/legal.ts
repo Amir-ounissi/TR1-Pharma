@@ -20,6 +20,7 @@ const legalEnvironmentFields = {
 
 export type LegalInformation = Record<keyof typeof legalEnvironmentFields, string>;
 type ApplicationEnvironment = "local" | "test" | "staging" | "production";
+type LegalInformationStatus = "final" | "temporary";
 
 function readApplicationEnvironment(environment: Record<string, string | undefined>): ApplicationEnvironment {
   const value = environment.APP_ENV ?? (environment.NODE_ENV === "test" ? "test" : "local");
@@ -27,10 +28,19 @@ function readApplicationEnvironment(environment: Record<string, string | undefin
   return value as ApplicationEnvironment;
 }
 
+function readLegalInformationStatus(environment: Record<string, string | undefined>): LegalInformationStatus {
+  return environment.LEGAL_INFORMATION_STATUS?.trim() === "temporary" ? "temporary" : "final";
+}
+
 export function readLegalConfiguration(environment: Record<string, string | undefined> = process.env) {
   const information = Object.fromEntries(Object.entries(legalEnvironmentFields).map(([key, variable]) => [key, environment[variable]?.trim() || LEGAL_PLACEHOLDER])) as LegalInformation;
   const missingFields = Object.entries(information).filter(([, value]) => value === LEGAL_PLACEHOLDER).map(([key]) => key as keyof LegalInformation);
-  return { appEnvironment: readApplicationEnvironment(environment), information, missingFields };
+  return {
+    appEnvironment: readApplicationEnvironment(environment),
+    informationStatus: readLegalInformationStatus(environment),
+    information,
+    missingFields,
+  };
 }
 
 export function validateLegalConfiguration(environment: Record<string, string | undefined> = process.env, warn: (message: string) => void = console.warn) {
@@ -46,3 +56,4 @@ const legalConfiguration = validateLegalConfiguration();
 
 export const legalInformation = legalConfiguration.information;
 export const missingLegalInformation = legalConfiguration.missingFields;
+export const temporaryLegalInformation = legalConfiguration.informationStatus === "temporary";
