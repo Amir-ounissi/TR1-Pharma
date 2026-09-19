@@ -22,7 +22,7 @@ env:
   CURRENT_PRODUCTION_SUPABASE_PROJECT_REF: zhifmehctuflwfexlvkz
   CURRENT_STAGING_SUPABASE_PROJECT_REF: ehptapmuzckazyxmnmnm
   CURRENT_PRODUCTION_VERCEL_PROJECT_ID: prj_KziP4kPjCBHDULmFuvGSLFOzDtVh
-  CURRENT_STAGING_VERCEL_PROJECT_ID: prj_KziP4kPjCBHDULmFuvGSLFOzDtVh
+  CURRENT_STAGING_VERCEL_PROJECT_ID: prj_qUQM4tS4vVKQtBLSOlo545y3vEjt
 
 jobs:
   gate:
@@ -91,8 +91,6 @@ jobs:
     needs: gate
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    env:
-      VERCEL_STAGING_PUBLIC_URL: https://tr-1-pharma-dusky.vercel.app
     steps:
       - uses: actions/checkout@v6
         with:
@@ -118,17 +116,13 @@ jobs:
             exit 1
           }
 
-      - name: Smoke staging public
-        run: BASE_URL="$VERCEL_STAGING_PUBLIC_URL" npm run staging:smoke
-
       - name: Preuve staging
         run: |
           {
             echo "### Staging officiel validé"
             echo "- SHA: `$RELEASE_SHA`"
             echo "- workflow Release staging: PASS"
-            echo "- URL publique: `$VERCEL_STAGING_PUBLIC_URL`"
-            echo "- smoke: PASS"
+            echo "- smoke du preview staging: PASS dans le workflow Release staging"
           } >> "$GITHUB_STEP_SUMMARY"
 
   production:
@@ -179,7 +173,11 @@ jobs:
             exit 1
           }
           test "$VERCEL_PROJECT_ID" = "$CURRENT_PRODUCTION_VERCEL_PROJECT_ID" || {
-            echo "::error::Le projet Vercel de production n'est pas le projet actuellement public."
+            echo "::error::Le projet Vercel de production n'est pas le projet canonique."
+            exit 1
+          }
+          test "$CURRENT_STAGING_VERCEL_PROJECT_ID" != "$CURRENT_PRODUCTION_VERCEL_PROJECT_ID" || {
+            echo "::error::Les projets Vercel staging et production doivent être distincts."
             exit 1
           }
           case "$PRODUCTION_SUPABASE_URL" in
