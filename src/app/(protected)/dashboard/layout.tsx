@@ -44,8 +44,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
     const globalNavigation: SearchItem[] = [
       { id: "navigation-dashboard", kind: "navigation", label: "Vue d’ensemble TR1", href: "/dashboard" },
       { id: "navigation-access-requests", kind: "navigation", label: "Demandes d’accès", href: "/dashboard/admin/access-requests" },
-      { id: "navigation-onboarding", kind: "navigation", label: "Onboarding marques", href: "/dashboard/admin/onboarding" },
-      { id: "navigation-saas", kind: "navigation", label: "SaaS & capacités", href: "/dashboard/admin/saas" },
+      { id: "navigation-onboarding", kind: "navigation", label: "Marques & déploiements", href: "/dashboard/admin/onboarding" },
+      { id: "navigation-saas", kind: "navigation", label: "Offres & capacités", href: "/dashboard/admin/saas" },
       { id: "navigation-users", kind: "navigation", label: "Utilisateurs & accès", href: "/dashboard/admin/users" },
       { id: "navigation-leads", kind: "navigation", label: "Leads TR1", href: "/dashboard/admin/leads" },
     ];
