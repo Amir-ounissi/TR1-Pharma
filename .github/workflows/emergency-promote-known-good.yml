@@ -1,6 +1,7 @@
 name: Emergency promote known-good production
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
