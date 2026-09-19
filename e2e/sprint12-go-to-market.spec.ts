@@ -71,10 +71,10 @@ test("landing mobile reste lisible et sans débordement", async ({ page }) => {
 test("pages légales signalées et page 404 publique", async ({ page }) => {
   await page.goto("/mentions-legales");
   await expect(page.getByRole("heading", { name: "Mentions légales" })).toBeVisible();
-  await expect(page.getByText(/informations définitives requises/i)).toBeVisible();
+  await expect(page.getByText(/version temporaire de pré-lancement/i)).toBeVisible();
   await page.goto("/politique-de-confidentialite");
   await expect(page.getByRole("heading", { name: "Politique de confidentialité" })).toBeVisible();
-  await expect(page.getByText(/version de préparation/i)).toBeVisible();
+  await expect(page.getByText(/version temporaire de pré-lancement/i)).toBeVisible();
   await page.goto("/page-inexistante-sprint-12-1");
   await expect(page.getByRole("heading", { name: "Page introuvable." })).toBeVisible();
 });
