@@ -115,10 +115,8 @@ export default async function FieldPage() {
 
         {!missions?.length ? (
           <div className="rounded-[0.9rem] border border-dashed bg-white p-6 text-center">
-            <p className="text-muted-foreground">Aucune mission planifiée pour le moment.</p>
-            <Button asChild className="mt-4" size="sm">
-              <Link href="/dashboard/missions/new"><Plus className="size-4" />Proposer une mission</Link>
-            </Button>
+            <p className="font-medium text-[var(--tr1-navy)]">Aucune mission planifiée pour le moment.</p>
+            <p className="mt-1 text-sm text-muted-foreground">Utilisez « Proposer une mission » pour préparer votre prochaine animation ou formation.</p>
           </div>
         ) : null}
       </div>
