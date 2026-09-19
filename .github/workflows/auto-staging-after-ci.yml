@@ -23,11 +23,68 @@ jobs:
       github.event.workflow_run.head_branch == 'main'
     runs-on: ubuntu-latest
     steps:
-      - name: Déclencher la release du SHA validé
+      - name: Déclencher le staging puis promouvoir uniquement s'il est vert
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -eu
-          gh workflow run release-staging.yml             --repo "$GITHUB_REPOSITORY"             --ref main             -f release_sha="$RELEASE_SHA"
+
+          dispatch_started="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          gh workflow run release-staging.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref main \
+            -f release_sha="$RELEASE_SHA"
           echo "Release staging demandée automatiquement pour $RELEASE_SHA."
+
+          staging_state=""
+          staging_run_id=""
+          for attempt in $(seq 1 80); do
+            gh api \
+              -H "Accept: application/vnd.github+json" \
+              "/repos/${GITHUB_REPOSITORY}/actions/workflows/release-staging.yml/runs?head_sha=${RELEASE_SHA}&event=workflow_dispatch&per_page=20" \
+              > /tmp/staging-runs.json
+
+            staging_run_id="$(jq -r --arg started "$dispatch_started" '
+              [.workflow_runs[] | select(.created_at >= $started)]
+              | sort_by(.created_at)
+              | reverse
+              | .[0].id // empty
+            ' /tmp/staging-runs.json)"
+
+            if [ -n "$staging_run_id" ]; then
+              staging_state="$(jq -r --argjson id "$staging_run_id" '
+                .workflow_runs[]
+                | select(.id == $id)
+                | if .status == "completed" then (.conclusion // "unknown") else .status end
+              ' /tmp/staging-runs.json)"
+            else
+              staging_state="missing"
+            fi
+
+            case "$staging_state" in
+              success)
+                echo "Release staging verte: run $staging_run_id."
+                break
+                ;;
+              failure|cancelled|timed_out|action_required|startup_failure)
+                echo "::error::Release staging $staging_run_id terminée avec l'état $staging_state."
+                exit 1
+                ;;
+              *)
+                echo "Release staging: $staging_state — nouvelle vérification dans 15 s."
+                sleep 15
+                ;;
+            esac
+          done
+
+          test "$staging_state" = "success" || {
+            echo "::error::La Release staging n'est pas devenue verte dans la fenêtre d'orchestration."
+            exit 1
+          }
+
+          gh workflow run release-production.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref main \
+            -f release_sha="$RELEASE_SHA"
+          echo "Release production demandée pour le même SHA $RELEASE_SHA."
