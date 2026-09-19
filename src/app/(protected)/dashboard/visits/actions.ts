@@ -4,7 +4,10 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireCompletedOnboarding } from "@/lib/auth";
 import { parisLocalToIso } from "@/lib/agenda";
-import { syncNaaliHubSpotVisitAfterPersistence } from "@/lib/integrations/hubspot/naali-visit-runtime";
+import {
+  syncNaaliHubSpotVisitAfterPersistence,
+  syncNaaliHubSpotVisitByVisitId,
+} from "@/lib/integrations/hubspot/naali-visit-runtime";
 import { syncHubSpotNoteAfterPersistence } from "@/lib/integrations/hubspot/runtime";
 
 export type VisitCloseoutActionState = {
@@ -21,6 +24,7 @@ type CloseoutInteractionRef = {
 
 type CloseoutRpcResult = {
   alreadyClosed: boolean;
+  nextVisitId: string | null;
   interactions: CloseoutInteractionRef[];
 };
 
@@ -34,7 +38,7 @@ const MAX_PHOTO_BYTES = 3 * 1024 * 1024;
 
 function parseCloseoutResult(value: unknown): CloseoutRpcResult {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return { alreadyClosed: false, interactions: [] };
+    return { alreadyClosed: false, nextVisitId: null, interactions: [] };
   }
 
   const payload = value as Record<string, unknown>;
@@ -52,6 +56,7 @@ function parseCloseoutResult(value: unknown): CloseoutRpcResult {
 
   return {
     alreadyClosed: payload.already_closed === true,
+    nextVisitId: typeof payload.next_visit_id === "string" ? payload.next_visit_id : null,
     interactions,
   };
 }
@@ -232,6 +237,9 @@ export async function closeFieldVisitAction(
     }
 
     await syncNaaliVisitIfLinked(supabase, parsed.visitId, closeout.interactions);
+    if (closeout.nextVisitId) {
+      await syncNaaliHubSpotVisitByVisitId(closeout.nextVisitId);
+    }
     // The closeout RPC creates one interaction per linked brand. Sync those
     // interactions only after photo persistence so HubSpot notes include the
     // exact evidence files on the company timeline.
