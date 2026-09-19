@@ -152,11 +152,11 @@ jobs:
           set -eu
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
           npx --yes "vercel@${VERCEL_CLI_VERSION}" deploy --prod --yes --token "$VERCEL_TOKEN" \
-            --build-env "APP_ENV=production" \
+            --build-env "APP_ENV=staging" \
             --build-env "NEXT_PUBLIC_SUPABASE_URL=$PRODUCTION_SUPABASE_URL" \
             --build-env "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PRODUCTION_SUPABASE_PUBLISHABLE_KEY" \
             --build-env "NEXT_PUBLIC_APP_URL=$PRODUCTION_URL" \
-            --env "APP_ENV=production" \
+            --env "APP_ENV=staging" \
             --env "NEXT_PUBLIC_SUPABASE_URL=$PRODUCTION_SUPABASE_URL" \
             --env "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PRODUCTION_SUPABASE_PUBLISHABLE_KEY" \
             --env "NEXT_PUBLIC_APP_URL=$PRODUCTION_URL"
@@ -174,5 +174,6 @@ jobs:
             echo "- staging officiel: PASS"
             echo "- Vercel production: déployé"
             echo "- runtime Supabase production: injecté"
+            echo "- APP_ENV: staging temporaire (VERCEL_ENV reste production)"
             echo "- smoke production: PASS"
           } >> "$GITHUB_STEP_SUMMARY"
