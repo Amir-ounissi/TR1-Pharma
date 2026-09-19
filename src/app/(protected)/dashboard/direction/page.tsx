@@ -1,4 +1,4 @@
-import { AlertTriangle, Building2, Gauge, Map, Target, TrendingDown, TrendingUp } from "lucide-react";
+import { AlertTriangle, Gauge, Map, Target, TrendingDown, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/ux/page-header";
