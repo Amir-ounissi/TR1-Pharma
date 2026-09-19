@@ -6,9 +6,6 @@ on:
       - CI
     types:
       - completed
-  push:
-    branches: [main]
-
 permissions:
   contents: read
   actions: write
@@ -106,7 +103,7 @@ jobs:
       contains(github.event.workflow_run.head_commit.message, '[p0-runtime-recovery]')
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    environment: staging
+    environment: production
     env:
       RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
       VERCEL_CLI_VERSION: 59.19.1
@@ -168,11 +165,11 @@ jobs:
             extra_env+=(--env "TR1_INTERNAL_RECONCILE_TOKEN=$TR1_INTERNAL_RECONCILE_TOKEN")
           fi
           npx --yes "vercel@${VERCEL_CLI_VERSION}" deploy --prod --yes --token "$VERCEL_TOKEN" \
-            --build-env "APP_ENV=staging" \
+            --build-env "APP_ENV=production" \
             --build-env "NEXT_PUBLIC_SUPABASE_URL=$PRODUCTION_SUPABASE_URL" \
             --build-env "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PRODUCTION_SUPABASE_PUBLISHABLE_KEY" \
             --build-env "NEXT_PUBLIC_APP_URL=$PRODUCTION_URL" \
-            --env "APP_ENV=staging" \
+            --env "APP_ENV=production" \
             --env "NEXT_PUBLIC_SUPABASE_URL=$PRODUCTION_SUPABASE_URL" \
             --env "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PRODUCTION_SUPABASE_PUBLISHABLE_KEY" \
             --env "NEXT_PUBLIC_APP_URL=$PRODUCTION_URL" \
@@ -202,70 +199,10 @@ jobs:
             echo "- staging officiel: PASS"
             echo "- Vercel production: déployé"
             echo "- runtime Supabase production: injecté"
-            echo "- APP_ENV: staging temporaire (VERCEL_ENV reste production)"
+            echo "- APP_ENV: production (aligné avec VERCEL_ENV=production)"
             echo "- smoke production: PASS"
             if [ "$RUN_HUBSPOT_RECONCILE" = "true" ]; then
               echo "- reconcile HubSpot one-shot: PASS"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
-
-  p0_direct_recovery:
-    name: P0 direct recovery — restaurer le runtime production
-    if: >-
-      github.event_name == 'push' &&
-      contains(github.event.head_commit.message, '[p0-direct-recovery]')
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    environment: staging
-    env:
-      RELEASE_SHA: ${{ github.sha }}
-      VERCEL_CLI_VERSION: 59.19.1
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: team_WhI0GBrg7UZgZpDsvTwUGZ8V
-      VERCEL_PROJECT_ID: prj_KziP4kPjCBHDULmFuvGSLFOzDtVh
-      PRODUCTION_SUPABASE_URL: https://zhifmehctuflwfexlvkz.supabase.co
-      PRODUCTION_SUPABASE_PUBLISHABLE_KEY: sb_publishable_dFtfD60cflPn_IqSZriScQ_g0TRS66x
-      PRODUCTION_URL: https://www.tr1pharma.com
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: ${{ github.sha }}
-          fetch-depth: 0
-
-      - name: Vérifier la cible directe
-        run: |
-          set -eu
-          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
-          test -n "${VERCEL_TOKEN:-}"
-          case "$PRODUCTION_SUPABASE_URL" in
-            *"zhifmehctuflwfexlvkz"*) ;;
-            *)
-              echo "::error::La cible Supabase n'est pas la production vérifiée."
-              exit 1
-              ;;
-          esac
-
-      - name: Déployer le runtime production vérifié
-        run: |
-          set -eu
-          npx --yes "vercel@${VERCEL_CLI_VERSION}" deploy --prod --yes --token "$VERCEL_TOKEN" \
-            --build-env "APP_ENV=staging" \
-            --build-env "NEXT_PUBLIC_SUPABASE_URL=$PRODUCTION_SUPABASE_URL" \
-            --build-env "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PRODUCTION_SUPABASE_PUBLISHABLE_KEY" \
-            --build-env "NEXT_PUBLIC_APP_URL=$PRODUCTION_URL" \
-            --env "APP_ENV=staging" \
-            --env "NEXT_PUBLIC_SUPABASE_URL=$PRODUCTION_SUPABASE_URL" \
-            --env "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PRODUCTION_SUPABASE_PUBLISHABLE_KEY" \
-            --env "NEXT_PUBLIC_APP_URL=$PRODUCTION_URL"
-
-      - name: Vérifier la production publique
-        run: |
-          set -eu
-          curl --fail --silent --show-error "$PRODUCTION_URL/" >/dev/null
-          location="$(curl --silent --show-error --output /dev/null --dump-header - "$PRODUCTION_URL/api/auth/google" | tr -d '\r' | awk 'BEGIN{IGNORECASE=1} /^location:/{sub(/^location:[[:space:]]*/, ""); print; exit}')"
-          echo "OAuth Location: $location"
-          printf '%s' "$location" | grep -q "zhifmehctuflwfexlvkz.supabase.co" || {
-            echo "::error::La production ne pointe pas vers le Supabase production attendu."
-            exit 1
-          }
