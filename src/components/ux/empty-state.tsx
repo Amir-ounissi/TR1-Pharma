@@ -26,14 +26,14 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "rounded-[0.8rem] border border-[var(--tr1-line)] bg-white/50 px-5 py-5 text-center",
+        "rounded-[0.85rem] border border-[var(--tr1-line)] bg-white px-5 py-6 text-center",
         className,
       )}
     >
-      <p className="font-mono text-[0.58rem] font-bold uppercase tracking-[0.14em] text-[var(--tr1-orange)]">
+      <p className="text-xs font-semibold text-[var(--tr1-orange)]">
         {eyebrow[tone]}
       </p>
-      <h2 className="mt-1.5 text-base font-semibold text-[var(--tr1-navy)]">{title}</h2>
+      <h2 className="mt-2 text-base font-semibold text-[var(--tr1-navy)]">{title}</h2>
       {description ? <p className="mx-auto mt-1.5 max-w-xl text-sm text-muted-foreground">{description}</p> : null}
       {action ? <div className="mt-3 flex justify-center">{action}</div> : null}
     </div>

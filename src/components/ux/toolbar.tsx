@@ -9,7 +9,7 @@ export function Toolbar({
   return (
     <section
       className={cn(
-        "border-y border-[var(--tr1-line)] bg-white/40 px-0 py-2.5",
+        "rounded-[0.75rem] border border-[var(--tr1-line)] bg-white px-3 py-2.5",
         className,
       )}
       {...props}
@@ -37,7 +37,7 @@ export function ToolbarMeta({
   className?: string;
 }) {
   return (
-    <div className={cn("font-mono text-[0.54rem] font-bold uppercase tracking-[0.12em] text-muted-foreground", className)}>
+    <div className={cn("text-xs font-medium text-muted-foreground", className)}>
       {children}
     </div>
   );

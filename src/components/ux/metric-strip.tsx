@@ -18,7 +18,7 @@ export function MetricStrip({
     <section
       aria-label="Indicateurs de synthèse"
       className={cn(
-        "overflow-hidden border-y border-[var(--tr1-line)] bg-transparent",
+        "overflow-hidden rounded-[0.85rem] border border-[var(--tr1-line)] bg-white",
         className,
       )}
     >
@@ -29,12 +29,12 @@ export function MetricStrip({
           <article
             key={item.label}
             className={cn(
-              "flex min-h-[4.4rem] items-center justify-between gap-3 px-3.5 py-2.5",
+              "flex min-h-[4.8rem] items-center justify-between gap-3 px-4 py-3",
               index > 0 && "border-t border-[var(--tr1-line)] sm:border-l sm:border-t-0 lg:border-t-0",
             )}
           >
             <div className="min-w-0">
-              <p className="font-mono text-[0.54rem] font-bold uppercase tracking-[0.11em] text-muted-foreground">
+              <p className="text-xs font-medium text-muted-foreground">
                 {item.label}
               </p>
               {item.detail ? <p className="mt-0.5 text-[0.68rem] text-muted-foreground">{item.detail}</p> : null}
@@ -43,7 +43,7 @@ export function MetricStrip({
               {Icon ? (
                 <Icon className={cn("size-3.5 text-[var(--tr1-navy)]/70", item.accent && "text-[var(--tr1-orange)]")} />
               ) : null}
-              <p className={cn("text-[1.25rem] font-semibold tracking-[-0.05em] text-[var(--tr1-navy)]", item.accent && "text-[var(--tr1-orange)]")}>
+              <p className={cn("text-[1.25rem] font-semibold tracking-[-0.03em] tabular-nums text-[var(--tr1-navy)]", item.accent && "text-[var(--tr1-orange)]")}>
                 {item.value}
               </p>
             </div>
