@@ -23,11 +23,12 @@ export default async function DashboardPage() {
     if (!platformAdmin) redirect("/select-brand");
 
     const { supabase, profile } = session;
-    const [{ data: brands }, { data: brandPharmacies }, { data: activeMemberships }, { count: leadCount }, { data: onboardingSessions }] = await Promise.all([
+    const [{ data: brands }, { data: brandPharmacies }, { data: activeMemberships }, { count: leadCount }, { count: pendingAccessCount }, { data: onboardingSessions }] = await Promise.all([
       supabase.from("brands").select("id,is_active,status"),
       supabase.from("brand_pharmacies").select("pharmacy_id,archived_at").is("archived_at", null),
       supabase.from("memberships").select("user_id").eq("status", "active"),
       supabase.from("commercial_leads").select("id", { count: "exact", head: true }),
+      supabase.from("access_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
       supabase
         .from("brand_onboarding_sessions")
         .select("id,brand_id,status,created_at,current_step,step_statuses,brands(name)")
@@ -63,16 +64,36 @@ export default async function DashboardPage() {
 
     return (
       <main className="space-y-6">
-        <PageHeader eyebrow="Pilotage TR1" title="Vue globale multi-marques" description={`Bonjour ${profile.full_name}. Cette vue centralise l’activité TR1 avant d’entrer dans une marque.`} tone="dark" />
-        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+        <PageHeader eyebrow="Plateforme TR1" title="Administration TR1" description={`Bonjour ${profile.full_name}. Commencez par les dossiers qui demandent une action, puis entrez dans une marque si nécessaire.`} tone="dark" />
+
+        <section className="space-y-3" aria-labelledby="platform-today">
+          <SectionHeader id="platform-today" title="À traiter aujourd’hui" description="Uniquement les files existantes et réellement disponibles dans la plateforme." />
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Link href="/dashboard/admin/access-requests" className="rounded-[0.85rem] border border-[var(--tr1-line)] bg-white p-5 transition hover:border-[var(--tr1-orange)]/45">
+              <p className="text-3xl font-semibold tracking-[-0.04em] tabular-nums">{pendingAccessCount ?? 0}</p>
+              <p className="mt-2 font-medium">Demandes d’accès</p>
+              <p className="mt-1 text-sm text-muted-foreground">En attente de décision.</p>
+            </Link>
+            <Link href="/dashboard/admin/onboarding" className="rounded-[0.85rem] border border-[var(--tr1-line)] bg-white p-5 transition hover:border-[var(--tr1-orange)]/45">
+              <p className="text-3xl font-semibold tracking-[-0.04em] tabular-nums">{summary.onboardingsInProgress}</p>
+              <p className="mt-2 font-medium">Déploiements en cours</p>
+              <p className="mt-1 text-sm text-muted-foreground">Onboardings à reprendre ou vérifier.</p>
+            </Link>
+            <Link href="/dashboard/admin/leads" className="rounded-[0.85rem] border border-[var(--tr1-line)] bg-white p-5 transition hover:border-[var(--tr1-orange)]/45">
+              <p className="text-3xl font-semibold tracking-[-0.04em] tabular-nums">{leadCount ?? 0}</p>
+              <p className="mt-2 font-medium">Leads TR1</p>
+              <p className="mt-1 text-sm text-muted-foreground">Dossiers commerciaux à qualifier.</p>
+            </Link>
+          </div>
+        </section>
+
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5" aria-label="État de la plateforme">
           {[
             { label: "Marques actives", value: summary.activeBrands },
             { label: "Marques en préparation", value: summary.preparingBrands },
             { label: "Pharmacies uniques", value: summary.uniquePharmacies },
             { label: "Relations marque/officine", value: summary.brandPharmacyRelations },
-            { label: "Utilisateurs uniques actifs", value: summary.uniqueActiveUsers },
-            { label: "Onboardings en cours", value: summary.onboardingsInProgress },
-            { label: "Leads TR1", value: leadCount ?? 0 },
+            { label: "Utilisateurs actifs", value: summary.uniqueActiveUsers },
           ].map((item) => (
             <Card key={item.label}><CardContent className="pt-5"><p className="text-2xl font-semibold tracking-[-0.03em] tabular-nums">{item.value}</p><p className="mt-1 text-sm font-medium">{item.label}</p></CardContent></Card>
           ))}
@@ -80,7 +101,7 @@ export default async function DashboardPage() {
         <section className="grid gap-4 xl:grid-cols-[1.15fr_.85fr]">
           <Card>
             <CardHeader className="flex-row items-center justify-between">
-              <CardTitle>Actions globales</CardTitle>
+              <CardTitle>Accès rapides</CardTitle>
               <Badge variant="secondary">TR1</Badge>
             </CardHeader>
             <CardContent className="grid gap-3 sm:grid-cols-2">
