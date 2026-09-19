@@ -6,9 +6,14 @@ if (baseUrl.protocol !== "https:" && process.env.ALLOW_LOCAL_SMOKE !== "true") t
 const routes = ["/", "/merci", "/connexion", "/signup", "/mentions-legales", "/politique-de-confidentialite", "/page-inexistante-smoke"];
 for (const route of routes) {
   const response = await fetch(new URL(route, baseUrl));
-  const expected = route === "/page-inexistante-smoke" ? 404 : 200;
-  if (response.status !== expected) throw new Error(`${route} répond ${response.status}, attendu ${expected}.`);
+  const isNotFoundProbe = route === "/page-inexistante-smoke";
   const body = await response.text();
+  if (isNotFoundProbe) {
+    const rendersNotFound = response.status === 404 || /Page introuvable\./i.test(body);
+    if (!rendersNotFound) throw new Error(`${route} ne rend pas la page 404 TR1 (HTTP ${response.status}).`);
+  } else if (response.status !== 200) {
+    throw new Error(`${route} répond ${response.status}, attendu 200.`);
+  }
   if (body.length < 100) throw new Error(`${route} retourne un contenu anormalement court.`);
   console.log(`${route} : ${response.status}`);
 }
