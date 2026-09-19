@@ -44,8 +44,9 @@ const config: HubSpotBrandConfiguration = {
       endAt: "hs_meeting_end_time",
       timestamp: "hs_timestamp",
       outcome: "hs_meeting_outcome",
+      attachmentIds: "hs_attachment_ids",
     },
-    note: { body: "hs_note_body", timestamp: "hs_timestamp" },
+    note: { body: "hs_note_body", timestamp: "hs_timestamp", attachmentIds: "hs_attachment_ids" },
   },
   deal: { pipeline: "pipeline-id", confirmedStage: "confirmed-stage-id" },
   order: {
@@ -139,14 +140,22 @@ describe("HubSpot brand mapping", () => {
       title: "Visite",
       startAt: "2026-09-07T09:00:00Z",
       outcome: "COMPLETED",
+      attachmentExternalIds: ["file-1", "file-2"],
     }, config).properties).toMatchObject({
       hs_meeting_title: "Visite",
       hs_meeting_start_time: "2026-09-07T09:00:00Z",
       hs_timestamp: "2026-09-07T09:00:00Z",
       hs_meeting_outcome: "COMPLETED",
+      hs_attachment_ids: "file-1;file-2",
     });
-    expect(mapNoteToHubSpot({ id: "note-1", body: "Compte rendu", timestamp: "2026-09-07T10:00:00Z" }, config).properties).toMatchObject({
+    expect(mapNoteToHubSpot({
+      id: "note-1",
+      body: "Compte rendu",
+      timestamp: "2026-09-07T10:00:00Z",
+      attachmentExternalIds: ["file-3", "file-4"],
+    }, config).properties).toMatchObject({
       hs_note_body: "Compte rendu",
+      hs_attachment_ids: "file-3;file-4",
     });
   });
 });
