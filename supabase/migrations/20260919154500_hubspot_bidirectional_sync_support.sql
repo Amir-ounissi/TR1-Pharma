@@ -34,3 +34,17 @@ comment on column public.brand_pharmacy_commercial_terms.hubspot_ug_free_quantit
   'Latest HubSpot free quantity for commercial free-units terms.';
 comment on column public.brand_pharmacy_commercial_terms.hubspot_synced_at is
   'Last successful HubSpot commercial terms snapshot timestamp.';
+
+
+update public.connector_entity_mappings mapping
+set
+  direction = 'bidirectional',
+  updated_at = now()
+from public.connector_connections connection
+join public.brands brand on brand.id = connection.brand_id
+where mapping.connection_id = connection.id
+  and connection.provider = 'hubspot'
+  and brand.slug = 'naali'
+  and mapping.entity_type in ('orders','visits','notes')
+  and mapping.direction = 'outbound'
+  and mapping.is_enabled = true;
