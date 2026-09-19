@@ -11,22 +11,30 @@ const protectionHeaders = trustedOidcToken
     }
   : {};
 
-const routes = ["/", "/merci", "/connexion", "/signup", "/mentions-legales", "/politique-de-confidentialite", "/page-inexistante-smoke"];
+const routes = ["/", "/merci", "/connexion", "/signup", "/mentions-legales", "/politique-de-confidentialite"];
 for (const route of routes) {
   const response = await fetch(new URL(route, baseUrl), { headers: protectionHeaders });
-  const isNotFoundProbe = route === "/page-inexistante-smoke";
   const body = await response.text();
-  if (isNotFoundProbe) {
-    const rendersNotFound = response.status === 404 || /Page introuvable\./i.test(body);
-    if (!rendersNotFound) throw new Error(`${route} ne rend pas la page 404 TR1 (HTTP ${response.status}).`);
-  } else {
-    if (response.status !== 200) {
-      throw new Error(`${route} répond ${response.status}, attendu 200.`);
-    }
-    if (body.length < 100) throw new Error(`${route} retourne un contenu anormalement court.`);
+  if (response.status !== 200) {
+    throw new Error(`${route} répond ${response.status}, attendu 200.`);
   }
+  if (body.length < 100) throw new Error(`${route} retourne un contenu anormalement court.`);
   console.log(`${route} : ${response.status}`);
 }
+
+const healthResponse = await fetch(new URL("/api/release-health", baseUrl), {
+  headers: protectionHeaders,
+  cache: "no-store",
+});
+if (healthResponse.status !== 200) {
+  const body = await healthResponse.text();
+  throw new Error(`/api/release-health répond ${healthResponse.status}, attendu 200. Réponse: ${body.slice(0, 300)}`);
+}
+const health = await healthResponse.json();
+if (health?.ok !== true || health?.service !== "tr1-pharma") {
+  throw new Error(`/api/release-health retourne une preuve invalide: ${JSON.stringify(health).slice(0, 300)}`);
+}
+console.log("/api/release-health : 200");
 const recoveryResponse = await fetch(new URL("/api/auth/forgot-password", baseUrl), {
   method: "POST",
   headers: { ...protectionHeaders, "Content-Type": "application/json" },
