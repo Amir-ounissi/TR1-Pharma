@@ -23,6 +23,15 @@ describe("role navigation", () => {
     expect(getNavigationItems("brand_admin").map((item) => item.href)).not.toContain("/dashboard/admin/saas-commercial");
   });
 
+  it("separates platform pilotage, administration and offer management", () => {
+    const sections = getNavigationSections("super_admin", "platform");
+    expect(sections.map((section) => section.label)).toEqual([
+      "Pilotage plateforme",
+      "Administration",
+      "Offre & revenus",
+    ]);
+  });
+
   it("splits global superadmin navigation from tenant navigation", () => {
     const globalLinks = getNavigationItems("super_admin", "platform").map((item) => item.href);
     const tenantLinks = getNavigationItems("super_admin", "tenant").map((item) => item.href);
@@ -59,16 +68,18 @@ describe("role navigation", () => {
     expect(facilitatorLinks).toEqual(["/dashboard/field", "/dashboard/agenda", "/dashboard/missions", "/dashboard/reports"]);
   });
 
-  it("keeps brand pilotage concise and moves reference pages under Paramètres", () => {
+  it("keeps brand navigation separated between pilotage, execution and settings", () => {
     const sections = getNavigationSections("brand_admin");
-    expect(sections[0]).toEqual({ label: "Pilotage", items: [
+    expect(sections.find((section) => section.label === "Pilotage")?.items).toEqual([
       expect.objectContaining({ href: "/dashboard", label: "Vue d’ensemble" }),
       expect.objectContaining({ href: "/dashboard/network/commercial", label: "Performance & prévisions" }),
       expect.objectContaining({ href: "/dashboard/pharmacies", label: "Réseau pharmacies" }),
+    ]);
+    expect(sections.find((section) => section.label === "Exécution")?.items).toEqual([
       expect.objectContaining({ href: "/dashboard/missions", label: "Équipe & terrain" }),
       expect.objectContaining({ href: "/dashboard/commercial-health", label: "Plan d’action" }),
       expect.objectContaining({ href: "/dashboard/orders", label: "Commandes" }),
-    ] });
+    ]);
     expect(sections.find((section) => section.label === "Paramètres")?.items.map((item) => item.href)).toEqual([
       "/dashboard/products", "/dashboard/groups", "/dashboard/territories", "/dashboard/imports", "/dashboard/connectors", "/dashboard/users", "/dashboard/subscription",
     ]);
