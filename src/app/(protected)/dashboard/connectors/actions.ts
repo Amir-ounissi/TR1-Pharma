@@ -15,7 +15,10 @@ import {
   isHubSpotFieldMappingEntity,
   normalizeHubSpotFieldMapping,
 } from "@/lib/integrations/hubspot/mapping-profile";
-import { reconcileHubSpotConnectionAfterActivation } from "@/lib/integrations/hubspot/reconciliation";
+import {
+  reconcileHubSpotConnection,
+  reconcileHubSpotConnectionAfterActivation,
+} from "@/lib/integrations/hubspot/reconciliation";
 import { assertActiveBrandCapability } from "@/lib/saas/server";
 
 const uuid = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
@@ -101,6 +104,27 @@ export async function setConnectorStatusFormAction(formData: FormData): Promise<
   if (status === "active" && connection.provider === "hubspot") {
     await reconcileHubSpotConnectionAfterActivation(brand.id, connectionId);
   }
+  revalidatePath("/dashboard/connectors");
+}
+
+export async function reconcileHubSpotConnectionFormAction(formData: FormData): Promise<void> {
+  const connectionId = uuid.parse(formData.get("connectionId"));
+  const { supabase, brand } = await requireConnectorAdmin();
+  const { data: connection, error: connectionError } = await supabase
+    .from("connector_connections")
+    .select("id,provider,status")
+    .eq("id", connectionId)
+    .eq("brand_id", brand.id)
+    .is("archived_at", null)
+    .maybeSingle();
+  if (connectionError || !connection) {
+    throw new Error(connectionError?.message || "Connecteur introuvable.");
+  }
+  if (connection.provider !== "hubspot" || connection.status !== "active") {
+    throw new Error("La synchronisation manuelle nécessite un connecteur HubSpot actif.");
+  }
+
+  await reconcileHubSpotConnection(brand.id, connectionId);
   revalidatePath("/dashboard/connectors");
 }
 
