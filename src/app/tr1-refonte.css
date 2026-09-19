@@ -18,6 +18,7 @@
   --accent-foreground: #7b3a0b;
   --border: #dde2de;
   --input: #cfd6d1;
+  --tr1-border: #dde2de;
   --radius: 0.875rem;
   color: var(--tr1-navy);
   background-color: var(--background);
