@@ -32,7 +32,7 @@ describe("legal configuration", () => {
     const configuration = validateLegalConfiguration({ APP_ENV: "production" }, warn);
     expect(configuration.informationStatus).toBe("temporary");
     expect(configuration.missingFields).toEqual([]);
-    expect(configuration.information.registrationNumber).toMatch(/Non attribué/);
+    expect(configuration.information.registrationNumber).toBe("982 728 917 R.C.S. Lyon");
     expect(warn).toHaveBeenCalled();
   });
 
