@@ -156,6 +156,34 @@ export class HubSpotClient {
     return this.write<T>("POST", `/crm/v3/objects/${encodeURIComponent(objectType)}`, { properties });
   }
 
+  async uploadFile(options: {
+    file: Blob;
+    filename: string;
+    folderPath: string;
+    access?: "PRIVATE" | "PUBLIC_INDEXABLE" | "PUBLIC_NOT_INDEXABLE";
+  }): Promise<HubSpotRequestResult<{ id?: string | number; url?: string }>> {
+    if (this.mode !== "write") {
+      return { mode: this.mode, data: null, status: null, correlationId: null };
+    }
+    if (!this.accessToken) throw new Error("HubSpot file upload requires a server-side access token");
+
+    const form = new FormData();
+    form.append("file", options.file, options.filename);
+    form.append("folderPath", options.folderPath);
+    form.append("options", JSON.stringify({
+      access: options.access ?? "PRIVATE",
+      overwrite: false,
+      duplicateValidationStrategy: "NONE",
+      duplicateValidationScope: "EXACT_FOLDER",
+    }));
+
+    return this.requestForm<{ id?: string | number; url?: string }>("POST", "/files/v3/files", form);
+  }
+
+  async getFileSignedUrl(fileId: string): Promise<HubSpotRequestResult<{ url?: string }>> {
+    return this.read<{ url?: string }>(`/files/v3/files/${encodeURIComponent(fileId)}/signed-url`);
+  }
+
   async updateObject<T = unknown>(objectType: string, objectId: string, properties: Record<string, string>): Promise<HubSpotRequestResult<T>> {
     return this.write<T>("PATCH", `/crm/v3/objects/${encodeURIComponent(objectType)}/${encodeURIComponent(objectId)}`, { properties });
   }
@@ -260,6 +288,34 @@ export class HubSpotClient {
       return { mode: this.mode, data: null, status: null, correlationId: null };
     }
     return this.request<T>(method, path, body);
+  }
+
+  private async requestForm<T>(method: "POST", path: string, body: FormData): Promise<HubSpotRequestResult<T>> {
+    if (!this.accessToken) throw new Error("HubSpot request requires a server-side access token");
+
+    let attempt = 0;
+    while (true) {
+      const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
+        method,
+        headers: {
+          authorization: `Bearer ${this.accessToken}`,
+          accept: "application/json",
+        },
+        body,
+        cache: "no-store",
+      });
+      const payload = await responsePayload(response);
+      const requestCorrelationId = correlationId(response, payload);
+
+      if (response.ok) {
+        return { mode: this.mode, data: payload as T, status: response.status, correlationId: requestCorrelationId };
+      }
+
+      const error = new HubSpotApiError(safeProviderMessage(payload, response.status), response.status, requestCorrelationId);
+      if (!error.retryable || attempt >= this.maxRetries) throw error;
+      await this.sleep(retryDelay(response, attempt));
+      attempt += 1;
+    }
   }
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<HubSpotRequestResult<T>> {
