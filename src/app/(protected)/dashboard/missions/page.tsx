@@ -60,7 +60,7 @@ export default async function MissionsPage({ searchParams }: { searchParams: Pro
   }));
 
   const hasActiveFilters = Boolean(filters.q || filters.status || filters.type);
-  const createLabel = role === "agent" ? "Demander une animation" : canCreateMission ? "Nouvelle mission" : "Planifier des animations";
+  const createLabel = role === "agent" ? "Demander une animation" : canCreateMission ? "Nouvelle mission" : "Proposer une mission";
   const createHref = role === "agent" ? "/dashboard/missions/new?mode=animation" : "/dashboard/missions/new";
 
   const headerActions = canCreateMission ? (
@@ -72,14 +72,14 @@ export default async function MissionsPage({ searchParams }: { searchParams: Pro
   ) : role === "agent" ? (
     <Button asChild className="h-9 rounded-md bg-[var(--tr1-navy)] px-3.5 text-sm font-medium text-white hover:bg-[var(--tr1-navy-soft)]"><Link href="/dashboard/missions/new?mode=animation"><Megaphone className="size-4" />Demander une animation</Link></Button>
   ) : canProposeMission ? (
-    <Button asChild className="h-9 rounded-md bg-[var(--tr1-navy)] px-3.5 text-sm font-medium text-white hover:bg-[var(--tr1-navy-soft)]"><Link href="/dashboard/missions/new"><CalendarPlus className="size-4" />Planifier des animations</Link></Button>
+    <Button asChild className="h-9 rounded-md bg-[var(--tr1-navy)] px-3.5 text-sm font-medium text-white hover:bg-[var(--tr1-navy-soft)]"><Link href="/dashboard/missions/new"><CalendarPlus className="size-4" />Proposer une mission</Link></Button>
   ) : undefined;
 
   return <div className="space-y-3">
     <CompactPageHeader
       eyebrow={`Terrain / ${contextLabel}`}
-      title={facilitatorOnly ? "Mes animations" : "Missions"}
-      description={facilitatorOnly ? "Toutes vos animations, quelle que soit la marque, dans une seule liste." : role === "agent" ? "Demandez une animation, suivez son acceptation et retrouvez son exécution dans le même flux." : "Le planning, les affectations et les statuts se suivent ici dans une lecture opérationnelle plus directe."}
+      title={facilitatorOnly ? "Mes missions" : "Missions"}
+      description={facilitatorOnly ? "Animations et formations, toutes marques confondues, dans une seule liste." : role === "agent" ? "Demandez une animation, suivez son acceptation et retrouvez son exécution dans le même flux." : "Le planning, les affectations et les statuts se suivent ici dans une lecture opérationnelle plus directe."}
       actions={headerActions}
     />
 
@@ -111,7 +111,7 @@ export default async function MissionsPage({ searchParams }: { searchParams: Pro
     ) : (missions ?? []).length === 0 ? (
       <EmptyState
         tone={hasActiveFilters ? "no_results" : "no_data"}
-        title={hasActiveFilters ? "Aucune mission ne correspond à ces filtres." : facilitatorOnly ? "Aucune animation planifiée pour le moment." : role === "agent" ? "Aucune animation demandée pour le moment." : "Aucune mission planifiée pour le moment."}
+        title={hasActiveFilters ? "Aucune mission ne correspond à ces filtres." : facilitatorOnly ? "Aucune mission planifiée pour le moment." : role === "agent" ? "Aucune animation demandée pour le moment." : "Aucune mission planifiée pour le moment."}
         description={hasActiveFilters ? "Essayez d’élargir votre recherche ou de réinitialiser les filtres." : facilitatorOnly ? "Ajoutez une ou plusieurs animations sans ressaisir les informations communes." : role === "agent" ? "Créez une demande depuis une pharmacie de votre portefeuille et définissez les preuves attendues." : "Créez une première mission pour commencer à piloter les interventions terrain."}
         action={hasActiveFilters ? <Button asChild size="sm" variant="outline"><Link href="/dashboard/missions"><RotateCcw className="size-3.5" />Réinitialiser</Link></Button> : canRequestAnimation || canProposeMission ? <Button asChild size="sm" className="h-9 bg-[var(--tr1-navy)] px-3.5 text-sm font-medium text-white hover:bg-[var(--tr1-navy-soft)]"><Link href={createHref}><CalendarPlus className="size-3.5" />{createLabel}</Link></Button> : undefined}
       />

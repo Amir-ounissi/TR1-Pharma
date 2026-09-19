@@ -316,12 +316,14 @@ export function MissionReportForm({
   pharmacyId,
   report,
   draftScope,
+  evidenceState,
 }: {
   missionId: string;
   missionType: string;
   pharmacyId: string;
   report?: Record<string, unknown> | null;
   draftScope?: string;
+  evidenceState?: { required: boolean; ready: boolean; missing: string[] };
 }) {
   const [state, action, pending] = useActionState(saveReportAction, {});
   const formRef = useRef<HTMLFormElement>(null);
@@ -392,15 +394,21 @@ export function MissionReportForm({
 
       <ActionFeedback {...state} />
 
-      <Field label="Synthèse">
-        <Textarea
-          name="summary"
-          defaultValue={value("summary")}
-          className="min-h-28"
-        />
-      </Field>
+      <section className="space-y-4 rounded-[0.85rem] border border-[var(--tr1-line)] bg-white p-4" aria-labelledby={`report-results-${missionId}`}>
+        <div>
+          <p className="text-xs font-semibold text-[var(--tr1-orange)]">1 · Résultats</p>
+          <h3 id={`report-results-${missionId}`} className="mt-1 text-base font-semibold text-[var(--tr1-navy)]">Ce qui s’est passé pendant la mission</h3>
+        </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Synthèse">
+          <Textarea
+            name="summary"
+            defaultValue={value("summary")}
+            className="min-h-28"
+          />
+        </Field>
+
+        <div className="grid gap-4 sm:grid-cols-2">
         {missionType === "animation" ? (
           <>
             <Field label="Unités vendues">
@@ -457,7 +465,7 @@ export function MissionReportForm({
                 defaultValue={value("duration_minutes")}
               />
             </Field>
-            <Field label="Connaissance avant %">
+            <Field label="Connaissance avant (%)">
               <Input
                 name="knowledgeBefore"
                 type="number"
@@ -466,7 +474,7 @@ export function MissionReportForm({
                 defaultValue={value("knowledge_before")}
               />
             </Field>
-            <Field label="Connaissance après %">
+            <Field label="Connaissance après (%)">
               <Input
                 name="knowledgeAfter"
                 type="number"
@@ -506,39 +514,65 @@ export function MissionReportForm({
         ) : null}
       </div>
 
-      <Field label="Retour pharmacie">
-        <Textarea
-          name="pharmacyFeedback"
-          defaultValue={value("pharmacy_feedback")}
-        />
-      </Field>
+      {missionType === "training" ? (
+        <p className="rounded-[0.7rem] border border-[var(--tr1-line)] bg-muted/30 px-3.5 py-3 text-xs leading-5 text-muted-foreground">
+          Durée en minutes et connaissances déclarées de 0 à 100 %. Laissez une valeur vide si elle n’est pas connue ; ces données décrivent le bilan de session et ne constituent pas une certification.
+        </p>
+      ) : null}
 
-      <Field label="Opportunités">
-        <Textarea name="opportunities" defaultValue={value("opportunities")} />
-      </Field>
+        <Field label="Retour pharmacie">
+          <Textarea
+            name="pharmacyFeedback"
+            defaultValue={value("pharmacy_feedback")}
+          />
+        </Field>
 
-      <div className="flex gap-2">
-        <Button
-          name="reportStatus"
-          value="draft"
-          variant="outline"
-          disabled={pending}
-        >
-          Enregistrer
-        </Button>
-        <Button
-          name="reportStatus"
-          value="submitted"
-          disabled={pending}
-        >
-          Soumettre à TR1
-        </Button>
-      </div>
+        <Field label="Opportunités">
+          <Textarea name="opportunities" defaultValue={value("opportunities")} />
+        </Field>
+      </section>
 
-      <p className="text-xs text-muted-foreground">
-        La soumission fait automatiquement passer la mission en attente de
-        validation du rapport.
-      </p>
+      <section className="rounded-[0.85rem] border border-[var(--tr1-line)] bg-white p-4" aria-labelledby={`report-evidence-${missionId}`}>
+        <p className="text-xs font-semibold text-[var(--tr1-orange)]">2 · Preuves</p>
+        <h3 id={`report-evidence-${missionId}`} className="mt-1 text-base font-semibold text-[var(--tr1-navy)]">Vérifier les pièces attendues</h3>
+        {evidenceState?.required ? (
+          evidenceState.ready ? (
+            <p className="mt-2 text-sm text-muted-foreground">Les preuves requises sont présentes dans les pièces de mission.</p>
+          ) : (
+            <div className="mt-2 text-sm text-muted-foreground">
+              <p>Il manque encore : {evidenceState.missing.join(", ")}.</p>
+              <p className="mt-1">Ajoutez-les dans « Pièces de mission » avant la soumission.</p>
+            </div>
+          )
+        ) : (
+          <p className="mt-2 text-sm text-muted-foreground">Aucun contrôle de preuve supplémentaire n’est signalé dans cette étape. Consultez le brief pour les autres livrables attendus.</p>
+        )}
+      </section>
+
+      <section className="rounded-[0.85rem] border border-[var(--tr1-line)] bg-white p-4" aria-labelledby={`report-check-${missionId}`}>
+        <p className="text-xs font-semibold text-[var(--tr1-orange)]">3 · Vérification</p>
+        <h3 id={`report-check-${missionId}`} className="mt-1 text-base font-semibold text-[var(--tr1-navy)]">Enregistrer ou transmettre à TR1</h3>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Relisez les résultats et les preuves avant l’envoi. La soumission verrouille le rapport jusqu’à la décision TR1.
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button
+            name="reportStatus"
+            value="draft"
+            variant="outline"
+            disabled={pending}
+          >
+            Enregistrer le brouillon
+          </Button>
+          <Button
+            name="reportStatus"
+            value="submitted"
+            disabled={pending}
+          >
+            Soumettre à TR1
+          </Button>
+        </div>
+      </section>
     </form>
   );
 }

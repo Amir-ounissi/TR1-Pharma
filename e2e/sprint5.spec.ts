@@ -99,7 +99,7 @@ test("parcours complet animation Sprint 5 avec vérification en base", async ({ 
   await waitForMissionStatus(admin, missionId, "in_progress");
 
   await animatorPage.goto(missionUrl);
-  await expect(animatorPage.getByText("Plan merch requis")).toBeVisible();
+  await expect(animatorPage.getByText("Il manque encore : plan merchandising, résultat merchandising.")).toBeVisible();
   await animatorPage.locator('input[type="file"]').setInputFiles({
     name: "plan-merchandising.png",
     mimeType: "image/png",
@@ -118,7 +118,7 @@ test("parcours complet animation Sprint 5 avec vérification en base", async ({ 
   }).toBe(1);
 
   await animatorPage.goto(missionUrl);
-  await expect(animatorPage.getByText("Plan merch ajouté")).toBeVisible();
+  await expect(animatorPage.getByText("Il manque encore : résultat merchandising.")).toBeVisible();
   await animatorPage.locator('input[type="file"]').setInputFiles({
     name: "resultat-merchandising.png",
     mimeType: "image/png",
@@ -137,13 +137,13 @@ test("parcours complet animation Sprint 5 avec vérification en base", async ({ 
   }).toBe(1);
 
   await animatorPage.goto(missionUrl);
-  await expect(animatorPage.getByText("Résultat ajouté")).toBeVisible();
+  await expect(animatorPage.getByText("Les preuves requises sont présentes dans les pièces de mission.")).toBeVisible();
   await animatorPage.locator('textarea[name="summary"]').fill("Animation réalisée, premiers résultats disponibles.");
   await animatorPage.locator('input[name="unitsSold"]').fill("12");
   await animatorPage.locator('input[name="durationMinutes"]').fill("360");
   await animatorPage.locator('input[name="customerContacts"]').fill("48");
   await animatorPage.locator('input[name="netSalesTtc"]').fill("420");
-  await animatorPage.getByRole("button", { name: "Enregistrer" }).click();
+  await animatorPage.getByRole("button", { name: "Enregistrer le brouillon" }).click();
 
   await expect.poll(async () => {
     const { data } = await admin.from("mission_reports").select("summary").eq("mission_id", missionId).single();

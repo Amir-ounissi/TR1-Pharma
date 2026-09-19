@@ -261,6 +261,13 @@ export default async function AgentPage() {
         plannedVisitCount={overviewVisits.length}
         firstName={firstName}
         dayLabel={dayLabel}
+        nextVisit={visit ? {
+          brandPharmacyId: visit.brand_pharmacy_id,
+          name: visit.name,
+          address: visit.address,
+          scheduledAt: visit.scheduled_at,
+          objective: visit.objective,
+        } : null}
       />
 
       <AgentMultibrandOverview

@@ -137,8 +137,8 @@ export default async function SaasCommercialAdministrationPage({
     <main className="space-y-6" data-testid="saas-commercial-admin">
       <PageHeader
         eyebrow="Plateforme TR1"
-        title="Quotas & billing"
-        description="Les droits fonctionnels restent dans SaaS & capacités. Ici, la plateforme gouverne séparément les limites, la consommation, les sièges et la préparation de facturation."
+        title="Quotas & facturation"
+        description="Les droits fonctionnels restent dans Offres & capacités. Ici, la plateforme gouverne séparément les limites, la consommation, les sièges et la préparation de facturation."
         tone="dark"
       />
 

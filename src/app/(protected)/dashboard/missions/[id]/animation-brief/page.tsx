@@ -68,38 +68,38 @@ export default async function AnimationBriefPage({ params }: { params: Promise<{
   ].filter((label): label is string => Boolean(label));
 
   return (
-    <div className="mx-auto max-w-3xl space-y-5">
+    <div className="mx-auto max-w-4xl space-y-5">
       <div>
         <div className="flex flex-wrap gap-2">
           <Badge>Animation</Badge>
           <Badge variant="secondary">{presentationLabel(mission.status)}</Badge>
         </div>
-        <h1 className="mt-2 text-2xl font-semibold text-[var(--tr1-navy)]">{mission.title}</h1>
+        <h1 className="mt-2 text-[1.85rem] font-semibold tracking-[-0.03em] text-[var(--tr1-navy)]">{mission.title}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {pharmacy?.trade_name || pharmacy?.legal_name || "Pharmacie"}{pharmacy?.city ? ` · ${pharmacy.city}` : ""}
         </p>
       </div>
 
       <Card>
-        <CardHeader><CardTitle>Mission proposée</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Brief de mission</CardTitle></CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Créneau souhaité</p>
+            <p className="text-xs font-semibold text-muted-foreground">Créneau souhaité</p>
             <p className="mt-1 text-sm font-semibold">
               {mission.scheduled_start_at ? new Date(mission.scheduled_start_at).toLocaleString("fr-FR") : "À définir"}
               {mission.scheduled_end_at ? ` → ${new Date(mission.scheduled_end_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}` : ""}
             </p>
           </div>
           <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Conditions</p>
+            <p className="text-xs font-semibold text-muted-foreground">Conditions</p>
             <p className="mt-1 text-sm font-semibold">{Number(mission.provider_cost_ht ?? 0).toLocaleString("fr-FR")} € HT de rémunération</p>
             <p className="text-xs text-muted-foreground">+ {Number(mission.travel_cost_ht ?? 0).toLocaleString("fr-FR")} € HT de frais prévus</p>
           </div>
           <div className="sm:col-span-2">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Objectif</p>
+            <p className="text-xs font-semibold text-muted-foreground">Objectif</p>
             <p className="mt-1 whitespace-pre-wrap text-sm">{mission.objective}</p>
           </div>
-          {mission.briefing ? <div className="sm:col-span-2"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Consignes</p><p className="mt-1 whitespace-pre-wrap text-sm">{mission.briefing}</p></div> : null}
+          {mission.briefing ? <div className="sm:col-span-2"><p className="text-xs font-semibold text-muted-foreground">Consignes</p><p className="mt-1 whitespace-pre-wrap text-sm">{mission.briefing}</p></div> : null}
         </CardContent>
       </Card>
 
@@ -108,7 +108,7 @@ export default async function AnimationBriefPage({ params }: { params: Promise<{
         <CardContent className="space-y-2">
           {(products ?? []).length ? (products ?? []).map((item) => {
             const product = Array.isArray(item.products) ? item.products[0] : item.products;
-            return <div key={item.id} className="flex items-start justify-between gap-3 rounded-lg border p-3 text-sm">
+            return <div key={item.id} className="flex items-start justify-between gap-3 rounded-[0.7rem] border bg-white p-3.5 text-sm">
               <div><p className="font-medium">{product?.name || "Produit"}</p><p className="text-xs text-muted-foreground">{product?.sku || ""}{item.briefing_notes ? ` · ${item.briefing_notes}` : ""}</p></div>
               <div className="text-right"><p className="font-semibold">{item.target_quantity ?? "—"}</p><p className="text-xs text-muted-foreground">objectif unités</p></div>
             </div>;
@@ -117,15 +117,15 @@ export default async function AnimationBriefPage({ params }: { params: Promise<{
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>Livrables attendus</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Livrables attendus</CardTitle><p className="text-sm text-muted-foreground">Préparez ces éléments avant la mission : ils seront vérifiés au moment du rapport.</p></CardHeader>
         <CardContent className="flex flex-wrap gap-2">
-          {proofLabels.map((label) => <Badge key={label} variant="outline" className="px-3 py-1.5">{label}</Badge>)}
+          {proofLabels.map((label) => <Badge key={label} variant="outline" className="min-h-9 px-3 py-1.5">{label}</Badge>)}
         </CardContent>
       </Card>
 
       {mission.status === "assigned" ? (
         <Card>
-          <CardHeader><CardTitle>Votre décision</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Accepter la mission</CardTitle></CardHeader>
           <CardContent>
             <p className="mb-4 text-sm text-muted-foreground">En acceptant, vous pourrez confirmer ou ajuster le créneau avant que la mission soit planifiée.</p>
             <MissionStatusForm missionId={id} options={["accepted", "rejected"]} />

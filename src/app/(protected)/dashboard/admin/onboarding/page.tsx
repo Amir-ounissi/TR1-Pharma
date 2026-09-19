@@ -16,6 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { PageHeader } from "@/components/ux/page-header";
 import type { ImportType } from "@/lib/imports/import-types";
 import { selectOnboardingSession } from "@/lib/onboarding/select-onboarding-session";
 import { requirePlatformAdmin } from "@/lib/auth";
@@ -109,19 +110,18 @@ export default async function BrandOnboardingPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-sm font-medium text-primary">Console de déploiement</p>
-          <h1 className="text-2xl font-semibold tracking-tight">Onboarding d’une marque</h1>
-          <p className="text-muted-foreground">Créez, contrôlez et activez un tenant sans manipulation SQL.</p>
-        </div>
-        {selectedSession ? (
-          <div className="flex gap-2 print:hidden">
+      <PageHeader
+        eyebrow="Marques & déploiements"
+        title="Onboarding d’une marque"
+        description="Créez, contrôlez et activez un espace de marque. L’activation reste manuelle après vérification."
+        tone="dark"
+        actions={selectedSession ? (
+          <>
             <Button asChild variant="outline"><a href={`/api/onboarding/export/${selectedSession.brand_id}/summary`}><Download className="size-4" />Rapport CSV</a></Button>
-            <Button variant="outline" onClick={undefined} asChild><Link href="#rapport"><Printer className="size-4" />Version imprimable</Link></Button>
-          </div>
-        ) : null}
-      </div>
+            <Button variant="outline" asChild><Link href="#rapport"><Printer className="size-4" />Version imprimable</Link></Button>
+          </>
+        ) : undefined}
+      />
 
       {!params.brand ? (
         <Card>
@@ -167,8 +167,16 @@ export default async function BrandOnboardingPage({
         <>
           <Card>
             <CardHeader>
-              <CardTitle>Configuration de {selectedBrand.name}</CardTitle>
-              <CardDescription>{selectedOrganization?.legal_name} · {progress}% de la configuration complétée</CardDescription>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold text-[var(--tr1-orange)]">Dossier marque</p>
+                  <CardTitle className="mt-1">{selectedBrand.name}</CardTitle>
+                  <CardDescription>{selectedOrganization?.legal_name} · {progress}% de la configuration complétée</CardDescription>
+                </div>
+                <Badge variant={selectedBrand.status === "active" ? "secondary" : "outline"}>
+                  {selectedBrand.status === "active" ? "Active" : "En préparation"}
+                </Badge>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="h-2 overflow-hidden rounded-full bg-muted"><div className="h-full bg-primary transition-all" style={{ width: `${progress}%` }} /></div>

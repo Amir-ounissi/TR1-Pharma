@@ -90,5 +90,5 @@ test("routes Administration TR1", async ({ page }) => {
     "/dashboard/admin/leads",
   ]);
   await page.goto("/dashboard/admin/saas");
-  await expect(page.getByRole("heading", { name: "SaaS & capacités" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Offres & capacités" })).toBeVisible();
 });

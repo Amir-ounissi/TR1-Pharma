@@ -18,7 +18,8 @@ export type NavigationSection = {
 export type NavigationScope = "tenant" | "platform";
 
 const agentItems: NavigationItem[] = [
-  { href: "/dashboard/agent", label: "Ma journée", shortLabel: "Aujourd’hui", icon: "sun", capability: "agent_day" },
+  { href: "/dashboard/agent", label: "Ma journée", shortLabel: "Terrain", icon: "sun", capability: "agent_day" },
+  { href: "/dashboard/agenda", label: "Agenda", icon: "calendar", capability: "core_crm" },
   { href: "/dashboard/pharmacies", label: "Pharmacies", icon: "building", capability: "core_crm" },
   { href: "/dashboard/orders", label: "Mes commandes", icon: "clipboard", capability: "orders" },
   { href: "/dashboard/agent/performance", label: "Ma performance", shortLabel: "Performance", icon: "chart", capability: "performance" },
@@ -26,7 +27,7 @@ const agentItems: NavigationItem[] = [
 ];
 
 const agentMobileItems: NavigationItem[] = [
-  { href: "/dashboard/agent", label: "Ma journée", shortLabel: "Aujourd’hui", icon: "sun", capability: "agent_day" },
+  { href: "/dashboard/agent", label: "Ma journée", shortLabel: "Terrain", icon: "sun", capability: "agent_day" },
   { href: "/dashboard/agenda", label: "Agenda", shortLabel: "Agenda", icon: "calendar", capability: "core_crm" },
   { href: "/dashboard/pharmacies", label: "Pharmacies", icon: "building", capability: "core_crm" },
   { href: "/dashboard/orders", label: "Mes commandes", shortLabel: "Commandes", icon: "clipboard", capability: "orders" },
@@ -45,12 +46,12 @@ const agentMoreItems: NavigationItem[] = [
 ];
 
 const managerItems: NavigationItem[] = [
-  { href: "/dashboard", label: "Vue d’ensemble", shortLabel: "Accueil", icon: "layout" },
-  { href: "/dashboard/network/commercial", label: "Performance & prévisions", shortLabel: "Performance", icon: "chart", capability: "performance" },
-  { href: "/dashboard/pharmacies", label: "Réseau pharmacies", shortLabel: "Réseau", icon: "building", capability: "core_crm" },
-  { href: "/dashboard/missions", label: "Équipe & terrain", shortLabel: "Terrain", icon: "users", capability: "missions" },
-  { href: "/dashboard/commercial-health", label: "Plan d’action", shortLabel: "Actions", icon: "target", capability: "next_best_action" },
+  { href: "/dashboard", label: "Synthèse", shortLabel: "Synthèse", icon: "layout" },
+  { href: "/dashboard/pharmacies", label: "Réseau", shortLabel: "Réseau", icon: "building", capability: "core_crm" },
   { href: "/dashboard/orders", label: "Commandes", icon: "clipboard", capability: "orders" },
+  { href: "/dashboard/missions", label: "Équipe & missions", shortLabel: "Missions", icon: "users", capability: "missions" },
+  { href: "/dashboard/commercial-health", label: "Plan d’action", shortLabel: "Actions", icon: "target", capability: "next_best_action" },
+  { href: "/dashboard/network/commercial", label: "Performance", shortLabel: "Performance", icon: "chart", capability: "performance" },
 ];
 
 const directionItems: NavigationItem[] = [
@@ -68,19 +69,28 @@ const tenantAdminItems: NavigationItem[] = [
 ];
 
 const facilitatorItems: NavigationItem[] = [
-  { href: "/dashboard/field", label: "Aujourd’hui", shortLabel: "Aujourd’hui", icon: "sun", capability: "missions" },
-  { href: "/dashboard/missions", label: "Mes missions", icon: "route", capability: "missions" },
+  { href: "/dashboard/field", label: "Terrain", shortLabel: "Terrain", icon: "sun", capability: "missions" },
   { href: "/dashboard/agenda", label: "Agenda", icon: "calendar", capability: "missions" },
-  { href: "/dashboard/reports", label: "Mes rapports", icon: "file", capability: "missions" },
+  { href: "/dashboard/missions", label: "Missions", icon: "route", capability: "missions" },
+  { href: "/dashboard/reports", label: "Rapports", icon: "file", capability: "missions" },
+  { href: "/dashboard/account", label: "Plus", icon: "menu" },
+];
+
+const facilitatorMobileItems: NavigationItem[] = [
+  { href: "/dashboard/field", label: "Terrain", shortLabel: "Terrain", icon: "sun", capability: "missions" },
+  { href: "/dashboard/agenda", label: "Agenda", icon: "calendar", capability: "missions" },
+  { href: "/dashboard/missions", label: "Missions", icon: "route", capability: "missions" },
+  { href: "/dashboard/reports", label: "Rapports", icon: "file", capability: "missions" },
+  { href: "/dashboard/account", label: "Plus", shortLabel: "Plus", icon: "menu" },
 ];
 
 const platformAdminItems: NavigationItem[] = [
   { href: "/dashboard", label: "Vue globale", shortLabel: "Accueil", icon: "layout" },
   { href: "/dashboard/admin/access-requests", label: "Demandes d’accès", icon: "users" },
-  { href: "/dashboard/admin/onboarding", label: "Marques & onboardings", icon: "badge" },
-  { href: "/dashboard/admin/saas", label: "SaaS & capacités", icon: "boxes" },
-  { href: "/dashboard/admin/saas-commercial", label: "Quotas & billing", icon: "chart" },
+  { href: "/dashboard/admin/onboarding", label: "Marques & déploiements", icon: "badge" },
   { href: "/dashboard/admin/users", label: "Utilisateurs & accès", icon: "users" },
+  { href: "/dashboard/admin/saas", label: "Offres & capacités", icon: "boxes" },
+  { href: "/dashboard/admin/saas-commercial", label: "Quotas & facturation", icon: "chart" },
   { href: "/dashboard/admin/leads", label: "Leads TR1", icon: "leads" },
 ];
 
@@ -120,7 +130,11 @@ export function getNavigationSections(
   const family = getRoleFamily(role);
 
   if (scope === "platform") {
-    return [{ label: "Plateforme TR1", items: platformAdminItems }];
+    return compactSections([
+      { label: "Pilotage plateforme", items: platformAdminItems.slice(0, 3) },
+      { label: "Administration", items: platformAdminItems.slice(3, 4) },
+      { label: "Offre & revenus", items: platformAdminItems.slice(4) },
+    ], enabledCapabilities);
   }
 
   if (family === "agent") {
@@ -136,7 +150,8 @@ export function getNavigationSections(
   }
 
   const sections: NavigationSection[] = [
-    { label: "Pilotage", items: managerItems },
+    { label: "Pilotage", items: [managerItems[0], managerItems[1], managerItems[5]] },
+    { label: "Exécution", items: [managerItems[2], managerItems[3], managerItems[4]] },
   ];
 
   if (family === "admin") {
@@ -155,6 +170,10 @@ export function getAgentMoreItems(enabledCapabilities?: readonly SaasCapability[
 
 export function getMobileAgentNavigationItems(enabledCapabilities?: readonly SaasCapability[]) {
   return filterItems(agentMobileItems, enabledCapabilities);
+}
+
+export function getMobileFacilitatorNavigationItems(enabledCapabilities?: readonly SaasCapability[]) {
+  return filterItems(facilitatorMobileItems, enabledCapabilities);
 }
 
 export function getNavigationItems(

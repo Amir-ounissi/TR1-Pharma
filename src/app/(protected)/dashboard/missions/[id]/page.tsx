@@ -68,6 +68,7 @@ export default async function MissionPage({
     { data: history },
     { data: attachments },
     { data: impactRows },
+    { data: invoice },
   ] = await Promise.all([
     supabase
       .from("missions")
@@ -97,6 +98,11 @@ export default async function MissionPage({
     supabase.rpc("get_mission_impact", {
       target_mission_id: id,
     }),
+    supabase
+      .from("animation_invoices")
+      .select("status")
+      .eq("mission_id", id)
+      .maybeSingle(),
   ]);
 
   if (!mission) notFound();
@@ -200,6 +206,36 @@ export default async function MissionPage({
       attachment.evidence_kind ?? "",
     ),
   );
+  const missingEvidence = [
+    requiresFacilitatorMerchEvidence && !hasMerchPlan ? "plan merchandising" : null,
+    requiresFacilitatorMerchEvidence && !hasMerchResult ? "résultat merchandising" : null,
+  ].filter((item): item is string => Boolean(item));
+  const invoicePrerequisites = mission.mission_type === "animation"
+    ? [
+        !mission.scheduled_start_at ? "animation non datée" : null,
+        mission.status !== "completed" ? "mission non terminée" : null,
+        report?.report_status !== "validated" ? "rapport non validé" : null,
+      ].filter((item): item is string => Boolean(item))
+    : [];
+  const invoiceReady = mission.mission_type === "animation" && invoicePrerequisites.length === 0;
+  const nextAction =
+    isAssigned && mission.status === "assigned"
+      ? "Accepter ou refuser la mission"
+      : isAssigned && mission.status === "accepted"
+        ? "Confirmer la planification avec TR1"
+        : isAssigned && mission.status === "scheduled"
+          ? "Réaliser la mission le jour prévu"
+          : reportEditable
+            ? missingEvidence.length
+              ? `Ajouter les preuves manquantes : ${missingEvidence.join(" · ")}`
+              : "Terminer et soumettre le compte rendu"
+            : report?.report_status === "submitted"
+              ? "Compte rendu transmis · en attente de validation"
+              : report?.report_status === "needs_correction"
+                ? "Corriger le compte rendu demandé"
+                : mission.status === "completed"
+                  ? "Mission clôturée"
+                  : "Consulter le brief et la prochaine étape";
 
   return (
     <div className="space-y-6">
@@ -212,33 +248,36 @@ export default async function MissionPage({
         />
       ) : null}
 
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="flex flex-wrap gap-2">
-            <Badge>{formatMissionType(mission.mission_type)}</Badge>
-            <Badge variant="secondary">
-              {presentationLabel(mission.status)}
-            </Badge>
+      <header className="rounded-[0.9rem] border border-[var(--tr1-line)] bg-white p-5 shadow-[0_10px_28px_rgb(14_29_49/0.035)] sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="flex flex-wrap gap-2">
+              <Badge>{formatMissionType(mission.mission_type)}</Badge>
+              <Badge variant="secondary">{presentationLabel(mission.status)}</Badge>
+            </div>
+            <h1 className="mt-3 text-2xl font-semibold tracking-[-0.025em] text-[var(--tr1-navy)]">{mission.title}</h1>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">{mission.objective}</p>
           </div>
 
-          <h1 className="mt-2 text-2xl font-semibold">{mission.title}</h1>
-          <p className="text-muted-foreground">{mission.objective}</p>
+          <div className="min-w-[12rem] text-left text-sm sm:text-right">
+            <p className="font-medium text-[var(--tr1-navy)]">
+              {mission.scheduled_start_at
+                ? new Date(mission.scheduled_start_at).toLocaleString("fr-FR")
+                : "À planifier"}
+            </p>
+            {canSeeCosts ? (
+              <p className="mt-1 font-semibold tabular-nums">
+                {Number(mission.cost_actual_ht ?? 0).toLocaleString("fr-FR")} € HT
+              </p>
+            ) : null}
+          </div>
         </div>
 
-        <div className="text-right text-sm">
-          <p>
-            {mission.scheduled_start_at
-              ? new Date(mission.scheduled_start_at).toLocaleString("fr-FR")
-              : "À planifier"}
-          </p>
-
-          {canSeeCosts ? (
-            <strong>
-              {Number(mission.cost_actual_ht ?? 0).toLocaleString("fr-FR")} € HT
-            </strong>
-          ) : null}
+        <div className="mt-5 rounded-[0.75rem] bg-[var(--tr1-navy)] px-4 py-3 text-white">
+          <p className="text-xs font-medium text-white/60">À faire maintenant</p>
+          <p className="mt-1 text-sm font-semibold">{nextAction}</p>
         </div>
-      </div>
+      </header>
 
       {mission.proposal_source === "provider" ? <Card className="border-orange-200 bg-orange-50/60"><CardHeader><CardTitle>Proposition initiée par l’intervenant</CardTitle></CardHeader><CardContent className="space-y-3 text-sm"><div className="flex flex-wrap gap-2"><Badge variant="secondary">{presentationLabel(mission.proposal_review_status)}</Badge>{mission.proposal_reviewed_at?<span className="text-muted-foreground">Revue le {new Date(mission.proposal_reviewed_at).toLocaleString("fr-FR")}</span>:null}</div>{mission.proposal_review_note?<p className="rounded-md bg-white p-3"><strong>Retour marque :</strong> {mission.proposal_review_note}</p>:null}{mission.proposal_review_status==="needs_correction"&&mission.proposed_by_user_id===userId?<ProposalResubmitForm mission={mission}/>:null}{mission.proposal_review_status==="pending"&&(isTr1||isBrandAdmin)?<Button asChild><Link href="/dashboard/missions/proposals">Ouvrir la file de validation</Link></Button>:null}</CardContent></Card>:null}
 
@@ -246,7 +285,7 @@ export default async function MissionPage({
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Briefing</CardTitle>
+              <CardTitle>Brief de mission</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="whitespace-pre-wrap">
@@ -271,26 +310,9 @@ export default async function MissionPage({
 
           <Card>
             <CardHeader>
-              <CardTitle>Compte rendu</CardTitle>
+              <CardTitle>Compte rendu & résultats</CardTitle>
             </CardHeader>
             <CardContent>
-              {requiresFacilitatorMerchEvidence ? (
-                <div className="mb-4 rounded-md border bg-muted/30 p-3 text-sm">
-                  <p className="font-medium">Preuves de clôture</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <Badge variant={hasMerchPlan ? "secondary" : "outline"}>
-                      {hasMerchPlan ? "Plan merch ajouté" : "Plan merch requis"}
-                    </Badge>
-                    <Badge variant={hasMerchResult ? "secondary" : "outline"}>
-                      {hasMerchResult ? "Résultat ajouté" : "Résultat merch requis"}
-                    </Badge>
-                  </div>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Ajoutez ces deux preuves dans « Pièces de mission » avant de soumettre le rapport.
-                  </p>
-                </div>
-              ) : null}
-
               {reportEditable ? (
                 <MissionReportForm
                   missionId={id}
@@ -298,6 +320,11 @@ export default async function MissionPage({
                   pharmacyId={mission.pharmacy_id}
                   report={report}
                   draftScope={`${brand.id}:${userId}`}
+                  evidenceState={{
+                    required: requiresFacilitatorMerchEvidence,
+                    ready: missingEvidence.length === 0,
+                    missing: missingEvidence,
+                  }}
                 />
               ) : report ? (
                 <div className="space-y-3">
@@ -339,7 +366,7 @@ export default async function MissionPage({
 
           <Card>
             <CardHeader>
-              <CardTitle>Pièces de mission</CardTitle>
+              <CardTitle>Preuves & pièces de mission</CardTitle>
             </CardHeader>
             <CardContent>
               {canUpload ? (
@@ -399,7 +426,7 @@ export default async function MissionPage({
               <div className={canUpload ? "mt-4 space-y-2" : "space-y-2"}>
                 {(attachments ?? []).map((file) => (
                   <div
-                    className="flex flex-wrap items-center justify-between gap-2 rounded border p-2 text-sm"
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-[0.65rem] border bg-white p-3 text-sm"
                     key={file.id}
                   >
                     <span>{file.original_name}</span>
@@ -470,9 +497,39 @@ export default async function MissionPage({
             </Card>
           ) : null}
 
+          {mission.mission_type === "animation" ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Facturation animation</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {invoice?.status ? (
+                  <div>
+                    <Badge variant="secondary">{presentationLabel(invoice.status)}</Badge>
+                    <p className="mt-2 text-sm text-muted-foreground">Une facture est déjà rattachée à cette animation.</p>
+                  </div>
+                ) : invoiceReady ? (
+                  <div className="rounded-[0.7rem] border border-[var(--tr1-line)] bg-muted/30 p-3 text-sm">
+                    <p className="font-medium text-[var(--tr1-navy)]">Pré-requis métier réunis</p>
+                    <p className="mt-1 text-muted-foreground">Animation datée et terminée, compte rendu validé.</p>
+                  </div>
+                ) : (
+                  <div className="rounded-[0.7rem] border border-[var(--tr1-line)] bg-muted/30 p-3 text-sm">
+                    <p className="font-medium text-[var(--tr1-navy)]">Facturation pas encore disponible</p>
+                    <p className="mt-1 text-muted-foreground">À terminer : {invoicePrerequisites.join(" · ")}.</p>
+                  </div>
+                )}
+                <Button asChild variant={invoiceReady || invoice?.status ? "default" : "outline"} className="w-full">
+                  <Link href={`/dashboard/missions/${id}/invoice`}>Ouvrir la facturation</Link>
+                </Button>
+                <p className="text-xs leading-5 text-muted-foreground">Le statut « payée » suit l’état administratif ; TR1 n’exécute pas le paiement bancaire.</p>
+              </CardContent>
+            </Card>
+          ) : null}
+
           <Card>
             <CardHeader>
-              <CardTitle>Workflow</CardTitle>
+              <CardTitle>État de la mission</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <p>

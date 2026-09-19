@@ -118,7 +118,7 @@ test.describe.serial("Sprint 9 — Pilotage commercial et réassort", () => {
   test("manager — décision, détail explicable et action ouverte sans doublon", async ({ page }) => {
     await signIn(page, "admin@dermavita.local", /Dermavita/);
     await expect(page.getByRole("heading", { name: "Où en est la marque, et où agir maintenant ?" })).toBeVisible();
-    await expect(page.getByText("4. Les décisions à prendre", { exact: true })).toBeVisible();
+    await expect(page.getByText("Décisions à prendre", { exact: true })).toBeVisible();
     await page.screenshot({ path: "artifacts/sprint9/manager-dashboard-desktop.png", fullPage: true });
 
     await page.goto("/dashboard/commercial-health");

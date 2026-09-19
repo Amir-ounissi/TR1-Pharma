@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { getAgentMoreItems, getMobileAgentNavigationItems, getNavigationItems, getNavigationSections, getRoleFamily, getRoleLandingPath, isNavigationItemActive } from "./navigation";
+import { getAgentMoreItems, getMobileAgentNavigationItems, getMobileFacilitatorNavigationItems, getNavigationItems, getNavigationSections, getRoleFamily, getRoleLandingPath, isNavigationItemActive } from "./navigation";
 
 describe("role navigation", () => {
   it("keeps agent navigation focused on field work", () => {
     const links = getNavigationItems("agent").map((item) => item.href);
     expect(links).toContain("/dashboard/agent");
-    expect(links).toEqual(["/dashboard/agent", "/dashboard/pharmacies", "/dashboard/orders", "/dashboard/agent/performance", "/dashboard/agent/more"]);
+    expect(links).toEqual(["/dashboard/agent", "/dashboard/agenda", "/dashboard/pharmacies", "/dashboard/orders", "/dashboard/agent/performance", "/dashboard/agent/more"]);
     expect(links).not.toContain("/dashboard/missions");
     expect(getAgentMoreItems().map((item) => item.href)).toEqual(["/dashboard/agent/performance", "/dashboard/products", "/dashboard/missions", "/dashboard/tasks", "/dashboard/sell-out", "/dashboard/reports", "/dashboard/agent/assistant", "/dashboard/agent/settings"]);
     expect(links).not.toContain("/dashboard/users");
@@ -23,6 +23,15 @@ describe("role navigation", () => {
     expect(getNavigationItems("brand_admin").map((item) => item.href)).not.toContain("/dashboard/admin/saas-commercial");
   });
 
+  it("separates platform pilotage, administration and offer management", () => {
+    const sections = getNavigationSections("super_admin", "platform");
+    expect(sections.map((section) => section.label)).toEqual([
+      "Pilotage plateforme",
+      "Administration",
+      "Offre & revenus",
+    ]);
+  });
+
   it("splits global superadmin navigation from tenant navigation", () => {
     const globalLinks = getNavigationItems("super_admin", "platform").map((item) => item.href);
     const tenantLinks = getNavigationItems("super_admin", "tenant").map((item) => item.href);
@@ -31,9 +40,9 @@ describe("role navigation", () => {
       "/dashboard",
       "/dashboard/admin/access-requests",
       "/dashboard/admin/onboarding",
+      "/dashboard/admin/users",
       "/dashboard/admin/saas",
       "/dashboard/admin/saas-commercial",
-      "/dashboard/admin/users",
       "/dashboard/admin/leads",
     ]);
     expect(globalLinks).not.toContain("/dashboard/users");
@@ -56,19 +65,21 @@ describe("role navigation", () => {
     expect(brandAdminLinks).not.toContain("/dashboard/admin/leads");
     expect(brandAdminLinks).not.toContain("/dashboard/admin/saas");
     expect(brandAdminLinks).not.toContain("/dashboard/admin/saas-commercial");
-    expect(facilitatorLinks).toEqual(["/dashboard/field", "/dashboard/missions", "/dashboard/agenda", "/dashboard/reports"]);
+    expect(facilitatorLinks).toEqual(["/dashboard/field", "/dashboard/agenda", "/dashboard/missions", "/dashboard/reports", "/dashboard/account"]);
   });
 
-  it("keeps brand pilotage concise and moves reference pages under Paramètres", () => {
+  it("keeps brand navigation separated between pilotage, execution and settings", () => {
     const sections = getNavigationSections("brand_admin");
-    expect(sections[0]).toEqual({ label: "Pilotage", items: [
-      expect.objectContaining({ href: "/dashboard", label: "Vue d’ensemble" }),
-      expect.objectContaining({ href: "/dashboard/network/commercial", label: "Performance & prévisions" }),
-      expect.objectContaining({ href: "/dashboard/pharmacies", label: "Réseau pharmacies" }),
-      expect.objectContaining({ href: "/dashboard/missions", label: "Équipe & terrain" }),
-      expect.objectContaining({ href: "/dashboard/commercial-health", label: "Plan d’action" }),
+    expect(sections.find((section) => section.label === "Pilotage")?.items).toEqual([
+      expect.objectContaining({ href: "/dashboard", label: "Synthèse" }),
+      expect.objectContaining({ href: "/dashboard/pharmacies", label: "Réseau" }),
+      expect.objectContaining({ href: "/dashboard/network/commercial", label: "Performance" }),
+    ]);
+    expect(sections.find((section) => section.label === "Exécution")?.items).toEqual([
       expect.objectContaining({ href: "/dashboard/orders", label: "Commandes" }),
-    ] });
+      expect.objectContaining({ href: "/dashboard/missions", label: "Équipe & missions" }),
+      expect.objectContaining({ href: "/dashboard/commercial-health", label: "Plan d’action" }),
+    ]);
     expect(sections.find((section) => section.label === "Paramètres")?.items.map((item) => item.href)).toEqual([
       "/dashboard/products", "/dashboard/groups", "/dashboard/territories", "/dashboard/imports", "/dashboard/connectors", "/dashboard/users", "/dashboard/subscription",
     ]);
@@ -121,6 +132,16 @@ describe("role navigation", () => {
     expect(managerLinks).toContain("/dashboard/missions");
     expect(adminLinks).toContain("/dashboard/connectors");
     expect(adminLinks).toContain("/dashboard/subscription");
+  });
+
+  it("gives facilitators a dedicated mobile navigation", () => {
+    expect(getMobileFacilitatorNavigationItems().map((item) => item.href)).toEqual([
+      "/dashboard/field",
+      "/dashboard/agenda",
+      "/dashboard/missions",
+      "/dashboard/reports",
+      "/dashboard/account",
+    ]);
   });
 
   it("puts the daily agenda directly under the commercial's thumb on mobile", () => {
