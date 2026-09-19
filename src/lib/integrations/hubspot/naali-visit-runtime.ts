@@ -295,3 +295,28 @@ export async function syncNaaliHubSpotVisitAfterPersistence(brandId: string, vis
     console.error(`[hubspot] visit:${visitId} sync failed: ${safeError(error)}`);
   }
 }
+
+
+export async function syncNaaliHubSpotVisitByVisitId(visitId: string) {
+  const admin = createAdminClient();
+  const { data: links, error } = await admin
+    .from("field_visit_brands")
+    .select("brand_id,brands!inner(slug)")
+    .eq("visit_id", visitId);
+  if (error) {
+    console.error(`[hubspot] visit:${visitId} brand lookup failed: ${safeError(error)}`);
+    return;
+  }
+
+  const brandIds = new Set<string>();
+  for (const row of links ?? []) {
+    const rawBrand = Array.isArray(row.brands) ? row.brands[0] : row.brands;
+    if (String(rawBrand?.slug ?? "").trim().toLowerCase() === "naali") {
+      brandIds.add(String(row.brand_id));
+    }
+  }
+
+  for (const brandId of brandIds) {
+    await syncNaaliHubSpotVisitAfterPersistence(brandId, visitId);
+  }
+}
