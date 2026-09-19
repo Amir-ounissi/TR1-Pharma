@@ -179,7 +179,7 @@ export default async function SaasAdministrationPage({
               </CardHeader>
               <CardContent className="space-y-5">
                 <div className="rounded-lg border p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Plan actuel</p>
+                  <p className="text-xs font-semibold text-muted-foreground">Plan actuel</p>
                   <p className="mt-1 text-xl font-semibold">{selectedPlan?.name ?? "Non configuré"}</p>
                   <p className="mt-1 text-sm text-muted-foreground">
                     {selectedPlan?.key === "legacy_full"
