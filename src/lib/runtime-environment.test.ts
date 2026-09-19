@@ -51,6 +51,24 @@ describe("runtime environment", () => {
     }).NEXT_PUBLIC_APP_URL).toBe("https://tr1-production.vercel.app");
   });
 
+  it("rejects staging APP_ENV on a Vercel production deployment", () => {
+    expect(() => readRuntimeEnvironment({
+      ...valid,
+      APP_ENV: "staging",
+      VERCEL_ENV: "production",
+      VERCEL_PROJECT_PRODUCTION_URL: "tr1.example.com",
+    })).toThrow(/APP_ENV doit être production/);
+  });
+
+  it("rejects production APP_ENV on a Vercel preview deployment", () => {
+    expect(() => readRuntimeEnvironment({
+      ...valid,
+      APP_ENV: "production",
+      VERCEL_ENV: "preview",
+      VERCEL_URL: "tr1-preview-example.vercel.app",
+    })).toThrow(/interdit sur un déploiement Vercel preview/);
+  });
+
   it("rejects localhost for staging", () => {
     expect(() => readRuntimeEnvironment({ ...valid, NEXT_PUBLIC_APP_URL: "http://127.0.0.1:3000" })).toThrow(/HTTPS|localhost/);
   });
