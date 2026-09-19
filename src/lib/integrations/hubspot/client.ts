@@ -7,6 +7,12 @@ export type HubSpotRequestResult<T = unknown> = {
   correlationId: string | null;
 };
 
+export type HubSpotDownloadedFile = {
+  blob: Blob;
+  contentType: string;
+  fileName: string | null;
+};
+
 export class HubSpotApiError extends Error {
   readonly status: number;
   readonly correlationId: string | null;
@@ -74,6 +80,20 @@ function correlationId(response: Response, payload: unknown) {
   return null;
 }
 
+function responseFileName(response: Response) {
+  const disposition = response.headers.get("content-disposition");
+  if (!disposition) return null;
+  const utf = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
+  if (utf) {
+    try {
+      return decodeURIComponent(utf.replace(/^"|"$/g, ""));
+    } catch {
+      return utf.replace(/^"|"$/g, "");
+    }
+  }
+  return disposition.match(/filename="?([^";]+)"?/i)?.[1] ?? null;
+}
+
 export class HubSpotClient {
   private readonly accessToken: string | null;
   private readonly mode: HubSpotClientMode;
@@ -105,10 +125,66 @@ export class HubSpotClient {
   }
 
   async searchObjects<T = unknown>(objectType: string, body: unknown): Promise<HubSpotRequestResult<T>> {
-    if (this.mode !== "write") {
+    if (this.mode === "disabled") {
       return { mode: this.mode, data: null, status: null, correlationId: null };
     }
     return this.request<T>("POST", `/crm/v3/objects/${encodeURIComponent(objectType)}/search`, body);
+  }
+
+  async readObjectsBatch<T = unknown>(
+    objectType: string,
+    ids: string[],
+    properties: string[],
+  ): Promise<HubSpotRequestResult<T>> {
+    if (this.mode === "disabled" || ids.length === 0) {
+      return { mode: this.mode, data: null, status: null, correlationId: null };
+    }
+    return this.request<T>("POST", `/crm/v3/objects/${encodeURIComponent(objectType)}/batch/read`, {
+      properties,
+      inputs: ids.map((id) => ({ id })),
+    });
+  }
+
+  async uploadFile<T = unknown>(input: {
+    file: Blob;
+    fileName: string;
+    folderPath: string;
+    access?: "PRIVATE" | "PUBLIC_INDEXABLE" | "PUBLIC_NOT_INDEXABLE";
+  }): Promise<HubSpotRequestResult<T>> {
+    if (this.mode !== "write") {
+      return { mode: this.mode, data: null, status: null, correlationId: null };
+    }
+    const form = new FormData();
+    form.set("file", input.file, input.fileName);
+    form.set("folderPath", input.folderPath);
+    form.set("options", JSON.stringify({
+      access: input.access ?? "PRIVATE",
+      overwrite: false,
+      duplicateValidationStrategy: "NONE",
+      duplicateValidationScope: "EXACT_FOLDER",
+    }));
+    return this.requestForm<T>("POST", "/files/v3/files", form);
+  }
+
+  async batchReadObjects<T = unknown>(
+    objectType: string,
+    ids: string[],
+    properties: string[],
+  ): Promise<HubSpotRequestResult<T>> {
+    if (this.mode !== "write") {
+      return { mode: this.mode, data: null, status: null, correlationId: null };
+    }
+    if (ids.length === 0) {
+      return { mode: this.mode, data: { results: [] } as T, status: 200, correlationId: null };
+    }
+    return this.request<T>(
+      "POST",
+      `/crm/v3/objects/${encodeURIComponent(objectType)}/batch/read`,
+      {
+        properties,
+        inputs: ids.map((id) => ({ id })),
+      },
+    );
   }
 
   async createObject<T = unknown>(objectType: string, properties: Record<string, string>): Promise<HubSpotRequestResult<T>> {
@@ -133,11 +209,120 @@ export class HubSpotClient {
     );
   }
 
+  async uploadPrivateFile(options: {
+    blob: Blob;
+    fileName: string;
+    folderPath: string;
+  }): Promise<HubSpotRequestResult<{ id?: string | number; name?: string; path?: string }>> {
+    if (this.mode !== "write") {
+      return { mode: this.mode, data: null, status: null, correlationId: null };
+    }
+    if (!this.accessToken) throw new Error("HubSpot file upload requires a server-side access token");
+
+    let attempt = 0;
+    while (true) {
+      const form = new FormData();
+      form.append("file", options.blob, options.fileName);
+      form.append("fileName", options.fileName);
+      form.append("folderPath", options.folderPath);
+      form.append("options", JSON.stringify({ access: "PRIVATE" }));
+
+      const response = await this.fetchImpl(`${this.baseUrl}/files/2026-03/files`, {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${this.accessToken}`,
+          accept: "application/json",
+        },
+        body: form,
+        cache: "no-store",
+      });
+      const payload = await responsePayload(response);
+      const requestCorrelationId = correlationId(response, payload);
+      if (response.ok) {
+        return {
+          mode: this.mode,
+          data: payload as { id?: string | number; name?: string; path?: string },
+          status: response.status,
+          correlationId: requestCorrelationId,
+        };
+      }
+
+      const error = new HubSpotApiError(safeProviderMessage(payload, response.status), response.status, requestCorrelationId);
+      if (!error.retryable || attempt >= this.maxRetries) throw error;
+      await this.sleep(retryDelay(response, attempt));
+      attempt += 1;
+    }
+  }
+
+  async downloadFile(fileId: string): Promise<HubSpotDownloadedFile> {
+    if (this.mode !== "write" || !this.accessToken) {
+      throw new Error("HubSpot file download requires write-mode credentials");
+    }
+
+    let attempt = 0;
+    while (true) {
+      const response = await this.fetchImpl(
+        `${this.baseUrl}/v3/files/${encodeURIComponent(fileId)}/download`,
+        {
+          method: "GET",
+          headers: {
+            authorization: `Bearer ${this.accessToken}`,
+            accept: "*/*",
+          },
+          cache: "no-store",
+        },
+      );
+
+      if (response.ok) {
+        return {
+          blob: await response.blob(),
+          contentType: response.headers.get("content-type")?.split(";")[0]?.trim() || "application/octet-stream",
+          fileName: responseFileName(response),
+        };
+      }
+
+      const payload = await responsePayload(response);
+      const requestCorrelationId = correlationId(response, payload);
+      const error = new HubSpotApiError(safeProviderMessage(payload, response.status), response.status, requestCorrelationId);
+      if (!error.retryable || attempt >= this.maxRetries) throw error;
+      await this.sleep(retryDelay(response, attempt));
+      attempt += 1;
+    }
+  }
+
   private async write<T>(method: "POST" | "PATCH" | "PUT", path: string, body: unknown): Promise<HubSpotRequestResult<T>> {
     if (this.mode !== "write") {
       return { mode: this.mode, data: null, status: null, correlationId: null };
     }
     return this.request<T>(method, path, body);
+  }
+
+  private async requestForm<T>(method: string, path: string, body: FormData): Promise<HubSpotRequestResult<T>> {
+    if (!this.accessToken) throw new Error("HubSpot request requires a server-side access token");
+
+    let attempt = 0;
+    while (true) {
+      const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
+        method,
+        headers: {
+          authorization: `Bearer ${this.accessToken}`,
+          accept: "application/json",
+        },
+        body,
+        cache: "no-store",
+      });
+      const payload = await responsePayload(response);
+      const requestCorrelationId = correlationId(response, payload);
+
+      if (response.ok) {
+        return { mode: this.mode, data: payload as T, status: response.status, correlationId: requestCorrelationId };
+      }
+
+      const error = new HubSpotApiError(safeProviderMessage(payload, response.status), response.status, requestCorrelationId);
+      if (!error.retryable || attempt >= this.maxRetries) throw error;
+      await this.sleep(retryDelay(response, attempt));
+      attempt += 1;
+    }
   }
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<HubSpotRequestResult<T>> {

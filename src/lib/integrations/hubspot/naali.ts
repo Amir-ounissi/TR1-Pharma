@@ -114,10 +114,12 @@ export const NAALI_HUBSPOT_CONFIGURATION: HubSpotBrandConfiguration = {
       activityType: "hs_activity_type",
       body: "hs_meeting_body",
       internalNotes: "hs_internal_meeting_notes",
+      attachmentIds: "hs_attachment_ids",
     },
     note: {
       body: "hs_note_body",
       timestamp: "hs_timestamp",
+      attachmentIds: "hs_attachment_ids",
     },
   },
   deal: {
