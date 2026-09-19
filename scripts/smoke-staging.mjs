@@ -30,4 +30,26 @@ if (recoveryResponse.status !== 200) {
 }
 console.log("/api/auth/forgot-password : 200");
 
+const oauthResponse = await fetch(new URL("/api/auth/google", baseUrl), {
+  redirect: "manual",
+});
+if (![302, 303, 307, 308].includes(oauthResponse.status)) {
+  const body = await oauthResponse.text();
+  throw new Error(`/api/auth/google répond ${oauthResponse.status}, attendu une redirection OAuth. Réponse: ${body.slice(0, 300)}`);
+}
+const oauthLocation = oauthResponse.headers.get("location") ?? "";
+if (!oauthLocation.includes(".supabase.co/auth/v1/authorize")) {
+  throw new Error(`/api/auth/google redirige vers une cible inattendue: ${oauthLocation || "(vide)"}.`);
+}
+console.log(`/api/auth/google : ${oauthResponse.status}`);
+
+const agentResponse = await fetch(new URL("/dashboard/agent", baseUrl), {
+  redirect: "manual",
+});
+if (![302, 303, 307, 308].includes(agentResponse.status)) {
+  const body = await agentResponse.text();
+  throw new Error(`/dashboard/agent répond ${agentResponse.status}, attendu une redirection anonyme. Réponse: ${body.slice(0, 300)}`);
+}
+console.log(`/dashboard/agent : ${agentResponse.status}`);
+
 console.log(`Smoke public réussi sur ${baseUrl.origin}`);
