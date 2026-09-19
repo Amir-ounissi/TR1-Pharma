@@ -21,6 +21,8 @@ env:
   VERCEL_CLI_VERSION: 59.19.1
   VERCEL_STAGING_PUBLIC_URL: https://tr-1-pharma-dusky.vercel.app
   CURRENT_PRODUCTION_SUPABASE_PROJECT_REF: zhifmehctuflwfexlvkz
+  CURRENT_PRODUCTION_VERCEL_PROJECT_ID: prj_KziP4kPjCBHDULmFuvGSLFOzDtVh
+  CURRENT_STAGING_VERCEL_PROJECT_ID: prj_qUQM4tS4vVKQtBLSOlo545y3vEjt
 
 jobs:
   gate:
@@ -102,6 +104,14 @@ jobs:
               exit 1
             }
           done
+          test "$VERCEL_PROJECT_ID" = "$CURRENT_STAGING_VERCEL_PROJECT_ID" || {
+            echo "::error::VERCEL_PROJECT_ID ne correspond pas au projet Vercel staging canonique."
+            exit 1
+          }
+          test "$VERCEL_PROJECT_ID" != "$CURRENT_PRODUCTION_VERCEL_PROJECT_ID" || {
+            echo "::error::Le staging ne peut jamais cibler le projet Vercel de production."
+            exit 1
+          }
 
       - name: Interdire explicitement toute cible Supabase de production
         run: |
