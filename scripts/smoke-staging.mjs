@@ -11,10 +11,12 @@ for (const route of routes) {
   if (isNotFoundProbe) {
     const rendersNotFound = response.status === 404 || /Page introuvable\./i.test(body);
     if (!rendersNotFound) throw new Error(`${route} ne rend pas la page 404 TR1 (HTTP ${response.status}).`);
-  } else if (response.status !== 200) {
-    throw new Error(`${route} répond ${response.status}, attendu 200.`);
+  } else {
+    if (response.status !== 200) {
+      throw new Error(`${route} répond ${response.status}, attendu 200.`);
+    }
+    if (body.length < 100) throw new Error(`${route} retourne un contenu anormalement court.`);
   }
-  if (body.length < 100) throw new Error(`${route} retourne un contenu anormalement court.`);
   console.log(`${route} : ${response.status}`);
 }
 const recoveryResponse = await fetch(new URL("/api/auth/forgot-password", baseUrl), {
