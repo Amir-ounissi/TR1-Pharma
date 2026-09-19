@@ -70,7 +70,7 @@ export function AgentTodayCockpit({
           <h1 id="today-pilot-title" className="mt-1 text-[2rem] font-bold leading-none tracking-[-0.04em] text-[var(--tr1-navy)] sm:text-[2.5rem]">
             Ma journée
           </h1>
-          <p className="mt-2 text-sm text-muted-foreground">{brandName} · {plannedVisitCount} visite{plannedVisitCount > 1 ? "s" : ""} prévue{plannedVisitCount > 1 ? "s" : ""}</p>
+          <p className="mt-2 text-sm text-muted-foreground">{brandName} · {plannedVisitCount} {plannedVisitCount === 1 ? "visite" : "visites"} aujourd’hui</p>
         </div>
         {pendingVisitCount > 0 ? (
           <Link href="/dashboard/agent/closeouts" className="inline-flex min-h-11 items-center gap-2 rounded-[0.65rem] border border-[var(--tr1-orange)]/25 bg-[var(--tr1-orange)]/[0.06] px-3.5 py-2 text-sm font-semibold text-[var(--tr1-navy)] transition hover:bg-[var(--tr1-orange)]/[0.1]">
@@ -82,12 +82,7 @@ export function AgentTodayCockpit({
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.45fr)_minmax(18rem,.55fr)]">
         <article className="rounded-[0.9rem] border border-[var(--tr1-line)] bg-white p-5 shadow-[0_10px_28px_rgb(14_29_49/0.035)] sm:p-6">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-xs font-semibold tracking-[0.03em] text-[var(--tr1-orange)]">{nextVisit ? "Prochaine visite" : "Terrain"}</p>
-            <Link href="/dashboard/agenda" className="inline-flex min-h-11 items-center gap-1.5 rounded-[0.6rem] px-2.5 text-sm font-semibold text-[var(--tr1-navy)] hover:bg-muted">
-              Agenda <ArrowRight className="size-4" />
-            </Link>
-          </div>
+          <p className="text-xs font-semibold tracking-[0.03em] text-[var(--tr1-orange)]">{nextVisit ? "Prochaine visite" : "Terrain"}</p>
 
           {nextVisit ? (
             <div className="mt-3">
@@ -101,12 +96,9 @@ export function AgentTodayCockpit({
                 <p className="text-xs font-semibold text-muted-foreground">Objectif de la visite</p>
                 <p className="mt-1 text-sm font-medium leading-6 text-[var(--tr1-navy)]">{nextVisit.objective || "Suivi commercial"}</p>
               </div>
-              <div className="mt-5 flex flex-wrap gap-2">
+              <div className="mt-5">
                 <Link href={`/dashboard/pharmacies/${nextVisit.brandPharmacyId}`} className="inline-flex min-h-11 items-center gap-2 rounded-[0.65rem] bg-[var(--tr1-navy)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--tr1-navy-soft)]">
                   Ouvrir la fiche <ArrowRight className="size-4" />
-                </Link>
-                <Link href={`/dashboard/agenda/new?mode=quick&brand=${encodeURIComponent(brandId)}`} className="inline-flex min-h-11 items-center gap-2 rounded-[0.65rem] border px-4 py-2 text-sm font-semibold text-[var(--tr1-navy)] hover:bg-muted">
-                  <CalendarPlus className="size-4" /> Ajouter une visite
                 </Link>
               </div>
             </div>

@@ -59,13 +59,13 @@ function MobileLinkContent({ item, active }: { item: NavigationItem; active: boo
     <span
       aria-busy={pending || undefined}
       className={cn(
-        "relative flex min-h-14 w-full flex-col items-center justify-center gap-1 overflow-hidden rounded-[0.7rem] px-0.5 text-[0.68rem] font-semibold leading-none text-muted-foreground transition-[color,background-color,transform] duration-150",
+        "relative flex min-h-14 w-full flex-col items-center justify-center gap-1 overflow-hidden rounded-[0.7rem] px-0 text-[0.625rem] font-semibold leading-none tracking-[-0.01em] text-muted-foreground transition-[color,background-color,transform] duration-150",
         active && "bg-[var(--tr1-navy)]/[0.055] text-[var(--tr1-navy)]",
         pending && "bg-[var(--tr1-orange)]/8 text-[var(--tr1-orange)]",
       )}
     >
       <NavigationIcon className={cn("size-[1.3rem]", active && "text-[var(--tr1-orange)]", pending && "animate-pulse")} name={item.icon} />
-      <span className="max-w-full truncate">{item.shortLabel ?? item.label}</span>
+      <span className="whitespace-nowrap">{item.shortLabel ?? item.label}</span>
       {(active || pending) ? (
         <span
           aria-hidden="true"
