@@ -150,8 +150,8 @@ export function getNavigationSections(
   }
 
   const sections: NavigationSection[] = [
-    { label: "Pilotage", items: managerItems.slice(0, 3) },
-    { label: "Exécution", items: managerItems.slice(3) },
+    { label: "Pilotage", items: [managerItems[0], managerItems[1], managerItems[5]] },
+    { label: "Exécution", items: [managerItems[2], managerItems[3], managerItems[4]] },
   ];
 
   if (family === "admin") {
