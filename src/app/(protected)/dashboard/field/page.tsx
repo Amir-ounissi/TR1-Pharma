@@ -74,16 +74,16 @@ export default async function FieldPage() {
       <div className="mx-auto max-w-3xl space-y-5 pb-24">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--tr1-orange)]">Terrain</p>
-            <h1 className="mt-1 text-3xl font-black tracking-tight text-[var(--tr1-navy)]">Aujourd’hui</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Toutes vos marques, animations et rapports dans un seul espace.</p>
+            <p className="text-xs font-semibold tracking-[0.03em] text-[var(--tr1-orange)]">Terrain</p>
+            <h1 className="mt-1 text-[2rem] font-bold tracking-[-0.035em] text-[var(--tr1-navy)]">Aujourd’hui</h1>
+            <p className="mt-1 text-sm text-muted-foreground">Vos animations, formations et rapports, toutes marques confondues.</p>
           </div>
           <div className="flex gap-2">
             <Button asChild variant="outline" size="sm">
               <Link href="/dashboard/agenda"><CalendarDays className="size-4" />Agenda</Link>
             </Button>
             <Button asChild size="sm">
-              <Link href="/dashboard/missions/new"><Plus className="size-4" />Planifier des animations</Link>
+              <Link href="/dashboard/missions/new"><Plus className="size-4" />Proposer une mission</Link>
             </Button>
           </div>
         </div>
@@ -93,7 +93,7 @@ export default async function FieldPage() {
           const pharmacy = Array.isArray(mission.pharmacies) ? mission.pharmacies[0] : mission.pharmacies;
           return (
             <Link href={`/dashboard/field/missions/${mission.id}`} key={mission.id}>
-              <Card className="mb-3 transition hover:border-primary">
+              <Card className="mb-3 border-[var(--tr1-line)] bg-white transition hover:border-[var(--tr1-orange)]/45">
                 <CardHeader className="pb-2">
                   <div className="flex justify-between gap-2">
                     <CardTitle className="text-base">{mission.title}</CardTitle>
@@ -114,10 +114,10 @@ export default async function FieldPage() {
         })}
 
         {!missions?.length ? (
-          <div className="rounded-xl border border-dashed p-6 text-center">
-            <p className="text-muted-foreground">Aucune animation planifiée pour le moment.</p>
+          <div className="rounded-[0.9rem] border border-dashed bg-white p-6 text-center">
+            <p className="text-muted-foreground">Aucune mission planifiée pour le moment.</p>
             <Button asChild className="mt-4" size="sm">
-              <Link href="/dashboard/missions/new"><Plus className="size-4" />Planifier une animation</Link>
+              <Link href="/dashboard/missions/new"><Plus className="size-4" />Proposer une mission</Link>
             </Button>
           </div>
         ) : null}
@@ -170,8 +170,8 @@ export default async function FieldPage() {
     <div className="mx-auto max-w-3xl space-y-5 pb-24">
       <header className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--tr1-orange)]">Terrain</p>
-          <h1 className="mt-1 text-3xl font-black tracking-tight text-[var(--tr1-navy)]">Aujourd’hui</h1>
+          <p className="text-xs font-semibold tracking-[0.03em] text-[var(--tr1-orange)]">Terrain</p>
+          <h1 className="mt-1 text-[2rem] font-bold tracking-[-0.035em] text-[var(--tr1-navy)]">Aujourd’hui</h1>
           <p className="mt-1 text-sm text-muted-foreground">Votre journée en pharmacies, sans ressaisie.</p>
         </div>
         <Button asChild variant="outline" size="sm">
@@ -235,7 +235,7 @@ export default async function FieldPage() {
             </Link>
           ))}
           {!events.length ? (
-            <div className="rounded-xl border border-dashed p-6 text-center">
+            <div className="rounded-[0.9rem] border border-dashed bg-white p-6 text-center">
               <p className="font-medium">Aucune pharmacie prévue aujourd’hui.</p>
               <p className="mt-1 text-sm text-muted-foreground">Cherchez une pharmacie puis utilisez l’action « Visite » pour l’ajouter en quelques pressions.</p>
               <Button asChild className="mt-4"><Link href="/dashboard/pharmacies"><Search className="size-4" />Chercher une pharmacie</Link></Button>
