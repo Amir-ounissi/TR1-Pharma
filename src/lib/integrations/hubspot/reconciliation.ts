@@ -546,19 +546,36 @@ async function syncCommercialTerms(
       const leadRule = resolveNaaliFreeUnitsRuleFromLeadStatus(text(properties.hs_lead_status));
       const explicitRule = parseExplicitFreeUnits(properties.unites_gratuites);
       const rule = leadRule ?? explicitRule;
-      const { error } = await admin
+      const snapshot = {
+        hubspot_discount_rate: parsePercentage(properties.remise_sur_facture_appliquee),
+        hubspot_ug_paid_quantity: rule?.paidQuantity ?? null,
+        hubspot_ug_free_quantity: rule?.freeQuantity ?? null,
+        hubspot_potential: text(properties.potentiel),
+        hubspot_lead_status: text(properties.hs_lead_status),
+        hubspot_synced_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      const { data: existing, error: existingError } = await admin
         .from("brand_pharmacy_commercial_terms")
-        .upsert({
-          brand_pharmacy_id: pharmacy.brandPharmacyId,
-          brand_id: brandId,
-          hubspot_discount_rate: parsePercentage(properties.remise_sur_facture_appliquee),
-          hubspot_ug_paid_quantity: rule?.paidQuantity ?? null,
-          hubspot_ug_free_quantity: rule?.freeQuantity ?? null,
-          hubspot_potential: text(properties.potentiel),
-          hubspot_lead_status: text(properties.hs_lead_status),
-          hubspot_synced_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }, { onConflict: "brand_pharmacy_id" });
+        .select("brand_pharmacy_id")
+        .eq("brand_pharmacy_id", pharmacy.brandPharmacyId)
+        .eq("brand_id", brandId)
+        .maybeSingle();
+      if (existingError) throw existingError;
+
+      const { error } = existing
+        ? await admin
+            .from("brand_pharmacy_commercial_terms")
+            .update(snapshot)
+            .eq("brand_pharmacy_id", pharmacy.brandPharmacyId)
+            .eq("brand_id", brandId)
+        : await admin
+            .from("brand_pharmacy_commercial_terms")
+            .insert({
+              brand_pharmacy_id: pharmacy.brandPharmacyId,
+              brand_id: brandId,
+              ...snapshot,
+            });
       if (error) throw error;
       counter.succeeded += 1;
     } catch {
