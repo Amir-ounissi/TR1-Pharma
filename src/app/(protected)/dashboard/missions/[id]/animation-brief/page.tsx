@@ -108,7 +108,7 @@ export default async function AnimationBriefPage({ params }: { params: Promise<{
         <CardContent className="space-y-2">
           {(products ?? []).length ? (products ?? []).map((item) => {
             const product = Array.isArray(item.products) ? item.products[0] : item.products;
-            return <div key={item.id} className="flex items-start justify-between gap-3 rounded-lg border p-3 text-sm">
+            return <div key={item.id} className="flex items-start justify-between gap-3 rounded-[0.7rem] border bg-white p-3.5 text-sm">
               <div><p className="font-medium">{product?.name || "Produit"}</p><p className="text-xs text-muted-foreground">{product?.sku || ""}{item.briefing_notes ? ` · ${item.briefing_notes}` : ""}</p></div>
               <div className="text-right"><p className="font-semibold">{item.target_quantity ?? "—"}</p><p className="text-xs text-muted-foreground">objectif unités</p></div>
             </div>;
