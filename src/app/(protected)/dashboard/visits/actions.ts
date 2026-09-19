@@ -141,9 +141,6 @@ async function syncNaaliVisitIfLinked(
   for (const brand of brands ?? []) {
     if (String(brand.slug).trim().toLowerCase() === "naali") {
       await syncNaaliHubSpotVisitAfterPersistence(String(brand.id), visitId);
-      for (const interaction of interactions.filter((item) => item.brandId === String(brand.id))) {
-        await syncHubSpotNoteAfterPersistence(String(brand.id), interaction.interactionId);
-      }
     }
   }
 }
