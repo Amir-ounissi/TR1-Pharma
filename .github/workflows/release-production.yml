@@ -22,7 +22,8 @@ env:
   CURRENT_PRODUCTION_SUPABASE_PROJECT_REF: zhifmehctuflwfexlvkz
   CURRENT_STAGING_SUPABASE_PROJECT_REF: ehptapmuzckazyxmnmnm
   CURRENT_PRODUCTION_VERCEL_PROJECT_ID: prj_KziP4kPjCBHDULmFuvGSLFOzDtVh
-  CURRENT_STAGING_VERCEL_PROJECT_ID: prj_qUQM4tS4vVKQtBLSOlo545y3vEjt
+  CURRENT_STAGING_VERCEL_PROJECT_ID: prj_KziP4kPjCBHDULmFuvGSLFOzDtVh
+  CURRENT_STAGING_VERCEL_TARGET: preview
 
 jobs:
   gate:
@@ -176,8 +177,8 @@ jobs:
             echo "::error::Le projet Vercel de production n'est pas le projet canonique."
             exit 1
           }
-          test "$CURRENT_STAGING_VERCEL_PROJECT_ID" != "$CURRENT_PRODUCTION_VERCEL_PROJECT_ID" || {
-            echo "::error::Les projets Vercel staging et production doivent être distincts."
+          test "$CURRENT_STAGING_VERCEL_TARGET" = "preview" || {
+            echo "::error::Le staging Vercel doit rester en preview et ne jamais utiliser --prod."
             exit 1
           }
           case "$PRODUCTION_SUPABASE_URL" in
