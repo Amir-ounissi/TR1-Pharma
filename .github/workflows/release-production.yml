@@ -220,6 +220,24 @@ jobs:
               ;;
           esac
 
+      - name: Préparer la configuration Vercel production
+        run: |
+          set -eu
+          npx --yes "vercel@${VERCEL_CLI_VERSION}" pull --yes --environment=production --token "$VERCEL_TOKEN"
+
+      - name: Préconstruire l'artefact production avant toute migration
+        env:
+          APP_ENV: production
+          NEXT_PUBLIC_SUPABASE_URL: ${{ env.PRODUCTION_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ env.PRODUCTION_SUPABASE_PUBLISHABLE_KEY }}
+          NEXT_PUBLIC_APP_URL: ${{ env.PRODUCTION_URL }}
+        run: |
+          set -eu
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          npx --yes "vercel@${VERCEL_CLI_VERSION}" build --prod --yes --token "$VERCEL_TOKEN"
+          test -d .vercel/output
+          test -z "$(git status --porcelain --untracked-files=no)"
+
       - name: Vérifier le préflight migrations
         run: npm run release:drift:preflight
 
@@ -229,24 +247,20 @@ jobs:
       - name: Exiger Git = staging = production
         run: npm run release:drift
 
-      - name: Déployer exactement le SHA sur le projet Vercel production
+      - name: Déployer l'artefact préconstruit du SHA sur Vercel production
         run: |
           set -eu
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
-          npx --yes "vercel@${VERCEL_CLI_VERSION}" deploy --prod --yes --token "$VERCEL_TOKEN" \
-            --build-env "APP_ENV=production" \
-            --build-env "NEXT_PUBLIC_SUPABASE_URL=$PRODUCTION_SUPABASE_URL" \
-            --build-env "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PRODUCTION_SUPABASE_PUBLISHABLE_KEY" \
-            --build-env "NEXT_PUBLIC_APP_URL=$PRODUCTION_URL" \
+          npx --yes "vercel@${VERCEL_CLI_VERSION}" deploy --prebuilt --prod --yes --token "$VERCEL_TOKEN" \
             --env "APP_ENV=production" \
             --env "NEXT_PUBLIC_SUPABASE_URL=$PRODUCTION_SUPABASE_URL" \
             --env "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PRODUCTION_SUPABASE_PUBLISHABLE_KEY" \
             --env "NEXT_PUBLIC_APP_URL=$PRODUCTION_URL"
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
-          test -z "$(git status --porcelain)"
+          test -z "$(git status --porcelain --untracked-files=no)"
 
       - name: Smoke production
-        run: BASE_URL="$PRODUCTION_URL" npm run staging:smoke
+        run: BASE_URL="$PRODUCTION_URL" EXPECTED_SUPABASE_PROJECT_REF="$PRODUCTION_SUPABASE_PROJECT_REF" npm run staging:smoke
 
       - name: Preuve release
         run: |
@@ -256,6 +270,7 @@ jobs:
             echo "- CI: PASS"
             echo "- Release staging officielle + smoke public: PASS"
             echo "- Supabase staging/production: projets distincts et vérifiés"
+            echo "- artefact production préconstruit avant toute migration: PASS"
             echo "- migrations Git/staging/production: identiques"
-            echo "- production smoke: PASS"
+            echo "- production smoke + cible OAuth Supabase production: PASS"
           } >> "$GITHUB_STEP_SUMMARY"
