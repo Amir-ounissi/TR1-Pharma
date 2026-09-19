@@ -5,6 +5,7 @@ import { z } from "zod";
 import { requireCompletedOnboarding } from "@/lib/auth";
 import { parisLocalToIso } from "@/lib/agenda";
 import { syncNaaliHubSpotVisitAfterPersistence } from "@/lib/integrations/hubspot/naali-visit-runtime";
+import { syncHubSpotNoteAfterPersistence } from "@/lib/integrations/hubspot/runtime";
 
 export type VisitCloseoutActionState = {
   error?: string;
@@ -140,6 +141,9 @@ async function syncNaaliVisitIfLinked(
   for (const brand of brands ?? []) {
     if (String(brand.slug).trim().toLowerCase() === "naali") {
       await syncNaaliHubSpotVisitAfterPersistence(String(brand.id), visitId);
+      for (const interaction of interactions.filter((item) => item.brandId === String(brand.id))) {
+        await syncHubSpotNoteAfterPersistence(String(brand.id), interaction.interactionId);
+      }
     }
   }
 }
