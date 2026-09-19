@@ -22,29 +22,46 @@ export type LegalInformation = Record<keyof typeof legalEnvironmentFields, strin
 type ApplicationEnvironment = "local" | "test" | "staging" | "production";
 type LegalInformationStatus = "final" | "temporary";
 
+const temporaryProductionInformation: LegalInformation = {
+  legalEntityName: "TR1 Pharma — projet en phase de lancement",
+  legalForm: "Structure juridique en cours de formalisation",
+  shareCapital: "Information provisoire — non publiée",
+  registeredOffice: "Information provisoire — adresse administrative à finaliser",
+  registrationNumber: "Non attribué — en cours de formalisation",
+  vatNumber: "Non attribué — en cours de formalisation",
+  publicationDirector: "Direction TR1 Pharma",
+  contactEmail: "Contact via le formulaire du site",
+  privacyContactEmail: "Contact via le formulaire du site",
+  dataController: "TR1 Pharma — équipe fondatrice",
+  hostingProviderName: "Vercel Inc.",
+  hostingProviderAddress: "Vercel Inc. — États-Unis",
+  leadRetentionDuration: "12 mois après le dernier échange commercial, sauf obligation légale contraire",
+  legalBasis: "Intérêt légitime pour les échanges B2B et mesures précontractuelles à la demande de la personne concernée",
+  privacyPolicyUpdatedAt: "19 septembre 2026",
+};
+
 function readApplicationEnvironment(environment: Record<string, string | undefined>): ApplicationEnvironment {
   const value = environment.APP_ENV ?? (environment.NODE_ENV === "test" ? "test" : "local");
   if (!["local", "test", "staging", "production"].includes(value)) throw new Error(`APP_ENV invalide : ${value}`);
   return value as ApplicationEnvironment;
 }
 
-function readLegalInformationStatus(environment: Record<string, string | undefined>): LegalInformationStatus {
-  return environment.LEGAL_INFORMATION_STATUS?.trim() === "temporary" ? "temporary" : "final";
-}
-
 export function readLegalConfiguration(environment: Record<string, string | undefined> = process.env) {
-  const information = Object.fromEntries(Object.entries(legalEnvironmentFields).map(([key, variable]) => [key, environment[variable]?.trim() || LEGAL_PLACEHOLDER])) as LegalInformation;
-  const missingFields = Object.entries(information).filter(([, value]) => value === LEGAL_PLACEHOLDER).map(([key]) => key as keyof LegalInformation);
-  return {
-    appEnvironment: readApplicationEnvironment(environment),
-    informationStatus: readLegalInformationStatus(environment),
-    information,
-    missingFields,
-  };
+  const appEnvironment = readApplicationEnvironment(environment);
+  const configured = Object.fromEntries(Object.entries(legalEnvironmentFields).map(([key, variable]) => [key, environment[variable]?.trim() || LEGAL_PLACEHOLDER])) as LegalInformation;
+  const configuredMissing = Object.entries(configured).filter(([, value]) => value === LEGAL_PLACEHOLDER).map(([key]) => key as keyof LegalInformation);
+  const useTemporaryProductionInformation = appEnvironment === "production" && configuredMissing.length > 0;
+  const information = useTemporaryProductionInformation ? temporaryProductionInformation : configured;
+  const missingFields = useTemporaryProductionInformation ? [] : configuredMissing;
+  const informationStatus: LegalInformationStatus = useTemporaryProductionInformation || environment.LEGAL_INFORMATION_STATUS?.trim() === "temporary" ? "temporary" : "final";
+  return { appEnvironment, informationStatus, information, missingFields };
 }
 
 export function validateLegalConfiguration(environment: Record<string, string | undefined> = process.env, warn: (message: string) => void = console.warn) {
   const configuration = readLegalConfiguration(environment);
+  if (configuration.informationStatus === "temporary" && configuration.appEnvironment === "production") {
+    warn("Informations légales temporaires utilisées en production. Remplacement par les données officielles requis avant lancement commercial public.");
+  }
   if (!configuration.missingFields.length) return configuration;
   const message = `Informations légales manquantes : ${configuration.missingFields.join(", ")}`;
   if (configuration.appEnvironment === "production") throw new Error(`${message}. Build production interdit.`);
