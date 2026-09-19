@@ -18,7 +18,8 @@ export type NavigationSection = {
 export type NavigationScope = "tenant" | "platform";
 
 const agentItems: NavigationItem[] = [
-  { href: "/dashboard/agent", label: "Ma journée", shortLabel: "Aujourd’hui", icon: "sun", capability: "agent_day" },
+  { href: "/dashboard/agent", label: "Ma journée", shortLabel: "Terrain", icon: "sun", capability: "agent_day" },
+  { href: "/dashboard/agenda", label: "Agenda", icon: "calendar", capability: "core_crm" },
   { href: "/dashboard/pharmacies", label: "Pharmacies", icon: "building", capability: "core_crm" },
   { href: "/dashboard/orders", label: "Mes commandes", icon: "clipboard", capability: "orders" },
   { href: "/dashboard/agent/performance", label: "Ma performance", shortLabel: "Performance", icon: "chart", capability: "performance" },
@@ -26,7 +27,7 @@ const agentItems: NavigationItem[] = [
 ];
 
 const agentMobileItems: NavigationItem[] = [
-  { href: "/dashboard/agent", label: "Ma journée", shortLabel: "Aujourd’hui", icon: "sun", capability: "agent_day" },
+  { href: "/dashboard/agent", label: "Ma journée", shortLabel: "Terrain", icon: "sun", capability: "agent_day" },
   { href: "/dashboard/agenda", label: "Agenda", shortLabel: "Agenda", icon: "calendar", capability: "core_crm" },
   { href: "/dashboard/pharmacies", label: "Pharmacies", icon: "building", capability: "core_crm" },
   { href: "/dashboard/orders", label: "Mes commandes", shortLabel: "Commandes", icon: "clipboard", capability: "orders" },
