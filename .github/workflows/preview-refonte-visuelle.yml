@@ -1,0 +1,86 @@
+name: Preview refonte visuelle
+
+on:
+  push:
+    branches:
+      - preview/refonte-visuelle-5-espaces
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview-refonte-visuelle
+  cancel-in-progress: true
+
+env:
+  RELEASE_SHA: 2712b1f3e0a5ccb7077e916f90154352df585aff
+  VERCEL_CLI_VERSION: 59.19.1
+  STAGING_SUPABASE_URL: https://ehptapmuzckazyxmnmnm.supabase.co
+  STAGING_SUPABASE_PUBLISHABLE_KEY: sb_publishable_j0dQKIs2SDsBgytuZj8vGw_LRBuA5Mv
+
+jobs:
+  deploy_preview:
+    name: Preview isolée Vercel
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: staging
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ vars.VERCEL_STAGING_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ env.RELEASE_SHA }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Vérifier le SHA et la cible preview
+        run: |
+          set -eu
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          for name in VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID STAGING_SUPABASE_URL STAGING_SUPABASE_PUBLISHABLE_KEY; do
+            eval "value=\${$name:-}"
+            test -n "$value" || {
+              echo "::error::$name n'est pas configuré."
+              exit 1
+            }
+          done
+
+      - name: Déployer en preview uniquement
+        run: |
+          set -eu
+          deployment_url="$(npx --yes "vercel@${VERCEL_CLI_VERSION}" deploy --yes --token "$VERCEL_TOKEN" \
+            --build-env "APP_ENV=staging" \
+            --build-env "NEXT_PUBLIC_SUPABASE_URL=$STAGING_SUPABASE_URL" \
+            --build-env "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$STAGING_SUPABASE_PUBLISHABLE_KEY" \
+            --env "APP_ENV=staging" \
+            --env "NEXT_PUBLIC_SUPABASE_URL=$STAGING_SUPABASE_URL" \
+            --env "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$STAGING_SUPABASE_PUBLISHABLE_KEY" | tail -n 1)"
+          case "$deployment_url" in
+            https://*.vercel.app) ;;
+            *)
+              echo "::error::URL preview Vercel invalide."
+              exit 1
+              ;;
+          esac
+          echo "PREVIEW_URL=$deployment_url" >> "$GITHUB_ENV"
+          echo "Preview: $deployment_url"
+
+      - name: Résumé
+        run: |
+          {
+            echo "### Preview refonte visuelle"
+            echo "- SHA applicatif: \`$RELEASE_SHA\`"
+            echo "- cible: Vercel preview uniquement (aucun --prod)"
+            echo "- Supabase: staging"
+            echo "- migrations: non exécutées"
+            echo "- URL: \`$PREVIEW_URL\`"
+            echo "- production: NON TOUCHÉE"
+          } >> "$GITHUB_STEP_SUMMARY"
