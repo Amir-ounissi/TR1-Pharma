@@ -131,6 +131,27 @@ export class HubSpotClient {
     return this.request<T>("POST", `/crm/v3/objects/${encodeURIComponent(objectType)}/search`, body);
   }
 
+  async batchReadObjects<T = unknown>(
+    objectType: string,
+    ids: string[],
+    properties: string[],
+  ): Promise<HubSpotRequestResult<T>> {
+    if (this.mode !== "write") {
+      return { mode: this.mode, data: null, status: null, correlationId: null };
+    }
+    if (ids.length === 0) {
+      return { mode: this.mode, data: { results: [] } as T, status: 200, correlationId: null };
+    }
+    return this.request<T>(
+      "POST",
+      `/crm/v3/objects/${encodeURIComponent(objectType)}/batch/read`,
+      {
+        properties,
+        inputs: ids.map((id) => ({ id })),
+      },
+    );
+  }
+
   async createObject<T = unknown>(objectType: string, properties: Record<string, string>): Promise<HubSpotRequestResult<T>> {
     return this.write<T>("POST", `/crm/v3/objects/${encodeURIComponent(objectType)}`, { properties });
   }
