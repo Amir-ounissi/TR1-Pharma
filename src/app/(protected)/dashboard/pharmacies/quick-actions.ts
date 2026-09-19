@@ -9,7 +9,10 @@ import {
   parisLocalToIso,
   todayInParis,
 } from "@/lib/agenda";
-import { syncNaaliHubSpotVisitAfterPersistence } from "@/lib/integrations/hubspot/naali-visit-runtime";
+import {
+  syncNaaliHubSpotVisitAfterPersistence,
+  syncNaaliHubSpotVisitByVisitId,
+} from "@/lib/integrations/hubspot/naali-visit-runtime";
 import { syncHubSpotNoteAfterPersistence } from "@/lib/integrations/hubspot/runtime";
 
 const uuid = z.string().uuid();
@@ -171,6 +174,7 @@ export async function quickPlanVisitAction(
       },
     });
     if (error) throw error;
+    if (visitId) await syncNaaliHubSpotVisitByVisitId(String(visitId));
     revalidatePath("/dashboard/agenda");
     revalidatePath("/dashboard/field");
     revalidatePath(`/dashboard/pharmacies/${parsed.brandPharmacyId}`);
