@@ -56,7 +56,7 @@ describe("role navigation", () => {
     expect(brandAdminLinks).not.toContain("/dashboard/admin/leads");
     expect(brandAdminLinks).not.toContain("/dashboard/admin/saas");
     expect(brandAdminLinks).not.toContain("/dashboard/admin/saas-commercial");
-    expect(facilitatorLinks).toEqual(["/dashboard/field", "/dashboard/missions", "/dashboard/agenda", "/dashboard/reports"]);
+    expect(facilitatorLinks).toEqual(["/dashboard/field", "/dashboard/agenda", "/dashboard/missions", "/dashboard/reports"]);
   });
 
   it("keeps brand pilotage concise and moves reference pages under Paramètres", () => {
