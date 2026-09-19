@@ -65,20 +65,20 @@ describe("role navigation", () => {
     expect(brandAdminLinks).not.toContain("/dashboard/admin/leads");
     expect(brandAdminLinks).not.toContain("/dashboard/admin/saas");
     expect(brandAdminLinks).not.toContain("/dashboard/admin/saas-commercial");
-    expect(facilitatorLinks).toEqual(["/dashboard/field", "/dashboard/agenda", "/dashboard/missions", "/dashboard/reports"]);
+    expect(facilitatorLinks).toEqual(["/dashboard/field", "/dashboard/agenda", "/dashboard/missions", "/dashboard/reports", "/dashboard/account"]);
   });
 
   it("keeps brand navigation separated between pilotage, execution and settings", () => {
     const sections = getNavigationSections("brand_admin");
     expect(sections.find((section) => section.label === "Pilotage")?.items).toEqual([
-      expect.objectContaining({ href: "/dashboard", label: "Vue d’ensemble" }),
-      expect.objectContaining({ href: "/dashboard/network/commercial", label: "Performance & prévisions" }),
-      expect.objectContaining({ href: "/dashboard/pharmacies", label: "Réseau pharmacies" }),
+      expect.objectContaining({ href: "/dashboard", label: "Synthèse" }),
+      expect.objectContaining({ href: "/dashboard/pharmacies", label: "Réseau" }),
+      expect.objectContaining({ href: "/dashboard/network/commercial", label: "Performance" }),
     ]);
     expect(sections.find((section) => section.label === "Exécution")?.items).toEqual([
-      expect.objectContaining({ href: "/dashboard/missions", label: "Équipe & terrain" }),
-      expect.objectContaining({ href: "/dashboard/commercial-health", label: "Plan d’action" }),
       expect.objectContaining({ href: "/dashboard/orders", label: "Commandes" }),
+      expect.objectContaining({ href: "/dashboard/missions", label: "Équipe & missions" }),
+      expect.objectContaining({ href: "/dashboard/commercial-health", label: "Plan d’action" }),
     ]);
     expect(sections.find((section) => section.label === "Paramètres")?.items.map((item) => item.href)).toEqual([
       "/dashboard/products", "/dashboard/groups", "/dashboard/territories", "/dashboard/imports", "/dashboard/connectors", "/dashboard/users", "/dashboard/subscription",
