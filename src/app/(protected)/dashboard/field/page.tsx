@@ -190,11 +190,11 @@ export default async function FieldPage() {
 
       {nextEvent ? (
         <section>
-          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+          <p className="mb-2 text-xs font-semibold text-muted-foreground">
             {nextEvent.status === "in_progress" ? "En cours" : "Prochaine pharmacie"}
           </p>
           <Link href={pharmacyHref(nextEvent)} className="block">
-            <Card className="border-[var(--tr1-orange)] bg-orange-50/50 transition active:scale-[0.99]">
+            <Card className="border-[var(--tr1-orange)]/35 bg-[var(--tr1-orange)]/[0.05] transition active:scale-[0.99]">
               <CardContent className="flex items-center justify-between gap-3 p-4">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
@@ -222,7 +222,7 @@ export default async function FieldPage() {
               <Card className="transition hover:border-[var(--tr1-orange)] active:scale-[0.99]">
                 <CardContent className="flex items-center gap-3 p-3.5">
                   <div className="w-12 shrink-0 text-center">
-                    <p className="font-mono text-sm font-black text-[var(--tr1-navy)]">{time(event.start_at)}</p>
+                    <p className="text-sm font-semibold tabular-nums text-[var(--tr1-navy)]">{time(event.start_at)}</p>
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold">{event.pharmacy_name || event.title}</p>
