@@ -26,7 +26,7 @@ env:
   CURRENT_PRODUCTION_SUPABASE_PROJECT_REF: zhifmehctuflwfexlvkz
   CURRENT_STAGING_SUPABASE_PROJECT_REF: ehptapmuzckazyxmnmnm
   CURRENT_PRODUCTION_VERCEL_PROJECT_ID: prj_KziP4kPjCBHDULmFuvGSLFOzDtVh
-  CURRENT_STAGING_VERCEL_PROJECT_ID: prj_qUQM4tS4vVKQtBLSOlo545y3vEjt
+  CURRENT_STAGING_VERCEL_PROJECT_ID: prj_KziP4kPjCBHDULmFuvGSLFOzDtVh
 
 jobs:
   gate:
@@ -106,7 +106,7 @@ jobs:
       STAGING_APP_URL: https://tr1-pharma-staging.vercel.app
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID: team_WhI0GBrg7UZgZpDsvTwUGZ8V
-      VERCEL_PROJECT_ID: prj_qUQM4tS4vVKQtBLSOlo545y3vEjt
+      VERCEL_PROJECT_ID: prj_KziP4kPjCBHDULmFuvGSLFOzDtVh
     steps:
       - uses: actions/checkout@v6
         with:
@@ -175,7 +175,7 @@ jobs:
         run: |
           set -eu
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
-          deployment_url="$(npx --yes "vercel@${VERCEL_CLI_VERSION}" deploy --prod --yes --token "$VERCEL_TOKEN" \
+          deployment_url="$(npx --yes "vercel@${VERCEL_CLI_VERSION}" deploy --yes --token "$VERCEL_TOKEN" \
             --build-env "APP_ENV=staging" \
             --build-env "NEXT_PUBLIC_SUPABASE_URL=$STAGING_SUPABASE_URL" \
             --build-env "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$STAGING_SUPABASE_PUBLISHABLE_KEY" \
