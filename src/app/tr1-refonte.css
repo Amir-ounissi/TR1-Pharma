@@ -1,0 +1,108 @@
+/*
+ * TR1 visual foundation — shared by Agent, Intervenant, Marque, Direction and Admin.
+ * This layer changes presentation only. Business states, permissions and workflows stay untouched.
+ */
+
+.tr1-product-da {
+  --background: #f5f6f4;
+  --foreground: #10233b;
+  --card: #ffffff;
+  --card-foreground: #10233b;
+  --popover: #ffffff;
+  --popover-foreground: #10233b;
+  --secondary: #eef0ed;
+  --secondary-foreground: #24364d;
+  --muted: #f0f2ef;
+  --muted-foreground: #68717d;
+  --accent: #fff1e6;
+  --accent-foreground: #7b3a0b;
+  --border: #dde2de;
+  --input: #cfd6d1;
+  --radius: 0.875rem;
+  color: var(--tr1-navy);
+  background-color: var(--background);
+  background-image: none;
+}
+
+.tr1-product-da [data-slot="card"] {
+  border-radius: 0.875rem;
+  border-color: var(--border);
+  background: var(--card);
+  box-shadow: 0 1px 2px rgb(14 29 49 / 0.035), 0 12px 32px rgb(14 29 49 / 0.035);
+}
+
+.tr1-product-da [data-slot="button"] {
+  min-height: 2.75rem;
+  border-radius: 0.625rem;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 650;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.tr1-product-da [data-slot="badge"] {
+  border-radius: 0.5rem;
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.tr1-product-da [data-slot="input"],
+.tr1-product-da [data-slot="select-trigger"],
+.tr1-product-da textarea {
+  min-height: 2.75rem;
+  border-radius: 0.625rem;
+  background: #ffffff;
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+}
+
+.tr1-product-da [data-slot="table-header"] {
+  background: #f2f4f2;
+  color: var(--tr1-navy);
+}
+
+.tr1-product-da [data-slot="table-head"] {
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  color: #536071;
+}
+
+.tr1-product-da [data-slot="table-row"] {
+  border-color: var(--border);
+}
+
+.tr1-product-da [data-slot="table-cell"],
+.tr1-product-da .tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.tr1-product-da main h1,
+.tr1-product-da main h2 {
+  font-family: var(--font-sans);
+  text-transform: none;
+}
+
+.tr1-product-da main h1 {
+  font-weight: 750;
+  letter-spacing: -0.035em;
+}
+
+.tr1-product-da main h2 {
+  font-weight: 700;
+  letter-spacing: -0.022em;
+}
+
+@media (max-width: 767px) {
+  .tr1-product-da [data-slot="button"],
+  .tr1-product-da [data-slot="input"],
+  .tr1-product-da [data-slot="select-trigger"] {
+    min-height: 2.75rem;
+  }
+}
