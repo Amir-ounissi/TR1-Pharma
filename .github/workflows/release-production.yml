@@ -53,6 +53,16 @@ jobs:
             exit 1
           }
 
+      - name: Exiger la tête actuelle de main pour une release automatique
+        if: github.event_name == 'workflow_run'
+        run: |
+          set -eu
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = "$RELEASE_SHA" || {
+            echo "::error::Une version plus récente existe sur main. Cette release automatique est abandonnée."
+            exit 1
+          }
+
       - name: Exiger une CI verte sur ce SHA
         if: github.event_name == 'workflow_dispatch'
         env:

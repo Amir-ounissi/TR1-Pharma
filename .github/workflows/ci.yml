@@ -10,8 +10,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.ref }}-${{ github.sha }}
+  cancel-in-progress: false
 
 env:
   CI: true
@@ -79,6 +79,7 @@ jobs:
       - run: npm run db:advisors
       - name: Stop Supabase
         if: always()
+        timeout-minutes: 2
         run: sh scripts/supabase-local.sh stop --no-backup
 
   e2e:
@@ -115,4 +116,5 @@ jobs:
           retention-days: 7
       - name: Stop Supabase
         if: always()
+        timeout-minutes: 2
         run: sh scripts/supabase-local.sh stop --no-backup
