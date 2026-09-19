@@ -158,8 +158,9 @@ test("isolation, changement autorisé et marque sans membership", async ({ brows
     // A stale inaccessible brand cookie is ignored without reintroducing a forced brand picker.
     await expect(page).toHaveURL(/\/dashboard\/agent$/);
     const fallbackBrandName = await primaryBrandName();
-    await expect(page.getByText(`Ma journée · ${fallbackBrandName}`, { exact: true })).toBeVisible();
-    await expect(page.getByText("Ma journée · Nutrilab", { exact: true })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Ma journée", exact: true })).toBeVisible();
+    await expect(page.getByText(new RegExp(`^${fallbackBrandName} · \\d+ visite`)).first()).toBeVisible();
+    await expect(page.getByText(/^Nutrilab · \d+ visite/)).toHaveCount(0);
   } finally {
     await service.from("product_events").delete()
       .eq("user_id", "00000000-0000-0000-0000-0000000000a3")
