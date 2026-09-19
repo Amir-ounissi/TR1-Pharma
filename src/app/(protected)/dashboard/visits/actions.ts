@@ -6,6 +6,7 @@ import { requireCompletedOnboarding } from "@/lib/auth";
 import { parisLocalToIso } from "@/lib/agenda";
 import { syncNaaliHubSpotVisitAfterPersistence } from "@/lib/integrations/hubspot/naali-visit-runtime";
 import { syncHubSpotNoteAfterPersistence } from "@/lib/integrations/hubspot/runtime";
+import { syncHubSpotNoteAfterPersistence } from "@/lib/integrations/hubspot/runtime";
 
 export type VisitCloseoutActionState = {
   error?: string;
@@ -235,6 +236,12 @@ export async function closeFieldVisitAction(
     }
 
     await syncNaaliVisitIfLinked(supabase, parsed.visitId, closeout.interactions);
+    // The closeout RPC creates one interaction per linked brand. Sync those
+    // interactions only after photo persistence so HubSpot notes include the
+    // exact evidence files on the company timeline.
+    for (const interaction of closeout.interactions) {
+      await syncHubSpotNoteAfterPersistence(interaction.brandId, interaction.interactionId);
+    }
 
     revalidatePath(`/dashboard/visits/${parsed.visitId}`);
     revalidatePath("/dashboard/agenda");
