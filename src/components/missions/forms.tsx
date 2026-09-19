@@ -545,7 +545,7 @@ export function MissionReportForm({
             </div>
           )
         ) : (
-          <p className="mt-2 text-sm text-muted-foreground">Aucune preuve supplémentaire n’est imposée par ce brief.</p>
+          <p className="mt-2 text-sm text-muted-foreground">Aucun contrôle de preuve supplémentaire n’est signalé dans cette étape. Consultez le brief pour les autres livrables attendus.</p>
         )}
       </section>
 
