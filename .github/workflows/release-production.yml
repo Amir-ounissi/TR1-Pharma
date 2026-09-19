@@ -22,7 +22,7 @@ env:
   CURRENT_PRODUCTION_SUPABASE_PROJECT_REF: zhifmehctuflwfexlvkz
   CURRENT_STAGING_SUPABASE_PROJECT_REF: ehptapmuzckazyxmnmnm
   CURRENT_PRODUCTION_VERCEL_PROJECT_ID: prj_KziP4kPjCBHDULmFuvGSLFOzDtVh
-  CURRENT_STAGING_VERCEL_PROJECT_ID: prj_KziP4kPjCBHDULmFuvGSLFOzDtVh
+  CURRENT_STAGING_VERCEL_PROJECT_ID: prj_qUQM4tS4vVKQtBLSOlo545y3vEjt
 
 jobs:
   gate:
@@ -92,7 +92,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      VERCEL_STAGING_PUBLIC_URL: https://tr-1-pharma-dusky.vercel.app
+      VERCEL_STAGING_PUBLIC_URL: https://tr1-pharma-staging-amir-ounissis-projects-723e961a.vercel.app
     steps:
       - uses: actions/checkout@v6
         with:
