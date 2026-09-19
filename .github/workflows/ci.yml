@@ -100,7 +100,9 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run db:start
       - run: npm run db:reset
-      - run: npm run test:e2e
+      - name: Run Playwright E2E
+        timeout-minutes: 20
+        run: npm run test:e2e
       - name: Upload Playwright diagnostics
         if: failure()
         uses: actions/upload-artifact@v6
