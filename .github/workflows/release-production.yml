@@ -1,11 +1,10 @@
 name: Release production
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "supabase/migrations/20260919123000_restore_field_visit_closeouts.sql"
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       release_sha:
@@ -22,7 +21,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  RELEASE_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.release_sha || github.sha }}
+  RELEASE_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.release_sha || github.event.workflow_run.head_sha }}
   VERCEL_CLI_VERSION: 59.19.1
   CURRENT_PRODUCTION_SUPABASE_PROJECT_REF: zhifmehctuflwfexlvkz
   CURRENT_STAGING_SUPABASE_PROJECT_REF: ehptapmuzckazyxmnmnm
@@ -32,8 +31,9 @@ env:
 jobs:
   gate:
     name: Gate du SHA
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
         with:
@@ -54,6 +54,7 @@ jobs:
           }
 
       - name: Exiger une CI verte sur ce SHA
+        if: github.event_name == 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
