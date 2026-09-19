@@ -45,7 +45,7 @@ test("Sprint 6.1 desktop — journée simplifiée et clôture directe", async ({
     await signIn(page, "agent@dermavita.local", /Dermavita/i);
     await page.goto("/dashboard/agent");
 
-    await expect(page.getByRole("heading", { name: "Aujourd’hui", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Ma journée", exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Mon programme", exact: true })).toBeVisible();
     await expect(page.getByTestId("next-visit-card")).toHaveCount(0);
     await expect(page.getByTestId("active-visit-card")).toHaveCount(0);
