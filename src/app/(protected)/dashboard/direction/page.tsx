@@ -112,24 +112,23 @@ export default async function DirectionPage() {
     <main className="space-y-6">
       <PageHeader
         eyebrow={`Direction · ${brand.name}`}
-        title="Piloter la trajectoire, sans bruit opérationnel"
-        description="Vue exécutive en lecture seule : CA, atterrissage, N-1, distribution, risques et comparaison des territoires."
+        title="Trajectoire de la marque"
+        description="Lecture exécutive en lecture seule : réalisé, N-1, projection, objectif, réseau et risques."
         tone="dark"
       />
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5" aria-label="Trajectoire Direction">
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Trajectoire Direction">
         <Metric label="CA réalisé YTD" value={formatCompactCurrency(workspace.revenue_ht)} detail="Facturé / livré à date" icon={TrendingUp} />
         <Metric label="Évolution vs N-1" value={signedPercent(workspace.revenue_delta_percent)} detail={`${formatCompactCurrency(workspace.previous_revenue_ht)} à date N-1`} icon={deltaNegative ? TrendingDown : TrendingUp} />
-        <Metric label="Atterrissage déterministe" value={formatCompactCurrency(workspace.projected_revenue_ht)} detail={`Run-rate ${formatCompactCurrency(workspace.run_rate_projection_ht)}`} icon={Gauge} />
+        <Metric label="Atterrissage" value={formatCompactCurrency(workspace.projected_revenue_ht)} detail={workspace.objective_gap_ht === null ? `Run-rate ${formatCompactCurrency(workspace.run_rate_projection_ht)}` : `Écart objectif ${formatCompactCurrency(workspace.objective_gap_ht)}`} icon={Gauge} />
         <Metric label="Objectif annuel" value={workspace.objective_revenue_ht === null ? "Non défini" : formatCompactCurrency(workspace.objective_revenue_ht)} detail={projectedAttainment === null ? "Objectif marque" : `${formatCompactPercent(projectedAttainment)} projeté`} icon={Target} />
-        <Metric label="DN moyenne" value={formatCompactPercent(workspace.avg_distribution_rate)} detail={`DN stratégique ${formatCompactPercent(workspace.strategic_distribution_rate)}`} icon={Building2} />
       </section>
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Lecture réseau">
+        <MiniMetric label="DN moyenne" value={formatCompactPercent(workspace.avg_distribution_rate)} />
         <MiniMetric label="Implantations YTD" value={formatCompactNumber(workspace.implantations)} />
         <MiniMetric label="Réassorts YTD" value={formatCompactNumber(workspace.reorders)} />
         <MiniMetric label="Pharmacies actives" value={formatCompactNumber(workspace.active_pharmacies)} />
-        <MiniMetric label="Écart objectif projeté" value={workspace.objective_gap_ht === null ? "—" : formatCompactCurrency(workspace.objective_gap_ht)} />
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[1.1fr_.9fr]">
@@ -184,11 +183,11 @@ export default async function DirectionPage() {
 }
 
 function Metric({ label, value, detail, icon: Icon }: { label: string; value: string; detail: string; icon: typeof TrendingUp }) {
-  return <Card><CardContent className="pt-5"><Icon className="size-4 text-[var(--tr1-orange)]" /><p className="mt-3 text-2xl font-semibold">{value}</p><p className="text-sm font-medium">{label}</p><p className="text-xs text-muted-foreground">{detail}</p></CardContent></Card>;
+  return <Card><CardContent className="pt-5"><Icon className="size-4 text-[var(--tr1-orange)]" /><p className="mt-3 text-2xl font-semibold tracking-[-0.03em] tabular-nums">{value}</p><p className="mt-1 text-sm font-medium">{label}</p><p className="text-xs text-muted-foreground">{detail}</p></CardContent></Card>;
 }
 
 function MiniMetric({ label, value }: { label: string; value: string }) {
-  return <Card><CardContent className="pt-5"><p className="text-2xl font-semibold">{value}</p><p className="text-sm text-muted-foreground">{label}</p></CardContent></Card>;
+  return <Card><CardContent className="pt-5"><p className="text-2xl font-semibold tracking-[-0.03em] tabular-nums">{value}</p><p className="mt-1 text-sm text-muted-foreground">{label}</p></CardContent></Card>;
 }
 
 function Breakdown({ label, value, detail }: { label: string; value: string; detail?: string }) {
