@@ -20,6 +20,7 @@ export function GET() {
       ok: true,
       service: "tr1-pharma",
       appEnv: process.env.APP_ENV?.trim() || null,
+      releaseSha: process.env.RELEASE_SHA?.trim() || null,
       supabaseProjectRef: supabaseProjectRef(),
     },
     {
