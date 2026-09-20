@@ -3,6 +3,9 @@ if (!rawBaseUrl) throw new Error("BASE_URL est obligatoire.");
 const baseUrl = new URL(rawBaseUrl);
 if (baseUrl.protocol !== "https:" && process.env.ALLOW_LOCAL_SMOKE !== "true") throw new Error("BASE_URL doit utiliser HTTPS pour un smoke test distant.");
 
+const expectedAppEnv = process.env.EXPECTED_APP_ENV?.trim();
+const expectedSupabaseProjectRef = process.env.EXPECTED_SUPABASE_PROJECT_REF?.trim();
+
 const trustedOidcToken = process.env.VERCEL_TRUSTED_OIDC_TOKEN?.trim();
 const protectionHeaders = trustedOidcToken
   ? {
@@ -34,6 +37,14 @@ const health = await healthResponse.json();
 if (health?.ok !== true || health?.service !== "tr1-pharma") {
   throw new Error(`/api/release-health retourne une preuve invalide: ${JSON.stringify(health).slice(0, 300)}`);
 }
+if (expectedAppEnv && health?.appEnv !== expectedAppEnv) {
+  throw new Error(`/api/release-health appEnv=${JSON.stringify(health?.appEnv)}, attendu ${expectedAppEnv}.`);
+}
+if (expectedSupabaseProjectRef && health?.supabaseProjectRef !== expectedSupabaseProjectRef) {
+  throw new Error(
+    `/api/release-health supabaseProjectRef=${JSON.stringify(health?.supabaseProjectRef)}, attendu ${expectedSupabaseProjectRef}.`,
+  );
+}
 console.log("/api/release-health : 200");
 const recoveryResponse = await fetch(new URL("/api/auth/forgot-password", baseUrl), {
   method: "POST",
@@ -55,7 +66,14 @@ if (![302, 303, 307, 308].includes(oauthResponse.status)) {
   throw new Error(`/api/auth/google répond ${oauthResponse.status}, attendu une redirection OAuth. Réponse: ${body.slice(0, 300)}`);
 }
 const oauthLocation = oauthResponse.headers.get("location") ?? "";
-if (!oauthLocation.includes(".supabase.co/auth/v1/authorize")) {
+const expectedOauthPrefix = expectedSupabaseProjectRef
+  ? `https://${expectedSupabaseProjectRef}.supabase.co/auth/v1/authorize`
+  : ".supabase.co/auth/v1/authorize";
+if (
+  expectedSupabaseProjectRef
+    ? !oauthLocation.startsWith(expectedOauthPrefix)
+    : !oauthLocation.includes(expectedOauthPrefix)
+) {
   throw new Error(`/api/auth/google redirige vers une cible inattendue: ${oauthLocation || "(vide)"}.`);
 }
 console.log(`/api/auth/google : ${oauthResponse.status}`);
