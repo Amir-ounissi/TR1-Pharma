@@ -263,26 +263,10 @@ jobs:
           process.stdout.write(payload.id);
           NODE
           )"
-          bypass_response="$(mktemp)"
-          curl --fail-with-body --silent --show-error \
-            -X PATCH \
-            -H "Authorization: Bearer $VERCEL_TOKEN" \
-            -H "Content-Type: application/json" \
-            --data '{"ttl":3600}' \
-            "https://api.vercel.com/aliases/$deployment_id/protection-bypass?teamId=$VERCEL_ORG_ID" \
-            -o "$bypass_response"
-          bypass_secret="$(node - "$bypass_response" <<'NODE'
-          const fs = require("node:fs");
-          const payload = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-          const value = payload.value ?? payload.protectionBypass?.value;
-          if (typeof value !== "string" || value.length < 16) process.exit(1);
-          process.stdout.write(value);
-          NODE
-          )"
-          echo "::add-mask::$bypass_secret"
+          echo "::add-mask::$VERCEL_AUTOMATION_BYPASS_SECRET"
           echo "PRODUCTION_DEPLOYMENT_URL=$deployment_url" >> "$GITHUB_ENV"
           echo "PRODUCTION_DEPLOYMENT_ID=$deployment_id" >> "$GITHUB_ENV"
-          echo "PRODUCTION_PROTECTION_BYPASS=$bypass_secret" >> "$GITHUB_ENV"
+          echo "PRODUCTION_PROTECTION_BYPASS=$VERCEL_AUTOMATION_BYPASS_SECRET" >> "$GITHUB_ENV"
           echo "Candidate production non promue: $deployment_url ($deployment_id)"
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
           test -z "$(git status --porcelain)"
