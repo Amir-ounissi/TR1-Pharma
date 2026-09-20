@@ -51,6 +51,18 @@ grep -Fq 'x-vercel-protection-bypass: $STAGING_PROTECTION_BYPASS' "$staging_work
   echo "Gate staging: le smoke doit utiliser le header de bypass Vercel." >&2
   exit 1
 }
+grep -Fq -- '--env "RELEASE_SHA=$RELEASE_SHA"' "$production_workflow" || {
+  echo "Gate production: le SHA de release doit être injecté dans le runtime Vercel." >&2
+  exit 1
+}
+grep -Fq -- '--env "RELEASE_SHA=$RELEASE_SHA"' "$staging_workflow" || {
+  echo "Gate staging: le SHA de release doit être injecté dans le runtime Vercel." >&2
+  exit 1
+}
+grep -Fq 'EXPECTED_RELEASE_SHA="$RELEASE_SHA"' "$production_workflow" || {
+  echo "Gate production: le smoke public doit vérifier le SHA exact promu." >&2
+  exit 1
+}
 if grep -Fq 'vercel@${VERCEL_CLI_VERSION}" curl' "$production_workflow" "$staging_workflow"; then
   echo "Gate release: vercel curl est interdit car incompatible avec le jeton d'équipe." >&2
   exit 1
