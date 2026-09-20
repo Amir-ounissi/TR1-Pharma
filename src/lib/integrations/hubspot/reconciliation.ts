@@ -489,6 +489,76 @@ async function meetingCompanyIds(client: HubSpotClient, meetingId: string) {
     .filter((value): value is string => Boolean(value));
 }
 
+type HubSpotCloseoutNote = {
+  id: string;
+  occurredAt: string;
+  body: string;
+};
+
+function parisCalendarDate(value: string) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Paris",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(value));
+}
+
+async function findHubSpotCloseoutNote(options: {
+  client: HubSpotClient;
+  companyId: string;
+  meetingStart: string;
+  nextMeetingStart?: string | null;
+}) {
+  const meetingStartMs = new Date(options.meetingStart).getTime();
+  if (!Number.isFinite(meetingStartMs)) return null;
+
+  const filters: Array<Record<string, unknown>> = [
+    {
+      propertyName: "hs_timestamp",
+      operator: "GTE",
+      value: String(meetingStartMs - 24 * 60 * 60_000),
+    },
+  ];
+  if (options.nextMeetingStart) {
+    const nextStartMs = new Date(options.nextMeetingStart).getTime();
+    if (Number.isFinite(nextStartMs)) {
+      filters.push({
+        propertyName: "hs_timestamp",
+        operator: "LT",
+        value: String(nextStartMs),
+      });
+    }
+  }
+
+  const notes = await searchAll(options.client, "notes", {
+    filterGroups: [{
+      filters: [
+        { propertyName: "associations.company", operator: "EQ", value: options.companyId },
+        ...filters,
+      ],
+    }],
+    properties: ["hs_note_body", "hs_timestamp", "hs_lastmodifieddate"],
+    sorts: ["hs_timestamp"],
+  });
+
+  const meetingDate = parisCalendarDate(options.meetingStart);
+  const candidates = notes.flatMap((note) => {
+    const id = externalId(note);
+    const occurredAt = text(note.properties?.hs_timestamp) ?? note.createdAt ?? null;
+    if (!id || !occurredAt) return [];
+    const occurredMs = new Date(occurredAt).getTime();
+    if (!Number.isFinite(occurredMs) || parisCalendarDate(occurredAt) < meetingDate) return [];
+    return [{
+      id,
+      occurredAt,
+      body: stripHtml(note.properties?.hs_note_body) || "Note HubSpot",
+    }];
+  }).sort((left, right) => new Date(left.occurredAt).getTime() - new Date(right.occurredAt).getTime());
+
+  return candidates[0] ?? null;
+}
+
 async function ensurePharmacyForHubSpotCompany(options: {
   admin: AdminClient;
   client: HubSpotClient;
@@ -1280,6 +1350,7 @@ async function importVisit(options: {
   remote: HubSpotRecord;
   visitLinks: Map<string, string>;
   owners: Map<string, string>;
+  nextMeetingStart?: string | null;
 }) {
   const remoteId = externalId(options.remote);
   if (!remoteId) throw new Error("HubSpot meeting has no id");
@@ -1295,7 +1366,14 @@ async function importVisit(options: {
     : new Date(startMs + 30 * 60_000).toISOString();
   const ownerExternalId = text(properties.hubspot_owner_id);
   const ownerUserId = (ownerExternalId ? options.owners.get(ownerExternalId) : null) ?? options.actorId;
-  const status = visitStatus(properties.hs_meeting_outcome);
+  const providerStatus = visitStatus(properties.hs_meeting_outcome);
+  const closeoutNote = await findHubSpotCloseoutNote({
+    client: options.client,
+    companyId: options.pharmacy.companyId,
+    meetingStart: start,
+    nextMeetingStart: options.nextMeetingStart,
+  });
+  const status = providerStatus === "cancelled" ? "cancelled" : closeoutNote ? "completed" : "planned";
   const body = [stripHtml(properties.hs_meeting_body), stripHtml(properties.hs_internal_meeting_notes)]
     .filter(Boolean)
     .join("\n\n");
@@ -1327,6 +1405,49 @@ async function importVisit(options: {
       externalUpdatedAt: options.remote.updatedAt ?? text(properties.hs_lastmodifieddate),
     });
     options.visitLinks.set(remoteId, existingVisitId);
+
+    if (closeoutNote) {
+      const { error: visitUpdateError } = await options.admin
+        .from("field_visits")
+        .update({
+          status: "completed",
+          actual_start_at: start,
+          actual_end_at: end,
+          started_at: start,
+          completed_at: closeoutNote.occurredAt,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existingVisitId)
+        .neq("status", "completed");
+      if (visitUpdateError) throw visitUpdateError;
+
+      const { data: existingCloseout, error: closeoutReadError } = await options.admin
+        .from("field_visit_closeouts")
+        .select("id")
+        .eq("visit_id", existingVisitId)
+        .limit(1)
+        .maybeSingle();
+      if (closeoutReadError) throw closeoutReadError;
+
+      if (!existingCloseout) {
+        const { error: closeoutError } = await options.admin
+          .from("field_visit_closeouts")
+          .insert({
+            visit_id: existingVisitId,
+            created_by: options.actorId,
+            outcome: "other",
+            summary: closeoutNote.body,
+            input_mode: "manual",
+            structured_payload: {
+              source: "hubspot",
+              hubspot_meeting_id: remoteId,
+              hubspot_note_id: closeoutNote.id,
+            },
+            completed_at: closeoutNote.occurredAt,
+          });
+        if (closeoutError) throw closeoutError;
+      }
+    }
 
     const { data: existingInteraction, error: existingInteractionError } = await options.admin
       .from("interactions")
@@ -1401,7 +1522,7 @@ async function importVisit(options: {
       actual_start_at: status === "completed" ? start : null,
       actual_end_at: status === "completed" ? end : null,
       started_at: status === "completed" ? start : null,
-      completed_at: status === "completed" ? end : null,
+      completed_at: status === "completed" ? closeoutNote?.occurredAt ?? end : null,
       outcome: null,
     })
     .select("id")
@@ -1427,10 +1548,14 @@ async function importVisit(options: {
         visit_id: visitId,
         created_by: options.actorId,
         outcome: "other",
-        summary: body || text(properties.hs_meeting_title) || "Meeting HubSpot complété.",
+        summary: closeoutNote?.body || body || text(properties.hs_meeting_title) || "Meeting HubSpot complété.",
         input_mode: "manual",
-        structured_payload: { source: "hubspot", external_id: remoteId },
-        completed_at: end,
+        structured_payload: {
+          source: "hubspot",
+          hubspot_meeting_id: remoteId,
+          hubspot_note_id: closeoutNote?.id ?? null,
+        },
+        completed_at: closeoutNote?.occurredAt ?? end,
       });
     if (closeoutError) throw closeoutError;
   }
@@ -1707,10 +1832,8 @@ async function syncInboundVisits(options: {
     const resolved: Array<{
       remote: HubSpotRecord;
       pharmacy: PharmacyContext;
-      companyId: string;
       start: string;
-      end: string;
-      ownerExternalId: string | null;
+      startMs: number;
     }> = [];
 
     for (const remote of records) {
@@ -1718,14 +1841,9 @@ async function syncInboundVisits(options: {
       try {
         const remoteId = externalId(remote);
         if (!remoteId) throw new Error("HubSpot meeting has no id");
-        const startAt = text(remote.properties?.hs_meeting_start_time) ?? text(remote.properties?.hs_timestamp);
-        if (!startAt) throw new Error(`HubSpot meeting ${remoteId} has no start time`);
-        const rawEnd = text(remote.properties?.hs_meeting_end_time);
-        const startMs = new Date(startAt).getTime();
-        const rawEndMs = rawEnd ? new Date(rawEnd).getTime() : Number.NaN;
-        const endAt = Number.isFinite(rawEndMs) && rawEndMs > startMs
-          ? rawEnd!
-          : new Date(startMs + 30 * 60_000).toISOString();
+        const start = text(remote.properties?.hs_meeting_start_time) ?? text(remote.properties?.hs_timestamp);
+        const startMs = start ? new Date(start).getTime() : Number.NaN;
+        if (!start || !Number.isFinite(startMs)) throw new Error(`HubSpot meeting ${remoteId} has no valid start time`);
 
         const ownerExternalId = text(remote.properties?.hubspot_owner_id);
         const ownerUserId = (ownerExternalId ? options.owners.get(ownerExternalId) : null) ?? options.actorId;
@@ -1733,11 +1851,9 @@ async function syncInboundVisits(options: {
         if (!companyIds.length) throw new Error(`HubSpot meeting ${remoteId} has no company association`);
 
         let pharmacy = companyIds.map((companyId) => byCompany.get(companyId)).find(Boolean) ?? null;
-        let companyId = pharmacy?.companyId ?? companyIds[0];
-
         if (!pharmacy) {
           let lastError: unknown = null;
-          for (const candidateCompanyId of companyIds) {
+          for (const companyId of companyIds) {
             try {
               pharmacy = await ensurePharmacyForHubSpotCompany({
                 admin: options.admin,
@@ -1746,10 +1862,9 @@ async function syncInboundVisits(options: {
                 connectionId: options.connection.id,
                 actorId: options.actorId,
                 ownerUserId,
-                companyId: candidateCompanyId,
+                companyId,
                 byCompany,
               });
-              companyId = candidateCompanyId;
               break;
             } catch (error) {
               lastError = error;
@@ -1758,62 +1873,41 @@ async function syncInboundVisits(options: {
           if (!pharmacy) throw lastError ?? new Error(`Unable to resolve pharmacy for HubSpot meeting ${remoteId}`);
         }
 
-        resolved.push({ remote, pharmacy, companyId, start: startAt, end: endAt, ownerExternalId });
+        resolved.push({ remote, pharmacy, start, startMs });
       } catch (error) {
         counter.failed += 1;
         console.error(
-          `[hubspot] inbound meeting resolve failed: ${error instanceof Error ? error.message.slice(0, 400) : "unknown"}`,
+          `[hubspot] inbound meeting resolution failed: ${error instanceof Error ? error.message.slice(0, 400) : "unknown"}`,
         );
       }
     }
 
-    resolved.sort((left, right) => new Date(left.start).getTime() - new Date(right.start).getTime());
+    resolved.sort((left, right) => left.startMs - right.startMs);
 
     for (let index = 0; index < resolved.length; index += 1) {
-      const item = resolved[index];
-      try {
-        const nextMeeting = resolved
-          .slice(index + 1)
-          .find((candidate) => candidate.companyId === item.companyId) ?? null;
+      const current = resolved[index];
+      const nextForPharmacy = resolved
+        .slice(index + 1)
+        .find((candidate) => candidate.pharmacy.companyId === current.pharmacy.companyId);
 
-        const visitId = await importVisit({
+      try {
+        await importVisit({
           admin: options.admin,
           client: options.client,
           brandId: options.brandId,
           connectionId: options.connection.id,
           actorId: options.actorId,
-          pharmacy: item.pharmacy,
-          remote: item.remote,
+          pharmacy: current.pharmacy,
+          remote: current.remote,
           visitLinks: links,
           owners: options.owners,
+          nextMeetingStart: nextForPharmacy?.start ?? null,
         });
-
-        const closeoutNote = await closeoutNoteForMeeting({
-          client: options.client,
-          companyId: item.companyId,
-          ownerExternalId: item.ownerExternalId,
-          meetingStart: item.start,
-          nextMeetingStart: nextMeeting?.start ?? null,
-        });
-
-        if (closeoutNote) {
-          await applyHubSpotMeetingCloseout({
-            admin: options.admin,
-            brandId: options.brandId,
-            actorId: options.actorId,
-            visitId,
-            pharmacy: item.pharmacy,
-            meetingStart: item.start,
-            meetingEnd: item.end,
-            note: closeoutNote,
-          });
-        }
-
         counter.succeeded += 1;
       } catch (error) {
         counter.failed += 1;
         console.error(
-          `[hubspot] inbound meeting import failed: ${error instanceof Error ? error.message.slice(0, 400) : "unknown"}`,
+          `[hubspot] inbound meeting failed: ${error instanceof Error ? error.message.slice(0, 400) : "unknown"}`,
         );
       }
     }
