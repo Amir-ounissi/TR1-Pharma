@@ -153,6 +153,7 @@ jobs:
       PRODUCTION_SUPABASE_URL: https://zhifmehctuflwfexlvkz.supabase.co
       PRODUCTION_SUPABASE_PUBLISHABLE_KEY: sb_publishable_dFtfD60cflPn_IqSZriScQ_g0TRS66x
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
       VERCEL_ORG_ID: team_WhI0GBrg7UZgZpDsvTwUGZ8V
       VERCEL_PROJECT_ID: prj_KziP4kPjCBHDULmFuvGSLFOzDtVh
       PRODUCTION_URL: https://www.tr1pharma.com
@@ -170,7 +171,7 @@ jobs:
       - name: Vérifier la configuration production
         run: |
           set -eu
-          for name in STAGING_DATABASE_URL STAGING_SUPABASE_PROJECT_REF PRODUCTION_DATABASE_URL PRODUCTION_SUPABASE_PROJECT_REF PRODUCTION_SUPABASE_URL PRODUCTION_SUPABASE_PUBLISHABLE_KEY VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID PRODUCTION_URL; do
+          for name in STAGING_DATABASE_URL STAGING_SUPABASE_PROJECT_REF PRODUCTION_DATABASE_URL PRODUCTION_SUPABASE_PROJECT_REF PRODUCTION_SUPABASE_URL PRODUCTION_SUPABASE_PUBLISHABLE_KEY VERCEL_TOKEN VERCEL_AUTOMATION_BYPASS_SECRET VERCEL_ORG_ID VERCEL_PROJECT_ID PRODUCTION_URL; do
             eval "value=\${$name:-}"
             test -n "$value" || {
               echo "::error::$name n'est pas configuré pour l'environnement production."
@@ -262,26 +263,10 @@ jobs:
           process.stdout.write(payload.id);
           NODE
           )"
-          bypass_response="$(mktemp)"
-          curl --fail-with-body --silent --show-error \
-            -X PATCH \
-            -H "Authorization: Bearer $VERCEL_TOKEN" \
-            -H "Content-Type: application/json" \
-            --data '{"ttl":3600}' \
-            "https://api.vercel.com/aliases/$deployment_id/protection-bypass?teamId=$VERCEL_ORG_ID" \
-            -o "$bypass_response"
-          bypass_secret="$(node - "$bypass_response" <<'NODE'
-          const fs = require("node:fs");
-          const payload = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-          const value = payload.value ?? payload.protectionBypass?.value;
-          if (typeof value !== "string" || value.length < 16) process.exit(1);
-          process.stdout.write(value);
-          NODE
-          )"
-          echo "::add-mask::$bypass_secret"
+          echo "::add-mask::$VERCEL_AUTOMATION_BYPASS_SECRET"
           echo "PRODUCTION_DEPLOYMENT_URL=$deployment_url" >> "$GITHUB_ENV"
           echo "PRODUCTION_DEPLOYMENT_ID=$deployment_id" >> "$GITHUB_ENV"
-          echo "PRODUCTION_PROTECTION_BYPASS=$bypass_secret" >> "$GITHUB_ENV"
+          echo "PRODUCTION_PROTECTION_BYPASS=$VERCEL_AUTOMATION_BYPASS_SECRET" >> "$GITHUB_ENV"
           echo "Candidate production non promue: $deployment_url ($deployment_id)"
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
           test -z "$(git status --porcelain)"
@@ -307,7 +292,7 @@ jobs:
             }
           }
 
-          for route in / /merci /connexion /signup /mentions-legales /politique-de-confidentialite; do
+          for route in / /merci /signup /mentions-legales /politique-de-confidentialite; do
             request "$route"
             test "$HTTP_STATUS" = "200" || {
               echo "::error::$route répond $HTTP_STATUS, attendu 200."
@@ -324,6 +309,25 @@ jobs:
             fi
             echo "$route : 200"
           done
+
+          request "/connexion"
+          case "$HTTP_STATUS" in
+            302|303|307|308) ;;
+            *)
+              echo "::error::/connexion répond $HTTP_STATUS, attendu une redirection vers /login."
+              head -c 300 "$HTTP_BODY" || true
+              exit 1
+              ;;
+          esac
+          connexion_location="$(awk 'BEGIN{IGNORECASE=1} /^location:/ {sub(/\r$/, ""); sub(/^[^:]+:[[:space:]]*/, ""); print; exit}' "$HTTP_HEADERS")"
+          case "$connexion_location" in
+            /login|"$PRODUCTION_DEPLOYMENT_URL/login") ;;
+            *)
+              echo "::error::/connexion redirige vers une cible inattendue: ${connexion_location:-vide}."
+              exit 1
+              ;;
+          esac
+          echo "/connexion : $HTTP_STATUS vers /login"
 
           request "/api/release-health"
           test "$HTTP_STATUS" = "200" || {

@@ -35,8 +35,12 @@ grep -Fq 'deploy --prod --skip-domain' "$production_workflow" || {
   echo "Gate production: la candidate doit être créée avec --skip-domain." >&2
   exit 1
 }
-grep -Fq '/aliases/$deployment_id/protection-bypass?teamId=$VERCEL_ORG_ID' "$production_workflow" || {
-  echo "Gate production: la candidate protégée doit recevoir un bypass temporaire." >&2
+grep -Fq 'VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}' "$production_workflow" || {
+  echo "Gate production: le secret Protection Bypass for Automation doit venir de l'environnement production." >&2
+  exit 1
+}
+grep -Fq 'x-vercel-protection-bypass: $PRODUCTION_PROTECTION_BYPASS' "$production_workflow" || {
+  echo "Gate production: le smoke de la candidate doit utiliser le header de bypass Vercel." >&2
   exit 1
 }
 grep -Fq 'VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}' "$staging_workflow" || {
