@@ -8,12 +8,13 @@ Le SHA validé en staging est le SHA déployé en production. Aucun commit, chan
 
 `vercel.json` reste un contrat d'infrastructure. `git.deploymentEnabled=false` coupe uniquement les déploiements automatiques liés au provider Git ; la publication contrôlée est effectuée par le workflow GitHub `Release production` via Vercel CLI.
 
-## État d'infrastructure constaté le 17 septembre 2026
+## État d'infrastructure vérifié le 20 septembre 2026
 
 ### Vercel
 
-- Le projet Vercel `tr1-pharma-staging` (`prj_qUQM4tS4vVKQtBLSOlo545y3vEjt`) sert actuellement `tr1pharma.com` et `www.tr1pharma.com`. Malgré son nom, il joue donc aujourd'hui le rôle **production**.
-- Le projet Vercel `tr-1-pharma` (`prj_KziP4kPjCBHDULmFuvGSLFOzDtVh`) ne sert pas les domaines publics. Son dernier build observé échouait parce que `APP_ENV` était vide. Il est le candidat naturel pour le rôle **staging** après configuration de ses variables.
+- Le projet Vercel `tr-1-pharma` (`prj_KziP4kPjCBHDULmFuvGSLFOzDtVh`) sert les domaines publics `tr1pharma.com` et `www.tr1pharma.com` et constitue la **production**.
+- Le projet Vercel `tr1-pharma-staging` (`prj_qUQM4tS4vVKQtBLSOlo545y3vEjt`) est réservé au **staging**. Le pipeline refuse désormais que staging et production partagent le même projet Vercel.
+- Les previews staging protégées sont testées via un `VERCEL_AUTOMATION_BYPASS_SECRET` dédié, pas via une identité utilisateur Vercel CLI.
 
 ### Supabase
 
@@ -34,12 +35,13 @@ Secrets :
 
 - `STAGING_DATABASE_URL` : connexion PostgreSQL vers une base Supabase de staging **distincte** de `zhifmehctuflwfexlvkz`.
 - `VERCEL_TOKEN` : token Vercel autorisé à déployer le projet staging.
+- `VERCEL_AUTOMATION_BYPASS_SECRET` : secret de Protection Bypass for Automation du projet `tr1-pharma-staging`, utilisé uniquement par les smoke tests.
 
 Variables :
 
 - `STAGING_SUPABASE_PROJECT_REF` : référence du futur projet Supabase staging. Elle doit être différente de `zhifmehctuflwfexlvkz` et être présente dans `STAGING_DATABASE_URL`.
 - `VERCEL_ORG_ID` : `team_WhI0GBrg7UZgZpDsvTwUGZ8V` pour l'organisation observée pendant l'audit.
-- `VERCEL_STAGING_PROJECT_ID` : projet Vercel jouant le rôle staging. Le candidat actuel est `prj_KziP4kPjCBHDULmFuvGSLFOzDtVh`.
+- `VERCEL_STAGING_PROJECT_ID` : `prj_qUQM4tS4vVKQtBLSOlo545y3vEjt` (`tr1-pharma-staging`).
 - `STAGING_URL` : URL HTTPS stable du staging.
 
 ### Environnement `production`
@@ -55,10 +57,10 @@ Variables :
 - `STAGING_SUPABASE_PROJECT_REF` : même référence staging que dans l'environnement `staging`.
 - `PRODUCTION_SUPABASE_PROJECT_REF` : `zhifmehctuflwfexlvkz` tant que la production publique reste branchée sur ce projet.
 - `VERCEL_ORG_ID` : même organisation Vercel.
-- `VERCEL_PRODUCTION_PROJECT_ID` : projet Vercel servant les domaines publics. À la date de l'audit : `prj_qUQM4tS4vVKQtBLSOlo545y3vEjt`.
+- `VERCEL_PRODUCTION_PROJECT_ID` : `prj_KziP4kPjCBHDULmFuvGSLFOzDtVh` (`tr-1-pharma`), projet servant les domaines publics.
 - `PRODUCTION_URL` : `https://www.tr1pharma.com` lorsque le domaine public reste inchangé.
 
-Le projet Vercel staging doit contenir `APP_ENV=staging` et les variables du nouveau Supabase staging. Le projet production doit contenir `APP_ENV=production` et les variables du Supabase production `zhifmehctuflwfexlvkz`. Les clés `NEXT_PUBLIC_*` sont donc construites séparément pour chaque environnement ; on ne promeut pas un build staging précompilé vers production.
+Le projet Vercel staging doit contenir `APP_ENV=staging`, les variables du Supabase staging et un bypass d’automatisation dédié. Le projet production doit contenir `APP_ENV=production` et les variables du Supabase production `zhifmehctuflwfexlvkz`. Les clés `NEXT_PUBLIC_*` sont donc construites séparément pour chaque environnement ; on ne promeut pas un build staging précompilé vers production.
 
 ## Garde-fous Supabase
 
