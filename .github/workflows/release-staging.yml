@@ -11,7 +11,6 @@ on:
 permissions:
   contents: read
   actions: read
-  id-token: write
 
 concurrency:
   group: tr1-staging-release
@@ -192,19 +191,110 @@ jobs:
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
           test -z "$(git status --porcelain)"
 
-      - name: Obtenir un jeton OIDC GitHub pour le preview protégé
-        id: oidc
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const token = await core.getIDToken();
-            core.setSecret(token);
-            core.setOutput("token", token);
+      - name: Smoke applicatif authentifié du preview Vercel protégé
+        run: |
+          set -euo pipefail
 
-      - name: Smoke applicatif du preview Vercel protégé
-        env:
-          VERCEL_TRUSTED_OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
-        run: BASE_URL="$STAGING_DEPLOYMENT_URL" npm run staging:smoke
+          request() {
+            local route="$1"
+            shift
+            HTTP_BODY="$(mktemp)"
+            HTTP_HEADERS="$(mktemp)"
+            local raw_status
+            raw_status="$(npx --yes "vercel@${VERCEL_CLI_VERSION}" curl "$route" \
+              --deployment "$STAGING_DEPLOYMENT_URL" \
+              -sS -D "$HTTP_HEADERS" -o "$HTTP_BODY" -w "%{http_code}" "$@")"
+            HTTP_STATUS="$(printf '%s\n' "$raw_status" | grep -Eo '[1-5][0-9]{2}' | tail -n 1)"
+            test -n "$HTTP_STATUS" || {
+              echo "::error::Impossible de lire le statut HTTP pour $route."
+              exit 1
+            }
+          }
+
+          for route in / /merci /connexion /signup /mentions-legales /politique-de-confidentialite; do
+            request "$route"
+            test "$HTTP_STATUS" = "200" || {
+              echo "::error::$route répond $HTTP_STATUS, attendu 200."
+              head -c 300 "$HTTP_BODY" || true
+              exit 1
+            }
+            test "$(wc -c < "$HTTP_BODY")" -ge 100 || {
+              echo "::error::$route retourne un contenu anormalement court."
+              exit 1
+            }
+            if grep -Eqi 'vercel\.com/sso-api|_vercel_sso_nonce' "$HTTP_BODY"; then
+              echo "::error::$route retourne encore la protection Vercel au lieu de TR1."
+              exit 1
+            fi
+            echo "$route : 200"
+          done
+
+          request "/api/release-health"
+          test "$HTTP_STATUS" = "200" || {
+            echo "::error::/api/release-health répond $HTTP_STATUS, attendu 200."
+            head -c 300 "$HTTP_BODY" || true
+            exit 1
+          }
+          node - "$HTTP_BODY" <<'NODE'
+          const fs = require("node:fs");
+          const file = process.argv[2];
+          const raw = fs.readFileSync(file, "utf8");
+          let health;
+          try {
+            health = JSON.parse(raw);
+          } catch {
+            console.error("::error::/api/release-health ne retourne pas du JSON TR1.");
+            process.exit(1);
+          }
+          if (health?.ok !== true || health?.service !== "tr1-pharma") {
+            console.error("::error::Preuve /api/release-health invalide.");
+            process.exit(1);
+          }
+          NODE
+          echo "/api/release-health : 200"
+
+          request "/api/auth/forgot-password" \
+            -X POST \
+            -H "Content-Type: application/json" \
+            --data "{\"email\":\"staging-smoke-${GITHUB_RUN_ID}@example.invalid\"}"
+          test "$HTTP_STATUS" = "200" || {
+            echo "::error::/api/auth/forgot-password répond $HTTP_STATUS, attendu 200."
+            head -c 300 "$HTTP_BODY" || true
+            exit 1
+          }
+          echo "/api/auth/forgot-password : 200"
+
+          request "/api/auth/google"
+          case "$HTTP_STATUS" in
+            302|303|307|308) ;;
+            *)
+              echo "::error::/api/auth/google répond $HTTP_STATUS, attendu une redirection OAuth."
+              head -c 300 "$HTTP_BODY" || true
+              exit 1
+              ;;
+          esac
+          oauth_location="$(awk 'BEGIN{IGNORECASE=1} /^location:/ {sub(/\r$/, ""); sub(/^[^:]+:[[:space:]]*/, ""); print; exit}' "$HTTP_HEADERS")"
+          case "$oauth_location" in
+            *".supabase.co/auth/v1/authorize"*) ;;
+            *)
+              echo "::error::/api/auth/google redirige vers une cible inattendue: ${oauth_location:-vide}."
+              exit 1
+              ;;
+          esac
+          echo "/api/auth/google : $HTTP_STATUS"
+
+          request "/dashboard/agent"
+          case "$HTTP_STATUS" in
+            302|303|307|308) ;;
+            *)
+              echo "::error::/dashboard/agent répond $HTTP_STATUS, attendu une redirection anonyme."
+              head -c 300 "$HTTP_BODY" || true
+              exit 1
+              ;;
+          esac
+          echo "/dashboard/agent : $HTTP_STATUS"
+
+          echo "Smoke staging authentifié réussi sur $STAGING_DEPLOYMENT_URL"
 
       - name: Preuve staging
         run: |
@@ -216,6 +306,6 @@ jobs:
             echo "- migrations: Git = staging"
             echo "- déploiement créé: \`$STAGING_DEPLOYMENT_URL\`"
             echo "- URL de preview testée: \`$STAGING_DEPLOYMENT_URL\`"
-            echo "- smoke applicatif OIDC: PASS"
+            echo "- smoke applicatif Vercel CLI authentifié: PASS"
             echo "- production: NON TOUCHÉE"
           } >> "$GITHUB_STEP_SUMMARY"
