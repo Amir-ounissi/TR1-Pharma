@@ -23,7 +23,7 @@ const protectionHeaders = trustedOidcToken
     }
   : {};
 
-const routes = ["/", "/merci", "/connexion", "/signup", "/mentions-legales", "/politique-de-confidentialite"];
+const routes = ["/", "/merci", "/signup", "/mentions-legales", "/politique-de-confidentialite"];
 for (const route of routes) {
   const response = await fetch(new URL(route, baseUrl), { headers: protectionHeaders });
   const body = await response.text();
@@ -33,6 +33,21 @@ for (const route of routes) {
   if (body.length < 100) throw new Error(`${route} retourne un contenu anormalement court.`);
   console.log(`${route} : ${response.status}`);
 }
+
+const connexionResponse = await fetch(new URL("/connexion", baseUrl), {
+  headers: protectionHeaders,
+  redirect: "manual",
+});
+if (![302, 303, 307, 308].includes(connexionResponse.status)) {
+  const body = await connexionResponse.text();
+  throw new Error(`/connexion répond ${connexionResponse.status}, attendu une redirection vers /login. Réponse: ${body.slice(0, 300)}`);
+}
+const connexionLocation = connexionResponse.headers.get("location") ?? "";
+const expectedLoginUrl = new URL("/login", baseUrl).toString();
+if (connexionLocation !== "/login" && connexionLocation !== expectedLoginUrl) {
+  throw new Error(`/connexion redirige vers une cible inattendue: ${connexionLocation || "(vide)"}.`);
+}
+console.log(`/connexion : ${connexionResponse.status} vers /login`);
 
 const healthResponse = await fetch(new URL("/api/release-health", baseUrl), {
   headers: protectionHeaders,
