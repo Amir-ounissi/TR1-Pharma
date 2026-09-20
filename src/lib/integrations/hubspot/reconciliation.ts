@@ -1781,6 +1781,23 @@ async function syncInboundOrders(options: {
   });
 }
 
+async function isNaaliClientCompany(
+  client: HubSpotClient,
+  companyId: string,
+  cache: Map<string, boolean>,
+) {
+  const cached = cache.get(companyId);
+  if (cached !== undefined) return cached;
+
+  const response = await client.read<{ properties?: Record<string, unknown> }>(
+    `/crm/v3/objects/companies/${encodeURIComponent(companyId)}?properties=client_naali`,
+  );
+  const value = normalize(response.data?.properties?.client_naali);
+  const isClient = value === "true" || value === "oui" || value === "yes" || value === "1";
+  cache.set(companyId, isClient);
+  return isClient;
+}
+
 async function syncInboundVisits(options: {
   admin: AdminClient;
   client: HubSpotClient;
@@ -1793,6 +1810,7 @@ async function syncInboundVisits(options: {
   const since = await lastSuccessfulInboundSyncAt(options.admin, options.connection.id, "visits" as const);
   const links = await existingExternalLinks(options.admin, options.connection.id, "visits");
   const byCompany = new Map(options.pharmacies.map((pharmacy) => [pharmacy.companyId, pharmacy]));
+  const clientStatusByCompany = new Map<string, boolean>();
   const ownerExternalIds = [...options.owners.keys()];
 
   return runInbound(options.admin, options.connection.id, "visits", async (counter) => {
@@ -1850,10 +1868,21 @@ async function syncInboundVisits(options: {
         const companyIds = await meetingCompanyIds(options.client, remoteId);
         if (!companyIds.length) throw new Error(`HubSpot meeting ${remoteId} has no company association`);
 
-        let pharmacy = companyIds.map((companyId) => byCompany.get(companyId)).find(Boolean) ?? null;
+        const clientCompanyIds: string[] = [];
+        for (const companyId of companyIds) {
+          if (await isNaaliClientCompany(options.client, companyId, clientStatusByCompany)) {
+            clientCompanyIds.push(companyId);
+          }
+        }
+        if (!clientCompanyIds.length) {
+          counter.succeeded += 1;
+          continue;
+        }
+
+        let pharmacy = clientCompanyIds.map((companyId) => byCompany.get(companyId)).find(Boolean) ?? null;
         if (!pharmacy) {
           let lastError: unknown = null;
-          for (const companyId of companyIds) {
+          for (const companyId of clientCompanyIds) {
             try {
               pharmacy = await ensurePharmacyForHubSpotCompany({
                 admin: options.admin,
