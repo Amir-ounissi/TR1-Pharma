@@ -2,16 +2,6 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function proxy(request: NextRequest) {
-  // Vercel's deployment protection can answer 200 for unknown routes before
-  // Next.js renders app/not-found. Keep a deterministic probe at the edge so
-  // the release smoke validates the real deployment without weakening the gate.
-  if (request.nextUrl.pathname === "/page-inexistante-smoke") {
-    return new NextResponse("Page introuvable.", {
-      status: 404,
-      headers: { "content-type": "text/plain; charset=utf-8" },
-    });
-  }
-
   let response = NextResponse.next({ request });
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const publishableKey =
