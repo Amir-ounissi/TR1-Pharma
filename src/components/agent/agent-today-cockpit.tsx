@@ -23,11 +23,12 @@ function visitDate(value: string | null) {
 }
 
 type NextVisitFocus = {
-  brandPharmacyId: string;
   name: string;
   address: string;
   scheduledAt: string | null;
   objective: string;
+  href: string;
+  ctaLabel: string;
 } | null;
 
 export function AgentTodayCockpit({
@@ -97,8 +98,8 @@ export function AgentTodayCockpit({
                 <p className="mt-1 text-sm font-medium leading-6 text-[var(--tr1-navy)]">{nextVisit.objective || "Suivi commercial"}</p>
               </div>
               <div className="mt-5">
-                <Link href={`/dashboard/pharmacies/${nextVisit.brandPharmacyId}`} className="inline-flex min-h-11 items-center gap-2 rounded-[0.65rem] bg-[var(--tr1-navy)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--tr1-navy-soft)]">
-                  Ouvrir la fiche <ArrowRight className="size-4" />
+                <Link href={nextVisit.href} className="inline-flex min-h-11 items-center gap-2 rounded-[0.65rem] bg-[var(--tr1-navy)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[var(--tr1-navy-soft)]">
+                  {nextVisit.ctaLabel} <ArrowRight className="size-4" />
                 </Link>
               </div>
             </div>

@@ -48,7 +48,7 @@ async function openTodayVisit(page: Page, visitId: string) {
   await expect(page.getByRole("button", { name: "Démarrer", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Terminer la visite", exact: true })).toHaveCount(0);
 
-  const visitLink = page.locator(`a[href="/dashboard/visits/${visitId}"]`);
+  const visitLink = page.locator(`a[href="/dashboard/visits/${visitId}"]`).filter({ hasText: "Pharmacie République" }).filter({ hasText: "Clôturer" });
   await expect(visitLink).toBeVisible();
   await expect(visitLink).toContainText("Pharmacie République");
   await expect(visitLink).toContainText("Clôturer");
@@ -96,7 +96,7 @@ test("Sprint 6 Agent Day mobile — parcours terrain sans bouton démarrer", asy
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
       expect(overflow, `no horizontal overflow at ${width}px`).toBeLessThanOrEqual(1);
       await expect(page.getByRole("heading", { name: "Mon programme", exact: true })).toBeVisible();
-      await expect(page.locator(`a[href="/dashboard/visits/${visitId}"]`)).toBeVisible();
+      await expect(page.locator(`a[href="/dashboard/visits/${visitId}"]`).filter({ hasText: "Pharmacie République" }).filter({ hasText: "Clôturer" })).toBeVisible();
       await expect(page.getByRole("button", { name: "Démarrer", exact: true })).toHaveCount(0);
     }
   } finally {

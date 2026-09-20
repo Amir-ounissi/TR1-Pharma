@@ -50,7 +50,7 @@ test("Sprint 6.1 desktop — journée simplifiée et clôture directe", async ({
     await expect(page.getByTestId("next-visit-card")).toHaveCount(0);
     await expect(page.getByTestId("active-visit-card")).toHaveCount(0);
 
-    const link = page.locator(`a[href="/dashboard/visits/${visitId}"]`);
+    const link = page.locator(`a[href="/dashboard/visits/${visitId}"]`).filter({ hasText: "Pharmacie République" }).filter({ hasText: "Clôturer" });
     await expect(link).toContainText("Pharmacie République");
     await expect(link).toContainText("Clôturer");
     await link.click();
@@ -73,7 +73,7 @@ test("Sprint 6.1 mobile — CTA clôturer accessible sans étape intermédiaire"
     await signIn(page, "agent@dermavita.local", /Dermavita/i);
     await page.goto("/dashboard/agent");
 
-    const link = page.locator(`a[href="/dashboard/visits/${visitId}"]`);
+    const link = page.locator(`a[href="/dashboard/visits/${visitId}"]`).filter({ hasText: "Pharmacie République" }).filter({ hasText: "Clôturer" });
     await expect(link).toBeVisible();
     await link.click();
 

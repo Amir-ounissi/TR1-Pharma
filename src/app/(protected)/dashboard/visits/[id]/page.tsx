@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, BookOpenCheck, Building2, CalendarDays, MapPin, Navigation, Target } from "lucide-react";
+import { ArrowLeft, BookOpenCheck, Building2, CalendarDays, CheckCircle2, MapPin, Navigation, Target } from "lucide-react";
 import { VisitAuditPanel, type VisitAuditSnapshot } from "@/components/visits/visit-audit-panel";
 import { VisitCloseoutPanel } from "@/components/visits/visit-closeout-panel";
 import { VisitOpenedTracker } from "@/components/visits/visit-opened-tracker";
@@ -112,6 +112,58 @@ export default async function FieldVisitPage({ params }: { params: Promise<{ id:
           Retour à l’Agenda
         </Link>
       </Button>
+
+      <section aria-label="Étapes de la visite" className="grid gap-3 sm:grid-cols-3">
+        <article className="rounded-2xl border bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <span className="grid size-8 place-items-center rounded-full bg-[var(--tr1-navy)] text-sm font-bold text-white">1</span>
+            <span className="text-xs font-semibold text-muted-foreground">Planification</span>
+          </div>
+          <h2 className="mt-3 font-semibold text-[var(--tr1-navy)]">Quand et pourquoi j’y vais</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{formatDateTime(visit.scheduled_start_at)}</p>
+          <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{visit.objective || "Objectif à préciser"}</p>
+          <Button asChild variant="outline" size="sm" className="mt-4 min-h-11 w-full justify-center">
+            <Link href="/dashboard/agenda">
+              <CalendarDays className="size-4" />
+              Voir / replanifier
+            </Link>
+          </Button>
+        </article>
+
+        <article className="rounded-2xl border border-[var(--tr1-orange)]/30 bg-orange-50/40 p-4 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <span className="grid size-8 place-items-center rounded-full bg-[var(--tr1-orange)] text-sm font-bold text-white">2</span>
+            <span className="text-xs font-semibold text-[var(--tr1-orange)]">Préparation</span>
+          </div>
+          <h2 className="mt-3 font-semibold text-[var(--tr1-navy)]">Ce que je dois savoir avant d’entrer</h2>
+          <p className="mt-1 text-sm leading-5 text-muted-foreground">Dernière visite, commandes, réassort, sell-out, alertes et actions ouvertes.</p>
+          {briefHref ? (
+            <Button asChild size="sm" className="mt-4 min-h-11 w-full justify-center">
+              <Link href={briefHref}>
+                <BookOpenCheck className="size-4" />
+                Préparer ma visite
+              </Link>
+            </Button>
+          ) : (
+            <Button size="sm" disabled className="mt-4 min-h-11 w-full justify-center">Brief indisponible</Button>
+          )}
+        </article>
+
+        <article className="rounded-2xl border bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <span className={`grid size-8 place-items-center rounded-full text-sm font-bold text-white ${visit.status === "completed" || closeoutResult.data ? "bg-emerald-600" : "bg-[var(--tr1-navy)]"}`}>3</span>
+            <span className="text-xs font-semibold text-muted-foreground">Clôture</span>
+          </div>
+          <h2 className="mt-3 font-semibold text-[var(--tr1-navy)]">{visit.status === "completed" || closeoutResult.data ? "Clôture enregistrée" : "Je saisis le résultat en sortant"}</h2>
+          <p className="mt-1 text-sm leading-5 text-muted-foreground">{visit.status === "completed" || closeoutResult.data ? "Le compte rendu et la suite sont enregistrés." : "Résultat, notes, preuves et prochaine action au même endroit."}</p>
+          <Button asChild variant={visit.status === "completed" || closeoutResult.data ? "outline" : "default"} size="sm" className="mt-4 min-h-11 w-full justify-center">
+            <Link href="#visit-execution">
+              <CheckCircle2 className="size-4" />
+              {visit.status === "completed" || closeoutResult.data ? "Voir la clôture" : "Clôturer la visite"}
+            </Link>
+          </Button>
+        </article>
+      </section>
 
       <header className="rounded-2xl bg-[var(--tr1-navy)] p-5 text-white shadow-sm sm:p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">

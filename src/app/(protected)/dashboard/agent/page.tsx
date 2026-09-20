@@ -162,6 +162,43 @@ export default async function AgentPage() {
     href: `/dashboard/visits/${event.source_id}`,
   }));
 
+  const primaryFieldVisit = [...multibrandFieldVisits]
+    .filter((event) => !["completed", "cancelled", "canceled", "missed"].includes(event.status.toLowerCase()))
+    .sort((left, right) => {
+      const leftInProgress = left.status.toLowerCase() === "in_progress";
+      const rightInProgress = right.status.toLowerCase() === "in_progress";
+      if (leftInProgress !== rightInProgress) return leftInProgress ? -1 : 1;
+      return Date.parse(left.start_at) - Date.parse(right.start_at);
+    })[0] ?? null;
+
+  const primaryVisitContext = primaryFieldVisit && visit?.pharmacy_id === primaryFieldVisit.pharmacy_id
+    ? visit
+    : null;
+
+  const cockpitNextVisit = primaryFieldVisit
+    ? {
+        name: primaryFieldVisit.pharmacy_name || primaryFieldVisit.title,
+        address: primaryVisitContext?.address || primaryFieldVisit.city || "Adresse disponible dans la visite",
+        scheduledAt: primaryFieldVisit.start_at,
+        objective: primaryVisitContext?.objective || primaryFieldVisit.title || "Visite terrain",
+        href: `/dashboard/visits/${primaryFieldVisit.source_id}`,
+        ctaLabel: primaryFieldVisit.status.toLowerCase() === "in_progress"
+          ? "Reprendre la visite"
+          : Date.parse(primaryFieldVisit.start_at) <= now.getTime()
+            ? "Clôturer la visite"
+            : "Préparer la visite",
+      }
+    : visit
+      ? {
+          name: visit.name,
+          address: visit.address,
+          scheduledAt: visit.scheduled_at,
+          objective: visit.objective,
+          href: `/dashboard/pharmacies/${visit.brand_pharmacy_id}`,
+          ctaLabel: "Préparer la visite",
+        }
+      : null;
+
   const upcomingFieldVisits = ((upcomingFieldAgendaResult.data ?? []) as FieldAgendaEvent[]).filter(
     (event) => event.ownership === "mine" && event.source_kind === "field_visit" && Boolean(event.pharmacy_id),
   );
@@ -261,13 +298,7 @@ export default async function AgentPage() {
         plannedVisitCount={overviewVisits.length}
         firstName={firstName}
         dayLabel={dayLabel}
-        nextVisit={visit ? {
-          brandPharmacyId: visit.brand_pharmacy_id,
-          name: visit.name,
-          address: visit.address,
-          scheduledAt: visit.scheduled_at,
-          objective: visit.objective,
-        } : null}
+        nextVisit={cockpitNextVisit}
       />
 
       <AgentMultibrandOverview
