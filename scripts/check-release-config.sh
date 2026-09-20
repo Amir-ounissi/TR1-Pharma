@@ -29,6 +29,30 @@ grep -q '^LEAD_CAPTURE_SALT=' .env.example || {
   exit 1
 }
 
+production_workflow='.github/workflows/release-production.yml'
+grep -Fq 'deploy --prod --skip-domain' "$production_workflow" || {
+  echo "Gate production: la candidate doit être créée avec --skip-domain." >&2
+  exit 1
+}
+grep -Fq '/promote/$PRODUCTION_DEPLOYMENT_ID?teamId=$VERCEL_ORG_ID' "$production_workflow" || {
+  echo "Gate production: seule l'identité de la candidate validée doit être promue." >&2
+  exit 1
+}
+
+candidate_smoke_line="$(grep -nF 'name: Vérifier la candidate production avant promotion' "$production_workflow" | cut -d: -f1)"
+promotion_line="$(grep -nF 'name: Promouvoir la candidate validée vers les domaines production' "$production_workflow" | cut -d: -f1)"
+public_smoke_line="$(grep -nF 'name: Smoke du domaine public après promotion' "$production_workflow" | cut -d: -f1)"
+test "$candidate_smoke_line" -lt "$promotion_line" && test "$promotion_line" -lt "$public_smoke_line" || {
+  echo "Gate production: l'ordre candidate → smoke → promotion → smoke public est invalide." >&2
+  exit 1
+}
+
+emergency_workflow='.github/workflows/emergency-promote-known-good.yml'
+grep -Fq '/promote/$KNOWN_GOOD_DEPLOYMENT_ID?teamId=$VERCEL_ORG_ID' "$emergency_workflow" || {
+  echo "Gate production: le rollback d'urgence doit utiliser l'API de promotion authentifiée." >&2
+  exit 1
+}
+
 test -f package-lock.json
 test -f .env.example
 test -f .nvmrc
