@@ -234,6 +234,25 @@ jobs:
         run: |
           set -eu
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+
+          # The CLI deployment receives explicit runtime env values below. Pull the
+          # server-only Supabase credential from the canonical Vercel production
+          # environment first so it is never copied into GitHub secrets or logs.
+          runtime_env_file="$(mktemp)"
+          npx --yes "vercel@${VERCEL_CLI_VERSION}" env pull "$runtime_env_file" --environment=production --yes --token "$VERCEL_TOKEN" >/dev/null
+          set -a
+          . "$runtime_env_file"
+          set +a
+          rm -f "$runtime_env_file"
+          if [ -n "${SUPABASE_SECRET_KEY:-}" ]; then
+            SUPABASE_ADMIN_KEY="$SUPABASE_SECRET_KEY"
+          elif [ -n "${SUPABASE_SERVICE_ROLE_KEY:-}" ]; then
+            SUPABASE_ADMIN_KEY="$SUPABASE_SERVICE_ROLE_KEY"
+          else
+            echo "::error::Aucune clé admin Supabase n'est disponible dans l'environnement Vercel production."
+            exit 1
+          fi
+          echo "::add-mask::$SUPABASE_ADMIN_KEY"
           deployment_url="$(npx --yes "vercel@${VERCEL_CLI_VERSION}" deploy --prod --skip-domain --yes --token "$VERCEL_TOKEN" \
             --build-env "APP_ENV=production" \
             --build-env "RELEASE_SHA=$RELEASE_SHA" \
@@ -244,7 +263,8 @@ jobs:
             --env "RELEASE_SHA=$RELEASE_SHA" \
             --env "NEXT_PUBLIC_SUPABASE_URL=$PRODUCTION_SUPABASE_URL" \
             --env "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PRODUCTION_SUPABASE_PUBLISHABLE_KEY" \
-            --env "NEXT_PUBLIC_APP_URL=$PRODUCTION_URL" | tail -n 1)"
+            --env "NEXT_PUBLIC_APP_URL=$PRODUCTION_URL" \
+            --env "SUPABASE_SECRET_KEY=$SUPABASE_ADMIN_KEY" | tail -n 1)"
           case "$deployment_url" in
             https://tr-1-pharma-*.vercel.app) ;;
             *)
