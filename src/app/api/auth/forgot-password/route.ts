@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
   try {
     const result = await Promise.race([
       supabase.auth.resetPasswordForEmail(payload.email, {
-        redirectTo: request.nextUrl.origin,
+        redirectTo: `${request.nextUrl.origin}/reset-password`,
       }),
       timeout,
     ]);
