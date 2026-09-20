@@ -38,7 +38,7 @@ export default async function AgentCloseoutsPage() {
         && !["completed", "cancelled"].includes(event.status)
         && new Date(event.start_at).getTime() <= now.getTime(),
     )
-    .sort((left, right) => new Date(left.start_at).getTime() - new Date(right.start_at).getTime())
+    .sort((left, right) => new Date(right.start_at).getTime() - new Date(left.start_at).getTime())
     .map((event) => ({
       id: event.source_id,
       pharmacyName: event.pharmacy_name || event.title,
@@ -55,7 +55,7 @@ export default async function AgentCloseoutsPage() {
         </p>
         <h1 className="mt-1 text-2xl font-semibold text-[var(--tr1-navy)]">Visites à clôturer</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Les visites non clôturées des 30 derniers jours restent ici jusqu’à leur compte rendu.
+          La visite la plus récente passe en premier, pour saisir le compte rendu tant que les détails sont encore frais.
         </p>
       </header>
 
