@@ -24,8 +24,11 @@ export type AgentPendingCloseoutVisit = {
 
 const emptyState: VisitCloseoutActionState = {};
 
-function visitTime(value: string) {
+function visitDateTime(value: string) {
   return new Intl.DateTimeFormat("fr-FR", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
     hour: "2-digit",
     minute: "2-digit",
     timeZone: "Europe/Paris",
@@ -66,7 +69,7 @@ export function AgentVisitCloseoutQueue({ visits }: { visits: AgentPendingCloseo
             {visits.length} visite{visits.length > 1 ? "s" : ""} à clôturer
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Clôture-les ici, une par une, sans retourner dans chaque fiche pharmacie.
+            Commence par la plus récente, puis enchaîne les comptes rendus sans retourner dans chaque fiche pharmacie.
           </p>
         </div>
         <span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-bold text-[var(--tr1-orange)]">
@@ -77,7 +80,7 @@ export function AgentVisitCloseoutQueue({ visits }: { visits: AgentPendingCloseo
       <div className="mt-5 rounded-xl border border-[var(--tr1-line)] bg-[var(--tr1-ivory)]/60 p-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-medium text-muted-foreground">À clôturer maintenant · {visitTime(current.startAt)}</p>
+            <p className="text-xs font-medium text-muted-foreground">À clôturer maintenant · {visitDateTime(current.startAt)}</p>
             <p className="mt-1 text-lg font-bold text-[var(--tr1-navy)]">{current.pharmacyName}</p>
             {current.city ? <p className="text-sm text-muted-foreground">{current.city}</p> : null}
           </div>
@@ -155,7 +158,7 @@ export function AgentVisitCloseoutQueue({ visits }: { visits: AgentPendingCloseo
             {visits.slice(1, 4).map((visit) => (
               <div key={visit.id} className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm">
                 <span className="min-w-0 truncate"><span className="font-medium">{visit.pharmacyName}</span>{visit.city ? <span className="text-muted-foreground"> · {visit.city}</span> : null}</span>
-                <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">{visitTime(visit.startAt)} <ChevronRight className="size-3" /></span>
+                <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">{visitDateTime(visit.startAt)} <ChevronRight className="size-3" /></span>
               </div>
             ))}
           </div>
