@@ -154,7 +154,7 @@ export default async function FieldVisitPage({ params }: { params: Promise<{ id:
             <span className={`grid size-8 place-items-center rounded-full text-sm font-bold text-white ${visit.status === "completed" || closeoutResult.data ? "bg-emerald-600" : "bg-[var(--tr1-navy)]"}`}>3</span>
             <span className="text-xs font-semibold text-muted-foreground">Clôture</span>
           </div>
-          <h2 className="mt-3 font-semibold text-[var(--tr1-navy)]">{visit.status === "completed" || closeoutResult.data ? "Visite clôturée" : "Je saisis le résultat en sortant"}</h2>
+          <h2 className="mt-3 font-semibold text-[var(--tr1-navy)]">{visit.status === "completed" || closeoutResult.data ? "Clôture enregistrée" : "Je saisis le résultat en sortant"}</h2>
           <p className="mt-1 text-sm leading-5 text-muted-foreground">{visit.status === "completed" || closeoutResult.data ? "Le compte rendu et la suite sont enregistrés." : "Résultat, notes, preuves et prochaine action au même endroit."}</p>
           <Button asChild variant={visit.status === "completed" || closeoutResult.data ? "outline" : "default"} size="sm" className="mt-4 min-h-11 w-full justify-center">
             <Link href="#visit-execution">
