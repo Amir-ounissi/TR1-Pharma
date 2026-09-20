@@ -3,8 +3,17 @@ if (!rawBaseUrl) throw new Error("BASE_URL est obligatoire.");
 const baseUrl = new URL(rawBaseUrl);
 if (baseUrl.protocol !== "https:" && process.env.ALLOW_LOCAL_SMOKE !== "true") throw new Error("BASE_URL doit utiliser HTTPS pour un smoke test distant.");
 
-const expectedAppEnv = process.env.EXPECTED_APP_ENV?.trim();
-const expectedSupabaseProjectRef = process.env.EXPECTED_SUPABASE_PROJECT_REF?.trim();
+const expectedAppEnv =
+  process.env.EXPECTED_APP_ENV?.trim() ||
+  (process.env.PRODUCTION_SUPABASE_PROJECT_REF?.trim()
+    ? "production"
+    : process.env.STAGING_SUPABASE_PROJECT_REF?.trim()
+      ? "staging"
+      : undefined);
+const expectedSupabaseProjectRef =
+  process.env.EXPECTED_SUPABASE_PROJECT_REF?.trim() ||
+  process.env.PRODUCTION_SUPABASE_PROJECT_REF?.trim() ||
+  process.env.STAGING_SUPABASE_PROJECT_REF?.trim();
 
 const trustedOidcToken = process.env.VERCEL_TRUSTED_OIDC_TOKEN?.trim();
 const protectionHeaders = trustedOidcToken
