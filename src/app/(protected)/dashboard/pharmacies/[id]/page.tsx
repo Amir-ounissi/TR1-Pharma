@@ -15,6 +15,7 @@ import { PharmacyCockpit } from "@/components/pharmacies/pharmacy-cockpit";
 import { PharmacyFieldDataSummary } from "@/components/pharmacies/pharmacy-field-data-summary";
 import { PharmacySectionNav } from "@/components/pharmacies/pharmacy-section-nav";
 import { TerrainPharmacyHeader } from "@/components/agent/terrain-pharmacy-header";
+import { PharmacyOpenedTracker } from "@/components/agent/pharmacy-opened-tracker";
 import {
   AddImplantedProductForm,
   AgentPotentialForm,
@@ -454,6 +455,7 @@ export default async function PharmacyDetailPage({
   });
   return (
     <div className="space-y-6">
+      <PharmacyOpenedTracker pharmacyId={pharmacy.id} />
       <TerrainPharmacyHeader
         brandPharmacyId={id}
         pharmacyId={pharmacy.id}

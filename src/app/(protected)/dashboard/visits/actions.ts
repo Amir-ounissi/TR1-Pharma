@@ -30,6 +30,71 @@ type CloseoutRpcResult = {
 
 type SupabaseSessionClient = Awaited<ReturnType<typeof requireCompletedOnboarding>>["supabase"];
 
+type VisitProductEvent = "interaction_started" | "interaction_submitted" | "next_action_created";
+
+async function loadVisitTrackingContext(
+  supabase: SupabaseSessionClient,
+  visitId: string,
+) {
+  const { data, error } = await supabase
+    .from("field_visit_brands")
+    .select("brand_id,field_visits!inner(pharmacy_id,archived_at)")
+    .eq("visit_id", visitId)
+    .is("field_visits.archived_at", null);
+
+  if (error) {
+    console.error("Impossible de charger le contexte analytics de la visite.", {
+      visitId,
+      code: error.code,
+      message: error.message,
+    });
+    return { brandIds: [] as string[], pharmacyId: null as string | null };
+  }
+
+  const brandIds = [...new Set((data ?? []).map((row) => String(row.brand_id)).filter(Boolean))];
+  const firstVisit = data?.[0]
+    ? (Array.isArray(data[0].field_visits) ? data[0].field_visits[0] : data[0].field_visits)
+    : null;
+
+  return {
+    brandIds,
+    pharmacyId: firstVisit?.pharmacy_id ? String(firstVisit.pharmacy_id) : null,
+  };
+}
+
+async function trackVisitProductEvent(
+  supabase: SupabaseSessionClient,
+  visitId: string,
+  event: VisitProductEvent,
+  metadata: Record<string, unknown> = {},
+) {
+  const context = await loadVisitTrackingContext(supabase, visitId);
+  for (const brandId of context.brandIds) {
+    const { error } = await supabase.rpc("track_product_event", {
+      target_event: event,
+      target_brand_id: brandId,
+      target_pharmacy_id: context.pharmacyId,
+      target_source: "field_visit",
+      target_metadata: { visit_id: visitId, ...metadata },
+    });
+    if (error) {
+      console.error("Impossible d'enregistrer l'événement produit de la visite.", {
+        visitId,
+        event,
+        code: error.code,
+        message: error.message,
+      });
+    }
+  }
+}
+
+export async function trackFieldVisitOpenedAction(visitId: string) {
+  const parsed = uuid.safeParse(visitId);
+  if (!parsed.success) return;
+  const { supabase } = await requireCompletedOnboarding();
+  await trackVisitProductEvent(supabase, parsed.data, "interaction_started");
+}
+
 const uuid = z.string().uuid();
 const databaseUuid = z.string().regex(/^[0-9a-fA-F]{8}-(?:[0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$/, "Identifiant invalide.");
 const postVisitDelay = z.enum(["3", "7", "14"]);
@@ -220,6 +285,18 @@ export async function closeFieldVisitAction(
     if (error) throw error;
 
     const closeout = parseCloseoutResult(data);
+    if (!closeout.alreadyClosed) {
+      await trackVisitProductEvent(supabase, parsed.visitId, "interaction_submitted", {
+        outcome: parsed.outcome,
+        input_mode: parsed.inputMode,
+      });
+      if (closeout.nextVisitId) {
+        await trackVisitProductEvent(supabase, parsed.visitId, "next_action_created", {
+          action_type: "next_visit",
+          next_visit_id: closeout.nextVisitId,
+        });
+      }
+    }
     let evidenceFailed = 0;
 
     if (photos.length > 0) {
@@ -341,6 +418,11 @@ export async function createPostVisitFollowUpAction(
       rule_code: "user_action_v1",
     });
     if (error) throw error;
+
+    await trackVisitProductEvent(supabase, parsed.visitId, "next_action_created", {
+      action_type: "follow_up",
+      delay_days: Number(parsed.delayDays),
+    });
 
     revalidatePath("/dashboard/tasks");
     revalidatePath(`/dashboard/pharmacies/${parsed.brandPharmacyId}`);

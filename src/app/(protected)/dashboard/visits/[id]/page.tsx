@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, BookOpenCheck, Building2, CalendarDays, MapPin, Navigation, Target } from "lucide-react";
 import { VisitAuditPanel, type VisitAuditSnapshot } from "@/components/visits/visit-audit-panel";
 import { VisitCloseoutPanel } from "@/components/visits/visit-closeout-panel";
+import { VisitOpenedTracker } from "@/components/visits/visit-opened-tracker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { requireCompletedOnboarding } from "@/lib/auth";
@@ -104,6 +105,7 @@ export default async function FieldVisitPage({ params }: { params: Promise<{ id:
 
   return (
     <main className="mx-auto max-w-4xl space-y-5 pb-32 sm:pb-10">
+      <VisitOpenedTracker visitId={visit.id} />
       <Button asChild variant="ghost" size="sm">
         <Link href="/dashboard/agenda" className="min-h-11 touch-manipulation">
           <ArrowLeft className="size-4" />
