@@ -186,7 +186,38 @@ jobs:
               exit 1
               ;;
           esac
+          deployment_host="${deployment_url#https://}"
+          deployment_response="$(mktemp)"
+          curl --fail-with-body --silent --show-error \
+            -H "Authorization: Bearer $VERCEL_TOKEN" \
+            "https://api.vercel.com/v13/deployments/$deployment_host?teamId=$VERCEL_ORG_ID" \
+            -o "$deployment_response"
+          deployment_id="$(node - "$deployment_response" <<'NODE'
+          const fs = require("node:fs");
+          const payload = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          if (typeof payload.id !== "string" || !payload.id.startsWith("dpl_")) process.exit(1);
+          process.stdout.write(payload.id);
+          NODE
+          )"
+          bypass_response="$(mktemp)"
+          curl --fail-with-body --silent --show-error \
+            -X PATCH \
+            -H "Authorization: Bearer $VERCEL_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data '{"ttl":3600}' \
+            "https://api.vercel.com/aliases/$deployment_id/protection-bypass?teamId=$VERCEL_ORG_ID" \
+            -o "$bypass_response"
+          bypass_secret="$(node - "$bypass_response" <<'NODE'
+          const fs = require("node:fs");
+          const payload = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          const value = payload.value ?? payload.protectionBypass?.value;
+          if (typeof value !== "string" || value.length < 16) process.exit(1);
+          process.stdout.write(value);
+          NODE
+          )"
+          echo "::add-mask::$bypass_secret"
           echo "STAGING_DEPLOYMENT_URL=$deployment_url" >> "$GITHUB_ENV"
+          echo "STAGING_PROTECTION_BYPASS=$bypass_secret" >> "$GITHUB_ENV"
           echo "Déploiement staging: $deployment_url"
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
           test -z "$(git status --porcelain)"
@@ -201,10 +232,10 @@ jobs:
             HTTP_BODY="$(mktemp)"
             HTTP_HEADERS="$(mktemp)"
             local raw_status
-            raw_status="$(npx --yes "vercel@${VERCEL_CLI_VERSION}" curl "$route" \
-              --token "$VERCEL_TOKEN" \
-              --deployment "$STAGING_DEPLOYMENT_URL" \
-              --silent --show-error -D "$HTTP_HEADERS" -o "$HTTP_BODY" -w "%{http_code}" "$@")"
+            raw_status="$(curl --silent --show-error \
+              -H "x-vercel-protection-bypass: $STAGING_PROTECTION_BYPASS" \
+              -D "$HTTP_HEADERS" -o "$HTTP_BODY" -w "%{http_code}" \
+              "$@" "$STAGING_DEPLOYMENT_URL$route")"
             HTTP_STATUS="$(printf '%s\n' "$raw_status" | grep -Eo '[1-5][0-9]{2}' | tail -n 1)"
             test -n "$HTTP_STATUS" || {
               echo "::error::Impossible de lire le statut HTTP pour $route."
@@ -303,7 +334,7 @@ jobs:
           esac
           echo "/dashboard/agent : $HTTP_STATUS"
 
-          echo "Smoke staging authentifié réussi sur $STAGING_DEPLOYMENT_URL"
+          echo "Smoke staging avec bypass temporaire réussi sur $STAGING_DEPLOYMENT_URL"
 
       - name: Preuve staging
         run: |
@@ -315,6 +346,6 @@ jobs:
             echo "- migrations: Git = staging"
             echo "- déploiement créé: \`$STAGING_DEPLOYMENT_URL\`"
             echo "- URL de preview testée: \`$STAGING_DEPLOYMENT_URL\`"
-            echo "- smoke applicatif Vercel CLI authentifié: PASS"
+            echo "- smoke applicatif avec bypass temporaire limité au déploiement: PASS"
             echo "- production: NON TOUCHÉE"
           } >> "$GITHUB_STEP_SUMMARY"

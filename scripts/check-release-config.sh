@@ -30,10 +30,23 @@ grep -q '^LEAD_CAPTURE_SALT=' .env.example || {
 }
 
 production_workflow='.github/workflows/release-production.yml'
+staging_workflow='.github/workflows/release-staging.yml'
 grep -Fq 'deploy --prod --skip-domain' "$production_workflow" || {
   echo "Gate production: la candidate doit être créée avec --skip-domain." >&2
   exit 1
 }
+grep -Fq '/aliases/$deployment_id/protection-bypass?teamId=$VERCEL_ORG_ID' "$production_workflow" || {
+  echo "Gate production: la candidate protégée doit recevoir un bypass temporaire." >&2
+  exit 1
+}
+grep -Fq '/aliases/$deployment_id/protection-bypass?teamId=$VERCEL_ORG_ID' "$staging_workflow" || {
+  echo "Gate staging: le preview protégé doit recevoir un bypass temporaire." >&2
+  exit 1
+}
+if grep -Fq 'vercel@${VERCEL_CLI_VERSION}" curl' "$production_workflow" "$staging_workflow"; then
+  echo "Gate release: vercel curl est interdit car incompatible avec le jeton d'équipe." >&2
+  exit 1
+fi
 grep -Fq '/promote/$PRODUCTION_DEPLOYMENT_ID?teamId=$VERCEL_ORG_ID' "$production_workflow" || {
   echo "Gate production: seule l'identité de la candidate validée doit être promue." >&2
   exit 1
