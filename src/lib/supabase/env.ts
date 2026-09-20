@@ -2,16 +2,17 @@ const missingEnvironmentVariable = (name: string): never => {
   throw new Error(`Variable d'environnement manquante : ${name}`);
 };
 
-function configuredEnvironmentVariable(name: string) {
-  const value = process.env[name];
+function configuredEnvironmentVariable(value: string | undefined) {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
 }
 
 export function getPublicSupabaseEnv() {
-  const url = configuredEnvironmentVariable("NEXT_PUBLIC_SUPABASE_URL");
+  // NEXT_PUBLIC_* values must be referenced statically so Next.js can inline them
+  // into the browser bundle at build time.
+  const url = configuredEnvironmentVariable(process.env.NEXT_PUBLIC_SUPABASE_URL);
   const publishableKey =
-    configuredEnvironmentVariable("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY") ??
-    configuredEnvironmentVariable("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+    configuredEnvironmentVariable(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) ??
+    configuredEnvironmentVariable(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
   return {
     url: url ?? missingEnvironmentVariable("NEXT_PUBLIC_SUPABASE_URL"),
@@ -22,10 +23,10 @@ export function getPublicSupabaseEnv() {
 }
 
 export function getSecretSupabaseKey() {
-  const secretKey = configuredEnvironmentVariable("SUPABASE_SECRET_KEY");
+  const secretKey = configuredEnvironmentVariable(process.env.SUPABASE_SECRET_KEY);
   if (secretKey) return secretKey;
 
-  const serviceRoleKey = configuredEnvironmentVariable("SUPABASE_SERVICE_ROLE_KEY");
+  const serviceRoleKey = configuredEnvironmentVariable(process.env.SUPABASE_SERVICE_ROLE_KEY);
   if (serviceRoleKey) return serviceRoleKey;
 
   throw new Error(
