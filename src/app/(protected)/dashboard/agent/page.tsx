@@ -186,7 +186,7 @@ export default async function AgentPage() {
           ? "Reprendre la visite"
           : Date.parse(primaryFieldVisit.start_at) <= now.getTime()
             ? "Clôturer la visite"
-            : "Ouvrir la visite",
+            : "Préparer la visite",
       }
     : visit
       ? {
