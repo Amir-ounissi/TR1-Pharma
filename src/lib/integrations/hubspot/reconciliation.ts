@@ -314,6 +314,414 @@ async function mappedPharmacies(admin: AdminClient, brandId: string, connectionI
   });
 }
 
+
+type HubSpotAssociationList = {
+  results?: Array<{ id?: string | number }>;
+};
+
+type HubSpotCompanyRead = {
+  properties?: Record<string, unknown>;
+  updatedAt?: string;
+};
+
+function hubSpotCompanyIdentity(value: unknown) {
+  const raw = text(value) ?? "Pharmacie HubSpot";
+  const parts = raw.split(/\s+-\s+/);
+  const name = parts[0]?.trim() || raw;
+  const cip = parts.slice(1).find((part) => /^\d{6,8}$/.test(part.trim()))?.trim() ?? null;
+  return { name, cip };
+}
+
+
+type HubSpotNoteCandidate = {
+  id: string;
+  timestamp: string;
+  body: string;
+  updatedAt: string | null;
+};
+
+function parisDayKey(value: string) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Paris",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(value));
+}
+
+async function closeoutNoteForMeeting(options: {
+  client: HubSpotClient;
+  companyId: string;
+  ownerExternalId: string | null;
+  meetingStart: string;
+  nextMeetingStart: string | null;
+}) {
+  const meetingDay = parisDayKey(options.meetingStart);
+  const lowerBound = new Date(new Date(options.meetingStart).getTime() - 36 * 60 * 60_000).toISOString();
+  const filters: Record<string, unknown>[] = [
+    { propertyName: "associations.company", operator: "EQ", value: options.companyId },
+    { propertyName: "hs_timestamp", operator: "GTE", value: String(new Date(lowerBound).getTime()) },
+  ];
+  if (options.ownerExternalId) {
+    filters.push({ propertyName: "hubspot_owner_id", operator: "EQ", value: options.ownerExternalId });
+  }
+
+  const notes = await searchAll(options.client, "notes", {
+    filterGroups: [{ filters }],
+    properties: [
+      "hs_note_body",
+      "hs_timestamp",
+      "hubspot_owner_id",
+      "hs_lastmodifieddate",
+    ],
+    sorts: ["hs_timestamp"],
+  });
+
+  const nextMeetingDay = options.nextMeetingStart ? parisDayKey(options.nextMeetingStart) : null;
+  const candidates = notes.flatMap((remote) => {
+    const noteId = externalId(remote);
+    const timestamp = text(remote.properties?.hs_timestamp) ?? remote.createdAt ?? null;
+    if (!noteId || !timestamp) return [];
+    const noteDay = parisDayKey(timestamp);
+    if (noteDay < meetingDay) return [];
+    if (nextMeetingDay && noteDay >= nextMeetingDay) return [];
+    return [{
+      id: noteId,
+      timestamp,
+      body: stripHtml(remote.properties?.hs_note_body),
+      updatedAt: remote.updatedAt ?? text(remote.properties?.hs_lastmodifieddate),
+    } satisfies HubSpotNoteCandidate];
+  });
+
+  candidates.sort((left, right) => {
+    const leftSameDay = parisDayKey(left.timestamp) === meetingDay ? 0 : 1;
+    const rightSameDay = parisDayKey(right.timestamp) === meetingDay ? 0 : 1;
+    if (leftSameDay !== rightSameDay) return leftSameDay - rightSameDay;
+    return new Date(left.timestamp).getTime() - new Date(right.timestamp).getTime();
+  });
+
+  return candidates[0] ?? null;
+}
+
+async function applyHubSpotMeetingCloseout(options: {
+  admin: AdminClient;
+  brandId: string;
+  actorId: string;
+  visitId: string;
+  pharmacy: PharmacyContext;
+  meetingStart: string;
+  meetingEnd: string;
+  note: HubSpotNoteCandidate;
+}) {
+  const completedAt = new Date(options.note.timestamp).getTime() >= new Date(options.meetingStart).getTime()
+    ? options.note.timestamp
+    : options.meetingEnd;
+
+  const { error: visitError } = await options.admin
+    .from("field_visits")
+    .update({
+      status: "completed",
+      actual_start_at: options.meetingStart,
+      actual_end_at: completedAt,
+      started_at: options.meetingStart,
+      completed_at: completedAt,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", options.visitId)
+    .is("archived_at", null);
+  if (visitError) throw visitError;
+
+  const { data: existingCloseout, error: closeoutLookupError } = await options.admin
+    .from("field_visit_closeouts")
+    .select("visit_id")
+    .eq("visit_id", options.visitId)
+    .maybeSingle();
+  if (closeoutLookupError) throw closeoutLookupError;
+
+  if (!existingCloseout) {
+    const { error: closeoutError } = await options.admin
+      .from("field_visit_closeouts")
+      .insert({
+        visit_id: options.visitId,
+        created_by: options.actorId,
+        outcome: "other",
+        summary: options.note.body || "Compte rendu HubSpot présent sur la fiche pharmacie.",
+        input_mode: "manual",
+        structured_payload: {
+          source: "hubspot_note",
+          external_note_id: options.note.id,
+        },
+        completed_at: completedAt,
+      });
+    if (closeoutError) throw closeoutError;
+  }
+
+  const { data: existingInteraction, error: interactionLookupError } = await options.admin
+    .from("interactions")
+    .select("id")
+    .eq("brand_id", options.brandId)
+    .eq("field_visit_id", options.visitId)
+    .eq("interaction_type", "visit")
+    .is("archived_at", null)
+    .limit(1)
+    .maybeSingle();
+  if (interactionLookupError) throw interactionLookupError;
+
+  if (existingInteraction?.id) {
+    const { error } = await options.admin
+      .from("interactions")
+      .update({
+        notes: options.note.body || "Compte rendu HubSpot présent sur la fiche pharmacie.",
+        outcome: "completed",
+        occurred_at: options.meetingStart,
+      })
+      .eq("id", existingInteraction.id);
+    if (error) throw error;
+  }
+}
+
+async function meetingCompanyIds(client: HubSpotClient, meetingId: string) {
+  const response = await client.read<HubSpotAssociationList>(
+    `/crm/v3/objects/meetings/${encodeURIComponent(meetingId)}/associations/companies?limit=100`,
+  );
+  return (response.data?.results ?? [])
+    .map((row) => row.id === null || row.id === undefined ? null : String(row.id))
+    .filter((value): value is string => Boolean(value));
+}
+
+type HubSpotCloseoutNote = {
+  id: string;
+  occurredAt: string;
+  body: string;
+};
+
+function parisCalendarDate(value: string) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Paris",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(value));
+}
+
+async function findHubSpotCloseoutNote(options: {
+  client: HubSpotClient;
+  companyId: string;
+  meetingStart: string;
+  nextMeetingStart?: string | null;
+}) {
+  const meetingStartMs = new Date(options.meetingStart).getTime();
+  if (!Number.isFinite(meetingStartMs)) return null;
+
+  const filters: Array<Record<string, unknown>> = [
+    {
+      propertyName: "hs_timestamp",
+      operator: "GTE",
+      value: String(meetingStartMs - 24 * 60 * 60_000),
+    },
+  ];
+  if (options.nextMeetingStart) {
+    const nextStartMs = new Date(options.nextMeetingStart).getTime();
+    if (Number.isFinite(nextStartMs)) {
+      filters.push({
+        propertyName: "hs_timestamp",
+        operator: "LT",
+        value: String(nextStartMs),
+      });
+    }
+  }
+
+  const notes = await searchAll(options.client, "notes", {
+    filterGroups: [{
+      filters: [
+        { propertyName: "associations.company", operator: "EQ", value: options.companyId },
+        ...filters,
+      ],
+    }],
+    properties: ["hs_note_body", "hs_timestamp", "hs_lastmodifieddate"],
+    sorts: ["hs_timestamp"],
+  });
+
+  const meetingDate = parisCalendarDate(options.meetingStart);
+  const candidates = notes.flatMap((note) => {
+    const id = externalId(note);
+    const occurredAt = text(note.properties?.hs_timestamp) ?? note.createdAt ?? null;
+    if (!id || !occurredAt) return [];
+    const occurredMs = new Date(occurredAt).getTime();
+    if (!Number.isFinite(occurredMs) || parisCalendarDate(occurredAt) < meetingDate) return [];
+    return [{
+      id,
+      occurredAt,
+      body: stripHtml(note.properties?.hs_note_body) || "Note HubSpot",
+    }];
+  }).sort((left, right) => new Date(left.occurredAt).getTime() - new Date(right.occurredAt).getTime());
+
+  return candidates[0] ?? null;
+}
+
+async function ensurePharmacyForHubSpotCompany(options: {
+  admin: AdminClient;
+  client: HubSpotClient;
+  brandId: string;
+  connectionId: string;
+  actorId: string;
+  ownerUserId: string;
+  companyId: string;
+  byCompany: Map<string, PharmacyContext>;
+}) {
+  const cached = options.byCompany.get(options.companyId);
+  if (cached) return cached;
+
+  const { data: mappedLink, error: mappedLinkError } = await options.admin
+    .from("connector_external_links")
+    .select("tr1_record_id")
+    .eq("connection_id", options.connectionId)
+    .eq("entity_type", "pharmacies")
+    .eq("external_id", options.companyId)
+    .limit(1)
+    .maybeSingle();
+  if (mappedLinkError) throw mappedLinkError;
+
+  let pharmacyId = mappedLink?.tr1_record_id ? String(mappedLink.tr1_record_id) : null;
+  let companyUpdatedAt: string | null = null;
+
+  if (!pharmacyId) {
+    const company = await options.client.read<HubSpotCompanyRead>(
+      `/crm/v3/objects/companies/${encodeURIComponent(options.companyId)}?properties=name,address,address2,city,zip,phone,domain`,
+    );
+    const properties = company.data?.properties ?? {};
+    companyUpdatedAt = company.data?.updatedAt ?? null;
+    const identity = hubSpotCompanyIdentity(properties.name);
+    const postalCode = text(properties.zip);
+
+    let existing: { id: string } | null = null;
+    if (identity.cip) {
+      const { data, error } = await options.admin
+        .from("pharmacies")
+        .select("id")
+        .eq("cip_code", identity.cip)
+        .is("archived_at", null)
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      existing = data ? { id: String(data.id) } : null;
+    }
+
+    if (!existing && postalCode) {
+      const { data, error } = await options.admin
+        .from("pharmacies")
+        .select("id")
+        .eq("postal_code", postalCode)
+        .ilike("trade_name", identity.name)
+        .is("archived_at", null)
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      existing = data ? { id: String(data.id) } : null;
+    }
+
+    if (!existing && postalCode) {
+      const { data, error } = await options.admin
+        .from("pharmacies")
+        .select("id")
+        .eq("postal_code", postalCode)
+        .ilike("legal_name", identity.name)
+        .is("archived_at", null)
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      existing = data ? { id: String(data.id) } : null;
+    }
+
+    if (existing) {
+      pharmacyId = existing.id;
+    } else {
+      const { data: inserted, error } = await options.admin
+        .from("pharmacies")
+        .insert({
+          legal_name: identity.name,
+          trade_name: identity.name,
+          cip_code: identity.cip,
+          postal_code: postalCode,
+          city: text(properties.city),
+          address_line_1: text(properties.address),
+          address_line_2: text(properties.address2),
+          phone: text(properties.phone),
+          website: text(properties.domain),
+          created_by: options.actorId,
+        })
+        .select("id")
+        .single();
+      if (error || !inserted) {
+        throw error ?? new Error(`Unable to create TR1 pharmacy for HubSpot company ${options.companyId}`);
+      }
+      pharmacyId = String(inserted.id);
+    }
+
+    await saveExternalLink({
+      admin: options.admin,
+      connectionId: options.connectionId,
+      entityType: "pharmacies",
+      externalId: options.companyId,
+      tr1RecordId: pharmacyId,
+      externalUpdatedAt: companyUpdatedAt,
+    });
+  }
+
+  const { data: relation, error: relationError } = await options.admin
+    .from("brand_pharmacies")
+    .select("id,current_agent_user_id")
+    .eq("brand_id", options.brandId)
+    .eq("pharmacy_id", pharmacyId)
+    .is("archived_at", null)
+    .limit(1)
+    .maybeSingle();
+  if (relationError) throw relationError;
+
+  let brandPharmacyId: string;
+  let currentAgentUserId = relation?.current_agent_user_id ? String(relation.current_agent_user_id) : null;
+
+  if (relation) {
+    brandPharmacyId = String(relation.id);
+    if (!currentAgentUserId) {
+      const { error } = await options.admin
+        .from("brand_pharmacies")
+        .update({ current_agent_user_id: options.ownerUserId, updated_at: new Date().toISOString() })
+        .eq("id", relation.id)
+        .eq("brand_id", options.brandId);
+      if (error) throw error;
+      currentAgentUserId = options.ownerUserId;
+    }
+  } else {
+    const { data: inserted, error } = await options.admin
+      .from("brand_pharmacies")
+      .insert({
+        brand_id: options.brandId,
+        pharmacy_id: pharmacyId,
+        current_agent_user_id: options.ownerUserId,
+        source: "import",
+        source_details: "HubSpot meeting import",
+        created_by: options.actorId,
+      })
+      .select("id")
+      .single();
+    if (error || !inserted) {
+      throw error ?? new Error(`Unable to create brand pharmacy for HubSpot company ${options.companyId}`);
+    }
+    brandPharmacyId = String(inserted.id);
+    currentAgentUserId = options.ownerUserId;
+  }
+
+  const context: PharmacyContext = {
+    pharmacyId,
+    brandPharmacyId,
+    companyId: options.companyId,
+    currentAgentUserId,
+  };
+  options.byCompany.set(options.companyId, context);
+  return context;
+}
+
 async function syncActorUserId(admin: AdminClient, brandId: string, connection: HubSpotConnection) {
   if (connection.updated_by) {
     const { data } = await admin
@@ -366,7 +774,7 @@ async function existingExternalLinks(
 async function saveExternalLink(options: {
   admin: AdminClient;
   connectionId: string;
-  entityType: "orders" | "visits" | "notes" | "products";
+  entityType: "orders" | "visits" | "notes" | "products" | "pharmacies";
   externalId: string;
   tr1RecordId: string;
   externalUpdatedAt?: string | null;
@@ -942,6 +1350,7 @@ async function importVisit(options: {
   remote: HubSpotRecord;
   visitLinks: Map<string, string>;
   owners: Map<string, string>;
+  nextMeetingStart?: string | null;
 }) {
   const remoteId = externalId(options.remote);
   if (!remoteId) throw new Error("HubSpot meeting has no id");
@@ -957,7 +1366,14 @@ async function importVisit(options: {
     : new Date(startMs + 30 * 60_000).toISOString();
   const ownerExternalId = text(properties.hubspot_owner_id);
   const ownerUserId = (ownerExternalId ? options.owners.get(ownerExternalId) : null) ?? options.actorId;
-  const status = visitStatus(properties.hs_meeting_outcome);
+  const providerStatus = visitStatus(properties.hs_meeting_outcome);
+  const closeoutNote = await findHubSpotCloseoutNote({
+    client: options.client,
+    companyId: options.pharmacy.companyId,
+    meetingStart: start,
+    nextMeetingStart: options.nextMeetingStart,
+  });
+  const status = providerStatus === "cancelled" ? "cancelled" : closeoutNote ? "completed" : "planned";
   const body = [stripHtml(properties.hs_meeting_body), stripHtml(properties.hs_internal_meeting_notes)]
     .filter(Boolean)
     .join("\n\n");
@@ -989,6 +1405,49 @@ async function importVisit(options: {
       externalUpdatedAt: options.remote.updatedAt ?? text(properties.hs_lastmodifieddate),
     });
     options.visitLinks.set(remoteId, existingVisitId);
+
+    if (closeoutNote) {
+      const { error: visitUpdateError } = await options.admin
+        .from("field_visits")
+        .update({
+          status: "completed",
+          actual_start_at: start,
+          actual_end_at: end,
+          started_at: start,
+          completed_at: closeoutNote.occurredAt,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existingVisitId)
+        .neq("status", "completed");
+      if (visitUpdateError) throw visitUpdateError;
+
+      const { data: existingCloseout, error: closeoutReadError } = await options.admin
+        .from("field_visit_closeouts")
+        .select("id")
+        .eq("visit_id", existingVisitId)
+        .limit(1)
+        .maybeSingle();
+      if (closeoutReadError) throw closeoutReadError;
+
+      if (!existingCloseout) {
+        const { error: closeoutError } = await options.admin
+          .from("field_visit_closeouts")
+          .insert({
+            visit_id: existingVisitId,
+            created_by: options.actorId,
+            outcome: "other",
+            summary: closeoutNote.body,
+            input_mode: "manual",
+            structured_payload: {
+              source: "hubspot",
+              hubspot_meeting_id: remoteId,
+              hubspot_note_id: closeoutNote.id,
+            },
+            completed_at: closeoutNote.occurredAt,
+          });
+        if (closeoutError) throw closeoutError;
+      }
+    }
 
     const { data: existingInteraction, error: existingInteractionError } = await options.admin
       .from("interactions")
@@ -1040,7 +1499,7 @@ async function importVisit(options: {
         externalIds: attachmentIds,
       });
     }
-    return;
+    return existingVisitId;
   }
 
   const { data: inserted, error } = await options.admin
@@ -1063,7 +1522,7 @@ async function importVisit(options: {
       actual_start_at: status === "completed" ? start : null,
       actual_end_at: status === "completed" ? end : null,
       started_at: status === "completed" ? start : null,
-      completed_at: status === "completed" ? end : null,
+      completed_at: status === "completed" ? closeoutNote?.occurredAt ?? end : null,
       outcome: null,
     })
     .select("id")
@@ -1089,10 +1548,14 @@ async function importVisit(options: {
         visit_id: visitId,
         created_by: options.actorId,
         outcome: "other",
-        summary: body || text(properties.hs_meeting_title) || "Meeting HubSpot complété.",
+        summary: closeoutNote?.body || body || text(properties.hs_meeting_title) || "Meeting HubSpot complété.",
         input_mode: "manual",
-        structured_payload: { source: "hubspot", external_id: remoteId },
-        completed_at: end,
+        structured_payload: {
+          source: "hubspot",
+          hubspot_meeting_id: remoteId,
+          hubspot_note_id: closeoutNote?.id ?? null,
+        },
+        completed_at: closeoutNote?.occurredAt ?? end,
       });
     if (closeoutError) throw closeoutError;
   }
@@ -1140,6 +1603,8 @@ async function importVisit(options: {
       externalIds: attachmentIds,
     });
   }
+
+  return visitId;
 }
 
 async function importNote(options: {
@@ -1327,51 +1792,123 @@ async function syncInboundVisits(options: {
 }) {
   const since = await lastSuccessfulInboundSyncAt(options.admin, options.connection.id, "visits" as const);
   const links = await existingExternalLinks(options.admin, options.connection.id, "visits");
+  const byCompany = new Map(options.pharmacies.map((pharmacy) => [pharmacy.companyId, pharmacy]));
+  const ownerExternalIds = [...options.owners.keys()];
+
   return runInbound(options.admin, options.connection.id, "visits", async (counter) => {
-    for (const pharmacy of options.pharmacies) {
-      const records = await searchAll(options.client, "meetings", {
-        filterGroups: [{
-          filters: [
-            { propertyName: "associations.company", operator: "EQ", value: pharmacy.companyId },
-            ...searchFiltersSince(since),
+    const freshnessFilters = since
+      ? searchFiltersSince(since)
+      : [{
+          propertyName: "hs_meeting_start_time",
+          operator: "GTE",
+          value: String(Date.now() - 120 * 24 * 60 * 60_000),
+        }];
+
+    const records = ownerExternalIds.length
+      ? await searchAll(options.client, "meetings", {
+          filterGroups: [{
+            filters: [
+              { propertyName: "hubspot_owner_id", operator: "IN", values: ownerExternalIds },
+              ...freshnessFilters,
+            ],
+          }],
+          properties: [
+            "hs_meeting_title",
+            "hs_meeting_start_time",
+            "hs_meeting_end_time",
+            "hs_timestamp",
+            "hs_meeting_outcome",
+            "hubspot_owner_id",
+            "hs_activity_type",
+            "hs_meeting_body",
+            "hs_internal_meeting_notes",
+            "hs_attachment_ids",
+            "hs_lastmodifieddate",
           ],
-        }],
-        properties: [
-          "hs_meeting_title",
-          "hs_meeting_start_time",
-          "hs_meeting_end_time",
-          "hs_timestamp",
-          "hs_meeting_outcome",
-          "hubspot_owner_id",
-          "hs_activity_type",
-          "hs_meeting_body",
-          "hs_internal_meeting_notes",
-          "hs_attachment_ids",
-          "hs_lastmodifieddate",
-        ],
-        sorts: ["hs_timestamp"],
-      });
-      for (const remote of records) {
-        counter.seen += 1;
-        try {
-          await importVisit({
-            admin: options.admin,
-            client: options.client,
-            brandId: options.brandId,
-            connectionId: options.connection.id,
-            actorId: options.actorId,
-            pharmacy,
-            remote,
-            visitLinks: links,
-            owners: options.owners,
-          });
-          counter.succeeded += 1;
-        } catch (error) {
-          counter.failed += 1;
-          console.error(
-            `[hubspot] inbound meeting failed: ${error instanceof Error ? error.message.slice(0, 400) : "unknown"}`,
-          );
+          sorts: ["hs_timestamp"],
+        })
+      : [];
+
+    const resolved: Array<{
+      remote: HubSpotRecord;
+      pharmacy: PharmacyContext;
+      start: string;
+      startMs: number;
+    }> = [];
+
+    for (const remote of records) {
+      counter.seen += 1;
+      try {
+        const remoteId = externalId(remote);
+        if (!remoteId) throw new Error("HubSpot meeting has no id");
+        const start = text(remote.properties?.hs_meeting_start_time) ?? text(remote.properties?.hs_timestamp);
+        const startMs = start ? new Date(start).getTime() : Number.NaN;
+        if (!start || !Number.isFinite(startMs)) throw new Error(`HubSpot meeting ${remoteId} has no valid start time`);
+
+        const ownerExternalId = text(remote.properties?.hubspot_owner_id);
+        const ownerUserId = (ownerExternalId ? options.owners.get(ownerExternalId) : null) ?? options.actorId;
+        const companyIds = await meetingCompanyIds(options.client, remoteId);
+        if (!companyIds.length) throw new Error(`HubSpot meeting ${remoteId} has no company association`);
+
+        let pharmacy = companyIds.map((companyId) => byCompany.get(companyId)).find(Boolean) ?? null;
+        if (!pharmacy) {
+          let lastError: unknown = null;
+          for (const companyId of companyIds) {
+            try {
+              pharmacy = await ensurePharmacyForHubSpotCompany({
+                admin: options.admin,
+                client: options.client,
+                brandId: options.brandId,
+                connectionId: options.connection.id,
+                actorId: options.actorId,
+                ownerUserId,
+                companyId,
+                byCompany,
+              });
+              break;
+            } catch (error) {
+              lastError = error;
+            }
+          }
+          if (!pharmacy) throw lastError ?? new Error(`Unable to resolve pharmacy for HubSpot meeting ${remoteId}`);
         }
+
+        resolved.push({ remote, pharmacy, start, startMs });
+      } catch (error) {
+        counter.failed += 1;
+        console.error(
+          `[hubspot] inbound meeting resolution failed: ${error instanceof Error ? error.message.slice(0, 400) : "unknown"}`,
+        );
+      }
+    }
+
+    resolved.sort((left, right) => left.startMs - right.startMs);
+
+    for (let index = 0; index < resolved.length; index += 1) {
+      const current = resolved[index];
+      const nextForPharmacy = resolved
+        .slice(index + 1)
+        .find((candidate) => candidate.pharmacy.companyId === current.pharmacy.companyId);
+
+      try {
+        await importVisit({
+          admin: options.admin,
+          client: options.client,
+          brandId: options.brandId,
+          connectionId: options.connection.id,
+          actorId: options.actorId,
+          pharmacy: current.pharmacy,
+          remote: current.remote,
+          visitLinks: links,
+          owners: options.owners,
+          nextMeetingStart: nextForPharmacy?.start ?? null,
+        });
+        counter.succeeded += 1;
+      } catch (error) {
+        counter.failed += 1;
+        console.error(
+          `[hubspot] inbound meeting failed: ${error instanceof Error ? error.message.slice(0, 400) : "unknown"}`,
+        );
       }
     }
   });
@@ -1494,6 +2031,49 @@ async function replayOrdersCreatedWhilePaused(brandId: string, connectionId: str
 
   for (const orderId of candidateIds) {
     if (!alreadySynced.has(orderId)) await syncHubSpotOrderAfterPersistence(brandId, orderId);
+  }
+}
+
+export async function reconcileHubSpotVisitsIfStale(
+  brandId: string,
+  maxAgeMs = 15 * 60_000,
+) {
+  try {
+    const admin = createAdminClient();
+    const { data: connection, error: connectionError } = await admin
+      .from("connector_connections")
+      .select("id,base_url,credential_reference,configuration,updated_by,last_synced_at")
+      .eq("brand_id", brandId)
+      .eq("provider", "hubspot")
+      .eq("status", "active")
+      .is("archived_at", null)
+      .limit(1)
+      .maybeSingle();
+    if (connectionError || !connection) return null;
+
+    const lastSyncAt = await lastSuccessfulInboundSyncAt(admin, String(connection.id), "visits");
+    if (lastSyncAt && Date.now() - new Date(lastSyncAt).getTime() < maxAgeMs) return null;
+
+    const runtime = await activeConnection(brandId, String(connection.id));
+    if (!runtime) return null;
+    const pharmacies = await mappedPharmacies(runtime.admin, brandId, String(connection.id));
+    const actorId = await syncActorUserId(runtime.admin, brandId, runtime.connection);
+    const owners = await ownerMap(runtime.admin, String(connection.id));
+
+    return await syncInboundVisits({
+      admin: runtime.admin,
+      client: runtime.client,
+      brandId,
+      connection: runtime.connection,
+      pharmacies,
+      actorId,
+      owners,
+    });
+  } catch (error) {
+    console.error(
+      `[hubspot] background meeting reconcile failed: ${error instanceof Error ? error.message.slice(0, 500) : "unknown"}`,
+    );
+    return null;
   }
 }
 

@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import type { AgentNextVisit, AgentTodayData } from "@/components/agent/agent-day-experience";
 import {
   AgentMultibrandOverview,
@@ -11,6 +12,7 @@ import { addCalendarDays } from "@/lib/agenda";
 import { requireActiveBrand } from "@/lib/auth";
 import { nextIsoDate, parisBusinessDate } from "@/lib/business-date";
 import { requireActiveBrandCapability } from "@/lib/saas/server";
+import { reconcileHubSpotVisitsIfStale } from "@/lib/integrations/hubspot/reconciliation";
 import { loadStockAlerts } from "@/lib/stock-alerts-server";
 
 type FieldAgendaEvent = {
@@ -48,6 +50,10 @@ export default async function AgentPage() {
     requireActiveBrand(),
   ]);
   const { supabase, brand, profile, userId } = session;
+
+  after(async () => {
+    await reconcileHubSpotVisitsIfStale(brand.id);
+  });
 
   const today = parisBusinessDate();
   const monthStart = `${today.slice(0, 7)}-01`;
