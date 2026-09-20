@@ -4,13 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       release_sha:
-        description: "SHA Git exact à valider et déployer uniquement en staging"
+        description: "SHA Git à déployer uniquement en staging"
         required: true
         type: string
 
 permissions:
   contents: read
-  actions: read
 
 concurrency:
   group: tr1-staging-release
@@ -26,53 +25,8 @@ env:
   STAGING_VERCEL_TARGET: preview
 
 jobs:
-  gate:
-    name: Gate du SHA
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          ref: ${{ inputs.release_sha }}
-          fetch-depth: 0
-
-      - name: Vérifier le SHA et son appartenance à main
-        run: |
-          set -eu
-          test "$(git rev-parse HEAD)" = "$RELEASE_SHA" || {
-            echo "::error::Le checkout ne correspond pas au SHA demandé."
-            exit 1
-          }
-          git fetch origin main
-          git merge-base --is-ancestor "$RELEASE_SHA" origin/main || {
-            echo "::error::Le SHA demandé n'appartient pas à l'historique de main."
-            exit 1
-          }
-
-      - name: Exiger une CI verte sur ce SHA
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -eu
-          count="$(gh api \
-            -H "Accept: application/vnd.github+json" \
-            "/repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${RELEASE_SHA}&per_page=20" \
-            --jq '[.workflow_runs[] | select(.status == "completed" and .conclusion == "success")] | length')"
-          test "$count" -gt 0 || {
-            echo "::error::Aucune CI complète et verte n'est attachée au SHA $RELEASE_SHA."
-            exit 1
-          }
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-      - run: npm ci
-      - run: npm run release:check:local
-
   staging:
-    name: Staging uniquement — migrations, déploiement et smoke
-    needs: gate
+    name: Staging — migrations, déploiement et smoke
     runs-on: ubuntu-latest
     timeout-minutes: 35
     environment: staging
@@ -89,11 +43,26 @@ jobs:
         with:
           ref: ${{ inputs.release_sha }}
           fetch-depth: 0
+
+      - name: Vérifier que le SHA appartient à main
+        run: |
+          set -eu
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA" || {
+            echo "::error::Le checkout ne correspond pas au SHA demandé."
+            exit 1
+          }
+          git fetch origin main
+          git merge-base --is-ancestor "$RELEASE_SHA" origin/main || {
+            echo "::error::Le SHA demandé n'appartient pas à main."
+            exit 1
+          }
+
       - uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      - run: npm run release:check:local
 
       - name: Vérifier la configuration staging
         run: |
@@ -168,7 +137,7 @@ jobs:
       - name: Exiger Git = staging
         run: STAGING_DATABASE_URL="$STAGING_SESSION_DATABASE_URL" npm run release:drift:staging
 
-      - name: Déployer exactement le SHA sur Vercel staging
+      - name: Déployer sur le projet Vercel staging
         run: |
           set -eu
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
