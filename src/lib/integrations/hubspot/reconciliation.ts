@@ -332,6 +332,154 @@ function hubSpotCompanyIdentity(value: unknown) {
   return { name, cip };
 }
 
+
+type HubSpotNoteCandidate = {
+  id: string;
+  timestamp: string;
+  body: string;
+  updatedAt: string | null;
+};
+
+function parisDayKey(value: string) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Paris",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(value));
+}
+
+async function closeoutNoteForMeeting(options: {
+  client: HubSpotClient;
+  companyId: string;
+  ownerExternalId: string | null;
+  meetingStart: string;
+  nextMeetingStart: string | null;
+}) {
+  const meetingDay = parisDayKey(options.meetingStart);
+  const lowerBound = new Date(new Date(options.meetingStart).getTime() - 36 * 60 * 60_000).toISOString();
+  const filters: Record<string, unknown>[] = [
+    { propertyName: "associations.company", operator: "EQ", value: options.companyId },
+    { propertyName: "hs_timestamp", operator: "GTE", value: String(new Date(lowerBound).getTime()) },
+  ];
+  if (options.ownerExternalId) {
+    filters.push({ propertyName: "hubspot_owner_id", operator: "EQ", value: options.ownerExternalId });
+  }
+
+  const notes = await searchAll(options.client, "notes", {
+    filterGroups: [{ filters }],
+    properties: [
+      "hs_note_body",
+      "hs_timestamp",
+      "hubspot_owner_id",
+      "hs_lastmodifieddate",
+    ],
+    sorts: ["hs_timestamp"],
+  });
+
+  const nextMeetingDay = options.nextMeetingStart ? parisDayKey(options.nextMeetingStart) : null;
+  const candidates = notes.flatMap((remote) => {
+    const noteId = externalId(remote);
+    const timestamp = text(remote.properties?.hs_timestamp) ?? remote.createdAt ?? null;
+    if (!noteId || !timestamp) return [];
+    const noteDay = parisDayKey(timestamp);
+    if (noteDay < meetingDay) return [];
+    if (nextMeetingDay && noteDay >= nextMeetingDay) return [];
+    return [{
+      id: noteId,
+      timestamp,
+      body: stripHtml(remote.properties?.hs_note_body),
+      updatedAt: remote.updatedAt ?? text(remote.properties?.hs_lastmodifieddate),
+    } satisfies HubSpotNoteCandidate];
+  });
+
+  candidates.sort((left, right) => {
+    const leftSameDay = parisDayKey(left.timestamp) === meetingDay ? 0 : 1;
+    const rightSameDay = parisDayKey(right.timestamp) === meetingDay ? 0 : 1;
+    if (leftSameDay !== rightSameDay) return leftSameDay - rightSameDay;
+    return new Date(left.timestamp).getTime() - new Date(right.timestamp).getTime();
+  });
+
+  return candidates[0] ?? null;
+}
+
+async function applyHubSpotMeetingCloseout(options: {
+  admin: AdminClient;
+  brandId: string;
+  actorId: string;
+  visitId: string;
+  pharmacy: PharmacyContext;
+  meetingStart: string;
+  meetingEnd: string;
+  note: HubSpotNoteCandidate;
+}) {
+  const completedAt = new Date(options.note.timestamp).getTime() >= new Date(options.meetingStart).getTime()
+    ? options.note.timestamp
+    : options.meetingEnd;
+
+  const { error: visitError } = await options.admin
+    .from("field_visits")
+    .update({
+      status: "completed",
+      actual_start_at: options.meetingStart,
+      actual_end_at: completedAt,
+      started_at: options.meetingStart,
+      completed_at: completedAt,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", options.visitId)
+    .is("archived_at", null);
+  if (visitError) throw visitError;
+
+  const { data: existingCloseout, error: closeoutLookupError } = await options.admin
+    .from("field_visit_closeouts")
+    .select("visit_id")
+    .eq("visit_id", options.visitId)
+    .maybeSingle();
+  if (closeoutLookupError) throw closeoutLookupError;
+
+  if (!existingCloseout) {
+    const { error: closeoutError } = await options.admin
+      .from("field_visit_closeouts")
+      .insert({
+        visit_id: options.visitId,
+        created_by: options.actorId,
+        outcome: "other",
+        summary: options.note.body || "Compte rendu HubSpot présent sur la fiche pharmacie.",
+        input_mode: "manual",
+        structured_payload: {
+          source: "hubspot_note",
+          external_note_id: options.note.id,
+        },
+        completed_at: completedAt,
+      });
+    if (closeoutError) throw closeoutError;
+  }
+
+  const { data: existingInteraction, error: interactionLookupError } = await options.admin
+    .from("interactions")
+    .select("id")
+    .eq("brand_id", options.brandId)
+    .eq("field_visit_id", options.visitId)
+    .eq("interaction_type", "visit")
+    .is("archived_at", null)
+    .limit(1)
+    .maybeSingle();
+  if (interactionLookupError) throw interactionLookupError;
+
+  if (existingInteraction?.id) {
+    const { error } = await options.admin
+      .from("interactions")
+      .update({
+        notes: options.note.body || "Compte rendu HubSpot présent sur la fiche pharmacie.",
+        outcome: "completed",
+        occurred_at: options.meetingStart,
+      })
+      .eq("id", existingInteraction.id);
+    if (error) throw error;
+  }
+}
+
 async function meetingCompanyIds(client: HubSpotClient, meetingId: string) {
   const response = await client.read<HubSpotAssociationList>(
     `/crm/v3/objects/meetings/${encodeURIComponent(meetingId)}/associations/companies?limit=100`,
@@ -1230,7 +1378,7 @@ async function importVisit(options: {
         externalIds: attachmentIds,
       });
     }
-    return;
+    return existingVisitId;
   }
 
   const { data: inserted, error } = await options.admin
@@ -1330,6 +1478,8 @@ async function importVisit(options: {
       externalIds: attachmentIds,
     });
   }
+
+  return visitId;
 }
 
 async function importNote(options: {
@@ -1554,20 +1704,40 @@ async function syncInboundVisits(options: {
         })
       : [];
 
+    const resolved: Array<{
+      remote: HubSpotRecord;
+      pharmacy: PharmacyContext;
+      companyId: string;
+      start: string;
+      end: string;
+      ownerExternalId: string | null;
+    }> = [];
+
     for (const remote of records) {
       counter.seen += 1;
       try {
         const remoteId = externalId(remote);
         if (!remoteId) throw new Error("HubSpot meeting has no id");
+        const startAt = text(remote.properties?.hs_meeting_start_time) ?? text(remote.properties?.hs_timestamp);
+        if (!startAt) throw new Error(`HubSpot meeting ${remoteId} has no start time`);
+        const rawEnd = text(remote.properties?.hs_meeting_end_time);
+        const startMs = new Date(startAt).getTime();
+        const rawEndMs = rawEnd ? new Date(rawEnd).getTime() : Number.NaN;
+        const endAt = Number.isFinite(rawEndMs) && rawEndMs > startMs
+          ? rawEnd!
+          : new Date(startMs + 30 * 60_000).toISOString();
+
         const ownerExternalId = text(remote.properties?.hubspot_owner_id);
         const ownerUserId = (ownerExternalId ? options.owners.get(ownerExternalId) : null) ?? options.actorId;
         const companyIds = await meetingCompanyIds(options.client, remoteId);
         if (!companyIds.length) throw new Error(`HubSpot meeting ${remoteId} has no company association`);
 
         let pharmacy = companyIds.map((companyId) => byCompany.get(companyId)).find(Boolean) ?? null;
+        let companyId = pharmacy?.companyId ?? companyIds[0];
+
         if (!pharmacy) {
           let lastError: unknown = null;
-          for (const companyId of companyIds) {
+          for (const candidateCompanyId of companyIds) {
             try {
               pharmacy = await ensurePharmacyForHubSpotCompany({
                 admin: options.admin,
@@ -1576,9 +1746,10 @@ async function syncInboundVisits(options: {
                 connectionId: options.connection.id,
                 actorId: options.actorId,
                 ownerUserId,
-                companyId,
+                companyId: candidateCompanyId,
                 byCompany,
               });
+              companyId = candidateCompanyId;
               break;
             } catch (error) {
               lastError = error;
@@ -1587,22 +1758,62 @@ async function syncInboundVisits(options: {
           if (!pharmacy) throw lastError ?? new Error(`Unable to resolve pharmacy for HubSpot meeting ${remoteId}`);
         }
 
-        await importVisit({
+        resolved.push({ remote, pharmacy, companyId, start: startAt, end: endAt, ownerExternalId });
+      } catch (error) {
+        counter.failed += 1;
+        console.error(
+          `[hubspot] inbound meeting resolve failed: ${error instanceof Error ? error.message.slice(0, 400) : "unknown"}`,
+        );
+      }
+    }
+
+    resolved.sort((left, right) => new Date(left.start).getTime() - new Date(right.start).getTime());
+
+    for (let index = 0; index < resolved.length; index += 1) {
+      const item = resolved[index];
+      try {
+        const nextMeeting = resolved
+          .slice(index + 1)
+          .find((candidate) => candidate.companyId === item.companyId) ?? null;
+
+        const visitId = await importVisit({
           admin: options.admin,
           client: options.client,
           brandId: options.brandId,
           connectionId: options.connection.id,
           actorId: options.actorId,
-          pharmacy,
-          remote,
+          pharmacy: item.pharmacy,
+          remote: item.remote,
           visitLinks: links,
           owners: options.owners,
         });
+
+        const closeoutNote = await closeoutNoteForMeeting({
+          client: options.client,
+          companyId: item.companyId,
+          ownerExternalId: item.ownerExternalId,
+          meetingStart: item.start,
+          nextMeetingStart: nextMeeting?.start ?? null,
+        });
+
+        if (closeoutNote) {
+          await applyHubSpotMeetingCloseout({
+            admin: options.admin,
+            brandId: options.brandId,
+            actorId: options.actorId,
+            visitId,
+            pharmacy: item.pharmacy,
+            meetingStart: item.start,
+            meetingEnd: item.end,
+            note: closeoutNote,
+          });
+        }
+
         counter.succeeded += 1;
       } catch (error) {
         counter.failed += 1;
         console.error(
-          `[hubspot] inbound meeting failed: ${error instanceof Error ? error.message.slice(0, 400) : "unknown"}`,
+          `[hubspot] inbound meeting import failed: ${error instanceof Error ? error.message.slice(0, 400) : "unknown"}`,
         );
       }
     }
