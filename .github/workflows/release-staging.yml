@@ -175,9 +175,11 @@ jobs:
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
           deployment_url="$(npx --yes "vercel@${VERCEL_CLI_VERSION}" deploy --yes --token "$VERCEL_TOKEN" \
             --build-env "APP_ENV=staging" \
+            --build-env "RELEASE_SHA=$RELEASE_SHA" \
             --build-env "NEXT_PUBLIC_SUPABASE_URL=$STAGING_SUPABASE_URL" \
             --build-env "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$STAGING_SUPABASE_PUBLISHABLE_KEY" \
             --env "APP_ENV=staging" \
+            --env "RELEASE_SHA=$RELEASE_SHA" \
             --env "NEXT_PUBLIC_SUPABASE_URL=$STAGING_SUPABASE_URL" \
             --env "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$STAGING_SUPABASE_PUBLISHABLE_KEY" | tail -n 1)"
           case "$deployment_url" in
@@ -273,6 +275,7 @@ jobs:
             health?.ok !== true ||
             health?.service !== "tr1-pharma" ||
             health?.appEnv !== "staging" ||
+            health?.releaseSha !== process.env.RELEASE_SHA ||
             health?.supabaseProjectRef !== process.env.STAGING_SUPABASE_PROJECT_REF
           ) {
             console.error(

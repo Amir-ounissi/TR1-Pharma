@@ -14,6 +14,7 @@ const expectedSupabaseProjectRef =
   process.env.EXPECTED_SUPABASE_PROJECT_REF?.trim() ||
   process.env.PRODUCTION_SUPABASE_PROJECT_REF?.trim() ||
   process.env.STAGING_SUPABASE_PROJECT_REF?.trim();
+const expectedReleaseSha = process.env.EXPECTED_RELEASE_SHA?.trim();
 
 const trustedOidcToken = process.env.VERCEL_TRUSTED_OIDC_TOKEN?.trim();
 const protectionHeaders = trustedOidcToken
@@ -67,6 +68,11 @@ if (expectedAppEnv && health?.appEnv !== expectedAppEnv) {
 if (expectedSupabaseProjectRef && health?.supabaseProjectRef !== expectedSupabaseProjectRef) {
   throw new Error(
     `/api/release-health supabaseProjectRef=${JSON.stringify(health?.supabaseProjectRef)}, attendu ${expectedSupabaseProjectRef}.`,
+  );
+}
+if (expectedReleaseSha && health?.releaseSha !== expectedReleaseSha) {
+  throw new Error(
+    `/api/release-health releaseSha=${JSON.stringify(health?.releaseSha)}, attendu ${expectedReleaseSha}.`,
   );
 }
 console.log("/api/release-health : 200");
