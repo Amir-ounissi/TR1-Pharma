@@ -39,8 +39,12 @@ grep -Fq '/aliases/$deployment_id/protection-bypass?teamId=$VERCEL_ORG_ID' "$pro
   echo "Gate production: la candidate protégée doit recevoir un bypass temporaire." >&2
   exit 1
 }
-grep -Fq '/aliases/$deployment_id/protection-bypass?teamId=$VERCEL_ORG_ID' "$staging_workflow" || {
-  echo "Gate staging: le preview protégé doit recevoir un bypass temporaire." >&2
+grep -Fq 'VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}' "$staging_workflow" || {
+  echo "Gate staging: le secret Protection Bypass for Automation doit venir de l'environnement staging." >&2
+  exit 1
+}
+grep -Fq 'x-vercel-protection-bypass: $STAGING_PROTECTION_BYPASS' "$staging_workflow" || {
+  echo "Gate staging: le smoke doit utiliser le header de bypass Vercel." >&2
   exit 1
 }
 if grep -Fq 'vercel@${VERCEL_CLI_VERSION}" curl' "$production_workflow" "$staging_workflow"; then

@@ -80,6 +80,7 @@ jobs:
       STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
       STAGING_SUPABASE_PROJECT_REF: ehptapmuzckazyxmnmnm
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
       VERCEL_ORG_ID: team_WhI0GBrg7UZgZpDsvTwUGZ8V
       VERCEL_PROJECT_ID: prj_KziP4kPjCBHDULmFuvGSLFOzDtVh
       STAGING_SUPABASE_URL: https://ehptapmuzckazyxmnmnm.supabase.co
@@ -98,7 +99,7 @@ jobs:
       - name: Vérifier la configuration staging
         run: |
           set -eu
-          for name in STAGING_DATABASE_URL STAGING_SUPABASE_PROJECT_REF VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID STAGING_SUPABASE_URL STAGING_SUPABASE_PUBLISHABLE_KEY; do
+          for name in STAGING_DATABASE_URL STAGING_SUPABASE_PROJECT_REF VERCEL_TOKEN VERCEL_AUTOMATION_BYPASS_SECRET VERCEL_ORG_ID VERCEL_PROJECT_ID STAGING_SUPABASE_URL STAGING_SUPABASE_PUBLISHABLE_KEY; do
             eval "value=\${$name:-}"
             test -n "$value" || {
               echo "::error::$name n'est pas configuré pour l'environnement staging."
@@ -186,38 +187,9 @@ jobs:
               exit 1
               ;;
           esac
-          deployment_host="${deployment_url#https://}"
-          deployment_response="$(mktemp)"
-          curl --fail-with-body --silent --show-error \
-            -H "Authorization: Bearer $VERCEL_TOKEN" \
-            "https://api.vercel.com/v13/deployments/$deployment_host?teamId=$VERCEL_ORG_ID" \
-            -o "$deployment_response"
-          deployment_id="$(node - "$deployment_response" <<'NODE'
-          const fs = require("node:fs");
-          const payload = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-          if (typeof payload.id !== "string" || !payload.id.startsWith("dpl_")) process.exit(1);
-          process.stdout.write(payload.id);
-          NODE
-          )"
-          bypass_response="$(mktemp)"
-          curl --fail-with-body --silent --show-error \
-            -X PATCH \
-            -H "Authorization: Bearer $VERCEL_TOKEN" \
-            -H "Content-Type: application/json" \
-            --data '{"ttl":3600}' \
-            "https://api.vercel.com/aliases/$deployment_id/protection-bypass?teamId=$VERCEL_ORG_ID" \
-            -o "$bypass_response"
-          bypass_secret="$(node - "$bypass_response" <<'NODE'
-          const fs = require("node:fs");
-          const payload = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-          const value = payload.value ?? payload.protectionBypass?.value;
-          if (typeof value !== "string" || value.length < 16) process.exit(1);
-          process.stdout.write(value);
-          NODE
-          )"
-          echo "::add-mask::$bypass_secret"
+          echo "::add-mask::$VERCEL_AUTOMATION_BYPASS_SECRET"
           echo "STAGING_DEPLOYMENT_URL=$deployment_url" >> "$GITHUB_ENV"
-          echo "STAGING_PROTECTION_BYPASS=$bypass_secret" >> "$GITHUB_ENV"
+          echo "STAGING_PROTECTION_BYPASS=$VERCEL_AUTOMATION_BYPASS_SECRET" >> "$GITHUB_ENV"
           echo "Déploiement staging: $deployment_url"
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
           test -z "$(git status --porcelain)"
@@ -334,7 +306,7 @@ jobs:
           esac
           echo "/dashboard/agent : $HTTP_STATUS"
 
-          echo "Smoke staging avec bypass temporaire réussi sur $STAGING_DEPLOYMENT_URL"
+          echo "Smoke staging avec bypass d'automatisation réussi sur $STAGING_DEPLOYMENT_URL"
 
       - name: Preuve staging
         run: |
@@ -346,6 +318,6 @@ jobs:
             echo "- migrations: Git = staging"
             echo "- déploiement créé: \`$STAGING_DEPLOYMENT_URL\`"
             echo "- URL de preview testée: \`$STAGING_DEPLOYMENT_URL\`"
-            echo "- smoke applicatif avec bypass temporaire limité au déploiement: PASS"
+            echo "- smoke applicatif avec Protection Bypass for Automation: PASS"
             echo "- production: NON TOUCHÉE"
           } >> "$GITHUB_STEP_SUMMARY"
