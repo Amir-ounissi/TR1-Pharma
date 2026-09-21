@@ -248,6 +248,9 @@ jobs:
             --build-env "NEXT_PUBLIC_SUPABASE_URL=$PRODUCTION_SUPABASE_URL" \
             --build-env "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PRODUCTION_SUPABASE_PUBLISHABLE_KEY" \
             --build-env "NEXT_PUBLIC_APP_URL=$PRODUCTION_URL" \
+            --build-env "HUBSPOT_ACCESS_TOKEN=$HUBSPOT_ACCESS_TOKEN" \
+            --build-env "TR1_HUBSPOT_MODE=write" \
+            --build-env "TR1_HUBSPOT_WRITE_ENABLED=true" \
             --env "APP_ENV=production" \
             --env "RELEASE_SHA=$RELEASE_SHA" \
             --env "NEXT_PUBLIC_SUPABASE_URL=$PRODUCTION_SUPABASE_URL" \
