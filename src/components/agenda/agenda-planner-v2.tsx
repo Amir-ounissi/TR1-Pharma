@@ -1,8 +1,7 @@
 "use client";
 
-import { useActionState, useMemo, useState, useTransition } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   CalendarDays,
   ChevronLeft,
@@ -10,6 +9,7 @@ import {
   Clock3,
   GripVertical,
   Info,
+  LoaderCircle,
   MapPin,
   Navigation,
   Plus,
@@ -21,9 +21,11 @@ import {
 import {
   createAgendaBlockAction,
   createFieldVisitAction,
+  loadAgendaRangeAction,
   rescheduleFieldVisitAction,
+  searchAgendaPharmaciesAction,
 } from "@/app/(protected)/dashboard/agenda/actions";
-import { addCalendarDays, isoToParisLocal } from "@/lib/agenda";
+import { addCalendarDays, isoToParisLocal, mondayOfWeek, parisLocalToIso } from "@/lib/agenda";
 import { uiLabel } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
