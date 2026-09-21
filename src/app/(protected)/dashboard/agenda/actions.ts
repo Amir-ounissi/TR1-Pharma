@@ -54,6 +54,14 @@ export async function createAgendaBlockAction(_: unknown, formData: FormData) {
   } catch (error) { return { error: error instanceof Error ? error.message : "Créneau invalide." }; }
 }
 
+export async function retryFieldVisitHubSpotSyncAction(visitId: string) {
+  const parsed = uuid.parse(visitId);
+  await requireCompletedOnboarding();
+  await syncNaaliHubSpotVisitByVisitId(parsed);
+  revalidatePath("/dashboard/agenda");
+  revalidatePath(`/dashboard/visits/${parsed}`);
+}
+
 export async function rescheduleFieldVisitAction(visitId: string, newStartLocal: string) {
   const parsed = z.object({ visitId: uuid, newStartLocal: dateTime }).parse({ visitId, newStartLocal });
   const { supabase } = await requireCompletedOnboarding();
