@@ -54,7 +54,15 @@ export async function createAgendaBlockAction(_: unknown, formData: FormData) {
   } catch (error) { return { error: error instanceof Error ? error.message : "Créneau invalide." }; }
 }
 
-export async function retryFieldVisitHubSpotSyncAction(visitId: string) {\n  const parsed = uuid.parse(visitId);\n  await requireCompletedOnboarding();\n  await syncNaaliHubSpotVisitByVisitId(parsed);\n  revalidatePath("/dashboard/agenda");\n  revalidatePath(`/dashboard/visits/${parsed}`);\n}\n\nexport async function rescheduleFieldVisitAction(visitId: string, newStartLocal: string) {
+export async function retryFieldVisitHubSpotSyncAction(visitId: string) {
+  const parsed = uuid.parse(visitId);
+  await requireCompletedOnboarding();
+  await syncNaaliHubSpotVisitByVisitId(parsed);
+  revalidatePath("/dashboard/agenda");
+  revalidatePath(`/dashboard/visits/${parsed}`);
+}
+
+export async function rescheduleFieldVisitAction(visitId: string, newStartLocal: string) {
   const parsed = z.object({ visitId: uuid, newStartLocal: dateTime }).parse({ visitId, newStartLocal });
   const { supabase } = await requireCompletedOnboarding();
   const { error } = await supabase.rpc("reschedule_field_visit", { target_visit_id: parsed.visitId, target_start_at: parsed.newStartLocal });
