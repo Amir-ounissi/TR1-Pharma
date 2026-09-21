@@ -33,7 +33,7 @@ it("creates a one-hour visit by default without an explicit end field", async ()
       scheduled_end_at: "2026-09-10T22:30:00.000Z",
     }),
   }));
-  expect(mocks.syncVisit).toHaveBeenCalledWith("00000000-0000-4000-8000-000000000099");
+  expect(mocks.syncVisit).not.toHaveBeenCalled();
   expect(mocks.revalidate).toHaveBeenCalledWith("/dashboard/agenda");
 });
 

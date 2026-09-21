@@ -37,7 +37,6 @@ export async function createFieldVisitAction(_: unknown, formData: FormData) {
       },
     });
     if (error) throw error;
-    if (visitId) await syncNaaliHubSpotVisitByVisitId(String(visitId));
     revalidatePath("/dashboard/agenda");
     return { success: "Visite ajoutée à votre Agenda." };
   } catch (error) { return { error: error instanceof Error ? error.message : "Visite invalide." }; }
@@ -67,6 +66,5 @@ export async function rescheduleFieldVisitAction(visitId: string, newStartLocal:
   const { supabase } = await requireCompletedOnboarding();
   const { error } = await supabase.rpc("reschedule_field_visit", { target_visit_id: parsed.visitId, target_start_at: parsed.newStartLocal });
   if (error) throw new Error(error.message);
-  await syncNaaliHubSpotVisitByVisitId(parsed.visitId);
   revalidatePath("/dashboard/agenda");
 }
