@@ -7,6 +7,7 @@ import { VisitOpenedTracker } from "@/components/visits/visit-opened-tracker";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { requireCompletedOnboarding } from "@/lib/auth";
+import { retryFieldVisitHubSpotSyncAction } from "@/app/(protected)/dashboard/agenda/actions";
 
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat("fr-FR", {
@@ -181,6 +182,18 @@ export default async function FieldVisitPage({ params }: { params: Promise<{ id:
           <p className="flex items-center gap-2"><Target className="size-4 text-orange-300" />{brands.join(" · ") || "Marque"}</p>
         </div>
       </header>
+
+      <form action={retryFieldVisitHubSpotSyncAction.bind(null, visit.id)} className="rounded-2xl border border-[var(--tr1-line)] bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="font-semibold text-[var(--tr1-navy)]">HubSpot</p>
+            <p className="text-sm text-muted-foreground">Envoyez l’état actuel de cette visite uniquement quand vous le décidez.</p>
+          </div>
+          <Button type="submit" className="min-h-11 shrink-0">
+            Synchroniser avec HubSpot
+          </Button>
+        </div>
+      </form>
 
       <nav aria-label="Actions rapides de la visite" className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {briefHref ? (
