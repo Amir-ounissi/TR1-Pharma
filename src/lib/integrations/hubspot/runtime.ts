@@ -3,6 +3,7 @@ import "server-only";
 import type { ConnectorEntityType } from "@/lib/connectors";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { HubSpotClient, type HubSpotClientMode } from "./client";
+import { hubSpotRunFailureStatus } from "./runtime-status";
 import { applyHubSpotFieldMapping } from "./mapping-profile";
 import { assertHubSpotBrandConfiguration, type HubSpotBrandConfiguration, type HubSpotMeetingSyncInput, type HubSpotNoteSyncInput, type HubSpotOrderSyncInput } from "./model";
 import { NAALI_HUBSPOT_CONFIGURATION, resolveNaaliHubSpotOrderRoute } from "./naali";
@@ -461,10 +462,10 @@ async function openRun(
 async function closeRun(
   admin: ReturnType<typeof createAdminClient>,
   runId: string,
-  status: "succeeded" | "failed",
+  status: "succeeded" | "partial" | "failed",
   errorSummary?: string,
 ) {
-  const failed = status === "failed" ? 1 : 0;
+  const failed = status === "succeeded" ? 0 : 1;
   const { error } = await admin.rpc("complete_connector_sync_run", {
     target_run_id: runId,
     target_status: status,
@@ -511,7 +512,7 @@ async function withRuntime(
   } catch (error) {
     const message = safeError(error);
     try {
-      await closeRun(admin, runId, "failed", message);
+      await closeRun(admin, runId, hubSpotRunFailureStatus(error), message);
     } catch {
       // The business write already succeeded; a connector journal failure must remain isolated.
     }
