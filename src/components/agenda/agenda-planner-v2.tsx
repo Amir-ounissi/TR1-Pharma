@@ -330,7 +330,7 @@ export function AgendaPlanner({
 
         <div className="flex flex-wrap gap-2">
           {canCreateVisit ? (
-            <Button onClick={() => openVisit(`${date}T09:00`)} disabled={!pharmacies.length}>
+            <Button onClick={() => openVisit(`${date}T09:00`)}>
               <Plus className="size-4" />
               Planifier une visite
             </Button>
@@ -364,7 +364,7 @@ export function AgendaPlanner({
           </div>
 
           <div className="order-first flex min-w-0 items-center gap-2 sm:order-none">
-            <CalendarDays className="size-4 shrink-0 text-[var(--tr1-orange)]" />
+            {navigationPending ? <LoaderCircle className="size-4 shrink-0 animate-spin text-[var(--tr1-orange)]" /> : <CalendarDays className="size-4 shrink-0 text-[var(--tr1-orange)]" />}
             <strong className="truncate text-sm text-[var(--tr1-navy)]">
               {view === "week"
                 ? `Semaine du ${formatDate(date, { day: "numeric", month: "long" })}`
@@ -386,7 +386,7 @@ export function AgendaPlanner({
                   "rounded-md px-3 py-1.5 text-xs font-semibold transition",
                   view === "day" ? "bg-white text-[var(--tr1-navy)] shadow-sm" : "text-muted-foreground hover:text-foreground",
                 )}
-                onClick={() => setView("day")}
+                onClick={() => changeView("day")}
               >
                 Jour
               </button>
@@ -395,7 +395,7 @@ export function AgendaPlanner({
                   "rounded-md px-3 py-1.5 text-xs font-semibold transition",
                   view === "week" ? "bg-white text-[var(--tr1-navy)] shadow-sm" : "text-muted-foreground hover:text-foreground",
                 )}
-                onClick={() => setView("week")}
+                onClick={() => changeView("week")}
               >
                 Semaine
               </button>
@@ -436,6 +436,8 @@ export function AgendaPlanner({
           ) : null}
         </div>
       </section>
+
+      {navigationError ? <p className="rounded-xl border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-700">{navigationError}</p> : null}
 
       {view === "day" ? (
         <ContextStrip events={dayContext} planning={dayPlanning} />
@@ -487,10 +489,10 @@ export function AgendaPlanner({
 
       {visitOpen ? (
         <VisitSheet
-          pharmacies={pharmacies}
           open={visitOpen}
           onOpenChange={setVisitOpen}
           defaultStart={visitStart}
+          onCreated={refreshRange}
         />
       ) : null}
 
