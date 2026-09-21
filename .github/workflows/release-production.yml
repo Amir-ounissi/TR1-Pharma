@@ -248,9 +248,27 @@ jobs:
             --scope "$VERCEL_ORG_ID" \
             --yes \
             --token "$VERCEL_TOKEN" >/dev/null
-          set -a
-          . "$runtime_env_file"
-          set +a
+          # Vercel redacts sensitive values as [SENSITIVE] in env pull output.
+          # Never source the whole file: doing so would overwrite VERCEL_TOKEN and
+          # other GitHub-provided credentials with redacted placeholders.
+          SUPABASE_SECRET_KEY=""
+          SUPABASE_SERVICE_ROLE_KEY=""
+          while IFS= read -r line; do
+            case "$line" in
+              SUPABASE_SECRET_KEY=*)
+                value="${line#SUPABASE_SECRET_KEY=}"
+                value="${value#\"}"
+                value="${value%\"}"
+                [ "$value" = "[SENSITIVE]" ] || SUPABASE_SECRET_KEY="$value"
+                ;;
+              SUPABASE_SERVICE_ROLE_KEY=*)
+                value="${line#SUPABASE_SERVICE_ROLE_KEY=}"
+                value="${value#\"}"
+                value="${value%\"}"
+                [ "$value" = "[SENSITIVE]" ] || SUPABASE_SERVICE_ROLE_KEY="$value"
+                ;;
+            esac
+          done < "$runtime_env_file"
           rm -f "$runtime_env_file"
           if [ -n "${SUPABASE_SECRET_KEY:-}" ]; then
             SUPABASE_ADMIN_KEY="$SUPABASE_SECRET_KEY"
