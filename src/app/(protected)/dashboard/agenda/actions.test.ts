@@ -26,7 +26,10 @@ function form(duration?: string) {
 }
 
 it("creates a one-hour visit by default without an explicit end field", async () => {
-  expect(await createFieldVisitAction({}, form())).toHaveProperty("success");
+  expect(await createFieldVisitAction({}, form())).toEqual({
+    success: "Visite ajoutée à votre Agenda.",
+    visitId: "00000000-0000-4000-8000-000000000099",
+  });
   expect(mocks.rpc).toHaveBeenCalledWith("create_field_visit", expect.objectContaining({
     visit_payload: expect.objectContaining({
       scheduled_start_at: "2026-09-10T21:30:00.000Z",
@@ -34,7 +37,7 @@ it("creates a one-hour visit by default without an explicit end field", async ()
     }),
   }));
   expect(mocks.syncVisit).not.toHaveBeenCalled();
-  expect(mocks.revalidate).toHaveBeenCalledWith("/dashboard/agenda");
+  expect(mocks.revalidate).not.toHaveBeenCalled();
 });
 
 it("uses the chosen duration", async () => {
