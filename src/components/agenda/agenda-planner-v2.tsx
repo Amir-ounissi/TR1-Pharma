@@ -143,7 +143,14 @@ export function AgendaPlanner({
   canCreateVisit: boolean;
 }) {
   const router = useRouter();
-  const [localEvents, setLocalEvents] = useState(events);
+  const [eventState, setEventState] = useState(() => ({ base: events, local: events }));
+  const localEvents = eventState.base === events ? eventState.local : events;
+  const setLocalEvents = (update: (current: AgendaEvent[]) => AgendaEvent[]) => {
+    setEventState((current) => {
+      const currentEvents = current.base === events ? current.local : events;
+      return { base: events, local: update(currentEvents) };
+    });
+  };
   const [filter, setFilter] = useState<(typeof planningFilters)[number]["key"]>("all");
   const [visitOpen, setVisitOpen] = useState(false);
   const [visitStart, setVisitStart] = useState(`${date}T09:00`);
@@ -154,10 +161,6 @@ export function AgendaPlanner({
     message: string;
   } | null>(null);
   const [, startTransition] = useTransition();
-
-  useEffect(() => {
-    setLocalEvents(events);
-  }, [events]);
 
   const days = useMemo(
     () => Array.from({ length: view === "week" ? 7 : 1 }, (_, index) => addCalendarDays(date, index)),
