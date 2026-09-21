@@ -2,6 +2,7 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { HubSpotClient, type HubSpotClientMode } from "./client";
+import { hubSpotRunFailureStatus } from "./runtime-status";
 import { NAALI_HUBSPOT_CONFIGURATION } from "./naali";
 import { resolveNaaliFreeUnitsRuleFromLeadStatus } from "./naali-pricing";
 import { syncHubSpotOrderAfterPersistence } from "./runtime";
@@ -831,7 +832,7 @@ async function runInbound(
     await task(counter);
     const { error } = await admin.rpc("complete_connector_sync_run", {
       target_run_id: String(runId),
-      target_status: counter.failed ? "failed" : "succeeded",
+      target_status: counter.failed ? "partial" : "succeeded",
       target_records_seen: counter.seen,
       target_records_succeeded: counter.succeeded,
       target_records_failed: counter.failed,
@@ -843,8 +844,8 @@ async function runInbound(
   } catch (error) {
     await admin.rpc("complete_connector_sync_run", {
       target_run_id: String(runId),
-      target_status: "failed",
-      target_records_seen: counter.seen,
+      target_status: hubSpotRunFailureStatus(error),
+      target_records_seen: Math.max(counter.seen, 1),
       target_records_succeeded: counter.succeeded,
       target_records_failed: Math.max(counter.failed, 1),
       target_cursor_after: null,
@@ -2004,7 +2005,7 @@ function statusOf(data: unknown) {
   return typeof status === "string" ? status : null;
 }
 
-async function replayOrdersCreatedWhilePaused(brandId: string, connectionId: string) {
+async function replayOrdersCreatedWhileInactive(brandId: string, connectionId: string) {
   const admin = createAdminClient();
   const { data: logs, error: logsError } = await admin
     .from("activity_logs")
@@ -2015,16 +2016,20 @@ async function replayOrdersCreatedWhilePaused(brandId: string, connectionId: str
     .limit(30);
   if (logsError) throw logsError;
 
-  const activation = (logs ?? []).find((log) => statusOf(log.old_data) === "paused" && statusOf(log.new_data) === "active");
+  const activation = (logs ?? []).find((log) =>
+    ["paused", "error"].includes(statusOf(log.old_data) ?? "") &&
+    statusOf(log.new_data) === "active",
+  );
   if (!activation) return;
-  const pause = (logs ?? []).find((log) =>
+  const inactiveStatus = statusOf(activation.old_data);
+  const inactiveStart = (logs ?? []).find((log) =>
     new Date(log.created_at).getTime() < new Date(activation.created_at).getTime() &&
     statusOf(log.old_data) === "active" &&
-    statusOf(log.new_data) === "paused",
+    statusOf(log.new_data) === inactiveStatus,
   );
-  if (!pause) return;
+  if (!inactiveStart) return;
 
-  const pauseAt = String(pause.created_at);
+  const pauseAt = String(inactiveStart.created_at);
   const activatedAt = String(activation.created_at);
   const syncStatuses = ["pending", "confirmed", "invoiced", "partially_delivered", "delivered"];
   const [{ data: createdOrders, error: createdError }, { data: updatedOrders, error: updatedError }] = await Promise.all([
@@ -2131,7 +2136,7 @@ export async function reconcileHubSpotConnection(
   const orders = await syncInboundOrders({ admin, client, brandId, organizationId, connection, pharmacies, actorId });
   const visits = await syncInboundVisits({ admin, client, brandId, connection, pharmacies, actorId, owners });
   const notes = await syncInboundNotes({ admin, client, brandId, connection, pharmacies, actorId, owners });
-  await replayOrdersCreatedWhilePaused(brandId, connectionId);
+  await replayOrdersCreatedWhileInactive(brandId, connectionId);
 
   const failed = terms.failed + orders.failed + visits.failed + notes.failed;
   const { error: connectionError } = await admin
