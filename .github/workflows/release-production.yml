@@ -153,6 +153,7 @@ jobs:
       PRODUCTION_SUPABASE_URL: https://zhifmehctuflwfexlvkz.supabase.co
       PRODUCTION_SUPABASE_PUBLISHABLE_KEY: sb_publishable_dFtfD60cflPn_IqSZriScQ_g0TRS66x
       SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      HUBSPOT_ACCESS_TOKEN: ${{ secrets.HUBSPOT_ACCESS_TOKEN }}
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
       VERCEL_ORG_ID: team_WhI0GBrg7UZgZpDsvTwUGZ8V
@@ -172,7 +173,7 @@ jobs:
       - name: Vérifier la configuration production
         run: |
           set -eu
-          for name in STAGING_DATABASE_URL STAGING_SUPABASE_PROJECT_REF PRODUCTION_DATABASE_URL PRODUCTION_SUPABASE_PROJECT_REF PRODUCTION_SUPABASE_URL PRODUCTION_SUPABASE_PUBLISHABLE_KEY SUPABASE_SECRET_KEY VERCEL_TOKEN VERCEL_AUTOMATION_BYPASS_SECRET VERCEL_ORG_ID VERCEL_PROJECT_ID PRODUCTION_URL; do
+          for name in STAGING_DATABASE_URL STAGING_SUPABASE_PROJECT_REF PRODUCTION_DATABASE_URL PRODUCTION_SUPABASE_PROJECT_REF PRODUCTION_SUPABASE_URL PRODUCTION_SUPABASE_PUBLISHABLE_KEY SUPABASE_SECRET_KEY HUBSPOT_ACCESS_TOKEN VERCEL_TOKEN VERCEL_AUTOMATION_BYPASS_SECRET VERCEL_ORG_ID VERCEL_PROJECT_ID PRODUCTION_URL; do
             eval "value=\${$name:-}"
             test -n "$value" || {
               echo "::error::$name n'est pas configuré pour l'environnement production."
@@ -252,7 +253,10 @@ jobs:
             --env "NEXT_PUBLIC_SUPABASE_URL=$PRODUCTION_SUPABASE_URL" \
             --env "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PRODUCTION_SUPABASE_PUBLISHABLE_KEY" \
             --env "NEXT_PUBLIC_APP_URL=$PRODUCTION_URL" \
-            --env "SUPABASE_SECRET_KEY=$SUPABASE_ADMIN_KEY" | tail -n 1)"
+            --env "SUPABASE_SECRET_KEY=$SUPABASE_ADMIN_KEY" \
+            --env "HUBSPOT_ACCESS_TOKEN=$HUBSPOT_ACCESS_TOKEN" \
+            --env "TR1_HUBSPOT_MODE=write" \
+            --env "TR1_HUBSPOT_WRITE_ENABLED=true" | tail -n 1)"
           case "$deployment_url" in
             https://tr-1-pharma-*.vercel.app) ;;
             *)
