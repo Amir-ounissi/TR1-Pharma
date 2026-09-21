@@ -18,7 +18,6 @@ export default async function AgendaPage({ searchParams }:{ searchParams:Promise
   const view = params.view === "week" ? "week" : "day";
   const date = view === "week" ? mondayOfWeek(safeDate) : safeDate;
   const range = await loadAgendaRangeAction(date, view);
-  const { supabase } = await requireCompletedOnboarding();
   const { data: backlog, error: backlogError } = await supabase.rpc("get_my_unplanned_agenda_items", {
     brand_filter: null,
   });
