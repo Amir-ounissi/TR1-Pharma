@@ -38,6 +38,14 @@ export default async function AgendaPage({ searchParams }:{ searchParams:Promise
     if (facilitatorOnly && event.source_kind === "mission") {
       return { ...event, detail_url: `/dashboard/field/missions/${event.source_id}` };
     }
+    if (event.pharmacy_id) {
+      const brand = event.brand_ids[0];
+      const query = brand ? `?brand=${encodeURIComponent(brand)}` : "";
+      return {
+        ...event,
+        detail_url: `/dashboard/pharmacies/open-pharmacy/${event.pharmacy_id}${query}`,
+      };
+    }
     return event;
   });
 
