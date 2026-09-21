@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { syncHubSpotOrderAfterPersistence } from "@/lib/integrations/hubspot/runtime";
 import { mobileApiError, requireMobileBrand, requireMobileCapability } from "@/lib/mobile-api";
+import { automaticOrderType, COUNTED_ORDER_STATUSES } from "@/lib/orders/order-type";
 
 export const runtime = "nodejs";
 
@@ -76,6 +77,39 @@ export async function POST(request: Request) {
       tax_rate: Number(productById.get(item.productId)?.tax_rate ?? 0),
     }));
 
+    let resolvedPharmacyId = input.pharmacyId ?? null;
+    if (!resolvedPharmacyId && input.brandPharmacyId) {
+      const { data: relation, error: relationError } = await supabase
+        .from("brand_pharmacies")
+        .select("pharmacy_id")
+        .eq("id", input.brandPharmacyId)
+        .eq("brand_id", brand.id)
+        .is("archived_at", null)
+        .maybeSingle();
+      if (relationError || !relation?.pharmacy_id) {
+        return Response.json({ error: "Impossible de déterminer l’historique de cette pharmacie." }, { status: 409 });
+      }
+      resolvedPharmacyId = String(relation.pharmacy_id);
+    }
+
+    let hasPriorOrder = false;
+    if (resolvedPharmacyId) {
+      const { data: priorOrder, error: priorOrderError } = await supabase
+        .from("orders")
+        .select("id")
+        .eq("brand_id", brand.id)
+        .eq("pharmacy_id", resolvedPharmacyId)
+        .in("order_status", [...COUNTED_ORDER_STATUSES])
+        .is("archived_at", null)
+        .limit(1)
+        .maybeSingle();
+      if (priorOrderError) {
+        return Response.json({ error: "Impossible de déterminer le type de commande." }, { status: 409 });
+      }
+      hasPriorOrder = Boolean(priorOrder);
+    }
+    const orderType = automaticOrderType(hasPriorOrder);
+
     const isAgent = brand.role === "agent";
     const { data, error } = await supabase.rpc("create_order_with_pharmacy_resolution", {
       target_brand_id: brand.id,
@@ -94,7 +128,7 @@ export async function POST(request: Request) {
       order_payload: {
         external_order_id: input.orderNumber,
         order_number: input.orderNumber,
-        order_type: "other",
+        order_type: orderType,
         order_status: isAgent ? "pending" : "confirmed",
         order_date: new Date(input.orderDate).toISOString(),
         shipping_amount_ht: 0,

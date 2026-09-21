@@ -7,6 +7,7 @@ import { syncHubSpotOrderAfterPersistence } from "@/lib/integrations/hubspot/run
 import { extractPdfOrder, PdfOrderImportError } from "@/lib/orders/pdf-order-extraction";
 import { calculateOrderTotal, consolidatePdfOrderLines, hasMeaningfulTotalDifference, matchPdfPharmacy, matchPdfProduct, resolvedLinePrice, type PharmacyCandidate, type ProductCandidate } from "@/lib/orders/pdf-order-matching";
 import type { PdfOrderExtraction } from "@/lib/orders/pdf-order-schema";
+import { automaticOrderType, COUNTED_ORDER_STATUSES } from "@/lib/orders/order-type";
 import { activeBrandHasCapability } from "@/lib/saas/server";
 
 const uuid = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
@@ -179,6 +180,38 @@ export async function confirmPdfOrderAction(_state: PdfOrderActionState, formDat
   if (externalDuplicate || numberDuplicate) return { error: "Une commande avec ce numéro existe déjà pour cette marque." };
   const productById = new Map(products.map((product) => [product.id, product]));
   const trustedItems = parsed.data.items.map((item) => ({ product_id: item.productId, quantity: item.quantity, free_quantity: item.freeQuantity, unit_price_ht: item.unitPriceHt, discount_rate: item.discountRate, tax_rate: Number(productById.get(item.productId)?.tax_rate ?? 0) }));
+
+  let resolvedPharmacyId = parsed.data.pharmacyId ?? null;
+  if (!resolvedPharmacyId && parsed.data.brandPharmacyId) {
+    const { data: relation, error: relationError } = await supabase
+      .from("brand_pharmacies")
+      .select("pharmacy_id")
+      .eq("id", parsed.data.brandPharmacyId)
+      .eq("brand_id", brand.id)
+      .is("archived_at", null)
+      .maybeSingle();
+    if (relationError || !relation?.pharmacy_id) {
+      return { error: "Impossible de déterminer l’historique de cette pharmacie." };
+    }
+    resolvedPharmacyId = String(relation.pharmacy_id);
+  }
+
+  let hasPriorOrder = false;
+  if (resolvedPharmacyId) {
+    const { data: priorOrder, error: priorOrderError } = await supabase
+      .from("orders")
+      .select("id")
+      .eq("brand_id", brand.id)
+      .eq("pharmacy_id", resolvedPharmacyId)
+      .in("order_status", [...COUNTED_ORDER_STATUSES])
+      .is("archived_at", null)
+      .limit(1)
+      .maybeSingle();
+    if (priorOrderError) return { error: "Impossible de déterminer le type de commande." };
+    hasPriorOrder = Boolean(priorOrder);
+  }
+  const orderType = automaticOrderType(hasPriorOrder);
+
   const { data, error } = await supabase.rpc("create_order_with_pharmacy_resolution", {
     target_brand_id: brand.id,
     target_brand_pharmacy_id: parsed.data.brandPharmacyId ?? null,
@@ -193,7 +226,7 @@ export async function confirmPdfOrderAction(_state: PdfOrderActionState, formDat
       city: parsed.data.newPharmacy.city || null,
       address_line_1: parsed.data.newPharmacy.address || null,
     } : null,
-    order_payload: { external_order_id: parsed.data.orderNumber, order_number: parsed.data.orderNumber, order_type: "other", order_status: isAgent ? "pending" : "confirmed", order_date: new Date().toISOString(), shipping_amount_ht: 0, payment_status: "not_applicable", notes: "Commande créée depuis un document (PDF/photo) vérifié par l’utilisateur.", source: "import" },
+    order_payload: { external_order_id: parsed.data.orderNumber, order_number: parsed.data.orderNumber, order_type: orderType, order_status: isAgent ? "pending" : "confirmed", order_date: new Date().toISOString(), shipping_amount_ht: 0, payment_status: "not_applicable", notes: "Commande créée depuis un document (PDF/photo) vérifié par l’utilisateur.", source: "import" },
     item_payload: trustedItems,
   });
   if (error) return { error: error.code === "23505" ? "Cette commande existe déjà." : error.message };
