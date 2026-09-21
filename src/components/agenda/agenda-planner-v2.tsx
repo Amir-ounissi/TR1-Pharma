@@ -450,7 +450,7 @@ export function AgendaPlanner({
           {view === "day" ? (
             <>
               <div className="md:hidden">
-                <MobileDayTimeline date={date} events={dayPlanning} contextEvents={dayContext} onAddVisit={canCreateVisit ? openVisit : undefined} />
+                <MobileDayTimeline date={date} events={dayPlanning} contextEvents={dayContext} onAddVisit={canCreateVisit ? openVisit : undefined} onReschedule={rescheduleVisit} />
               </div>
               <div className="hidden md:block">
                 <DesktopTimeline
@@ -461,13 +461,14 @@ export function AgendaPlanner({
                   canCreateVisit={canCreateVisit}
                   onDrop={dropVisit}
                   onAddVisit={openVisit}
+                  onReschedule={rescheduleVisit}
                 />
               </div>
             </>
           ) : (
             <>
               <div className="md:hidden">
-                <MobileWeekTimeline days={days} events={timedEvents} contextEvents={contextEvents} onAddVisit={canCreateVisit ? openVisit : undefined} />
+                <MobileWeekTimeline days={days} events={timedEvents} contextEvents={contextEvents} onAddVisit={canCreateVisit ? openVisit : undefined} onReschedule={rescheduleVisit} />
               </div>
               <div className="hidden overflow-x-auto md:block">
                 <DesktopTimeline
@@ -594,6 +595,7 @@ function DesktopTimeline({
   canCreateVisit,
   onDrop,
   onAddVisit,
+  onReschedule,
 }: {
   days: string[];
   events: AgendaEvent[];
@@ -602,6 +604,7 @@ function DesktopTimeline({
   canCreateVisit: boolean;
   onDrop: (event: React.DragEvent, day: string, hour: number, minute: number) => void;
   onAddVisit: (startAt: string) => void;
+  onReschedule: (visitId: string, nextLocal: string) => Promise<void>;
 }) {
   const positionedByDay = new Map(days.map((day) => [day, layoutDayEvents(events, day)]));
 
@@ -690,6 +693,7 @@ function DesktopTimeline({
               <EventCard
                 event={event}
                 relatedContext={relatedContext(event, contextEvents)}
+                onReschedule={onReschedule}
                 fillHeight
               />
             </div>
@@ -700,7 +704,7 @@ function DesktopTimeline({
   );
 }
 
-function MobileDayTimeline({ date, events, contextEvents, onAddVisit }: { date: string; events: AgendaEvent[]; contextEvents: AgendaEvent[]; onAddVisit?: (startAt: string) => void }) {
+function MobileDayTimeline({ date, events, contextEvents, onAddVisit, onReschedule }: { date: string; events: AgendaEvent[]; contextEvents: AgendaEvent[]; onAddVisit?: (startAt: string) => void; onReschedule: (visitId: string, nextLocal: string) => Promise<void> }) {
   const sorted = [...events].sort((a, b) => Date.parse(a.start_at) - Date.parse(b.start_at));
   return (
     <div className="p-3">
@@ -716,7 +720,7 @@ function MobileDayTimeline({ date, events, contextEvents, onAddVisit }: { date: 
           {sorted.map((event) => (
             <div key={event.event_key} className="grid grid-cols-[3.5rem_minmax(0,1fr)] gap-2">
               <div className="pt-3 text-right font-mono text-xs font-bold text-muted-foreground">{eventTime(event.start_at)}</div>
-              <EventCard event={event} relatedContext={relatedContext(event, contextEvents)} />
+              <EventCard event={event} relatedContext={relatedContext(event, contextEvents)} onReschedule={onReschedule} />
             </div>
           ))}
         </div>
@@ -725,7 +729,7 @@ function MobileDayTimeline({ date, events, contextEvents, onAddVisit }: { date: 
   );
 }
 
-function MobileWeekTimeline({ days, events, contextEvents, onAddVisit }: { days: string[]; events: AgendaEvent[]; contextEvents: AgendaEvent[]; onAddVisit?: (startAt: string) => void }) {
+function MobileWeekTimeline({ days, events, contextEvents, onAddVisit, onReschedule }: { days: string[]; events: AgendaEvent[]; contextEvents: AgendaEvent[]; onAddVisit?: (startAt: string) => void; onReschedule: (visitId: string, nextLocal: string) => Promise<void> }) {
   return (
     <div className="space-y-1 p-3">
       {days.map((day) => {
@@ -740,7 +744,7 @@ function MobileWeekTimeline({ days, events, contextEvents, onAddVisit }: { days:
               </div>
             </div>
             {dayEvents.length ? (
-              <div className="space-y-2">{dayEvents.map((event) => <EventCard event={event} relatedContext={relatedContext(event, contextEvents)} key={event.event_key} />)}</div>
+              <div className="space-y-2">{dayEvents.map((event) => <EventCard event={event} relatedContext={relatedContext(event, contextEvents)} onReschedule={onReschedule} key={event.event_key} />)}</div>
             ) : <div className="h-8 rounded-lg border border-dashed bg-slate-50/60" />}
           </section>
         );
@@ -749,8 +753,7 @@ function MobileWeekTimeline({ days, events, contextEvents, onAddVisit }: { days:
   );
 }
 
-function EventCard({ event, relatedContext, fillHeight = false }: { event: AgendaEvent; relatedContext: AgendaEvent[]; fillHeight?: boolean }) {
-  const router = useRouter();
+function EventCard({ event, relatedContext, onReschedule, fillHeight = false }: { event: AgendaEvent; relatedContext: AgendaEvent[]; onReschedule: (visitId: string, nextLocal: string) => Promise<void>; fillHeight?: boolean }) {
   const [rescheduleAt, setRescheduleAt] = useState(isoToParisLocal(event.start_at).slice(0, 16));
   const [saving, startSaving] = useTransition();
   const duration = eventDurationMinutes(event);
@@ -817,8 +820,7 @@ function EventCard({ event, relatedContext, fillHeight = false }: { event: Agend
                   variant="outline"
                   disabled={saving}
                   onClick={() => startSaving(async () => {
-                    await rescheduleFieldVisitAction(event.source_id, rescheduleAt);
-                    router.refresh();
+                    await onReschedule(event.source_id, rescheduleAt);
                   })}
                 >
                   {saving ? "…" : "OK"}
