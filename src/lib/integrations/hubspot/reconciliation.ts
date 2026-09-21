@@ -2085,6 +2085,7 @@ export async function reconcileHubSpotVisitsIfStale(
       .maybeSingle();
     if (connectionError || !connection) return null;
 
+    await replayOrdersCreatedWhileInactive(brandId, String(connection.id));
     const lastSyncAt = await lastSuccessfulInboundSyncAt(admin, String(connection.id), "visits");
     if (lastSyncAt && Date.now() - new Date(lastSyncAt).getTime() < maxAgeMs) return null;
 
