@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useState, useTransition } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -21,9 +21,10 @@ import {
 import {
   createAgendaBlockAction,
   createFieldVisitAction,
+  loadAgendaPharmaciesAction,
   rescheduleFieldVisitAction,
 } from "@/app/(protected)/dashboard/agenda/actions";
-import { addCalendarDays, isoToParisLocal } from "@/lib/agenda";
+import { addCalendarDays, isoToParisLocal, parisLocalToIso } from "@/lib/agenda";
 import { uiLabel } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -131,7 +132,6 @@ export function AgendaPlanner({
   events,
   backlog,
   brands,
-  pharmacies,
   canCreateVisit,
 }: {
   date: string;
@@ -140,19 +140,24 @@ export function AgendaPlanner({
   events: AgendaEvent[];
   backlog: BacklogItem[];
   brands: Array<{ id: string; name: string }>;
-  pharmacies: PharmacyOption[];
   canCreateVisit: boolean;
 }) {
   const router = useRouter();
+  const [localEvents, setLocalEvents] = useState(events);
   const [filter, setFilter] = useState<(typeof planningFilters)[number]["key"]>("all");
   const [visitOpen, setVisitOpen] = useState(false);
   const [visitStart, setVisitStart] = useState(`${date}T09:00`);
   const [moveFeedback, setMoveFeedback] = useState<{
     visitId: string;
     previousLocal: string;
+    nextLocal: string;
     message: string;
   } | null>(null);
   const [, startTransition] = useTransition();
+
+  useEffect(() => {
+    setLocalEvents(events);
+  }, [events]);
 
   const days = useMemo(
     () => Array.from({ length: view === "week" ? 7 : 1 }, (_, index) => addCalendarDays(date, index)),
@@ -161,23 +166,23 @@ export function AgendaPlanner({
 
   const timedEvents = useMemo(
     () =>
-      events.filter(
+      localEvents.filter(
         (event) =>
           event.ownership === "mine" &&
           !actionKinds.has(event.source_kind) &&
           (filter === "all" || event.source_kind === filter),
       ),
-    [events, filter],
+    [localEvents, filter],
   );
 
   const actionEvents = useMemo(
-    () => events.filter((event) => event.ownership === "mine" && actionKinds.has(event.source_kind)),
-    [events],
+    () => localEvents.filter((event) => event.ownership === "mine" && actionKinds.has(event.source_kind)),
+    [localEvents],
   );
 
   const contextEvents = useMemo(
-    () => events.filter((event) => event.ownership === "pharmacy_activity"),
-    [events],
+    () => localEvents.filter((event) => event.ownership === "pharmacy_activity"),
+    [localEvents],
   );
 
   const dayPlanning = timedEvents.filter((event) => localDay(event.start_at) === date);
@@ -185,13 +190,58 @@ export function AgendaPlanner({
   const dayActions = actionEvents.filter((event) => localDay(event.start_at) === date);
   const dayContext = contextEvents.filter((event) => localDay(event.start_at) === date);
 
-  const navigate = (next: string) => router.push(`/dashboard/agenda?date=${next}&view=${view}`);
+  useEffect(() => {
+    const step = view === "week" ? 7 : 1;
+    router.prefetch(`/dashboard/agenda?date=${addCalendarDays(date, -step)}&view=${view}`);
+    router.prefetch(`/dashboard/agenda?date=${addCalendarDays(date, step)}&view=${view}`);
+  }, [date, router, view]);
+
+  const navigate = (next: string) =>
+    router.push(`/dashboard/agenda?date=${next}&view=${view}`, { scroll: false });
   const setView = (nextView: "day" | "week") =>
-    router.push(`/dashboard/agenda?date=${date}&view=${nextView}`);
+    router.push(`/dashboard/agenda?date=${date}&view=${nextView}`, { scroll: false });
 
   const openVisit = (startAt: string) => {
     setVisitStart(startAt);
     setVisitOpen(true);
+  };
+
+  const rescheduleVisit = async (
+    visitId: string,
+    nextLocal: string,
+    previousLocalOverride?: string,
+    successMessage?: string,
+  ) => {
+    const currentVisit = localEvents.find(
+      (event) => event.source_kind === "field_visit" && event.source_id === visitId,
+    );
+    if (!currentVisit) return;
+
+    const previousLocal = previousLocalOverride || isoToParisLocal(currentVisit.start_at);
+    if (previousLocal === nextLocal) return;
+
+    setLocalEvents((current) => moveVisitInEvents(current, visitId, nextLocal));
+    setMoveFeedback({
+      visitId,
+      previousLocal,
+      nextLocal,
+      message: successMessage || `Visite déplacée à ${nextLocal.slice(11, 16)}`,
+    });
+
+    try {
+      await rescheduleFieldVisitAction(visitId, nextLocal);
+      window.setTimeout(() => {
+        setMoveFeedback((current) => current?.visitId === visitId ? null : current);
+      }, 6000);
+    } catch {
+      setLocalEvents((current) => moveVisitInEvents(current, visitId, previousLocal));
+      setMoveFeedback({
+        visitId: "",
+        previousLocal: "",
+        nextLocal: "",
+        message: "Impossible de déplacer la visite.",
+      });
+    }
   };
 
   const dropVisit = (drag: React.DragEvent, day: string, hour: number, minute: number) => {
@@ -202,27 +252,34 @@ export function AgendaPlanner({
     const nextLocal = slotLocal(day, hour, minute);
 
     startTransition(async () => {
-      try {
-        await rescheduleFieldVisitAction(visitId, nextLocal);
-        setMoveFeedback({
-          visitId,
-          previousLocal,
-          message: `Visite déplacée à ${formatSlot(hour, minute)}`,
-        });
-        router.refresh();
-        window.setTimeout(() => setMoveFeedback(null), 6000);
-      } catch {
-        setMoveFeedback({ visitId: "", previousLocal: "", message: "Impossible de déplacer la visite." });
-      }
+      await rescheduleVisit(
+        visitId,
+        nextLocal,
+        previousLocal,
+        `Visite déplacée à ${formatSlot(hour, minute)}`,
+      );
     });
   };
 
   const undoMove = () => {
     if (!moveFeedback?.visitId || !moveFeedback.previousLocal) return;
+    const { visitId, previousLocal, nextLocal } = moveFeedback;
+
+    setLocalEvents((current) => moveVisitInEvents(current, visitId, previousLocal));
+    setMoveFeedback(null);
+
     startTransition(async () => {
-      await rescheduleFieldVisitAction(moveFeedback.visitId, moveFeedback.previousLocal);
-      setMoveFeedback(null);
-      router.refresh();
+      try {
+        await rescheduleFieldVisitAction(visitId, previousLocal);
+      } catch {
+        setLocalEvents((current) => moveVisitInEvents(current, visitId, nextLocal));
+        setMoveFeedback({
+          visitId: "",
+          previousLocal: "",
+          nextLocal: "",
+          message: "Impossible d’annuler le déplacement.",
+        });
+      }
     });
   };
 
@@ -242,7 +299,7 @@ export function AgendaPlanner({
 
         <div className="flex flex-wrap gap-2">
           {canCreateVisit ? (
-            <Button onClick={() => openVisit(`${date}T09:00`)} disabled={!pharmacies.length}>
+            <Button onClick={() => openVisit(`${date}T09:00`)}>
               <Plus className="size-4" />
               Planifier une visite
             </Button>
@@ -360,7 +417,7 @@ export function AgendaPlanner({
           {view === "day" ? (
             <>
               <div className="md:hidden">
-                <MobileDayTimeline date={date} events={dayPlanning} contextEvents={dayContext} onAddVisit={canCreateVisit ? openVisit : undefined} />
+                <MobileDayTimeline date={date} events={dayPlanning} contextEvents={dayContext} onAddVisit={canCreateVisit ? openVisit : undefined} onReschedule={rescheduleVisit} />
               </div>
               <div className="hidden md:block">
                 <DesktopTimeline
@@ -371,13 +428,14 @@ export function AgendaPlanner({
                   canCreateVisit={canCreateVisit}
                   onDrop={dropVisit}
                   onAddVisit={openVisit}
+                  onReschedule={rescheduleVisit}
                 />
               </div>
             </>
           ) : (
             <>
               <div className="md:hidden">
-                <MobileWeekTimeline days={days} events={timedEvents} contextEvents={contextEvents} onAddVisit={canCreateVisit ? openVisit : undefined} />
+                <MobileWeekTimeline days={days} events={timedEvents} contextEvents={contextEvents} onAddVisit={canCreateVisit ? openVisit : undefined} onReschedule={rescheduleVisit} />
               </div>
               <div className="hidden overflow-x-auto md:block">
                 <DesktopTimeline
@@ -388,6 +446,7 @@ export function AgendaPlanner({
                   canCreateVisit={canCreateVisit}
                   onDrop={dropVisit}
                   onAddVisit={openVisit}
+                  onReschedule={rescheduleVisit}
                 />
               </div>
             </>
@@ -399,10 +458,10 @@ export function AgendaPlanner({
 
       {visitOpen ? (
         <VisitSheet
-          pharmacies={pharmacies}
           open={visitOpen}
           onOpenChange={setVisitOpen}
           defaultStart={visitStart}
+          onVisitCreated={(event) => setLocalEvents((current) => [...current, event])}
         />
       ) : null}
 
@@ -504,6 +563,7 @@ function DesktopTimeline({
   canCreateVisit,
   onDrop,
   onAddVisit,
+  onReschedule,
 }: {
   days: string[];
   events: AgendaEvent[];
@@ -512,6 +572,7 @@ function DesktopTimeline({
   canCreateVisit: boolean;
   onDrop: (event: React.DragEvent, day: string, hour: number, minute: number) => void;
   onAddVisit: (startAt: string) => void;
+  onReschedule: (visitId: string, nextLocal: string) => Promise<void>;
 }) {
   const positionedByDay = new Map(days.map((day) => [day, layoutDayEvents(events, day)]));
 
@@ -601,6 +662,7 @@ function DesktopTimeline({
                 event={event}
                 relatedContext={relatedContext(event, contextEvents)}
                 fillHeight
+                onReschedule={onReschedule}
               />
             </div>
           );
@@ -610,7 +672,7 @@ function DesktopTimeline({
   );
 }
 
-function MobileDayTimeline({ date, events, contextEvents, onAddVisit }: { date: string; events: AgendaEvent[]; contextEvents: AgendaEvent[]; onAddVisit?: (startAt: string) => void }) {
+function MobileDayTimeline({ date, events, contextEvents, onAddVisit, onReschedule }: { date: string; events: AgendaEvent[]; contextEvents: AgendaEvent[]; onAddVisit?: (startAt: string) => void; onReschedule: (visitId: string, nextLocal: string) => Promise<void> }) {
   const sorted = [...events].sort((a, b) => Date.parse(a.start_at) - Date.parse(b.start_at));
   return (
     <div className="p-3">
@@ -626,7 +688,7 @@ function MobileDayTimeline({ date, events, contextEvents, onAddVisit }: { date: 
           {sorted.map((event) => (
             <div key={event.event_key} className="grid grid-cols-[3.5rem_minmax(0,1fr)] gap-2">
               <div className="pt-3 text-right font-mono text-xs font-bold text-muted-foreground">{eventTime(event.start_at)}</div>
-              <EventCard event={event} relatedContext={relatedContext(event, contextEvents)} />
+              <EventCard event={event} relatedContext={relatedContext(event, contextEvents)} onReschedule={onReschedule} />
             </div>
           ))}
         </div>
@@ -635,7 +697,7 @@ function MobileDayTimeline({ date, events, contextEvents, onAddVisit }: { date: 
   );
 }
 
-function MobileWeekTimeline({ days, events, contextEvents, onAddVisit }: { days: string[]; events: AgendaEvent[]; contextEvents: AgendaEvent[]; onAddVisit?: (startAt: string) => void }) {
+function MobileWeekTimeline({ days, events, contextEvents, onAddVisit, onReschedule }: { days: string[]; events: AgendaEvent[]; contextEvents: AgendaEvent[]; onAddVisit?: (startAt: string) => void; onReschedule: (visitId: string, nextLocal: string) => Promise<void> }) {
   return (
     <div className="space-y-1 p-3">
       {days.map((day) => {
@@ -650,7 +712,7 @@ function MobileWeekTimeline({ days, events, contextEvents, onAddVisit }: { days:
               </div>
             </div>
             {dayEvents.length ? (
-              <div className="space-y-2">{dayEvents.map((event) => <EventCard event={event} relatedContext={relatedContext(event, contextEvents)} key={event.event_key} />)}</div>
+              <div className="space-y-2">{dayEvents.map((event) => <EventCard event={event} relatedContext={relatedContext(event, contextEvents)} onReschedule={onReschedule} key={event.event_key} />)}</div>
             ) : <div className="h-8 rounded-lg border border-dashed bg-slate-50/60" />}
           </section>
         );
@@ -659,8 +721,7 @@ function MobileWeekTimeline({ days, events, contextEvents, onAddVisit }: { days:
   );
 }
 
-function EventCard({ event, relatedContext, fillHeight = false }: { event: AgendaEvent; relatedContext: AgendaEvent[]; fillHeight?: boolean }) {
-  const router = useRouter();
+function EventCard({ event, relatedContext, fillHeight = false, onReschedule }: { event: AgendaEvent; relatedContext: AgendaEvent[]; fillHeight?: boolean; onReschedule: (visitId: string, nextLocal: string) => Promise<void> }) {
   const [rescheduleAt, setRescheduleAt] = useState(isoToParisLocal(event.start_at).slice(0, 16));
   const [saving, startSaving] = useTransition();
   const duration = eventDurationMinutes(event);
@@ -727,8 +788,7 @@ function EventCard({ event, relatedContext, fillHeight = false }: { event: Agend
                   variant="outline"
                   disabled={saving}
                   onClick={() => startSaving(async () => {
-                    await rescheduleFieldVisitAction(event.source_id, rescheduleAt);
-                    router.refresh();
+                    await onReschedule(event.source_id, rescheduleAt);
                   })}
                 >
                   {saving ? "…" : "OK"}
@@ -823,16 +883,44 @@ function EmptyPlanning({ onAddVisit }: { onAddVisit?: () => void }) {
   );
 }
 
-function VisitSheet({ pharmacies, open, onOpenChange, defaultStart }: { pharmacies: PharmacyOption[]; open: boolean; onOpenChange: (open: boolean) => void; defaultStart: string }) {
-  const router = useRouter();
-  const [pharmacyId, setPharmacyId] = useState(pharmacies[0]?.id ?? "");
+function VisitSheet({
+  open,
+  onOpenChange,
+  defaultStart,
+  onVisitCreated,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  defaultStart: string;
+  onVisitCreated: (event: AgendaEvent) => void;
+}) {
+  const [pharmacies, setPharmacies] = useState<PharmacyOption[]>([]);
+  const [pharmacyId, setPharmacyId] = useState("");
   const [search, setSearch] = useState("");
   const [startAt, setStartAt] = useState(defaultStart);
   const [feedback, setFeedback] = useState<{ error?: string }>({});
   const [pending, startSubmit] = useTransition();
+  const [loadingPharmacies, startPharmacyLoad] = useTransition();
+  const loadStarted = useRef(false);
+
+  useEffect(() => {
+    if (!open || loadStarted.current) return;
+    loadStarted.current = true;
+    startPharmacyLoad(async () => {
+      try {
+        const options = await loadAgendaPharmaciesAction();
+        setPharmacies(options);
+        setPharmacyId(options[0]?.id ?? "");
+      } catch {
+        setFeedback({ error: "Impossible de charger vos pharmacies." });
+      }
+    });
+  }, [open, startPharmacyLoad]);
 
   const selected = pharmacies.find((item) => item.id === pharmacyId) ?? pharmacies[0];
-  const filtered = pharmacies.filter((item) => `${item.label} ${item.city ?? ""}`.toLowerCase().includes(search.trim().toLowerCase())).slice(0, 60);
+  const filtered = pharmacies
+    .filter((item) => `${item.label} ${item.city ?? ""}`.toLowerCase().includes(search.trim().toLowerCase()))
+    .slice(0, 60);
 
   const handleOpenChange = (next: boolean) => {
     if (next) {
@@ -852,13 +940,48 @@ function VisitSheet({ pharmacies, open, onOpenChange, defaultStart }: { pharmaci
             event.preventDefault();
             const form = event.currentTarget;
             startSubmit(async () => {
-              const result = await createFieldVisitAction({}, new FormData(form));
+              const formData = new FormData(form);
+              const result = await createFieldVisitAction({}, formData);
               if (result?.error) {
                 setFeedback({ error: result.error });
                 return;
               }
+              if (!result?.visitId || !selected) {
+                setFeedback({ error: "La visite a été créée mais son affichage n’a pas pu être mis à jour." });
+                return;
+              }
+
+              const duration = Number(formData.get("duration") ?? 60);
+              const startLocal = String(formData.get("startAt") ?? startAt);
+              const startIso = parisLocalToIso(startLocal);
+              const endIso = new Date(Date.parse(startIso) + duration * 60_000).toISOString();
+              const relationIds = formData.getAll("brandPharmacyId").map(String);
+              const selectedBrands = selected.brands.filter((brand) => relationIds.includes(brand.relationId));
+
+              onVisitCreated({
+                event_key: `visit:${result.visitId}`,
+                source_kind: "field_visit",
+                source_id: result.visitId,
+                event_type: "field_visit",
+                title: `Visite · ${selected.label}`,
+                start_at: startIso,
+                end_at: endIso,
+                pharmacy_id: selected.id,
+                pharmacy_name: selected.label,
+                city: selected.city ?? null,
+                brand_ids: selectedBrands.map((brand) => brand.brandId),
+                brand_names: selectedBrands.map((brand) => brand.brandName),
+                assigned_user_id: null,
+                assigned_user_name: null,
+                ownership: "mine",
+                status: "planned",
+                draggable: true,
+                detail_url: `/dashboard/visits/${result.visitId}`,
+                priority: "normal",
+                metadata: { visit_kind: String(formData.get("visitKind") ?? "client_visit") },
+              });
+
               onOpenChange(false);
-              router.refresh();
             });
           }}
         >
@@ -869,10 +992,12 @@ function VisitSheet({ pharmacies, open, onOpenChange, defaultStart }: { pharmaci
           <Field label="Pharmacie">
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-3 size-4 text-muted-foreground" />
-              <Input className="pl-9" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Nom, ville…" />
+              <Input className="pl-9" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Nom, ville…" disabled={loadingPharmacies} />
             </div>
             <div className="mt-2 max-h-44 space-y-1 overflow-y-auto rounded-lg border p-1">
-              {filtered.map((item) => (
+              {loadingPharmacies ? (
+                <p className="p-3 text-center text-xs text-muted-foreground">Chargement de vos pharmacies…</p>
+              ) : filtered.map((item) => (
                 <button
                   key={item.id}
                   type="button"
@@ -882,7 +1007,7 @@ function VisitSheet({ pharmacies, open, onOpenChange, defaultStart }: { pharmaci
                   <span className="font-semibold">{item.label}</span>{item.city ? <span className={cn("ml-1 text-xs", selected?.id === item.id ? "text-white/70" : "text-muted-foreground")}>· {item.city}</span> : null}
                 </button>
               ))}
-              {!filtered.length ? <p className="p-3 text-center text-xs text-muted-foreground">Aucune pharmacie trouvée.</p> : null}
+              {!loadingPharmacies && !filtered.length ? <p className="p-3 text-center text-xs text-muted-foreground">Aucune pharmacie trouvée.</p> : null}
             </div>
           </Field>
 
@@ -894,17 +1019,14 @@ function VisitSheet({ pharmacies, open, onOpenChange, defaultStart }: { pharmaci
                   {brand.brandName}
                 </label>
               ))}
+              {!selected && !loadingPharmacies ? <p className="text-xs text-muted-foreground">Sélectionnez une pharmacie.</p> : null}
             </div>
           </Field>
 
           <div className="grid grid-cols-2 gap-2">
             <Field label="Type">
               <select className="h-10 w-full rounded-md border bg-background px-3" name="visitKind" defaultValue="client_visit">
-                <option value="client_visit">Visite client</option>
-                <option value="prospecting">Prospection</option>
-                <option value="relationship">Relation</option>
-                <option value="training">Formation</option>
-                <option value="other">Autre</option>
+                <option value="client_visit">Visite client</option><option value="prospecting">Prospection</option><option value="relationship">Relation</option><option value="training">Formation</option><option value="other">Autre</option>
               </select>
             </Field>
             <Field label="Durée">
@@ -917,17 +1039,15 @@ function VisitSheet({ pharmacies, open, onOpenChange, defaultStart }: { pharmaci
           <Field label="Début">
             <Input type="datetime-local" name="startAt" value={startAt} onChange={(event) => setStartAt(event.target.value)} required />
           </Field>
-
-          <Field label="Objectif">
-            <Textarea name="objective" placeholder="Ce que vous voulez obtenir pendant la visite" />
-          </Field>
-
+          <Field label="Objectif"><Textarea name="objective" placeholder="Ce que vous voulez obtenir pendant la visite" /></Field>
           <details className="rounded-lg border px-3 py-2">
             <summary className="cursor-pointer text-sm font-medium">Ajouter une note</summary>
             <Textarea className="mt-3" name="notes" />
           </details>
 
-          <Button disabled={pending || !selected} className="w-full">{pending ? "Planification…" : "Planifier la visite"}</Button>
+          <Button disabled={pending || loadingPharmacies || !selected} className="w-full">
+            {pending ? "Planification…" : loadingPharmacies ? "Chargement…" : "Planifier la visite"}
+          </Button>
         </form>
       </SheetContent>
     </Sheet>
@@ -1045,6 +1165,20 @@ function layoutDayEvents(events: AgendaEvent[], day: string): PositionedEvent[] 
     });
     const laneCount = Math.max(1, laneEnds.length);
     return laidOut.map((item) => ({ ...item, laneCount }));
+  });
+}
+
+function moveVisitInEvents(events: AgendaEvent[], visitId: string, nextLocal: string) {
+  const nextStart = parisLocalToIso(nextLocal);
+  return events.map((event) => {
+    if (event.source_kind !== "field_visit" || event.source_id !== visitId) return event;
+    const duration = Date.parse(event.end_at) - Date.parse(event.start_at);
+    const safeDuration = Number.isFinite(duration) && duration > 0 ? duration : 60 * 60_000;
+    return {
+      ...event,
+      start_at: nextStart,
+      end_at: new Date(Date.parse(nextStart) + safeDuration).toISOString(),
+    };
   });
 }
 
