@@ -127,13 +127,12 @@ type PositionedEvent = {
 };
 
 export function AgendaPlanner({
-  date,
+  date: initialDate,
   today,
-  view,
-  events,
+  view: initialView,
+  events: initialEvents,
   backlog,
   brands,
-  pharmacies,
   canCreateVisit,
 }: {
   date: string;
@@ -142,19 +141,29 @@ export function AgendaPlanner({
   events: AgendaEvent[];
   backlog: BacklogItem[];
   brands: Array<{ id: string; name: string }>;
-  pharmacies: PharmacyOption[];
   canCreateVisit: boolean;
 }) {
-  const router = useRouter();
+  const [date, setDate] = useState(initialDate);
+  const [view, setViewState] = useState<"day" | "week">(initialView);
+  const [events, setEvents] = useState(initialEvents);
   const [filter, setFilter] = useState<(typeof planningFilters)[number]["key"]>("all");
   const [visitOpen, setVisitOpen] = useState(false);
-  const [visitStart, setVisitStart] = useState(`${date}T09:00`);
+  const [visitStart, setVisitStart] = useState(`${initialDate}T09:00`);
+  const [navigationError, setNavigationError] = useState<string | null>(null);
   const [moveFeedback, setMoveFeedback] = useState<{
     visitId: string;
     previousLocal: string;
     message: string;
   } | null>(null);
   const [, startTransition] = useTransition();
+  const [navigationPending, startNavigation] = useTransition();
+  const navigationRequest = useRef(0);
+
+  useEffect(() => {
+    setDate(initialDate);
+    setViewState(initialView);
+    setEvents(initialEvents);
+  }, [initialDate, initialEvents, initialView]);
 
   const days = useMemo(
     () => Array.from({ length: view === "week" ? 7 : 1 }, (_, index) => addCalendarDays(date, index)),
@@ -187,13 +196,79 @@ export function AgendaPlanner({
   const dayActions = actionEvents.filter((event) => localDay(event.start_at) === date);
   const dayContext = contextEvents.filter((event) => localDay(event.start_at) === date);
 
-  const navigate = (next: string) => router.push(`/dashboard/agenda?date=${next}&view=${view}`);
-  const setView = (nextView: "day" | "week") =>
-    router.push(`/dashboard/agenda?date=${date}&view=${nextView}`);
+  const loadRange = (requestedDate: string, requestedView: "day" | "week") => {
+    const previousDate = date;
+    const previousView = view;
+    const nextDate = requestedView === "week" ? mondayOfWeek(requestedDate) : requestedDate;
+    const requestId = navigationRequest.current + 1;
+    navigationRequest.current = requestId;
+
+    setNavigationError(null);
+    setDate(nextDate);
+    setViewState(requestedView);
+    window.history.replaceState(null, "", `/dashboard/agenda?date=${nextDate}&view=${requestedView}`);
+
+    startNavigation(async () => {
+      try {
+        const result = await loadAgendaRangeAction(nextDate, requestedView);
+        if (navigationRequest.current !== requestId) return;
+        setDate(result.date);
+        setViewState(result.view);
+        setEvents(result.events);
+      } catch {
+        if (navigationRequest.current !== requestId) return;
+        setDate(previousDate);
+        setViewState(previousView);
+        window.history.replaceState(null, "", `/dashboard/agenda?date=${previousDate}&view=${previousView}`);
+        setNavigationError("Impossible de charger cette période.");
+      }
+    });
+  };
+
+  const navigate = (next: string) => loadRange(next, view);
+  const changeView = (nextView: "day" | "week") => loadRange(date, nextView);
+
+  const refreshRange = async () => {
+    const result = await loadAgendaRangeAction(date, view);
+    setDate(result.date);
+    setViewState(result.view);
+    setEvents(result.events);
+  };
 
   const openVisit = (startAt: string) => {
     setVisitStart(startAt);
     setVisitOpen(true);
+  };
+
+  const moveVisitLocally = (visitId: string, nextLocal: string) => {
+    const nextStart = parisLocalToIso(nextLocal);
+    setEvents((current) =>
+      current.map((event) => {
+        if (event.source_kind !== "field_visit" || event.source_id !== visitId) return event;
+        const duration = Date.parse(event.end_at) - Date.parse(event.start_at);
+        return {
+          ...event,
+          start_at: nextStart,
+          end_at: new Date(Date.parse(nextStart) + Math.max(duration, 15 * 60_000)).toISOString(),
+        };
+      }),
+    );
+  };
+
+  const restoreVisit = (snapshot: AgendaEvent | undefined) => {
+    if (!snapshot) return;
+    setEvents((current) => current.map((event) => event.event_key === snapshot.event_key ? snapshot : event));
+  };
+
+  const rescheduleVisit = async (visitId: string, nextLocal: string) => {
+    const snapshot = events.find((event) => event.source_kind === "field_visit" && event.source_id === visitId);
+    moveVisitLocally(visitId, nextLocal);
+    try {
+      await rescheduleFieldVisitAction(visitId, nextLocal);
+    } catch (error) {
+      restoreVisit(snapshot);
+      throw error;
+    }
   };
 
   const dropVisit = (drag: React.DragEvent, day: string, hour: number, minute: number) => {
@@ -202,18 +277,21 @@ export function AgendaPlanner({
     const previousLocal = drag.dataTransfer.getData("text/field-visit-start");
     if (!visitId) return;
     const nextLocal = slotLocal(day, hour, minute);
+    const snapshot = events.find((event) => event.source_kind === "field_visit" && event.source_id === visitId);
+
+    moveVisitLocally(visitId, nextLocal);
+    setMoveFeedback({
+      visitId,
+      previousLocal,
+      message: `Visite déplacée à ${formatSlot(hour, minute)}`,
+    });
 
     startTransition(async () => {
       try {
         await rescheduleFieldVisitAction(visitId, nextLocal);
-        setMoveFeedback({
-          visitId,
-          previousLocal,
-          message: `Visite déplacée à ${formatSlot(hour, minute)}`,
-        });
-        router.refresh();
         window.setTimeout(() => setMoveFeedback(null), 6000);
       } catch {
+        restoreVisit(snapshot);
         setMoveFeedback({ visitId: "", previousLocal: "", message: "Impossible de déplacer la visite." });
       }
     });
@@ -221,10 +299,18 @@ export function AgendaPlanner({
 
   const undoMove = () => {
     if (!moveFeedback?.visitId || !moveFeedback.previousLocal) return;
+    const visitId = moveFeedback.visitId;
+    const previousLocal = moveFeedback.previousLocal;
+    const snapshot = events.find((event) => event.source_kind === "field_visit" && event.source_id === visitId);
+    moveVisitLocally(visitId, previousLocal);
+    setMoveFeedback(null);
     startTransition(async () => {
-      await rescheduleFieldVisitAction(moveFeedback.visitId, moveFeedback.previousLocal);
-      setMoveFeedback(null);
-      router.refresh();
+      try {
+        await rescheduleFieldVisitAction(visitId, previousLocal);
+      } catch {
+        restoreVisit(snapshot);
+        setMoveFeedback({ visitId: "", previousLocal: "", message: "Impossible d’annuler le déplacement." });
+      }
     });
   };
 
