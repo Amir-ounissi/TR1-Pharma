@@ -2,6 +2,7 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { HubSpotClient, type HubSpotClientMode } from "./client";
+import { hubSpotRunFailureStatus } from "./runtime-status";
 import { assertHubSpotBrandConfiguration, type HubSpotMeetingSyncInput } from "./model";
 import { NAALI_HUBSPOT_CONFIGURATION, resolveNaaliHubSpotVisitType } from "./naali";
 import {
@@ -279,7 +280,7 @@ export async function syncNaaliHubSpotVisitAfterPersistence(brandId: string, vis
       try {
         await admin.rpc("complete_connector_sync_run", {
           target_run_id: run,
-          target_status: "failed",
+          target_status: hubSpotRunFailureStatus(error),
           target_records_seen: 1,
           target_records_succeeded: 0,
           target_records_failed: 1,
