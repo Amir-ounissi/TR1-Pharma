@@ -209,6 +209,44 @@ describe("order document extraction", () => {
     });
   });
 
+  it("falls back to the extraction model when the stronger Gateway repair model is unavailable", async () => {
+    delete process.env.OPENAI_API_KEY;
+    delete process.env.OPEN_API_PREVIEW_KEY;
+    process.env.AI_GATEWAY_API_KEY = "gateway-key";
+    delete process.env.VERCEL_OIDC_TOKEN;
+    delete process.env.OPENAI_PDF_ORDER_REPAIR_MODEL;
+    const inconsistent = {
+      ...extracted,
+      lines: [{ ...extracted.lines[0], quantity: 1 }],
+      totalHt: 20,
+    };
+    const usageSink = vi.fn();
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ output_text: JSON.stringify(inconsistent) }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        error: { message: "Free tier users do not have access to this model." },
+      }), { status: 403 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ output_text: JSON.stringify(extracted) }), { status: 200 }));
+
+    await expect(
+      extractPdfOrder(new File(["pdf"], "order.pdf", { type: "application/pdf" }), fetcher, usageSink),
+    ).resolves.toMatchObject({
+      orderNumber: "PDF-42",
+      lines: [expect.objectContaining({ quantity: 2 })],
+      totalHt: 20,
+    });
+
+    expect(fetcher).toHaveBeenCalledTimes(3);
+    const unavailableRepairBody = JSON.parse(fetcher.mock.calls[1][1].body);
+    const fallbackRepairBody = JSON.parse(fetcher.mock.calls[2][1].body);
+    expect(unavailableRepairBody.model).toBe(`openai/${DEFAULT_ORDER_REPAIR_MODEL}`);
+    expect(fallbackRepairBody).toMatchObject({
+      model: `openai/${DEFAULT_ORDER_EXTRACTION_MODEL}`,
+      reasoning: { effort: "minimal" },
+    });
+    expect(usageSink.mock.calls.map((call) => call[0].attempt)).toEqual(["initial", "repair"]);
+  });
+
   it("does not double-count reasoning tokens in the estimated output cost", () => {
     expect(estimateOrderScanCostUsd("gpt-5-mini", {
       input_tokens: 0,
