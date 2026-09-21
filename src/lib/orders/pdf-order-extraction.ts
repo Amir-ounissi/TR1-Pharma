@@ -386,16 +386,43 @@ export async function extractOrderDocuments(
       issues: initialQuality.issues,
     });
 
-    const repairProvider = resolveRepairProvider(provider);
-    const repaired = await requestStructuredExtraction({
-      provider: repairProvider,
-      documentInputs,
-      files,
-      fetcher,
-      usageSink,
-      attempt: "repair",
-      prompt: buildPdfOrderRepairPrompt(initial, initialQuality.issues),
-    });
+    let repairProvider = resolveRepairProvider(provider);
+    let repaired: PdfOrderExtraction;
+    try {
+      repaired = await requestStructuredExtraction({
+        provider: repairProvider,
+        documentInputs,
+        files,
+        fetcher,
+        usageSink,
+        attempt: "repair",
+        prompt: buildPdfOrderRepairPrompt(initial, initialQuality.issues),
+      });
+    } catch (error) {
+      if (
+        error instanceof PdfOrderImportError
+        && error.code === "openai_unavailable"
+        && repairProvider.model !== provider.model
+      ) {
+        console.warn("[order_scan_quality] Repair model unavailable, retrying with extraction model", {
+          provider: repairProvider.source,
+          unavailableModel: repairProvider.model,
+          fallbackModel: provider.model,
+        });
+        repairProvider = provider;
+        repaired = await requestStructuredExtraction({
+          provider: repairProvider,
+          documentInputs,
+          files,
+          fetcher,
+          usageSink,
+          attempt: "repair",
+          prompt: buildPdfOrderRepairPrompt(initial, initialQuality.issues),
+        });
+      } else {
+        throw error;
+      }
+    }
     const repairedQuality = assessPdfOrderExtraction(repaired);
 
     if (repairedQuality.reliable) {
