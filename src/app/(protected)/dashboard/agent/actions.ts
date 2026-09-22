@@ -1,10 +1,18 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireActiveBrand } from "@/lib/auth";
 import { hasValidNoNextActionReason } from "@/lib/agent-experience";
+import { reconcileHubSpotConnection } from "@/lib/integrations/hubspot/reconciliation";
 
 export type QuickInteractionState = { error?: string; success?: string };
+export type HubSpotManualSyncState = {
+  error?: string;
+  success?: string;
+  syncedAt?: string;
+};
+
 
 const databaseUuid = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
 const interactionTypes = ["call", "email", "visit", "video_call", "message", "other"] as const;
@@ -46,6 +54,56 @@ export async function trackProductEventAction(eventName: string, pharmacyId?: st
     target_source: "agent_day",
     target_metadata: {},
   });
+}
+
+export async function syncHubSpotAgentDataAction(
+  _state: HubSpotManualSyncState,
+): Promise<HubSpotManualSyncState> {
+  const { supabase, brand, userId } = await requireActiveBrand();
+
+  const { data: connection, error: connectionError } = await supabase
+    .from("connector_connections")
+    .select("id,status")
+    .eq("brand_id", brand.id)
+    .eq("provider", "hubspot")
+    .eq("status", "active")
+    .is("archived_at", null)
+    .limit(1)
+    .maybeSingle();
+  if (connectionError || !connection?.id) {
+    return { error: "Aucune connexion HubSpot active n’est disponible." };
+  }
+
+  const { data: userLink, error: userLinkError } = await supabase
+    .from("connector_external_links")
+    .select("external_id")
+    .eq("connection_id", connection.id)
+    .eq("entity_type", "users")
+    .eq("tr1_record_id", userId)
+    .limit(1)
+    .maybeSingle();
+  if (userLinkError || !userLink?.external_id) {
+    return { error: "Votre utilisateur TR1 n’est pas relié à un propriétaire HubSpot." };
+  }
+
+  try {
+    const summary = await reconcileHubSpotConnection(brand.id, String(connection.id));
+    const syncedAt = new Date().toISOString();
+    revalidatePath("/dashboard/agent");
+    revalidatePath("/dashboard/agent/performance");
+    revalidatePath("/dashboard/agenda");
+    revalidatePath("/dashboard/pharmacies");
+
+    return {
+      success: `HubSpot synchronisé : ${summary.orders.succeeded} commande(s), ${summary.visits.succeeded} visite(s) et ${summary.notes.succeeded} note(s) traitées.`,
+      syncedAt,
+    };
+  } catch (error) {
+    console.error(
+      `[hubspot] agent manual reconcile failed: ${error instanceof Error ? error.message.slice(0, 500) : "unknown"}`,
+    );
+    return { error: "La synchronisation HubSpot a échoué. Réessayez depuis l’espace terrain." };
+  }
 }
 
 export async function quickInteractionAction(
