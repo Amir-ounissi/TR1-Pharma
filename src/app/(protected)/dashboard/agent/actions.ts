@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireActiveBrand } from "@/lib/auth";
 import { hasValidNoNextActionReason } from "@/lib/agent-experience";
-import { reconcileHubSpotConnection } from "@/lib/integrations/hubspot/reconciliation";
+import { reconcileHubSpotAgentData } from "@/lib/integrations/hubspot/reconciliation";
 
 export type QuickInteractionState = { error?: string; success?: string };
 export type HubSpotManualSyncState = {
@@ -59,35 +59,10 @@ export async function trackProductEventAction(eventName: string, pharmacyId?: st
 export async function syncHubSpotAgentDataAction(
   _state: HubSpotManualSyncState,
 ): Promise<HubSpotManualSyncState> {
-  const { supabase, brand, userId } = await requireActiveBrand();
-
-  const { data: connection, error: connectionError } = await supabase
-    .from("connector_connections")
-    .select("id,status")
-    .eq("brand_id", brand.id)
-    .eq("provider", "hubspot")
-    .eq("status", "active")
-    .is("archived_at", null)
-    .limit(1)
-    .maybeSingle();
-  if (connectionError || !connection?.id) {
-    return { error: "Aucune connexion HubSpot active n’est disponible." };
-  }
-
-  const { data: userLink, error: userLinkError } = await supabase
-    .from("connector_external_links")
-    .select("external_id")
-    .eq("connection_id", connection.id)
-    .eq("entity_type", "users")
-    .eq("tr1_record_id", userId)
-    .limit(1)
-    .maybeSingle();
-  if (userLinkError || !userLink?.external_id) {
-    return { error: "Votre utilisateur TR1 n’est pas relié à un propriétaire HubSpot." };
-  }
+  const { brand, userId } = await requireActiveBrand();
 
   try {
-    const summary = await reconcileHubSpotConnection(brand.id, String(connection.id));
+    const summary = await reconcileHubSpotAgentData(brand.id, userId);
     const syncedAt = new Date().toISOString();
     revalidatePath("/dashboard/agent");
     revalidatePath("/dashboard/agent/performance");
