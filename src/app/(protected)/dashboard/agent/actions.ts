@@ -58,6 +58,7 @@ export async function trackProductEventAction(eventName: string, pharmacyId?: st
 
 export async function syncHubSpotAgentDataAction(
   _state: HubSpotManualSyncState,
+  _formData: FormData,
 ): Promise<HubSpotManualSyncState> {
   const { brand, userId } = await requireActiveBrand();
 
