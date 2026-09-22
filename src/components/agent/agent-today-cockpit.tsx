@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, CalendarDays, CalendarPlus, CheckCircle2, MapPin, TrendingUp } from "lucide-react";
+import { HubSpotManualSync } from "@/components/agent/hubspot-manual-sync";
 
 function currency(value: number | null | undefined) {
   if (value == null || !Number.isFinite(value)) return "—";
@@ -45,6 +46,8 @@ export function AgentTodayCockpit({
   firstName,
   dayLabel,
   nextVisit,
+  hubSpotSyncAvailable,
+  lastHubSpotSyncAt,
 }: {
   brandId: string;
   brandName: string;
@@ -59,6 +62,8 @@ export function AgentTodayCockpit({
   firstName: string;
   dayLabel: string;
   nextVisit: NextVisitFocus;
+  hubSpotSyncAvailable: boolean;
+  lastHubSpotSyncAt: string | null;
 }) {
   const attainment = target && target > 0 ? (revenue / target) * 100 : null;
   const settingsHref = `/dashboard/agent/settings?month=${encodeURIComponent(monthStart)}`;
@@ -73,12 +78,18 @@ export function AgentTodayCockpit({
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">{brandName} · {plannedVisitCount} {plannedVisitCount === 1 ? "visite" : "visites"} aujourd’hui</p>
         </div>
-        {pendingVisitCount > 0 ? (
-          <Link href="/dashboard/agent/closeouts" className="inline-flex min-h-11 items-center gap-2 rounded-[0.65rem] border border-[var(--tr1-orange)]/25 bg-[var(--tr1-orange)]/[0.06] px-3.5 py-2 text-sm font-semibold text-[var(--tr1-navy)] transition hover:bg-[var(--tr1-orange)]/[0.1]">
-            <CheckCircle2 className="size-4 text-[var(--tr1-orange)]" />
-            {pendingVisitCount} visite{pendingVisitCount > 1 ? "s" : ""} à clôturer
-          </Link>
-        ) : null}
+        <div className="flex flex-col items-start gap-2 sm:items-end">
+          <HubSpotManualSync
+            available={hubSpotSyncAvailable}
+            lastFullSyncAt={lastHubSpotSyncAt}
+          />
+          {pendingVisitCount > 0 ? (
+            <Link href="/dashboard/agent/closeouts" className="inline-flex min-h-11 items-center gap-2 rounded-[0.65rem] border border-[var(--tr1-orange)]/25 bg-[var(--tr1-orange)]/[0.06] px-3.5 py-2 text-sm font-semibold text-[var(--tr1-navy)] transition hover:bg-[var(--tr1-orange)]/[0.1]">
+              <CheckCircle2 className="size-4 text-[var(--tr1-orange)]" />
+              {pendingVisitCount} visite{pendingVisitCount > 1 ? "s" : ""} à clôturer
+            </Link>
+          ) : null}
+        </div>
       </header>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.45fr)_minmax(18rem,.55fr)]">

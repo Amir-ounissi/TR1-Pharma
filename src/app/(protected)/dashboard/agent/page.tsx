@@ -12,7 +12,10 @@ import { addCalendarDays } from "@/lib/agenda";
 import { requireActiveBrand } from "@/lib/auth";
 import { nextIsoDate, parisBusinessDate } from "@/lib/business-date";
 import { requireActiveBrandCapability } from "@/lib/saas/server";
-import { reconcileHubSpotVisitsIfStale } from "@/lib/integrations/hubspot/reconciliation";
+import {
+  getHubSpotAgentSyncStatus,
+  reconcileHubSpotVisitsIfStale,
+} from "@/lib/integrations/hubspot/reconciliation";
 import { loadStockAlerts } from "@/lib/stock-alerts-server";
 
 type FieldAgendaEvent = {
@@ -72,6 +75,7 @@ export default async function AgentPage() {
     monthObjectivesResult,
     monthOrdersResult,
     personalTargetResult,
+    hubSpotSyncStatus,
   ] = await Promise.all([
     supabase.rpc("get_agent_today", { target_brand_id: brand.id, target_date: today }),
     supabase.rpc("get_next_agent_visit", { target_brand_id: brand.id }),
@@ -126,6 +130,7 @@ export default async function AgentPage() {
       .eq("user_id", userId)
       .eq("month_start", monthStart)
       .maybeSingle(),
+    getHubSpotAgentSyncStatus(brand.id, userId),
   ]);
 
   if (multibrandFieldAgendaResult.error) throw new Error(multibrandFieldAgendaResult.error.message);
@@ -305,6 +310,8 @@ export default async function AgentPage() {
         firstName={firstName}
         dayLabel={dayLabel}
         nextVisit={cockpitNextVisit}
+        hubSpotSyncAvailable={hubSpotSyncStatus.available}
+        lastHubSpotSyncAt={hubSpotSyncStatus.lastFullSyncAt}
       />
 
       <AgentMultibrandOverview
