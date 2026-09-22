@@ -730,6 +730,7 @@ function EventCard({ event, relatedContext, fillHeight = false, onReschedule }: 
   const showTime = !fillHeight || duration >= 45;
   const showCity = !fillHeight || duration >= 60;
   const showContext = !fillHeight || duration >= 90;
+  const audienceLabel = visitAudienceLabel(event);
   const tone = event.source_kind === "field_visit"
     ? "border-l-[var(--tr1-orange)] bg-orange-50/95"
     : event.source_kind === "mission"
@@ -758,7 +759,10 @@ function EventCard({ event, relatedContext, fillHeight = false, onReschedule }: 
             <div className="min-w-0 flex-1 overflow-hidden">
               <div className="flex items-start justify-between gap-2">
                 <strong className={cn("text-sm text-[var(--tr1-navy)]", compact ? "line-clamp-1" : "line-clamp-2")}>{event.pharmacy_name || event.title}</strong>
-                {duration > 0 ? <Badge variant="outline" className="shrink-0">{formatDuration(duration)}</Badge> : null}
+                <div className="flex shrink-0 items-center gap-1">
+                  {audienceLabel ? <Badge variant={audienceLabel === "Prospect" ? "secondary" : "outline"}>{audienceLabel}</Badge> : null}
+                  {duration > 0 ? <Badge variant="outline">{formatDuration(duration)}</Badge> : null}
+                </div>
               </div>
               {showTime ? <p className="mt-1 text-xs text-muted-foreground"><Clock3 className="mr-1 inline size-3" />{eventTimeRange(event)}</p> : null}
               {showCity && event.city ? <p className="mt-1 line-clamp-1 text-xs text-muted-foreground"><MapPin className="mr-1 inline size-3" />{event.city}</p> : null}
@@ -1196,8 +1200,23 @@ function formatDuration(minutes: number) {
 }
 
 function contextLabel(event: AgendaEvent) { return event.source_kind === "mission" ? "Animation / mission" : "Activité en pharmacie"; }
+function visitAudienceLabel(event: AgendaEvent) {
+  if (event.source_kind !== "field_visit") return null;
+  const kind = typeof event.metadata?.visit_kind === "string" ? event.metadata.visit_kind : null;
+  if (kind === "prospecting") return "Prospect";
+  if (kind === "client_visit") return "Client";
+  return null;
+}
+
 function eventKindLabel(event: AgendaEvent) {
-  if (event.source_kind === "field_visit") return "Visite terrain";
+  if (event.source_kind === "field_visit") {
+    const kind = typeof event.metadata?.visit_kind === "string" ? event.metadata.visit_kind : null;
+    if (kind === "prospecting") return "Visite de prospection";
+    if (kind === "client_visit") return "Visite client";
+    if (kind === "relationship") return "Visite relation";
+    if (kind === "training") return "Formation";
+    return "Visite terrain";
+  }
   if (event.source_kind === "mission") return "Mission";
   if (event.source_kind === "agenda_block") return "Créneau bloqué";
   return uiLabel(event.event_type || event.source_kind);
