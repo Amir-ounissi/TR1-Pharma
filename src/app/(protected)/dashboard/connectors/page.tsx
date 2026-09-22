@@ -4,7 +4,6 @@ import {
   saveConnectorConnectionFormAction,
   saveConnectorMappingFormAction,
   setConnectorStatusFormAction,
-  reconcileHubSpotConnectionFormAction,
 } from "./actions";
 import { HubSpotMappingStudio } from "./hubspot-mapping-studio";
 import { Badge } from "@/components/ui/badge";
@@ -200,12 +199,6 @@ export default async function ConnectorsPage() {
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {connection.status !== "active" ? <StatusButton connectionId={connection.id} status="active" label="Activer" disabled={connection.credential_status !== "configured"} /> : <StatusButton connectionId={connection.id} status="paused" label="Mettre en pause" />}
-                      {connection.provider === "hubspot" && connection.status === "active" ? (
-                        <form action={reconcileHubSpotConnectionFormAction}>
-                          <input type="hidden" name="connectionId" value={connection.id} />
-                          <Button size="sm" variant="outline" type="submit"><RefreshCw className="mr-1.5 size-3.5" />Synchroniser maintenant</Button>
-                        </form>
-                      ) : null}
                       {connection.status === "draft" ? <StatusButton connectionId={connection.id} status="ready" label="Marquer prêt" /> : null}
                       <form action={archiveConnectorConnectionFormAction}><input type="hidden" name="connectionId" value={connection.id} /><Button size="sm" variant="ghost" type="submit">Archiver</Button></form>
                     </div>
