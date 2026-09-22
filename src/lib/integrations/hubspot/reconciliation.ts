@@ -2293,6 +2293,40 @@ export async function getHubSpotAgentSyncStatus(
   return { available: true, lastFullSyncAt };
 }
 
+export async function reconcileHubSpotAgentData(
+  brandId: string,
+  userId: string,
+): Promise<HubSpotReconciliationSummary> {
+  const admin = createAdminClient();
+  const { data: connection, error: connectionError } = await admin
+    .from("connector_connections")
+    .select("id")
+    .eq("brand_id", brandId)
+    .eq("provider", "hubspot")
+    .eq("status", "active")
+    .is("archived_at", null)
+    .limit(1)
+    .maybeSingle();
+  if (connectionError || !connection?.id) {
+    throw new Error("No active HubSpot connection is available");
+  }
+
+  const connectionId = String(connection.id);
+  const { data: userLink, error: userLinkError } = await admin
+    .from("connector_external_links")
+    .select("external_id")
+    .eq("connection_id", connectionId)
+    .eq("entity_type", "users")
+    .eq("tr1_record_id", userId)
+    .limit(1)
+    .maybeSingle();
+  if (userLinkError || !userLink?.external_id) {
+    throw new Error("TR1 user is not linked to a HubSpot owner");
+  }
+
+  return reconcileHubSpotConnection(brandId, connectionId);
+}
+
 export async function reconcileHubSpotVisitsIfStale(
   brandId: string,
   maxAgeMs = 15 * 60_000,
