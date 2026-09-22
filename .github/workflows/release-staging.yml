@@ -36,6 +36,26 @@ jobs:
           ref: ${{ inputs.release_sha }}
           fetch-depth: 0
 
+      - name: Normaliser le SHA de release
+        run: |
+          set -eu
+          normalized_sha="$(printf '%s' "$RELEASE_SHA" | tr -d '[:space:]')"
+          test -n "$normalized_sha" || {
+            echo "::error::Le SHA de release est vide après normalisation."
+            exit 1
+          }
+          echo "RELEASE_SHA=$normalized_sha" >> "$GITHUB_ENV"
+
+      - name: Normaliser le SHA de release
+        run: |
+          set -eu
+          normalized_sha="$(printf '%s' "$RELEASE_SHA" | tr -d '[:space:]')"
+          test -n "$normalized_sha" || {
+            echo "::error::Le SHA de release est vide après normalisation."
+            exit 1
+          }
+          echo "RELEASE_SHA=$normalized_sha" >> "$GITHUB_ENV"
+
       - name: Vérifier le SHA et son appartenance à main
         run: |
           set -eu
