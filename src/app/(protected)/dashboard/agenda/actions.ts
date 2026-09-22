@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getBrandContexts, requireCompletedOnboarding } from "@/lib/auth";
 import { parisLocalToIso } from "@/lib/agenda";
-import { syncNaaliHubSpotVisitByVisitId } from "@/lib/integrations/hubspot/naali-visit-runtime";
 
 const uuid = z.string().uuid();
 const dateTime = z.string().min(16).transform(parisLocalToIso);
@@ -100,14 +99,6 @@ export async function createAgendaBlockAction(_: unknown, formData: FormData) {
     revalidatePath("/dashboard/agenda");
     return { success: "Créneau bloqué." };
   } catch (error) { return { error: error instanceof Error ? error.message : "Créneau invalide." }; }
-}
-
-export async function retryFieldVisitHubSpotSyncAction(visitId: string) {
-  const parsed = uuid.parse(visitId);
-  await requireCompletedOnboarding();
-  await syncNaaliHubSpotVisitByVisitId(parsed);
-  revalidatePath("/dashboard/agenda");
-  revalidatePath(`/dashboard/visits/${parsed}`);
 }
 
 export async function rescheduleFieldVisitAction(visitId: string, newStartLocal: string) {
