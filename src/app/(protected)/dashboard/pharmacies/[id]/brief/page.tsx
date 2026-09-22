@@ -264,7 +264,6 @@ export default async function VisitBriefPage({ params }: { params: Promise<{ id:
     distributionResult,
     tasksResult,
     healthResult,
-    nextActionResult,
     missionImpactResult,
     sellOutCaptureResult,
     visitBrandResult,
@@ -272,12 +271,18 @@ export default async function VisitBriefPage({ params }: { params: Promise<{ id:
     if (result.error) throw result.error;
   }
 
+  if (nextActionResult.error && nextActionResult.error.code !== "42501") {
+    throw nextActionResult.error;
+  }
+
   const order = (orderResult.data ?? null) as OrderRow | null;
   const performance = (performanceResult.data ?? null) as PerformanceRow | null;
   const distribution = (distributionResult.data ?? null) as DistributionRow | null;
   const tasks = (tasksResult.data ?? []) as TaskRow[];
   const health = ((healthResult.data ?? [])[0] ?? null) as CommercialHealthRow | null;
-  const nextBestAction = ((nextActionResult.data ?? [])[0] ?? null) as NextBestActionRow | null;
+  const nextBestAction = nextActionResult.error
+    ? null
+    : (((nextActionResult.data ?? [])[0] ?? null) as NextBestActionRow | null);
   const missionImpact = (missionImpactResult.data ?? null) as MissionImpactRow | null;
   const sellOutCapture = (sellOutCaptureResult.data ?? null) as SellOutCaptureRow | null;
 
