@@ -1352,6 +1352,7 @@ async function importVisit(options: {
   visitLinks: Map<string, string>;
   owners: Map<string, string>;
   nextMeetingStart?: string | null;
+  visitKindOverride?: "client_visit" | "prospecting" | "relationship" | "training" | "other";
 }) {
   const remoteId = externalId(options.remote);
   if (!remoteId) throw new Error("HubSpot meeting has no id");
@@ -1508,7 +1509,7 @@ async function importVisit(options: {
     .insert({
       owner_user_id: ownerUserId,
       pharmacy_id: options.pharmacy.pharmacyId,
-      visit_kind: visitKind(properties.hs_activity_type),
+      visit_kind: options.visitKindOverride ?? visitKind(properties.hs_activity_type),
       status,
       title: text(properties.hs_meeting_title) ?? "Meeting HubSpot",
       objective: null,
@@ -1782,21 +1783,27 @@ async function syncInboundOrders(options: {
   });
 }
 
-async function isNaaliClientCompany(
+type NaaliCompanyRelationship = "client" | "prospect";
+
+async function naaliCompanyRelationship(
   client: HubSpotClient,
   companyId: string,
-  cache: Map<string, boolean>,
+  cache: Map<string, NaaliCompanyRelationship | null>,
 ) {
-  const cached = cache.get(companyId);
-  if (cached !== undefined) return cached;
+  if (cache.has(companyId)) return cache.get(companyId) ?? null;
 
   const response = await client.read<{ properties?: Record<string, unknown> }>(
     `/crm/v3/objects/companies/${encodeURIComponent(companyId)}?properties=client_naali`,
   );
   const value = normalize(response.data?.properties?.client_naali);
-  const isClient = value === "true" || value === "oui" || value === "yes" || value === "1";
-  cache.set(companyId, isClient);
-  return isClient;
+  const relationship: NaaliCompanyRelationship | null =
+    value === "true" || value === "oui" || value === "yes" || value === "1"
+      ? "client"
+      : value === "false" || value === "non" || value === "no" || value === "0"
+        ? "prospect"
+        : null;
+  cache.set(companyId, relationship);
+  return relationship;
 }
 
 async function syncInboundVisits(options: {
@@ -1811,12 +1818,15 @@ async function syncInboundVisits(options: {
   const since = await lastSuccessfulInboundSyncAt(options.admin, options.connection.id, "visits" as const);
   const links = await existingExternalLinks(options.admin, options.connection.id, "visits");
   const byCompany = new Map(options.pharmacies.map((pharmacy) => [pharmacy.companyId, pharmacy]));
-  const clientStatusByCompany = new Map<string, boolean>();
+  const relationshipByCompany = new Map<string, NaaliCompanyRelationship | null>();
   const ownerExternalIds = [...options.owners.keys()];
 
   return runInbound(options.admin, options.connection.id, "visits", async (counter) => {
-    const freshnessFilters = since
-      ? searchFiltersSince(since)
+    const replaySince = since
+      ? new Date(new Date(since).getTime() - 7 * 24 * 60 * 60_000).toISOString()
+      : null;
+    const freshnessFilters = replaySince
+      ? searchFiltersSince(replaySince)
       : [{
           propertyName: "hs_meeting_start_time",
           operator: "GTE",
@@ -1853,6 +1863,7 @@ async function syncInboundVisits(options: {
       pharmacy: PharmacyContext;
       start: string;
       startMs: number;
+      visitKindOverride: "client_visit" | "prospecting" | "relationship" | "training" | "other";
     }> = [];
 
     for (const remote of records) {
@@ -1869,21 +1880,21 @@ async function syncInboundVisits(options: {
         const companyIds = await meetingCompanyIds(options.client, remoteId);
         if (!companyIds.length) throw new Error(`HubSpot meeting ${remoteId} has no company association`);
 
-        const clientCompanyIds: string[] = [];
+        const eligibleCompanies: Array<{ companyId: string; relationship: NaaliCompanyRelationship }> = [];
         for (const companyId of companyIds) {
-          if (await isNaaliClientCompany(options.client, companyId, clientStatusByCompany)) {
-            clientCompanyIds.push(companyId);
-          }
+          const relationship = await naaliCompanyRelationship(options.client, companyId, relationshipByCompany);
+          if (relationship) eligibleCompanies.push({ companyId, relationship });
         }
-        if (!clientCompanyIds.length) {
+        if (!eligibleCompanies.length) {
           counter.succeeded += 1;
           continue;
         }
 
-        let pharmacy = clientCompanyIds.map((companyId) => byCompany.get(companyId)).find(Boolean) ?? null;
+        let selectedCompany = eligibleCompanies.find((candidate) => byCompany.has(candidate.companyId)) ?? null;
+        let pharmacy = selectedCompany ? byCompany.get(selectedCompany.companyId) ?? null : null;
         if (!pharmacy) {
           let lastError: unknown = null;
-          for (const companyId of clientCompanyIds) {
+          for (const candidate of eligibleCompanies) {
             try {
               pharmacy = await ensurePharmacyForHubSpotCompany({
                 admin: options.admin,
@@ -1892,9 +1903,10 @@ async function syncInboundVisits(options: {
                 connectionId: options.connection.id,
                 actorId: options.actorId,
                 ownerUserId,
-                companyId,
+                companyId: candidate.companyId,
                 byCompany,
               });
+              selectedCompany = candidate;
               break;
             } catch (error) {
               lastError = error;
@@ -1903,7 +1915,14 @@ async function syncInboundVisits(options: {
           if (!pharmacy) throw lastError ?? new Error(`Unable to resolve pharmacy for HubSpot meeting ${remoteId}`);
         }
 
-        resolved.push({ remote, pharmacy, start, startMs });
+        const mappedKind = visitKind(remote.properties?.hs_activity_type);
+        const visitKindOverride = mappedKind === "other"
+          ? selectedCompany?.relationship === "prospect"
+            ? "prospecting"
+            : "client_visit"
+          : mappedKind;
+
+        resolved.push({ remote, pharmacy, start, startMs, visitKindOverride });
       } catch (error) {
         counter.failed += 1;
         console.error(
@@ -1932,6 +1951,7 @@ async function syncInboundVisits(options: {
           visitLinks: links,
           owners: options.owners,
           nextMeetingStart: nextForPharmacy?.start ?? null,
+          visitKindOverride: current.visitKindOverride,
         });
         counter.succeeded += 1;
       } catch (error) {
