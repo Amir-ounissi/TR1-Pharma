@@ -2224,6 +2224,75 @@ async function replayOrdersCreatedWhileInactive(brandId: string, connectionId: s
   }
 }
 
+export type HubSpotAgentSyncStatus = {
+  available: boolean;
+  lastFullSyncAt: string | null;
+};
+
+export async function getHubSpotAgentSyncStatus(
+  brandId: string,
+  userId: string,
+): Promise<HubSpotAgentSyncStatus> {
+  const admin = createAdminClient();
+  const { data: connection, error: connectionError } = await admin
+    .from("connector_connections")
+    .select("id")
+    .eq("brand_id", brandId)
+    .eq("provider", "hubspot")
+    .eq("status", "active")
+    .is("archived_at", null)
+    .limit(1)
+    .maybeSingle();
+  if (connectionError || !connection?.id) {
+    return { available: false, lastFullSyncAt: null };
+  }
+
+  const connectionId = String(connection.id);
+  const { data: userLink, error: userLinkError } = await admin
+    .from("connector_external_links")
+    .select("external_id")
+    .eq("connection_id", connectionId)
+    .eq("entity_type", "users")
+    .eq("tr1_record_id", userId)
+    .limit(1)
+    .maybeSingle();
+  if (userLinkError || !userLink?.external_id) {
+    return { available: false, lastFullSyncAt: null };
+  }
+
+  const { data: runs, error: runsError } = await admin
+    .from("connector_sync_runs")
+    .select("entity_type,completed_at")
+    .eq("connection_id", connectionId)
+    .eq("direction", "inbound")
+    .in("entity_type", ["orders", "visits", "notes"])
+    .in("status", ["succeeded", "partial"])
+    .not("completed_at", "is", null)
+    .order("completed_at", { ascending: false })
+    .limit(60);
+  if (runsError) {
+    return { available: true, lastFullSyncAt: null };
+  }
+
+  const latest = new Map<string, string>();
+  for (const run of runs ?? []) {
+    const entityType = String(run.entity_type);
+    const completedAt = run.completed_at ? String(run.completed_at) : null;
+    if (completedAt && !latest.has(entityType)) latest.set(entityType, completedAt);
+  }
+
+  const required = ["orders", "visits", "notes"];
+  if (!required.every((entityType) => latest.has(entityType))) {
+    return { available: true, lastFullSyncAt: null };
+  }
+
+  const lastFullSyncAt = required
+    .map((entityType) => latest.get(entityType)!)
+    .sort((left, right) => new Date(left).getTime() - new Date(right).getTime())[0];
+
+  return { available: true, lastFullSyncAt };
+}
+
 export async function reconcileHubSpotVisitsIfStale(
   brandId: string,
   maxAgeMs = 15 * 60_000,
