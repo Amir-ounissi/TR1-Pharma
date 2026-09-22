@@ -29,4 +29,4 @@ export async function syncHubSpotFromAgentSettingsAction(): Promise<void> {
   revalidatePath("/dashboard/agent");
   revalidatePath("/dashboard/agenda");
   revalidatePath("/dashboard/pharmacies");
-};
+}
