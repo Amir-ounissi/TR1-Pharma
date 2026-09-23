@@ -1182,7 +1182,9 @@ async function importOrder(options: {
       pharmacy_id: pharmacy.pharmacyId,
       created_by: actorId,
       source_user_id: actorId,
-      order_status: "pending",
+      // Build imported orders in an editable review state. order_items are
+      // immutable once an order leaves draft/needs_correction.
+      order_status: "needs_correction",
       order_date: date,
       external_order_id: remoteId,
       order_number: `HS-${remoteId}`,
