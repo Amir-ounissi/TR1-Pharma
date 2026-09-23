@@ -65,7 +65,6 @@ export default async function AgentPage() {
     { data: nextVisit },
     multibrandFieldAgendaResult,
     upcomingFieldAgendaResult,
-    activeFieldAgendaResult,
     stockAlerts,
     multibrandDayResult,
     monthOverviewResult,
@@ -85,13 +84,13 @@ export default async function AgentPage() {
       end_date: planningHorizon,
       brand_filter: brand.id,
     }),
-    supabase.rpc("get_my_field_agenda", {
-      start_date: today,
-      end_date: today,
-      brand_filter: brand.id,
-    }),
     saas.capabilities.has("sell_out")
-      ? loadStockAlerts(supabase, brand.id, userId)
+      ? loadStockAlerts(supabase, brand.id, userId).catch((error) => {
+          console.error(
+            `[agent] stock alerts unavailable: ${error instanceof Error ? error.message : "unknown error"}`,
+          );
+          return [];
+        })
       : Promise.resolve([]),
     supabase.rpc("get_agent_today_multibrand", {
       target_date: today,
@@ -128,14 +127,21 @@ export default async function AgentPage() {
       .maybeSingle(),
   ]);
 
-  if (multibrandFieldAgendaResult.error) throw new Error(multibrandFieldAgendaResult.error.message);
-  if (upcomingFieldAgendaResult.error) throw new Error(upcomingFieldAgendaResult.error.message);
-  if (activeFieldAgendaResult.error) throw new Error(activeFieldAgendaResult.error.message);
-  if (multibrandDayResult.error) throw new Error(multibrandDayResult.error.message);
-  if (monthOverviewResult.error) throw new Error(monthOverviewResult.error.message);
-  if (monthObjectivesResult.error) throw new Error(monthObjectivesResult.error.message);
-  if (monthOrdersResult.error) throw new Error(monthOrdersResult.error.message);
-  if (personalTargetResult.error) throw new Error(personalTargetResult.error.message);
+  const optionalQueryErrors = [
+    ["agenda du jour", multibrandFieldAgendaResult.error],
+    ["agenda à venir", upcomingFieldAgendaResult.error],
+    ["cockpit multimarque", multibrandDayResult.error],
+    ["performance mensuelle", monthOverviewResult.error],
+    ["objectifs mensuels", monthObjectivesResult.error],
+    ["commandes mensuelles", monthOrdersResult.error],
+    ["objectif personnel", personalTargetResult.error],
+  ] as const;
+
+  for (const [label, error] of optionalQueryErrors) {
+    if (error) {
+      console.error(`[agent] ${label} unavailable: ${error.message}`);
+    }
+  }
 
   const day = (agenda ?? { tasks: [], missions: [], reports: [], follow_ups: [] }) as AgentTodayData;
   const visit = nextVisit as AgentNextVisit | null;
@@ -220,7 +226,7 @@ export default async function AgentPage() {
     href: `/dashboard/visits/${event.source_id}`,
   }));
 
-  const activeFieldVisits = ((activeFieldAgendaResult.data ?? []) as FieldAgendaEvent[]).filter(
+  const activeFieldVisits = ((multibrandFieldAgendaResult.data ?? []) as FieldAgendaEvent[]).filter(
     (event) => event.ownership === "mine" && event.source_kind === "field_visit" && Boolean(event.pharmacy_id),
   );
   const pendingVisitCount = activeFieldVisits.filter(
