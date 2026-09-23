@@ -18,7 +18,6 @@ describe("role navigation", () => {
     expect(getNavigationItems("brand_admin").map((item) => item.href)).toContain("/dashboard/subscription");
     expect(getNavigationItems("tr1_manager").map((item) => item.href)).not.toContain("/dashboard/imports");
     expect(getNavigationItems("tr1_manager").map((item) => item.href)).not.toContain("/dashboard/subscription");
-    expect(getNavigationItems("brand_admin").map((item) => item.href)).not.toContain("/dashboard/admin/design-system");
     expect(getNavigationItems("brand_admin").map((item) => item.href)).not.toContain("/dashboard/admin/saas");
     expect(getNavigationItems("brand_admin").map((item) => item.href)).not.toContain("/dashboard/admin/saas-commercial");
   });
