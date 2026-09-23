@@ -490,6 +490,15 @@ async function meetingCompanyIds(client: HubSpotClient, meetingId: string) {
     .filter((value): value is string => Boolean(value));
 }
 
+async function dealCompanyIds(client: HubSpotClient, dealId: string) {
+  const response = await client.read<HubSpotAssociationList>(
+    `/crm/v3/objects/deals/${encodeURIComponent(dealId)}/associations/companies?limit=100`,
+  );
+  return (response.data?.results ?? [])
+    .map((row) => row.id === null || row.id === undefined ? null : String(row.id))
+    .filter((value): value is string => Boolean(value));
+}
+
 type HubSpotCloseoutNote = {
   id: string;
   occurredAt: string;
@@ -568,6 +577,7 @@ async function ensurePharmacyForHubSpotCompany(options: {
   actorId: string;
   ownerUserId: string;
   companyId: string;
+  expectedCip?: string | null;
   byCompany: Map<string, PharmacyContext>;
 }) {
   const cached = options.byCompany.get(options.companyId);
@@ -593,14 +603,15 @@ async function ensurePharmacyForHubSpotCompany(options: {
     const properties = company.data?.properties ?? {};
     companyUpdatedAt = company.data?.updatedAt ?? null;
     const identity = hubSpotCompanyIdentity(properties.name);
+    const cip = identity.cip ?? options.expectedCip ?? null;
     const postalCode = text(properties.zip);
 
     let existing: { id: string } | null = null;
-    if (identity.cip) {
+    if (cip) {
       const { data, error } = await options.admin
         .from("pharmacies")
         .select("id")
-        .eq("cip_code", identity.cip)
+        .eq("cip_code", cip)
         .is("archived_at", null)
         .limit(1)
         .maybeSingle();
@@ -642,7 +653,7 @@ async function ensurePharmacyForHubSpotCompany(options: {
         .insert({
           legal_name: identity.name,
           trade_name: identity.name,
-          cip_code: identity.cip,
+          cip_code: cip,
           postal_code: postalCode,
           city: text(properties.city),
           address_line_1: text(properties.address),
@@ -1067,16 +1078,24 @@ async function importOrder(options: {
     // Never overwrite a TR1 correction workflow.
     if (existingOrder.source === "import" && existingOrder.order_status !== "needs_correction") {
       const desiredStatus = orderStatus(remote.properties?.dealstage);
+      const sourceAmount = numberValue(remote.properties?.amount);
+      const updates: Record<string, unknown> = {};
+
       if (desiredStatus !== existingOrder.order_status) {
-        const { error: statusError } = await admin
+        updates.order_status = desiredStatus;
+        updates.cancellation_reason = desiredStatus === "cancelled" ? "Abandonnée dans HubSpot" : null;
+      }
+      if (sourceAmount !== null) {
+        updates.net_amount_ht = sourceAmount;
+      }
+
+      if (Object.keys(updates).length) {
+        const { error: updateError } = await admin
           .from("orders")
-          .update({
-            order_status: desiredStatus,
-            cancellation_reason: desiredStatus === "cancelled" ? "Abandonnée dans HubSpot" : null,
-          })
+          .update(updates)
           .eq("id", existingOrderId)
           .eq("brand_id", brandId);
-        if (statusError) throw statusError;
+        if (updateError) throw updateError;
       }
     }
     return;
@@ -1726,12 +1745,44 @@ async function syncInboundOrders(options: {
   connection: HubSpotConnection;
   pharmacies: PharmacyContext[];
   actorId: string;
+  owners: Map<string, string>;
 }) {
   const since = await lastSuccessfulInboundSyncAt(options.admin, options.connection.id, "orders" as const);
   const products = await productMaps(options.admin, options.brandId);
   const links = await existingExternalLinks(options.admin, options.connection.id, "orders");
+  const byCompany = new Map(options.pharmacies.map((pharmacy) => [pharmacy.companyId, pharmacy]));
+  const ownerExternalIds = [...options.owners.keys()];
+
+  const { data: existingOrders, error: existingOrdersError } = await options.admin
+    .from("orders")
+    .select("external_order_id")
+    .eq("brand_id", options.brandId)
+    .is("archived_at", null)
+    .not("external_order_id", "is", null);
+  if (existingOrdersError) throw existingOrdersError;
+  const existingExternalOrderIds = new Set(
+    (existingOrders ?? [])
+      .map((row) => row.external_order_id ? String(row.external_order_id) : null)
+      .filter((value): value is string => Boolean(value)),
+  );
+
+  const properties = [
+    "dealname",
+    "amount",
+    "deal_currency_code",
+    "pipeline",
+    "dealstage",
+    "origine_de_la_commande",
+    "type_de_commande",
+    "hubspot_owner_id",
+    "createdate",
+    "closedate",
+    "hs_lastmodifieddate",
+  ];
 
   return runInbound(options.admin, options.connection.id, "orders", async (counter) => {
+    // Preserve the existing brand-account behavior: every deal attached to an already
+    // mapped pharmacy is reconciled, regardless of which mapped commercial owns it.
     for (const pharmacy of options.pharmacies) {
       const records = await searchAll(options.client, "deals", {
         filterGroups: [{
@@ -1741,21 +1792,10 @@ async function syncInboundOrders(options: {
             ...searchFiltersSince(since),
           ],
         }],
-        properties: [
-          "dealname",
-          "amount",
-          "deal_currency_code",
-          "pipeline",
-          "dealstage",
-          "origine_de_la_commande",
-          "type_de_commande",
-          "hubspot_owner_id",
-          "createdate",
-          "closedate",
-          "hs_lastmodifieddate",
-        ],
+        properties,
         sorts: ["createdate"],
       });
+
       for (const remote of records) {
         counter.seen += 1;
         try {
@@ -1778,6 +1818,101 @@ async function syncInboundOrders(options: {
             `[hubspot] inbound order failed: ${error instanceof Error ? error.message.slice(0, 400) : "unknown"}`,
           );
         }
+      }
+    }
+
+    // Discover deals owned by mapped TR1 users even when their pharmacy has not yet
+    // been linked. This closes the gap where a valid pharmacy deal could never enter
+    // TR1 simply because the pharmacy mapping did not exist beforehand.
+    const discoveryRecords = ownerExternalIds.length
+      ? await searchAll(options.client, "deals", {
+          filterGroups: [{
+            filters: [
+              { propertyName: "hubspot_owner_id", operator: "IN", values: ownerExternalIds },
+              { propertyName: "pipeline", operator: "IN", values: NAALI_PIPELINES },
+              ...searchFiltersSince(since),
+            ],
+          }],
+          properties,
+          sorts: ["createdate"],
+        })
+      : [];
+
+    for (const remote of discoveryRecords) {
+      const remoteId = externalId(remote);
+      if (!remoteId || links.has(remoteId) || existingExternalOrderIds.has(remoteId)) continue;
+
+      const companyIds = await dealCompanyIds(options.client, remoteId);
+      if (!companyIds.length) continue;
+
+      let pharmacy = companyIds
+        .map((companyId) => byCompany.get(companyId) ?? null)
+        .find((candidate): candidate is PharmacyContext => Boolean(candidate)) ?? null;
+
+      if (!pharmacy) {
+        const dealName = text(remote.properties?.dealname) ?? "";
+        const dealCip = dealName.match(/\b\d{6,8}\b/)?.[0] ?? null;
+        // Non-pharmacy commercial deals (for example service/medical entities without
+        // a CIP in their deal name) must not create fake pharmacy records.
+        if (!dealCip) continue;
+
+        const ownerExternalId = text(remote.properties?.hubspot_owner_id);
+        const ownerUserId = (ownerExternalId ? options.owners.get(ownerExternalId) : null) ?? options.actorId;
+        let lastError: unknown = null;
+
+        for (const companyId of companyIds) {
+          try {
+            pharmacy = await ensurePharmacyForHubSpotCompany({
+              admin: options.admin,
+              client: options.client,
+              brandId: options.brandId,
+              connectionId: options.connection.id,
+              actorId: options.actorId,
+              ownerUserId,
+              companyId,
+              expectedCip: dealCip,
+              byCompany,
+            });
+            break;
+          } catch (error) {
+            lastError = error;
+          }
+        }
+
+        if (!pharmacy) {
+          counter.seen += 1;
+          counter.failed += 1;
+          console.error(
+            `[hubspot] inbound order pharmacy resolution failed for deal ${remoteId}: ${lastError instanceof Error ? lastError.message.slice(0, 400) : "unknown"}`,
+          );
+          continue;
+        }
+
+        if (!options.pharmacies.some((candidate) => candidate.companyId === pharmacy!.companyId)) {
+          options.pharmacies.push(pharmacy);
+        }
+      }
+
+      counter.seen += 1;
+      try {
+        await importOrder({
+          admin: options.admin,
+          client: options.client,
+          brandId: options.brandId,
+          organizationId: options.organizationId,
+          connectionId: options.connection.id,
+          actorId: options.actorId,
+          pharmacy,
+          remote,
+          orderLinks: links,
+          products,
+        });
+        counter.succeeded += 1;
+      } catch (error) {
+        counter.failed += 1;
+        console.error(
+          `[hubspot] inbound discovered order failed: ${error instanceof Error ? error.message.slice(0, 400) : "unknown"}`,
+        );
       }
     }
   });
@@ -2154,7 +2289,7 @@ export async function reconcileHubSpotConnection(
 
   await syncNaaliCatalog(admin, client, brandId, connectionId);
   const terms = await syncCommercialTerms(admin, client, brandId, pharmacies);
-  const orders = await syncInboundOrders({ admin, client, brandId, organizationId, connection, pharmacies, actorId });
+  const orders = await syncInboundOrders({ admin, client, brandId, organizationId, connection, pharmacies, actorId, owners });
   const visits = await syncInboundVisits({ admin, client, brandId, connection, pharmacies, actorId, owners });
   const notes = await syncInboundNotes({ admin, client, brandId, connection, pharmacies, actorId, owners });
   await replayOrdersCreatedWhileInactive(brandId, connectionId);
