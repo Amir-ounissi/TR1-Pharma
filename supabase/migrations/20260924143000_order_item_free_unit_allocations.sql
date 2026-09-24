@@ -13,29 +13,29 @@ create table if not exists public.order_item_free_unit_allocations (
 alter table public.order_item_free_unit_allocations enable row level security;
 
 create policy order_item_free_unit_allocations_select on public.order_item_free_unit_allocations
-for select to authenticated using (private.can_access_brand(brand_id));
+for select to authenticated using (private.can_access_brand(order_item_free_unit_allocations.brand_id));
 
 create policy order_item_free_unit_allocations_insert on public.order_item_free_unit_allocations
 for insert to authenticated with check (
-  private.can_access_brand(brand_id)
+  private.can_access_brand(order_item_free_unit_allocations.brand_id)
   and exists (
     select 1 from public.order_items oi
     join public.orders o on o.id = oi.order_id
-    where oi.id = order_item_id
-      and o.brand_id = brand_id
-      and (o.created_by = (select auth.uid()) or private.has_brand_role(brand_id, array['tr1_manager','brand_admin']))
+    where oi.id = order_item_free_unit_allocations.order_item_id
+      and o.brand_id = order_item_free_unit_allocations.brand_id
+      and (o.created_by = (select auth.uid()) or private.has_brand_role(order_item_free_unit_allocations.brand_id, array['tr1_manager','brand_admin']))
   )
 );
 
 create policy order_item_free_unit_allocations_delete on public.order_item_free_unit_allocations
 for delete to authenticated using (
-  private.can_access_brand(brand_id)
+  private.can_access_brand(order_item_free_unit_allocations.brand_id)
   and exists (
     select 1 from public.order_items oi
     join public.orders o on o.id = oi.order_id
-    where oi.id = order_item_id
-      and o.brand_id = brand_id
-      and (o.created_by = (select auth.uid()) or private.has_brand_role(brand_id, array['tr1_manager','brand_admin']))
+    where oi.id = order_item_free_unit_allocations.order_item_id
+      and o.brand_id = order_item_free_unit_allocations.brand_id
+      and (o.created_by = (select auth.uid()) or private.has_brand_role(order_item_free_unit_allocations.brand_id, array['tr1_manager','brand_admin']))
   )
 );
 
