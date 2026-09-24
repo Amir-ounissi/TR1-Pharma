@@ -52,6 +52,9 @@ type DraftLine = {
   productId: string;
   quantity: number;
   freeQuantity: number;
+  commercialFreeQuantity: number;
+  manualFreeQuantity: number;
+  freeClassification: string;
   unitPriceHt: string;
   discountRate: string;
 };
@@ -224,6 +227,11 @@ export function QuickOrderForm({
       freeQuantity: initialProduct
         ? freeQuantityFor(initialMinimum, initialFreeUnitsRule)
         : 0,
+      commercialFreeQuantity: initialProduct
+        ? freeQuantityFor(initialMinimum, initialFreeUnitsRule)
+        : 0,
+      manualFreeQuantity: 0,
+      freeClassification: "",
       unitPriceHt:
         initialProduct?.price == null ? "" : String(initialProduct.price),
       discountRate:
@@ -245,6 +253,9 @@ export function QuickOrderForm({
         productId: "",
         quantity: 1,
         freeQuantity: 0,
+        commercialFreeQuantity: 0,
+        manualFreeQuantity: 0,
+        freeClassification: "",
         unitPriceHt: "",
         discountRate: defaultDiscountValue(),
       },
@@ -260,10 +271,20 @@ export function QuickOrderForm({
   }
 
   function updateLineQuantity(index: number, quantity: number) {
-    updateLine(index, {
-      quantity,
-      freeQuantity: freeQuantityFor(quantity, freeUnitsRule),
-    });
+    const commercialFreeQuantity = freeQuantityFor(quantity, freeUnitsRule);
+    setLines((current) => current.map((line, lineIndex) =>
+      lineIndex === index
+        ? { ...line, quantity, commercialFreeQuantity, freeQuantity: commercialFreeQuantity + line.manualFreeQuantity }
+        : line,
+    ));
+  }
+
+  function updateManualFreeQuantity(index: number, manualFreeQuantity: number) {
+    setLines((current) => current.map((line, lineIndex) =>
+      lineIndex === index
+        ? { ...line, manualFreeQuantity, freeQuantity: line.commercialFreeQuantity + manualFreeQuantity, freeClassification: manualFreeQuantity > 0 ? line.freeClassification : "" }
+        : line,
+    ));
   }
 
   function selectProduct(index: number, productId: string) {
@@ -273,6 +294,9 @@ export function QuickOrderForm({
       productId,
       quantity,
       freeQuantity: freeQuantityFor(quantity, freeUnitsRule),
+      commercialFreeQuantity: freeQuantityFor(quantity, freeUnitsRule),
+      manualFreeQuantity: 0,
+      freeClassification: "",
       unitPriceHt: product?.price == null ? "" : String(product.price),
       discountRate: defaultDiscountValue(),
     });
@@ -285,10 +309,10 @@ export function QuickOrderForm({
         key: `last-${index}-${item.productId}`,
         productId: item.productId,
         quantity: Math.max(1, Number(item.quantity)),
-        freeQuantity:
-          freeUnitsRule == null
-            ? Math.max(0, Number(item.freeQuantity ?? 0))
-            : freeQuantityFor(Math.max(1, Number(item.quantity)), freeUnitsRule),
+        freeQuantity: freeQuantityFor(Math.max(1, Number(item.quantity)), freeUnitsRule),
+        commercialFreeQuantity: freeQuantityFor(Math.max(1, Number(item.quantity)), freeUnitsRule),
+        manualFreeQuantity: 0,
+        freeClassification: "",
         unitPriceHt: String(item.unitPriceHt ?? ""),
         discountRate:
           item.discountRate == null ? defaultDiscountValue() : String(item.discountRate),
@@ -309,7 +333,8 @@ export function QuickOrderForm({
           ...line,
           discountRate:
             pricing.discountRate == null ? "" : String(pricing.discountRate),
-          freeQuantity: freeQuantityFor(line.quantity, pricing.freeUnitsRule),
+          commercialFreeQuantity: freeQuantityFor(line.quantity, pricing.freeUnitsRule),
+          freeQuantity: freeQuantityFor(line.quantity, pricing.freeUnitsRule) + line.manualFreeQuantity,
         })),
       );
     } finally {
