@@ -121,7 +121,10 @@ export async function createOrderAction(_state: OrderActionState, formData: Form
   if (error) return { error: error.code === "23505" ? "Cette commande externe existe déjà." : error.message };
   const result = Array.isArray(data) ? data[0] : data;
   const orderId = result?.order_id ? String(result.order_id) : null;
-  if (orderId) {\n    await persistFreeUnitAllocations(supabase, orderId, parsedItems.data);\n  }\n  if (orderId && header.data.orderStatus !== "draft") {
+  if (orderId) {
+    await persistFreeUnitAllocations(supabase, orderId, parsedItems.data);
+  }
+  if (orderId && header.data.orderStatus !== "draft") {
     await syncHubSpotOrderAfterPersistence(brand.id, orderId);
   }
   return { success: "Commande créée et indicateurs recalculés.", orderId: orderId ?? undefined };
