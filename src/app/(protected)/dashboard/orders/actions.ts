@@ -56,12 +56,19 @@ export async function createOrderAction(_state: OrderActionState, formData: Form
   const productIds = formData.getAll("productId").map(String);
   const quantities = formData.getAll("quantity").map(String);
   const freeQuantities = formData.getAll("freeQuantity").map(String);
+  const commercialFreeQuantities = formData.getAll("commercialFreeQuantity").map(String);
+  const manualFreeQuantities = formData.getAll("manualFreeQuantity").map(String);
+  const freeClassifications = formData.getAll("freeClassification").map(String);
+  const hasAllocationMetadata = commercialFreeQuantities.length > 0 || manualFreeQuantities.length > 0 || freeClassifications.length > 0;
   const unitPrices = formData.getAll("unitPriceHt").map(String);
   const discountRates = formData.getAll("discountRate").map(String);
   const items = productIds.map((productId, index) => ({
     product_id: productId,
     quantity: Number(quantities[index]),
     free_quantity: Number(freeQuantities[index] || 0),
+    commercial_free_quantity: Number(commercialFreeQuantities[index] ?? freeQuantities[index] ?? 0),
+    manual_free_quantity: Number(manualFreeQuantities[index] || 0),
+    free_classification: freeClassifications[index] ? freeClassifications[index] : null,
     unit_price_ht: Number(unitPrices[index]),
     discount_rate: discountRates[index] ? Number(discountRates[index]) : null,
   }));
@@ -121,7 +128,7 @@ export async function createOrderAction(_state: OrderActionState, formData: Form
   if (error) return { error: error.code === "23505" ? "Cette commande externe existe déjà." : error.message };
   const result = Array.isArray(data) ? data[0] : data;
   const orderId = result?.order_id ? String(result.order_id) : null;
-  if (orderId) {
+  if (orderId && hasAllocationMetadata) {
     await persistFreeUnitAllocations(supabase, orderId, parsedItems.data);
   }
   if (orderId && header.data.orderStatus !== "draft") {
