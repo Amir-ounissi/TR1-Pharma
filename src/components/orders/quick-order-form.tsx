@@ -52,9 +52,23 @@ type DraftLine = {
   productId: string;
   quantity: number;
   freeQuantity: number;
+  commercialFreeQuantity: number;
+  manualFreeQuantity: number;
+  freeClassification: string;
   unitPriceHt: string;
   discountRate: string;
 };
+
+const NAALI_UG_CLASSIFICATIONS = [
+  "compensation opé promo",
+  "offre exceptionnelle sell-in",
+  "geste commercial",
+  "échange périmé",
+  "échange déféctueux",
+  "litige logistique",
+  "cadeau challenge",
+  "ne pas renseigner",
+] as const;
 
 function localDateTimeNow() {
   const now = new Date();
@@ -213,6 +227,11 @@ export function QuickOrderForm({
       freeQuantity: initialProduct
         ? freeQuantityFor(initialMinimum, initialFreeUnitsRule)
         : 0,
+      commercialFreeQuantity: initialProduct
+        ? freeQuantityFor(initialMinimum, initialFreeUnitsRule)
+        : 0,
+      manualFreeQuantity: 0,
+      freeClassification: "",
       unitPriceHt:
         initialProduct?.price == null ? "" : String(initialProduct.price),
       discountRate:
@@ -234,6 +253,9 @@ export function QuickOrderForm({
         productId: "",
         quantity: 1,
         freeQuantity: 0,
+        commercialFreeQuantity: 0,
+        manualFreeQuantity: 0,
+        freeClassification: "",
         unitPriceHt: "",
         discountRate: defaultDiscountValue(),
       },
@@ -249,10 +271,20 @@ export function QuickOrderForm({
   }
 
   function updateLineQuantity(index: number, quantity: number) {
-    updateLine(index, {
-      quantity,
-      freeQuantity: freeQuantityFor(quantity, freeUnitsRule),
-    });
+    const commercialFreeQuantity = freeQuantityFor(quantity, freeUnitsRule);
+    setLines((current) => current.map((line, lineIndex) =>
+      lineIndex === index
+        ? { ...line, quantity, commercialFreeQuantity, freeQuantity: commercialFreeQuantity + line.manualFreeQuantity }
+        : line,
+    ));
+  }
+
+  function updateManualFreeQuantity(index: number, manualFreeQuantity: number) {
+    setLines((current) => current.map((line, lineIndex) =>
+      lineIndex === index
+        ? { ...line, manualFreeQuantity, freeQuantity: line.commercialFreeQuantity + manualFreeQuantity, freeClassification: manualFreeQuantity > 0 ? line.freeClassification : "" }
+        : line,
+    ));
   }
 
   function selectProduct(index: number, productId: string) {
@@ -262,6 +294,9 @@ export function QuickOrderForm({
       productId,
       quantity,
       freeQuantity: freeQuantityFor(quantity, freeUnitsRule),
+      commercialFreeQuantity: freeQuantityFor(quantity, freeUnitsRule),
+      manualFreeQuantity: 0,
+      freeClassification: "",
       unitPriceHt: product?.price == null ? "" : String(product.price),
       discountRate: defaultDiscountValue(),
     });
@@ -274,10 +309,10 @@ export function QuickOrderForm({
         key: `last-${index}-${item.productId}`,
         productId: item.productId,
         quantity: Math.max(1, Number(item.quantity)),
-        freeQuantity:
-          freeUnitsRule == null
-            ? Math.max(0, Number(item.freeQuantity ?? 0))
-            : freeQuantityFor(Math.max(1, Number(item.quantity)), freeUnitsRule),
+        freeQuantity: freeQuantityFor(Math.max(1, Number(item.quantity)), freeUnitsRule),
+        commercialFreeQuantity: freeQuantityFor(Math.max(1, Number(item.quantity)), freeUnitsRule),
+        manualFreeQuantity: 0,
+        freeClassification: "",
         unitPriceHt: String(item.unitPriceHt ?? ""),
         discountRate:
           item.discountRate == null ? defaultDiscountValue() : String(item.discountRate),
@@ -298,7 +333,8 @@ export function QuickOrderForm({
           ...line,
           discountRate:
             pricing.discountRate == null ? "" : String(pricing.discountRate),
-          freeQuantity: freeQuantityFor(line.quantity, pricing.freeUnitsRule),
+          commercialFreeQuantity: freeQuantityFor(line.quantity, pricing.freeUnitsRule),
+          freeQuantity: freeQuantityFor(line.quantity, pricing.freeUnitsRule) + line.manualFreeQuantity,
         })),
       );
     } finally {
@@ -345,6 +381,9 @@ export function QuickOrderForm({
                   productId: "",
                   quantity: 1,
                   freeQuantity: 0,
+                  commercialFreeQuantity: 0,
+                  manualFreeQuantity: 0,
+                  freeClassification: "",
                   unitPriceHt: "",
                   discountRate: "",
                 },
@@ -493,26 +532,37 @@ export function QuickOrderForm({
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor={`quick-free-quantity-${index}`}>UG</Label>
-                    <Input
-                      id={`quick-free-quantity-${index}`}
-                      name="freeQuantity"
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={line.freeQuantity}
-                      onChange={(event) =>
-                        updateLine(index, {
-                          freeQuantity: Math.max(0, Number(event.target.value) || 0),
-                        })
-                      }
-                      className="h-11 w-full min-w-16 text-center font-bold"
-                    />
+                    <Label>UG conditions</Label>
+                    <Input value={line.commercialFreeQuantity} readOnly className="h-11 w-full min-w-16 bg-muted text-center font-bold" />
+                    <input type="hidden" name="commercialFreeQuantity" value={line.commercialFreeQuantity} />
+                    <input type="hidden" name="freeQuantity" value={line.freeQuantity} />
                   </div>
                 </div>
               </div>
 
-              <input type="hidden" name="discountRate" value={line.discountRate} />
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor={`quick-manual-free-${index}`}>UG exceptionnelle</Label>
+                  <Input id={`quick-manual-free-${index}`} name="manualFreeQuantity" type="number" min="0" step="1" value={line.manualFreeQuantity}
+                    onChange={(event) => updateManualFreeQuantity(index, Math.max(0, Number(event.target.value) || 0))} />
+                </div>
+                {line.manualFreeQuantity > 0 ? (
+                  <div className="space-y-2">
+                    <Label>Classification UG/UP</Label>
+                    <Select name="freeClassification" required value={line.freeClassification} onValueChange={(value) => updateLine(index, { freeClassification: value })}>
+                      <SelectTrigger className="w-full"><SelectValue placeholder="Choisir la classification" /></SelectTrigger>
+                      <SelectContent>
+                        {NAALI_UG_CLASSIFICATIONS.map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : <input type="hidden" name="freeClassification" value="" />}
+              </div>
+              {line.commercialFreeQuantity > 0 ? (
+                <p className="mt-2 text-xs text-muted-foreground">{line.commercialFreeQuantity} UG · conditions commerciales client</p>
+              ) : null}
+
+                            <input type="hidden" name="discountRate" value={line.discountRate} />
 
               {!isAgent || !line.unitPriceHt ? (
                 <div className="mt-3 max-w-xs space-y-2">
@@ -539,7 +589,7 @@ export function QuickOrderForm({
               <div className="mt-3 flex items-center justify-between gap-3 border-t pt-3 text-sm">
                 <span className="text-muted-foreground">
                   {lineTotal == null ? "Prix à compléter" : money(lineTotal)}
-                  {line.freeQuantity > 0 ? ` · ${line.freeQuantity} UG conditions client` : ""}
+                  {line.commercialFreeQuantity > 0 ? ` · ${line.commercialFreeQuantity} UG conditions commerciales` : ""}{line.manualFreeQuantity > 0 ? ` · ${line.manualFreeQuantity} UG ${line.freeClassification || "à classifier"}` : ""}
                 </span>
                 {lines.length > 1 ? (
                   <Button

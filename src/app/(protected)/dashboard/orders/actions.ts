@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
 import { syncHubSpotOrderAfterPersistence } from "@/lib/integrations/hubspot/runtime";
 import { translateUiMessage } from "@/lib/ui-copy";
@@ -22,6 +23,27 @@ const optionalUuid = z.preprocess(
 );
 const orderTypes = ["initial", "reorder", "complementary", "replacement", "sample", "return", "credit_note", "other"] as const;
 const orderStatuses = ["draft", "pending", "needs_correction", "confirmed", "invoiced", "partially_delivered", "delivered", "rejected", "cancelled", "refunded"] as const;
+const ugClassifications = ["compensation opé promo", "offre exceptionnelle sell-in", "geste commercial", "échange périmé", "échange déféctueux", "litige logistique", "cadeau challenge", "ne pas renseigner"] as const;
+
+type OrderItemAllocationRow = { id: string; product_id: string; organization_id: string; brand_id: string };
+
+async function persistFreeUnitAllocations(supabase: SupabaseClient, orderId: string, items: Array<{product_id:string; commercial_free_quantity:number; manual_free_quantity:number; free_classification:string | null}>) {
+  const { data: rows, error } = await supabase.from("order_items").select("id,product_id,organization_id,brand_id").eq("order_id", orderId);
+  if (error) throw error;
+  const typedRows = (rows ?? []) as OrderItemAllocationRow[];
+  await supabase.from("order_item_free_unit_allocations").delete().in("order_item_id", typedRows.map((row) => row.id));
+  const allocations = [];
+  for (const item of items) {
+    const row = typedRows.find((candidate) => candidate.product_id === item.product_id);
+    if (!row) continue;
+    if (item.commercial_free_quantity > 0) allocations.push({order_item_id:row.id,organization_id:row.organization_id,brand_id:row.brand_id,source:"commercial_terms",quantity:item.commercial_free_quantity,classification:"conditions commerciales client"});
+    if (item.manual_free_quantity > 0 && item.free_classification) allocations.push({order_item_id:row.id,organization_id:row.organization_id,brand_id:row.brand_id,source:"manual",quantity:item.manual_free_quantity,classification:item.free_classification});
+  }
+  if (allocations.length) {
+    const { error: allocationError } = await supabase.from("order_item_free_unit_allocations").insert(allocations);
+    if (allocationError) throw allocationError;
+  }
+}
 
 export async function createOrderAction(_state: OrderActionState, formData: FormData): Promise<OrderActionState> {
   const header = z.object({
@@ -38,16 +60,29 @@ export async function createOrderAction(_state: OrderActionState, formData: Form
   const productIds = formData.getAll("productId").map(String);
   const quantities = formData.getAll("quantity").map(String);
   const freeQuantities = formData.getAll("freeQuantity").map(String);
+  const commercialFreeQuantities = formData.getAll("commercialFreeQuantity").map(String);
+  const manualFreeQuantities = formData.getAll("manualFreeQuantity").map(String);
+  const freeClassifications = formData.getAll("freeClassification").map(String);
+  const hasAllocationMetadata = commercialFreeQuantities.length > 0 || manualFreeQuantities.length > 0 || freeClassifications.length > 0;
   const unitPrices = formData.getAll("unitPriceHt").map(String);
   const discountRates = formData.getAll("discountRate").map(String);
   const items = productIds.map((productId, index) => ({
     product_id: productId,
     quantity: Number(quantities[index]),
     free_quantity: Number(freeQuantities[index] || 0),
+    commercial_free_quantity: Number(commercialFreeQuantities[index] ?? freeQuantities[index] ?? 0),
+    manual_free_quantity: Number(manualFreeQuantities[index] || 0),
+    free_classification: freeClassifications[index] ? freeClassifications[index] : null,
     unit_price_ht: Number(unitPrices[index]),
     discount_rate: discountRates[index] ? Number(discountRates[index]) : null,
   }));
-  const parsedItems = z.array(z.object({ product_id: uuid, quantity: z.number().int().positive(), free_quantity: z.number().int().min(0), unit_price_ht: z.number(), discount_rate: z.number().min(0).max(100).nullable() })).min(1).safeParse(items);
+  const parsedItems = z.array(z.object({
+    product_id: uuid, quantity: z.number().int().positive(), free_quantity: z.number().int().min(0), unit_price_ht: z.number(), discount_rate: z.number().min(0).max(100).nullable(),
+    commercial_free_quantity: z.number().int().min(0), manual_free_quantity: z.number().int().min(0), free_classification: z.enum(ugClassifications).nullable(),
+  }).superRefine((item, ctx) => {
+    if (item.free_quantity !== item.commercial_free_quantity + item.manual_free_quantity) ctx.addIssue({code:"custom",message:"Ventilation UG incohérente."});
+    if (item.manual_free_quantity > 0 && !item.free_classification) ctx.addIssue({code:"custom",message:"Classification UG obligatoire."});
+  })).min(1).safeParse(items);
   if (!header.success || !parsedItems.success) return { error: "La commande ou ses lignes sont invalides." };
   if (Number(Boolean(header.data.brandPharmacyId)) + Number(Boolean(header.data.pharmacyId)) !== 1) return { error: "Sélectionnez une pharmacie du référentiel." };
   const { supabase, brand } = await requireActiveBrand();
@@ -75,7 +110,14 @@ export async function createOrderAction(_state: OrderActionState, formData: Form
     .in("id", uniqueProductIds);
   if (productsError || products?.length !== uniqueProductIds.length) return { error: "Un produit sélectionné n’est plus disponible pour cette marque." };
   const productById = new Map(products.map((product) => [product.id, product]));
-  const trustedItems = parsedItems.data.map((item) => ({ ...item, tax_rate: Number(productById.get(item.product_id)?.tax_rate ?? 0) }));
+  const trustedItems = parsedItems.data.map((item) => ({
+    product_id: item.product_id,
+    quantity: item.quantity,
+    free_quantity: item.free_quantity,
+    unit_price_ht: item.unit_price_ht,
+    discount_rate: item.discount_rate,
+    tax_rate: Number(productById.get(item.product_id)?.tax_rate ?? 0),
+  }));
   const { data, error } = await supabase.rpc("create_order_with_pharmacy_resolution", {
     target_brand_id: brand.id,
     target_brand_pharmacy_id: header.data.brandPharmacyId ?? null,
@@ -97,6 +139,9 @@ export async function createOrderAction(_state: OrderActionState, formData: Form
   if (error) return { error: error.code === "23505" ? "Cette commande externe existe déjà." : error.message };
   const result = Array.isArray(data) ? data[0] : data;
   const orderId = result?.order_id ? String(result.order_id) : null;
+  if (orderId && hasAllocationMetadata) {
+    await persistFreeUnitAllocations(supabase, orderId, parsedItems.data);
+  }
   if (orderId && header.data.orderStatus !== "draft") {
     await syncHubSpotOrderAfterPersistence(brand.id, orderId);
   }
