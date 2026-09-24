@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
 import { syncHubSpotOrderAfterPersistence } from "@/lib/integrations/hubspot/runtime";
 import { translateUiMessage } from "@/lib/ui-copy";
@@ -24,13 +25,16 @@ const orderTypes = ["initial", "reorder", "complementary", "replacement", "sampl
 const orderStatuses = ["draft", "pending", "needs_correction", "confirmed", "invoiced", "partially_delivered", "delivered", "rejected", "cancelled", "refunded"] as const;
 const ugClassifications = ["compensation opé promo", "offre exceptionnelle sell-in", "geste commercial", "échange périmé", "échange déféctueux", "litige logistique", "cadeau challenge", "ne pas renseigner"] as const;
 
-async function persistFreeUnitAllocations(supabase: any, orderId: string, items: Array<{product_id:string; commercial_free_quantity:number; manual_free_quantity:number; free_classification:string | null}>) {
+type OrderItemAllocationRow = { id: string; product_id: string; organization_id: string; brand_id: string };
+
+async function persistFreeUnitAllocations(supabase: SupabaseClient, orderId: string, items: Array<{product_id:string; commercial_free_quantity:number; manual_free_quantity:number; free_classification:string | null}>) {
   const { data: rows, error } = await supabase.from("order_items").select("id,product_id,organization_id,brand_id").eq("order_id", orderId);
   if (error) throw error;
-  await supabase.from("order_item_free_unit_allocations").delete().in("order_item_id", (rows ?? []).map((row: any) => row.id));
+  const typedRows = (rows ?? []) as OrderItemAllocationRow[];
+  await supabase.from("order_item_free_unit_allocations").delete().in("order_item_id", typedRows.map((row) => row.id));
   const allocations = [];
   for (const item of items) {
-    const row = (rows ?? []).find((candidate: any) => candidate.product_id === item.product_id);
+    const row = typedRows.find((candidate) => candidate.product_id === item.product_id);
     if (!row) continue;
     if (item.commercial_free_quantity > 0) allocations.push({order_item_id:row.id,organization_id:row.organization_id,brand_id:row.brand_id,source:"commercial_terms",quantity:item.commercial_free_quantity,classification:"conditions commerciales client"});
     if (item.manual_free_quantity > 0 && item.free_classification) allocations.push({order_item_id:row.id,organization_id:row.organization_id,brand_id:row.brand_id,source:"manual",quantity:item.manual_free_quantity,classification:item.free_classification});
@@ -106,7 +110,14 @@ export async function createOrderAction(_state: OrderActionState, formData: Form
     .in("id", uniqueProductIds);
   if (productsError || products?.length !== uniqueProductIds.length) return { error: "Un produit sélectionné n’est plus disponible pour cette marque." };
   const productById = new Map(products.map((product) => [product.id, product]));
-  const trustedItems = parsedItems.data.map(({ commercial_free_quantity, manual_free_quantity, free_classification, ...item }) => ({ ...item, tax_rate: Number(productById.get(item.product_id)?.tax_rate ?? 0) }));
+  const trustedItems = parsedItems.data.map((item) => ({
+    product_id: item.product_id,
+    quantity: item.quantity,
+    free_quantity: item.free_quantity,
+    unit_price_ht: item.unit_price_ht,
+    discount_rate: item.discount_rate,
+    tax_rate: Number(productById.get(item.product_id)?.tax_rate ?? 0),
+  }));
   const { data, error } = await supabase.rpc("create_order_with_pharmacy_resolution", {
     target_brand_id: brand.id,
     target_brand_pharmacy_id: header.data.brandPharmacyId ?? null,
