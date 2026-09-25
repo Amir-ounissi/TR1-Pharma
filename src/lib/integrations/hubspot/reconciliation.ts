@@ -7,7 +7,7 @@ import { NAALI_HUBSPOT_CONFIGURATION } from "./naali";
 import { resolveNaaliFreeUnitsRuleFromLeadStatus } from "./naali-pricing";
 import { syncHubSpotOrderAfterPersistence } from "./runtime";
 import { hubSpotCanMutateVisit, selectHubSpotVisitCandidate } from "./visit-identity";
-import { resolveHubSpotOrderSyncSince } from "./reconciliation-window";
+import { resolveHubSpotOrderSyncWindow } from "./reconciliation-window";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
@@ -1949,7 +1949,7 @@ async function syncInboundOrders(options: {
   owners: Map<string, string>;
   includeMappedPharmacySweep?: boolean;
 }) {
-  const since = resolveHubSpotOrderSyncSince(
+  const syncWindow = resolveHubSpotOrderSyncWindow(
     await lastSuccessfulInboundSyncAt(options.admin, options.connection.id, "orders" as const),
   );
   const products = await productMaps(options.admin, options.brandId);
@@ -1995,7 +1995,11 @@ async function syncInboundOrders(options: {
           filters: [
             { propertyName: "associations.company", operator: "EQ", value: pharmacy.companyId },
             { propertyName: "pipeline", operator: "IN", values: NAALI_PIPELINES },
-            ...searchFiltersSince(since),
+            {
+              propertyName: syncWindow.propertyName,
+              operator: "GTE",
+              value: String(new Date(syncWindow.since).getTime()),
+            },
           ],
         }],
         properties,
@@ -2041,7 +2045,11 @@ async function syncInboundOrders(options: {
             filters: [
               { propertyName: "hubspot_owner_id", operator: "IN", values: ownerExternalIds },
               { propertyName: "pipeline", operator: "IN", values: NAALI_PIPELINES },
-              ...searchFiltersSince(since),
+              {
+              propertyName: syncWindow.propertyName,
+              operator: "GTE",
+              value: String(new Date(syncWindow.since).getTime()),
+            },
             ],
           }],
           properties,
