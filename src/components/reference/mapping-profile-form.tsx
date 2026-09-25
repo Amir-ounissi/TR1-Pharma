@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { LocalizedFileInput } from "@/components/ui/localized-file-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -136,10 +137,8 @@ export function MappingProfileForm() {
       <div className="space-y-2 rounded-lg border border-dashed p-4">
         <div className="flex items-center gap-2 font-medium"><FileUp className="size-4" />Charger un CSV exemple</div>
         <p className="text-xs text-muted-foreground">Seule la ligne d’entêtes est utilisée dans votre navigateur pour préparer le mapping. L’exemple n’est pas importé.</p>
-        <input
-          type="file"
+        <LocalizedFileInput
           accept=".csv,text/csv"
-          className="border-input w-full rounded-md border p-2 text-sm"
           onChange={(event) => void loadExampleFile(event.target.files?.[0] ?? null)}
         />
       </div>
