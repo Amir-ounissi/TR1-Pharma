@@ -1,7 +1,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { reconcileHubSpotConnection } from "@/lib/integrations/hubspot/reconciliation";
+import { reconcileHubSpotOrdersNow } from "@/lib/integrations/hubspot/reconciliation";
 
 export const runtime = "nodejs";
 
@@ -49,8 +49,8 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const summary = await reconcileHubSpotConnection(String(brand.id), String(connection.id));
-    return NextResponse.json({ ok: true, summary });
+    const orders = await reconcileHubSpotOrdersNow(String(brand.id), String(connection.id));
+    return NextResponse.json({ ok: true, summary: { orders } });
   } catch (error) {
     const message = error instanceof Error ? error.message : "unknown_error";
     console.error(`[hubspot] internal reconcile failed: ${message.slice(0, 500)}`);
