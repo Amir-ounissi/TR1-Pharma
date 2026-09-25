@@ -6,6 +6,7 @@ import { ActionFeedback } from "@/components/reference/action-feedback";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { LocalizedFileInput } from "@/components/ui/localized-file-input";
 import { Label } from "@/components/ui/label";
 import { previewImport } from "@/lib/imports/import-engine";
 import { IMPORT_COLUMNS, type ColumnMapping, type ImportPreview, type ImportType } from "@/lib/imports/import-types";
@@ -168,14 +169,12 @@ export function OnboardingImportPanel({
         ) : null}
         <div className="space-y-2 md:col-span-2">
           <Label htmlFor={fileInputId}>Fichier CSV UTF-8 — 5 Mo et 10 000 lignes maximum</Label>
-          <input
+          <LocalizedFileInput
             id={fileInputId}
             name="file"
-            type="file"
             accept=".csv,text/csv"
             required
             onChange={(event) => void readFile(event.target.files?.[0])}
-            className="border-input w-full rounded-md border p-2 text-sm"
           />
         </div>
         {preview ? (
