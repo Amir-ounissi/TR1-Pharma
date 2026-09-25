@@ -219,19 +219,19 @@ select ok(
 );
 
 select throws_ok(
-  $select public.register_connector_sync_run(
+  $$select public.register_connector_sync_run(
     (select id from public.connector_connections where name = 'HubSpot France'),
     'pharmacies'::public.import_entity_type,
     'inbound',
     'cursor-concurrent'
-  )$,
+  )$$,
   '55P03',
   'Connector sync already running for this connection, entity and direction',
   'a concurrent sync for the same scope is rejected'
 );
 
 select lives_ok(
-  $select public.complete_connector_sync_run(
+  $$select public.complete_connector_sync_run(
     (select id from public.connector_sync_runs order by created_at desc limit 1),
     'succeeded',
     12,
@@ -261,12 +261,12 @@ select ok(
 );
 
 select lives_ok(
-  $select public.register_connector_sync_run(
+  $$select public.register_connector_sync_run(
     (select id from public.connector_connections where name = 'HubSpot France'),
     'orders'::public.import_entity_type,
     'inbound',
     'cursor-stale'
-  )$,
+  )$$,
   'trusted backend can register a second sync scope'
 );
 
@@ -277,12 +277,12 @@ where entity_type = 'orders'::public.import_entity_type
   and status = 'running';
 
 select lives_ok(
-  $select public.register_connector_sync_run(
+  $$select public.register_connector_sync_run(
     (select id from public.connector_connections where name = 'HubSpot France'),
     'orders'::public.import_entity_type,
     'inbound',
     'cursor-recovered'
-  )$,
+  )$$,
   'stale running sync is cancelled before a replacement starts'
 );
 
@@ -296,7 +296,7 @@ select is(
 );
 
 select lives_ok(
-  $select public.upsert_connector_external_link(
+  $$select public.upsert_connector_external_link(
     (select id from public.connector_connections where name = 'HubSpot France'),
     'pharmacies'::public.import_entity_type,
     'hs-company-42',
