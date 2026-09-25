@@ -49,7 +49,7 @@ Les commandes et missions existantes référencent désormais `brand_pharmacy_id
 ## Moteur commercial — Sprint 3
 
 - `brand_pharmacies.commercial_status` reste le statut courant optimisé pour les lectures ; chaque changement alimente `brand_pharmacy_status_history` par trigger.
-- `tasks` est l’unique source de vérité de la prochaine action. Un trigger recalcule `next_action_type`, `next_action_at` et `next_action_owner_id` depuis la tâche ouverte la plus proche.
+- Les actions futures métier (`tasks`, `field_visits`, `missions`) alimentent une résolution canonique de la prochaine action. `brand_pharmacies.next_action_type`, `next_action_at` et `next_action_owner_id` restent un cache de lecture rapide, recalculé par triggers depuis l’action ouverte la plus proche.
 - `commercial_tasks` expose le statut `overdue` dynamiquement, sans mutation périodique de la table.
 - `interactions` stocke le canal, le résultat et la visibilité. La RPC `create_commercial_interaction` crée atomiquement la tâche suivante et lie les deux enregistrements.
 - `pharmacy_assignments` conserve l’historique des responsables. La RPC `assign_brand_pharmacy` clôt l’affectation principale précédente avant d’insérer la nouvelle ; un trigger synchronise le responsable courant de la relation.

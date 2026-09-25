@@ -169,6 +169,7 @@ export async function quickPlanVisitAction(
       visit_payload: {
         visit_kind: "client_visit",
         title: `Visite · ${pharmacyName}`,
+        objective: "Suivi commercial",
         scheduled_start_at: startAt,
         scheduled_end_at: endAt,
       },

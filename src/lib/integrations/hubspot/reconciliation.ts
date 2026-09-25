@@ -182,6 +182,13 @@ function visitKind(activityType: unknown) {
   return "other";
 }
 
+function visitObjective(kind: "client_visit" | "prospecting" | "relationship" | "training" | "other") {
+  if (kind === "prospecting") return "Prospection";
+  if (kind === "relationship") return "Suivi relationnel";
+  if (kind === "training") return "Formation équipe";
+  return "Suivi commercial";
+}
+
 function visitStatus(outcome: unknown) {
   const value = String(outcome ?? "").trim().toUpperCase();
   if (value === "COMPLETED") return "completed";
@@ -1377,6 +1384,8 @@ async function importVisit(options: {
   if (!remoteId) throw new Error("HubSpot meeting has no id");
 
   const properties = options.remote.properties ?? {};
+  const resolvedVisitKind = options.visitKindOverride ?? visitKind(properties.hs_activity_type);
+  const resolvedObjective = visitObjective(resolvedVisitKind);
   const start = text(properties.hs_meeting_start_time) ?? text(properties.hs_timestamp);
   if (!start) throw new Error(`HubSpot meeting ${remoteId} has no start time`);
   const rawEnd = text(properties.hs_meeting_end_time);
@@ -1426,6 +1435,21 @@ async function importVisit(options: {
       externalUpdatedAt: options.remote.updatedAt ?? text(properties.hs_lastmodifieddate),
     });
     options.visitLinks.set(remoteId, existingVisitId);
+
+    const { error: objectiveUpdateError } = await options.admin
+      .from("field_visits")
+      .update({ objective: resolvedObjective })
+      .eq("id", existingVisitId)
+      .is("objective", null);
+    if (objectiveUpdateError) throw objectiveUpdateError;
+
+    const { error: brandObjectiveUpdateError } = await options.admin
+      .from("field_visit_brands")
+      .update({ objective: resolvedObjective })
+      .eq("visit_id", existingVisitId)
+      .eq("brand_id", options.brandId)
+      .is("objective", null);
+    if (brandObjectiveUpdateError) throw brandObjectiveUpdateError;
 
     if (closeoutNote) {
       const { error: visitUpdateError } = await options.admin
@@ -1528,10 +1552,10 @@ async function importVisit(options: {
     .insert({
       owner_user_id: ownerUserId,
       pharmacy_id: options.pharmacy.pharmacyId,
-      visit_kind: options.visitKindOverride ?? visitKind(properties.hs_activity_type),
+      visit_kind: resolvedVisitKind,
       status,
       title: text(properties.hs_meeting_title) ?? "Meeting HubSpot",
-      objective: null,
+      objective: resolvedObjective,
       scheduled_start_at: start,
       scheduled_end_at: end,
       notes: [
@@ -1557,7 +1581,7 @@ async function importVisit(options: {
       visit_id: visitId,
       brand_id: options.brandId,
       brand_pharmacy_id: options.pharmacy.brandPharmacyId,
-      objective: null,
+      objective: resolvedObjective,
       is_primary: true,
     });
   if (brandLinkError) throw brandLinkError;
