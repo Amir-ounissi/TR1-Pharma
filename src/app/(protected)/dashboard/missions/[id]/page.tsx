@@ -22,6 +22,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { LocalizedFileInput } from "@/components/ui/localized-file-input";
 import {
   Select,
   SelectContent,
@@ -376,8 +377,7 @@ export default async function MissionPage({
                 >
                   <input type="hidden" name="missionId" value={id} />
 
-                  <Input
-                    type="file"
+                  <LocalizedFileInput
                     name="file"
                     accept="image/jpeg,image/png,image/webp,application/pdf"
                     required
