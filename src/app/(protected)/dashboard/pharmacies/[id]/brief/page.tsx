@@ -19,6 +19,7 @@ import { requireActiveBrand } from "@/lib/auth";
 import type { CommercialHealthRow } from "@/lib/commercial-health";
 import type { NextBestActionRow } from "@/lib/next-best-action";
 import { getPharmacyCockpit } from "@/lib/pharmacy-cockpit";
+import { presentationText } from "@/lib/presentation";
 import { formatCurrency } from "@/lib/reference-data";
 import { buildVisitBrief, type VisitBriefFact, type VisitBriefSignal } from "@/lib/visit-brief";
 
@@ -527,7 +528,7 @@ export default async function VisitBriefPage({ params }: { params: Promise<{ id:
             {tasks.slice(0, 4).map((task) => (
               <div key={task.id} className="flex items-start justify-between gap-3 rounded-lg border p-3 text-sm">
                 <div>
-                  <p className="font-medium">{task.title}</p>
+                  <p className="font-medium">{presentationText(task.title)}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {task.due_at ? `Échéance : ${formatDate(task.due_at)}` : "Sans échéance"}
                   </p>
