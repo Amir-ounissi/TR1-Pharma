@@ -79,6 +79,13 @@ export function presentationLabel(value?: string | null) {
 
 export function presentationText(value: string) {
   return value
+    .replace(/Action suggérée après passage à qualified/gi, "Relancer la pharmacie")
+    .replace(/Action suggérée après passage à contacted/gi, "Assurer le suivi commercial")
+    .replace(/Action suggérée après passage à appointment_scheduled/gi, "Préparer le rendez-vous")
+    .replace(/Action suggérée après passage à offer_sent/gi, "Relancer l’offre")
+    .replace(/Activité watch — action de suivi/gi, "Vérifier l’activité de la pharmacie")
+    .replace(/Activité at_risk — action de suivi/gi, "Relancer la pharmacie")
+    .replace(/Activité dormant — action de suivi/gi, "Réactiver la pharmacie")
     .replace(/Suite\s*:\s*Compte rendu visit/gi, "Suite — compte rendu de visite")
     .replace(/\bvisit\b/gi, "visite")
     .replaceAll("_", " ");
