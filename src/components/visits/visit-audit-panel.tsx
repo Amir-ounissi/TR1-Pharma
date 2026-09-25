@@ -10,6 +10,7 @@ import {
 } from "@/app/(protected)/dashboard/visits/audit-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { LocalizedFileInput } from "@/components/ui/localized-file-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -230,10 +231,9 @@ export function VisitAuditPanel({
               <Camera className="size-4 text-[var(--tr1-orange)]" />
               Photo preuve facultative
             </Label>
-            <Input
+            <LocalizedFileInput
               id={`audit-photo-${brandPharmacyId}`}
               name="auditPhoto"
-              type="file"
               accept="image/jpeg,image/png,image/webp"
               capture="environment"
               className="mt-2"
