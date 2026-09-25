@@ -1317,6 +1317,18 @@ async function importOrder(options: {
     const calculated = Number(totals?.net_amount_ht ?? 0);
     const mismatch = sourceAmount !== null && Math.abs(calculated - sourceAmount) > 0.15;
     const finalStatus = needsCorrectionBeforeTotals || mismatch ? "needs_correction" : targetStatus;
+
+    // Keep the order in draft until every remote child/link has been persisted.
+    // This makes any failure cleanup safe and prevents half-imported active orders.
+    await saveExternalLink({
+      admin,
+      connectionId,
+      entityType: "orders",
+      externalId: remoteId,
+      tr1RecordId: orderId,
+      externalUpdatedAt: remote.updatedAt ?? text(properties.hs_lastmodifieddate),
+    });
+
     const { error: updateError } = await admin
       .from("orders")
       .update({
@@ -1326,17 +1338,9 @@ async function importOrder(options: {
           ? `${notes} · écart lignes/source ${calculated.toFixed(2)} vs ${sourceAmount?.toFixed(2)}`
           : notes,
       })
-      .eq("id", orderId);
+      .eq("id", orderId)
+      .eq("order_status", "draft");
     if (updateError) throw updateError;
-  
-    await saveExternalLink({
-      admin,
-      connectionId,
-      entityType: "orders",
-      externalId: remoteId,
-      tr1RecordId: orderId,
-      externalUpdatedAt: remote.updatedAt ?? text(properties.hs_lastmodifieddate),
-    });
     orderLinks.set(remoteId, orderId);
   
     if (finalStatus === "needs_correction") {
