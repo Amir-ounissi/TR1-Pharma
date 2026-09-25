@@ -1342,7 +1342,6 @@ async function importOrder(options: {
     if (finalStatus === "needs_correction") {
       console.warn(`[hubspot] imported deal ${remoteId} requires correction`);
     }
-  }
   } catch (error) {
     await admin
       .from("connector_external_child_links")
@@ -1369,6 +1368,7 @@ async function importOrder(options: {
     }
     throw error;
   }
+}
 
 async function importHubSpotAttachments(options: {
   admin: AdminClient;
