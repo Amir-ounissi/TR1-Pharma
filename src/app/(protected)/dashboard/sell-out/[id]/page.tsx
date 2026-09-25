@@ -9,6 +9,7 @@ import {
 } from "../actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { LocalizedFileInput } from "@/components/ui/localized-file-input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/ux/page-header";
@@ -195,7 +196,7 @@ export default async function SellOutCapturePage({ params }: { params: Promise<{
             <CardContent className="space-y-4">
               <form action={uploadSellOutEvidenceFormAction} className="space-y-3">
                 <input type="hidden" name="captureId" value={capture.id} />
-                <input required name="file" type="file" accept="image/jpeg,image/png,application/pdf,text/csv,.csv" className="block w-full rounded-md border bg-background p-2 text-sm" />
+                <LocalizedFileInput required name="file" accept="image/jpeg,image/png,application/pdf,text/csv,.csv" />
                 <p className="text-xs text-muted-foreground">Avant l’envoi, recadrez ou expurgez tout nom, téléphone, e-mail ou information permettant d’identifier un patient ou un client.</p>
                 <Button type="submit" variant="outline" className="w-full">Ajouter le justificatif</Button>
               </form>
