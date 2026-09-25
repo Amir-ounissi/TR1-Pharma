@@ -2364,6 +2364,39 @@ async function replayOrdersCreatedWhileInactive(brandId: string, connectionId: s
   }
 }
 
+export async function reconcileHubSpotOrdersNow(
+  brandId: string,
+  connectionId: string,
+) {
+  const runtime = await activeConnection(brandId, connectionId);
+  if (!runtime) throw new Error("HubSpot connection is not active");
+
+  const { data: brand, error: brandError } = await runtime.admin
+    .from("brands")
+    .select("organization_id")
+    .eq("id", brandId)
+    .single();
+  if (brandError || !brand?.organization_id) {
+    throw brandError ?? new Error("Brand organization unavailable");
+  }
+
+  const pharmacies = await mappedPharmacies(runtime.admin, brandId, connectionId);
+  const actorId = await syncActorUserId(runtime.admin, brandId, runtime.connection);
+  const owners = await ownerMap(runtime.admin, connectionId);
+
+  return syncInboundOrders({
+    admin: runtime.admin,
+    client: runtime.client,
+    brandId,
+    organizationId: String(brand.organization_id),
+    connection: runtime.connection,
+    pharmacies,
+    actorId,
+    owners,
+    includeMappedPharmacySweep: false,
+  });
+}
+
 export async function reconcileHubSpotOrdersIfStale(
   brandId: string,
   maxAgeMs = 60 * 60_000,
