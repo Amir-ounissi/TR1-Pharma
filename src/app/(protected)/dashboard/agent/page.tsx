@@ -245,7 +245,9 @@ export default async function AgentPage() {
   const personalMonthTarget = personalTargetResult.data?.revenue_target_ht == null
     ? null
     : Number(personalTargetResult.data.revenue_target_ht);
-  const monthRevenue = monthBookedRevenue || Number(revenueObjective?.realized_value ?? 0);
+  const monthRevenue = monthBookedOrdersResult.error
+    ? Number(revenueObjective?.realized_value ?? 0)
+    : monthBookedRevenue;
   const monthTarget = revenueObjective
     ? Number(revenueObjective.target_value)
     : personalMonthTarget;
