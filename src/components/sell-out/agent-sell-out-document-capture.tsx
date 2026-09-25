@@ -5,6 +5,7 @@ import { FileSearch, Save } from "lucide-react";
 import { createAnalyzedSellOutCaptureAction } from "@/app/(protected)/dashboard/sell-out/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { LocalizedFileInput } from "@/components/ui/localized-file-input";
 import { Label } from "@/components/ui/label";
 
 type PharmacyOption = {
@@ -174,11 +175,10 @@ export function AgentSellOutDocumentCapture({
 
         <div className="sm:col-span-2 rounded-xl border border-dashed p-3">
           <Label htmlFor="sell-out-document">Sortie de caisse / relevé sell-out</Label>
-          <Input
+          <LocalizedFileInput
             ref={fileRef}
             id="sell-out-document"
             name="document"
-            type="file"
             accept="image/jpeg,image/png,application/pdf"
             required
             className="mt-1.5"
