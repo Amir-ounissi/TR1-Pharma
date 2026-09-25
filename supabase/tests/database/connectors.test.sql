@@ -2,7 +2,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(32);
+select plan(37);
 
 select has_table('public','connector_connections','connector connections table exists');
 select has_table('public','connector_entity_mappings','connector entity mappings table exists');
@@ -213,6 +213,25 @@ select is(
   'registered sync starts in running state'
 );
 
+select ok(
+  to_regclass('public.connector_sync_runs_one_running_per_scope_idx') is not null,
+  'connector sync concurrency guard index exists'
+);
+
+select throws_ok(
+  $sql$
+    select public.register_connector_sync_run(
+      (select id from public.connector_connections where name = 'HubSpot France'),
+      'pharmacies'::public.import_entity_type,
+      'inbound',
+      'cursor-concurrent'
+    )
+  $sql$,
+  '55P03',
+  'Connector sync already running for this connection, entity and direction',
+  'a concurrent sync for the same scope is rejected'
+);
+
 select lives_ok(
   $$select public.complete_connector_sync_run(
     (select id from public.connector_sync_runs order by created_at desc limit 1),
@@ -241,6 +260,41 @@ select is(
 select ok(
   (select last_synced_at is not null from public.connector_connections where name = 'HubSpot France'),
   'successful sync updates the connection last synced timestamp'
+);
+
+select lives_ok(
+  $$select public.register_connector_sync_run(
+    (select id from public.connector_connections where name = 'HubSpot France'),
+    'orders'::public.import_entity_type,
+    'inbound',
+    'cursor-stale'
+  )$$,
+  'trusted backend can register a second sync scope'
+);
+
+update public.connector_sync_runs
+set started_at = now() - interval '20 minutes'
+where entity_type = 'orders'::public.import_entity_type
+  and direction = 'inbound'
+  and status = 'running';
+
+select lives_ok(
+  $$select public.register_connector_sync_run(
+    (select id from public.connector_connections where name = 'HubSpot France'),
+    'orders'::public.import_entity_type,
+    'inbound',
+    'cursor-recovered'
+  )$$,
+  'stale running sync is cancelled before a replacement starts'
+);
+
+select is(
+  (select count(*) from public.connector_sync_runs
+   where entity_type = 'orders'::public.import_entity_type
+     and direction = 'inbound'
+     and status = 'running'),
+  1::bigint,
+  'stale recovery leaves exactly one running sync'
 );
 
 select lives_ok(
