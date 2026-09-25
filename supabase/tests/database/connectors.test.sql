@@ -219,12 +219,14 @@ select ok(
 );
 
 select throws_ok(
-  $$select public.register_connector_sync_run(
-    (select id from public.connector_connections where name = 'HubSpot France'),
-    'pharmacies'::public.import_entity_type,
-    'inbound',
-    'cursor-concurrent'
-  )$$,
+  $sql$
+    select public.register_connector_sync_run(
+      (select id from public.connector_connections where name = 'HubSpot France'),
+      'pharmacies'::public.import_entity_type,
+      'inbound',
+      'cursor-concurrent'
+    )
+  $sql$,
   '55P03',
   'Connector sync already running for this connection, entity and direction',
   'a concurrent sync for the same scope is rejected'
