@@ -26,7 +26,6 @@ export async function POST(request: NextRequest) {
     .from("brands")
     .select("id")
     .eq("slug", "naali")
-    .is("archived_at", null)
     .limit(1)
     .maybeSingle();
 
