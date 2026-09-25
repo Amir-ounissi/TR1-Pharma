@@ -68,7 +68,7 @@ export default async function AgentPage() {
     upcomingFieldAgendaResult,
     stockAlerts,
     multibrandDayResult,
-    monthOverviewResult,
+    monthBookedOrdersResult,
     monthObjectivesResult,
     monthOrdersResult,
     personalTargetResult,
@@ -97,13 +97,13 @@ export default async function AgentPage() {
       target_date: today,
       brand_filter: brand.id,
     }),
-    supabase.rpc("get_performance_overview", {
-      target_brand_id: brand.id,
-      target_period_start: monthStart,
-      target_period_end: today,
-      target_territory_id: null,
-      target_agent_id: userId,
-    }),
+    supabase
+      .from("performance_booked_order_facts")
+      .select("net_amount_ht")
+      .eq("brand_id", brand.id)
+      .eq("agent_user_id_at_order", userId)
+      .gte("order_date", `${monthStart}T00:00:00.000Z`)
+      .lt("order_date", `${nextIsoDate(today)}T00:00:00.000Z`),
     supabase.rpc("get_objective_progress", {
       target_brand_id: brand.id,
       target_filter_start: monthStart,
@@ -132,7 +132,7 @@ export default async function AgentPage() {
     ["agenda du jour", multibrandFieldAgendaResult.error],
     ["agenda à venir", upcomingFieldAgendaResult.error],
     ["cockpit multimarque", multibrandDayResult.error],
-    ["performance mensuelle", monthOverviewResult.error],
+    ["CA mensuel réservé", monthBookedOrdersResult.error],
     ["objectifs mensuels", monthObjectivesResult.error],
     ["commandes mensuelles", monthOrdersResult.error],
     ["objectif personnel", personalTargetResult.error],
@@ -235,14 +235,17 @@ export default async function AgentPage() {
       && new Date(event.start_at).getTime() <= now.getTime(),
   ).length;
 
-  const monthSummary = (monthOverviewResult.data ?? {}) as Record<string, number | null>;
+  const monthBookedRevenue = (monthBookedOrdersResult.data ?? []).reduce(
+    (total, order) => total + Number(order.net_amount_ht ?? 0),
+    0,
+  );
   const revenueObjective = ((monthObjectivesResult.data ?? []) as ObjectiveProgressRow[]).find(
     (objective) => objective.metric_key === "revenue_ht",
   );
   const personalMonthTarget = personalTargetResult.data?.revenue_target_ht == null
     ? null
     : Number(personalTargetResult.data.revenue_target_ht);
-  const monthRevenue = Number(monthSummary.booked_revenue_ht ?? revenueObjective?.realized_value ?? 0);
+  const monthRevenue = monthBookedRevenue || Number(revenueObjective?.realized_value ?? 0);
   const monthTarget = revenueObjective
     ? Number(revenueObjective.target_value)
     : personalMonthTarget;
