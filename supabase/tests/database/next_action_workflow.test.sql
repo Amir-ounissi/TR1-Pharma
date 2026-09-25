@@ -2,7 +2,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(8);
+select plan(10);
 
 select is(
   (select next_action_type from public.brand_pharmacies where id='00000000-0000-0000-0000-000000000412'),
@@ -90,6 +90,49 @@ select is(
   (select next_action_type from public.brand_pharmacies where id='00000000-0000-0000-0000-000000000412'),
   null::text,
   'cancelled visit is removed from next action'
+);
+
+insert into public.field_visits(
+  id, owner_user_id, pharmacy_id, visit_kind, status, title, objective,
+  scheduled_start_at, scheduled_end_at, source, created_by
+) values (
+  '00000000-0000-0000-0000-00000000f904',
+  '00000000-0000-0000-0000-0000000000a3',
+  '00000000-0000-0000-0000-000000000402',
+  'prospecting',
+  'planned',
+  'Visite P1 dépassée',
+  'Prospection',
+  now() - interval '1 day',
+  now() - interval '23 hours 15 minutes',
+  'manual',
+  '00000000-0000-0000-0000-0000000000a2'
+);
+
+insert into public.field_visit_brands(
+  visit_id, brand_id, brand_pharmacy_id, objective, is_primary
+) values (
+  '00000000-0000-0000-0000-00000000f904',
+  '00000000-0000-0000-0000-000000000101',
+  '00000000-0000-0000-0000-000000000412',
+  'Prospection',
+  true
+);
+
+select is(
+  (select next_action_type from public.brand_pharmacies where id='00000000-0000-0000-0000-000000000412'),
+  'visit_overdue',
+  'past planned visit is surfaced as an overdue visit'
+);
+
+update public.field_visits
+set status='cancelled'
+where id='00000000-0000-0000-0000-00000000f904';
+
+select is(
+  (select next_action_type from public.brand_pharmacies where id='00000000-0000-0000-0000-000000000412'),
+  null::text,
+  'resolved overdue visit no longer blocks the next action'
 );
 
 insert into public.missions(
