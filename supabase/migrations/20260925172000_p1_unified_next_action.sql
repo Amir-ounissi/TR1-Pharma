@@ -192,6 +192,27 @@ begin
 end;
 $$;
 
+-- HubSpot meetings historically stored the meeting title but left the visit objective empty.
+-- Fill only missing imported objectives; never overwrite an explicit field objective.
+update public.field_visits
+set objective = case visit_kind
+  when 'client_visit' then 'Suivi commercial'
+  when 'prospecting' then 'Prospection'
+  when 'relationship' then 'Suivi relationnel'
+  when 'training' then 'Formation équipe'
+  else 'Suivi commercial'
+end
+where source = 'import'
+  and nullif(btrim(objective), '') is null;
+
+update public.field_visit_brands fvb
+set objective = fv.objective
+from public.field_visits fv
+where fv.id = fvb.visit_id
+  and fv.source = 'import'
+  and nullif(btrim(fvb.objective), '') is null
+  and nullif(btrim(fv.objective), '') is not null;
+
 create or replace view public.commercial_account_health
 with (security_invoker = true) as
 with valid_orders as (
