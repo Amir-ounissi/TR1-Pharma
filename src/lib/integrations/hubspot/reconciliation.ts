@@ -6,6 +6,7 @@ import { hubSpotRunFailureStatus } from "./runtime-status";
 import { NAALI_HUBSPOT_CONFIGURATION } from "./naali";
 import { resolveNaaliFreeUnitsRuleFromLeadStatus } from "./naali-pricing";
 import { syncHubSpotOrderAfterPersistence } from "./runtime";
+import { hubSpotCanMutateVisit, selectHubSpotVisitCandidate } from "./visit-identity";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
@@ -1360,6 +1361,46 @@ async function importHubSpotAttachments(options: {
   }
 }
 
+async function ensureVisitBrandLink(options: {
+  admin: AdminClient;
+  visitId: string;
+  brandId: string;
+  brandPharmacyId: string;
+}) {
+  const { data: existing, error: existingError } = await options.admin
+    .from("field_visit_brands")
+    .select("brand_pharmacy_id")
+    .eq("visit_id", options.visitId)
+    .eq("brand_id", options.brandId)
+    .maybeSingle();
+  if (existingError) throw existingError;
+
+  if (existing) {
+    if (String(existing.brand_pharmacy_id) !== options.brandPharmacyId) {
+      throw new Error("Existing visit brand link points to another brand pharmacy");
+    }
+    return;
+  }
+
+  const { data: currentLinks, error: currentLinksError } = await options.admin
+    .from("field_visit_brands")
+    .select("brand_id")
+    .eq("visit_id", options.visitId)
+    .limit(1);
+  if (currentLinksError) throw currentLinksError;
+
+  const { error } = await options.admin
+    .from("field_visit_brands")
+    .insert({
+      visit_id: options.visitId,
+      brand_id: options.brandId,
+      brand_pharmacy_id: options.brandPharmacyId,
+      objective: null,
+      is_primary: !currentLinks?.length,
+    });
+  if (error) throw error;
+}
+
 async function importVisit(options: {
   admin: AdminClient;
   client: HubSpotClient;
@@ -1394,7 +1435,9 @@ async function importVisit(options: {
     meetingStart: start,
     nextMeetingStart: options.nextMeetingStart,
   });
-  const status = providerStatus === "cancelled" ? "cancelled" : closeoutNote ? "completed" : "planned";
+  const importedStatus = providerStatus === "cancelled" ? "cancelled" : closeoutNote ? "completed" : "planned";
+  const mappedKind = options.visitKindOverride ?? visitKind(properties.hs_activity_type);
+  const title = text(properties.hs_meeting_title) ?? "Meeting HubSpot";
   const body = [stripHtml(properties.hs_meeting_body), stripHtml(properties.hs_internal_meeting_notes)]
     .filter(Boolean)
     .join("\n\n");
@@ -1406,17 +1449,45 @@ async function importVisit(options: {
     const upper = new Date(startMs + 5 * 60_000).toISOString();
     const { data: candidates, error: candidateError } = await options.admin
       .from("field_visits")
-      .select("id")
+      .select("id,source,scheduled_start_at,created_at")
       .eq("pharmacy_id", options.pharmacy.pharmacyId)
+      .eq("owner_user_id", ownerUserId)
       .is("archived_at", null)
+      .neq("status", "cancelled")
       .gte("scheduled_start_at", lower)
       .lte("scheduled_start_at", upper)
-      .limit(2);
+      .limit(10);
     if (candidateError) throw candidateError;
-    if (candidates?.length === 1) existingVisitId = String(candidates[0].id);
+
+    existingVisitId = selectHubSpotVisitCandidate(
+      (candidates ?? []).map((candidate) => ({
+        id: String(candidate.id),
+        scheduledStartAt: String(candidate.scheduled_start_at),
+        source: candidate.source ? String(candidate.source) : null,
+        createdAt: candidate.created_at ? String(candidate.created_at) : null,
+      })),
+      new Set(options.visitLinks.values()),
+      startMs,
+    );
   }
 
   if (existingVisitId) {
+    const { data: existingVisit, error: existingVisitError } = await options.admin
+      .from("field_visits")
+      .select("id,source,status")
+      .eq("id", existingVisitId)
+      .is("archived_at", null)
+      .maybeSingle();
+    if (existingVisitError) throw existingVisitError;
+    if (!existingVisit) throw new Error(`TR1 visit ${existingVisitId} is unavailable`);
+
+    await ensureVisitBrandLink({
+      admin: options.admin,
+      visitId: existingVisitId,
+      brandId: options.brandId,
+      brandPharmacyId: options.pharmacy.brandPharmacyId,
+    });
+
     await saveExternalLink({
       admin: options.admin,
       connectionId: options.connectionId,
@@ -1427,21 +1498,38 @@ async function importVisit(options: {
     });
     options.visitLinks.set(remoteId, existingVisitId);
 
-    if (closeoutNote) {
+    const hubSpotOwnsMutableVisit = hubSpotCanMutateVisit(
+      existingVisit.source ? String(existingVisit.source) : null,
+      String(existingVisit.status),
+    );
+
+    if (hubSpotOwnsMutableVisit) {
+      const visitUpdates: Record<string, unknown> = {
+        owner_user_id: ownerUserId,
+        visit_kind: mappedKind,
+        status: importedStatus,
+        title,
+        scheduled_start_at: start,
+        scheduled_end_at: end,
+        updated_at: new Date().toISOString(),
+      };
+      if (body) visitUpdates.notes = body;
+      if (importedStatus === "completed") {
+        visitUpdates.actual_start_at = start;
+        visitUpdates.actual_end_at = end;
+        visitUpdates.started_at = start;
+        visitUpdates.completed_at = closeoutNote?.occurredAt ?? end;
+      }
+
       const { error: visitUpdateError } = await options.admin
         .from("field_visits")
-        .update({
-          status: "completed",
-          actual_start_at: start,
-          actual_end_at: end,
-          started_at: start,
-          completed_at: closeoutNote.occurredAt,
-          updated_at: new Date().toISOString(),
-        })
+        .update(visitUpdates)
         .eq("id", existingVisitId)
-        .neq("status", "completed");
+        .is("archived_at", null);
       if (visitUpdateError) throw visitUpdateError;
+    }
 
+    if (hubSpotOwnsMutableVisit && closeoutNote) {
       const { data: existingCloseout, error: closeoutReadError } = await options.admin
         .from("field_visit_closeouts")
         .select("id")
@@ -1477,37 +1565,53 @@ async function importVisit(options: {
       .eq("field_visit_id", existingVisitId)
       .eq("interaction_type", "visit")
       .is("archived_at", null)
+      .order("created_at", { ascending: true })
       .limit(1)
       .maybeSingle();
     if (existingInteractionError) throw existingInteractionError;
 
     let interactionId = existingInteraction?.id ? String(existingInteraction.id) : null;
-    if (!interactionId) {
-      const { data: createdInteraction, error: createInteractionError } = await options.admin
-        .from("interactions")
-        .insert({
-          brand_id: options.brandId,
-          brand_pharmacy_id: options.pharmacy.brandPharmacyId,
-          created_by: options.actorId,
-          interaction_type: "visit",
-          occurred_at: start,
-          subject: text(properties.hs_meeting_title) ?? "Meeting HubSpot",
-          notes: body || "Meeting importé depuis HubSpot.",
-          outcome: status === "completed" ? "completed" : "other",
-          assigned_user_id: ownerUserId,
-          visibility: "shared",
-          field_visit_id: existingVisitId,
-          tags: ["hubspot_meeting_import"],
-        })
-        .select("id")
-        .single();
-      if (createInteractionError || !createdInteraction) {
-        throw createInteractionError ?? new Error("Unable to create imported meeting interaction");
+    if (hubSpotOwnsMutableVisit && closeoutNote) {
+      if (interactionId) {
+        const { error: updateInteractionError } = await options.admin
+          .from("interactions")
+          .update({
+            brand_pharmacy_id: options.pharmacy.brandPharmacyId,
+            occurred_at: start,
+            subject: title,
+            notes: closeoutNote.body || body || "Meeting HubSpot complété.",
+            outcome: "completed",
+            assigned_user_id: ownerUserId,
+          })
+          .eq("id", interactionId);
+        if (updateInteractionError) throw updateInteractionError;
+      } else {
+        const { data: createdInteraction, error: createInteractionError } = await options.admin
+          .from("interactions")
+          .insert({
+            brand_id: options.brandId,
+            brand_pharmacy_id: options.pharmacy.brandPharmacyId,
+            created_by: options.actorId,
+            interaction_type: "visit",
+            occurred_at: start,
+            subject: title,
+            notes: closeoutNote.body || body || "Meeting HubSpot complété.",
+            outcome: "completed",
+            assigned_user_id: ownerUserId,
+            visibility: "shared",
+            field_visit_id: existingVisitId,
+            tags: ["hubspot_meeting_import"],
+          })
+          .select("id")
+          .single();
+        if (createInteractionError || !createdInteraction) {
+          throw createInteractionError ?? new Error("Unable to create imported meeting interaction");
+        }
+        interactionId = String(createdInteraction.id);
       }
-      interactionId = String(createdInteraction.id);
     }
 
-    if (attachmentIds.length) {
+    if (attachmentIds.length && interactionId) {
       await importHubSpotAttachments({
         admin: options.admin,
         client: options.client,
@@ -1528,9 +1632,9 @@ async function importVisit(options: {
     .insert({
       owner_user_id: ownerUserId,
       pharmacy_id: options.pharmacy.pharmacyId,
-      visit_kind: options.visitKindOverride ?? visitKind(properties.hs_activity_type),
-      status,
-      title: text(properties.hs_meeting_title) ?? "Meeting HubSpot",
+      visit_kind: mappedKind,
+      status: importedStatus,
+      title,
       objective: null,
       scheduled_start_at: start,
       scheduled_end_at: end,
@@ -1540,10 +1644,10 @@ async function importVisit(options: {
       ].filter(Boolean).join("\n\n") || null,
       source: "import",
       created_by: options.actorId,
-      actual_start_at: status === "completed" ? start : null,
-      actual_end_at: status === "completed" ? end : null,
-      started_at: status === "completed" ? start : null,
-      completed_at: status === "completed" ? closeoutNote?.occurredAt ?? end : null,
+      actual_start_at: importedStatus === "completed" ? start : null,
+      actual_end_at: importedStatus === "completed" ? end : null,
+      started_at: importedStatus === "completed" ? start : null,
+      completed_at: importedStatus === "completed" ? closeoutNote?.occurredAt ?? end : null,
       outcome: null,
     })
     .select("id")
@@ -1562,14 +1666,14 @@ async function importVisit(options: {
     });
   if (brandLinkError) throw brandLinkError;
 
-  if (status === "completed") {
+  if (importedStatus === "completed") {
     const { error: closeoutError } = await options.admin
       .from("field_visit_closeouts")
       .insert({
         visit_id: visitId,
         created_by: options.actorId,
         outcome: "other",
-        summary: closeoutNote?.body || body || text(properties.hs_meeting_title) || "Meeting HubSpot complété.",
+        summary: closeoutNote?.body || body || title || "Meeting HubSpot complété.",
         input_mode: "manual",
         structured_payload: {
           source: "hubspot",
@@ -1591,27 +1695,31 @@ async function importVisit(options: {
   });
   options.visitLinks.set(remoteId, visitId);
 
-  const { data: interaction, error: interactionError } = await options.admin
-    .from("interactions")
-    .insert({
-      brand_id: options.brandId,
-      brand_pharmacy_id: options.pharmacy.brandPharmacyId,
-      created_by: options.actorId,
-      interaction_type: "visit",
-      occurred_at: start,
-      subject: text(properties.hs_meeting_title) ?? "Meeting HubSpot",
-      notes: body || "Meeting importé depuis HubSpot.",
-      outcome: status === "completed" ? "completed" : "other",
-      assigned_user_id: ownerUserId,
-      visibility: "shared",
-      field_visit_id: visitId,
-      tags: ["hubspot_meeting_import"],
-    })
-    .select("id")
-    .single();
-  if (interactionError || !interaction) throw interactionError ?? new Error("Unable to create meeting interaction");
+  let interactionId: string | null = null;
+  if (importedStatus === "completed") {
+    const { data: interaction, error: interactionError } = await options.admin
+      .from("interactions")
+      .insert({
+        brand_id: options.brandId,
+        brand_pharmacy_id: options.pharmacy.brandPharmacyId,
+        created_by: options.actorId,
+        interaction_type: "visit",
+        occurred_at: start,
+        subject: title,
+        notes: closeoutNote?.body || body || "Meeting HubSpot complété.",
+        outcome: "completed",
+        assigned_user_id: ownerUserId,
+        visibility: "shared",
+        field_visit_id: visitId,
+        tags: ["hubspot_meeting_import"],
+      })
+      .select("id")
+      .single();
+    if (interactionError || !interaction) throw interactionError ?? new Error("Unable to create meeting interaction");
+    interactionId = String(interaction.id);
+  }
 
-  if (attachmentIds.length) {
+  if (attachmentIds.length && interactionId) {
     await importHubSpotAttachments({
       admin: options.admin,
       client: options.client,
@@ -1620,7 +1728,7 @@ async function importVisit(options: {
       actorId: options.actorId,
       parentEntityType: "visits",
       parentTr1RecordId: visitId,
-      interactionId: String(interaction.id),
+      interactionId,
       externalIds: attachmentIds,
     });
   }
