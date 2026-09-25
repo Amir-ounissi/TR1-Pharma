@@ -12,7 +12,7 @@ import { addCalendarDays } from "@/lib/agenda";
 import { requireActiveBrand } from "@/lib/auth";
 import { nextIsoDate, parisBusinessDate } from "@/lib/business-date";
 import { requireActiveBrandCapability } from "@/lib/saas/server";
-import { reconcileHubSpotVisitsIfStale } from "@/lib/integrations/hubspot/reconciliation";
+import { reconcileHubSpotOrdersIfStale, reconcileHubSpotVisitsIfStale } from "@/lib/integrations/hubspot/reconciliation";
 import { loadStockAlerts } from "@/lib/stock-alerts-server";
 
 type FieldAgendaEvent = {
@@ -52,6 +52,7 @@ export default async function AgentPage() {
   const { supabase, brand, profile, userId } = session;
 
   after(async () => {
+    await reconcileHubSpotOrdersIfStale(brand.id);
     await reconcileHubSpotVisitsIfStale(brand.id);
   });
 
