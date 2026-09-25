@@ -139,7 +139,7 @@ export function VisitAuditPanel({
 
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Produit disponible ?">
-              <select name="availabilityStatus" defaultValue={seed?.availability_status ?? "unknown"} className="h-11 w-full rounded-md border bg-background px-3 text-sm">
+              <select aria-label="Disponibilité du produit" name="availabilityStatus" defaultValue={seed?.availability_status ?? "unknown"} className="h-11 w-full rounded-md border bg-background px-3 text-sm">
                 <option value="available">Oui</option>
                 <option value="low_stock">Stock faible</option>
                 <option value="stockout">Rupture</option>
@@ -149,8 +149,8 @@ export function VisitAuditPanel({
 
             <Field label="Stock">
               <div className="grid grid-cols-[1fr_8.5rem] gap-2">
-                <Input name="stockQuantity" type="number" min="0" step="1" defaultValue={seed?.stock_quantity ?? ""} placeholder="Qté" />
-                <select name="stockCountMode" defaultValue={seed?.stock_count_mode ?? "unknown"} className="h-10 rounded-md border bg-background px-2 text-sm">
+                <Input aria-label="Quantité en stock" name="stockQuantity" type="number" min="0" step="1" defaultValue={seed?.stock_quantity ?? ""} placeholder="Qté" />
+                <select aria-label="Mode de comptage du stock" name="stockCountMode" defaultValue={seed?.stock_count_mode ?? "unknown"} className="h-10 rounded-md border bg-background px-2 text-sm">
                   <option value="counted">Compté</option>
                   <option value="estimated">Estimé</option>
                   <option value="unknown">Non vérifié</option>
@@ -160,19 +160,19 @@ export function VisitAuditPanel({
 
             <Field label="Prix affiché ?">
               <div className="grid grid-cols-[8rem_1fr] gap-2">
-                <select name="priceDisplayed" defaultValue={boolValue(seed?.price_displayed)} className="h-10 rounded-md border bg-background px-2 text-sm">
+                <select aria-label="Prix affiché" name="priceDisplayed" defaultValue={boolValue(seed?.price_displayed)} className="h-10 rounded-md border bg-background px-2 text-sm">
                   <option value="true">Oui</option>
                   <option value="false">Non</option>
                   <option value="unknown">Non vérifié</option>
                 </select>
-                <Input name="displayedPriceTtc" type="number" min="0" step="0.01" defaultValue={moneyValue(seed?.displayed_price_ttc)} placeholder="Prix TTC €" />
+                <Input aria-label="Prix TTC affiché" name="displayedPriceTtc" type="number" min="0" step="0.01" defaultValue={moneyValue(seed?.displayed_price_ttc)} placeholder="Prix TTC €" />
               </div>
             </Field>
 
             <Field label="Facings / visibilité">
               <div className="grid grid-cols-[7rem_1fr] gap-2">
-                <Input name="facings" type="number" min="0" step="1" defaultValue={seed?.facings ?? ""} placeholder="Facings" />
-                <select name="shelfVisibility" defaultValue={seed?.shelf_visibility ?? "unknown"} className="h-10 rounded-md border bg-background px-2 text-sm">
+                <Input aria-label="Nombre de facings" name="facings" type="number" min="0" step="1" defaultValue={seed?.facings ?? ""} placeholder="Facings" />
+                <select aria-label="Visibilité en rayon" name="shelfVisibility" defaultValue={seed?.shelf_visibility ?? "unknown"} className="h-10 rounded-md border bg-background px-2 text-sm">
                   <option value="high">Très visible</option>
                   <option value="medium">Correcte</option>
                   <option value="low">Faible</option>
@@ -183,7 +183,7 @@ export function VisitAuditPanel({
             </Field>
 
             <Field label="PLV présente ?">
-              <select name="plvPresent" defaultValue={boolValue(seed?.plv_present)} className="h-10 w-full rounded-md border bg-background px-3 text-sm">
+              <select aria-label="Présence de PLV" name="plvPresent" defaultValue={boolValue(seed?.plv_present)} className="h-10 w-full rounded-md border bg-background px-3 text-sm">
                 <option value="true">Oui</option>
                 <option value="false">Non</option>
                 <option value="unknown">Non vérifié</option>
@@ -191,7 +191,7 @@ export function VisitAuditPanel({
             </Field>
 
             <Field label="Équipe">
-              <select name="teamTrainingStatus" defaultValue={seed?.team_training_status ?? "unknown"} className="h-10 w-full rounded-md border bg-background px-3 text-sm">
+              <select aria-label="Niveau de formation de l’équipe" name="teamTrainingStatus" defaultValue={seed?.team_training_status ?? "unknown"} className="h-10 w-full rounded-md border bg-background px-3 text-sm">
                 <option value="trained">Formée</option>
                 <option value="reinforce">À renforcer</option>
                 <option value="not_trained">Non formée</option>
@@ -200,7 +200,7 @@ export function VisitAuditPanel({
             </Field>
 
             <Field label="Testeurs / échantillons">
-              <select name="testerSamplesStatus" defaultValue={seed?.tester_samples_status ?? "unknown"} className="h-10 w-full rounded-md border bg-background px-3 text-sm">
+              <select aria-label="Disponibilité des testeurs et échantillons" name="testerSamplesStatus" defaultValue={seed?.tester_samples_status ?? "unknown"} className="h-10 w-full rounded-md border bg-background px-3 text-sm">
                 <option value="present">Présents</option>
                 <option value="missing">Manquants</option>
                 <option value="not_applicable">Non pertinent</option>
@@ -209,7 +209,7 @@ export function VisitAuditPanel({
             </Field>
 
             <Field label="Concurrence visible ?">
-              <select name="competitionVisible" defaultValue={boolValue(seed?.competition_visible)} className="h-10 w-full rounded-md border bg-background px-3 text-sm">
+              <select aria-label="Concurrence visible" name="competitionVisible" defaultValue={boolValue(seed?.competition_visible)} className="h-10 w-full rounded-md border bg-background px-3 text-sm">
                 <option value="true">Oui</option>
                 <option value="false">Non</option>
                 <option value="unknown">Non vérifié</option>
@@ -218,11 +218,11 @@ export function VisitAuditPanel({
           </div>
 
           <Field label="Remarque concurrence">
-            <Input name="competitionNote" maxLength={1000} defaultValue={seed?.competition_note ?? ""} placeholder="Ex. concurrent en tête de gondole, promo visible…" />
+            <Input aria-label="Remarque sur la concurrence" name="competitionNote" maxLength={1000} defaultValue={seed?.competition_note ?? ""} placeholder="Ex. concurrent en tête de gondole, promo visible…" />
           </Field>
 
           <Field label="Note rapide">
-            <Textarea name="notes" maxLength={2000} rows={2} defaultValue={seed?.notes ?? ""} placeholder="Écart ou détail utile pour le prochain passage." />
+            <Textarea aria-label="Note rapide de l’audit" name="notes" maxLength={2000} rows={2} defaultValue={seed?.notes ?? ""} placeholder="Écart ou détail utile pour le prochain passage." />
           </Field>
 
           <div className="rounded-xl border border-dashed p-3">
