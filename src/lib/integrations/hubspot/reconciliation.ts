@@ -98,6 +98,20 @@ function text(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
+function syncErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message.trim()) return message.trim();
+  }
+  try {
+    const serialized = JSON.stringify(error);
+    return serialized && serialized !== "{}" ? serialized : "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
 function numberValue(value: unknown) {
   if (value === null || value === undefined || value === "") return null;
   const parsed = Number(String(value).replace(",", "."));
@@ -1052,26 +1066,54 @@ async function importOrder(options: {
   organizationId: string;
   connectionId: string;
   actorId: string;
+  sourceAgentUserId?: string | null;
   pharmacy: PharmacyContext;
   remote: HubSpotRecord;
   orderLinks: Map<string, string>;
   products: Awaited<ReturnType<typeof productMaps>>;
 }) {
-  const { admin, client, brandId, organizationId, connectionId, actorId, pharmacy, remote, orderLinks, products } = options;
+  const { admin, client, brandId, organizationId, connectionId, actorId, sourceAgentUserId, pharmacy, remote, orderLinks, products } = options;
   const remoteId = externalId(remote);
   if (!remoteId) throw new Error("HubSpot deal has no id");
 
   const linkedOrderId = orderLinks.get(remoteId) ?? null;
   const { data: existingOrder, error: existingError } = await admin
     .from("orders")
-    .select("id,source,order_status")
+    .select("id,source,order_status,line_items_complete")
     .eq("brand_id", brandId)
     .eq(linkedOrderId ? "id" : "external_order_id", linkedOrderId ?? remoteId)
     .is("archived_at", null)
     .limit(1)
     .maybeSingle();
   if (existingError) throw existingError;
-  if (existingOrder?.id) {
+
+  if (
+    existingOrder?.id &&
+    existingOrder.source === "import" &&
+    existingOrder.order_status === "draft" &&
+    !linkedOrderId
+  ) {
+    const staleOrderId = String(existingOrder.id);
+    await admin
+      .from("connector_external_child_links")
+      .delete()
+      .eq("connection_id", connectionId)
+      .eq("parent_entity_type", "orders")
+      .eq("parent_tr1_record_id", staleOrderId);
+    await admin
+      .from("connector_external_links")
+      .delete()
+      .eq("connection_id", connectionId)
+      .eq("entity_type", "orders")
+      .eq("tr1_record_id", staleOrderId);
+    const { error: staleDeleteError } = await admin
+      .from("orders")
+      .delete()
+      .eq("id", staleOrderId)
+      .eq("brand_id", brandId)
+      .eq("order_status", "draft");
+    if (staleDeleteError) throw staleDeleteError;
+  } else if (existingOrder?.id) {
     const existingOrderId = String(existingOrder.id);
     await saveExternalLink({
       admin,
@@ -1087,15 +1129,11 @@ async function importOrder(options: {
     // Never overwrite a TR1 correction workflow.
     if (existingOrder.source === "import" && existingOrder.order_status !== "needs_correction") {
       const desiredStatus = orderStatus(remote.properties?.dealstage);
-      const sourceAmount = numberValue(remote.properties?.amount);
       const updates: Record<string, unknown> = {};
 
       if (desiredStatus !== existingOrder.order_status) {
         updates.order_status = desiredStatus;
         updates.cancellation_reason = desiredStatus === "cancelled" ? "Abandonnée dans HubSpot" : null;
-      }
-      if (sourceAmount !== null) {
-        updates.net_amount_ht = sourceAmount;
       }
 
       if (Object.keys(updates).length) {
@@ -1210,7 +1248,8 @@ async function importOrder(options: {
       pharmacy_id: pharmacy.pharmacyId,
       created_by: actorId,
       source_user_id: actorId,
-      order_status: "pending",
+      source_agent_user_id: sourceAgentUserId ?? pharmacy.currentAgentUserId ?? null,
+      order_status: "draft",
       order_date: date,
       external_order_id: remoteId,
       order_number: `HS-${remoteId}`,
@@ -1219,90 +1258,117 @@ async function importOrder(options: {
       currency_code: text(properties.deal_currency_code) ?? "EUR",
       notes: text(properties.dealname) ? `${notes} · ${text(properties.dealname)}` : notes,
       imported_at: new Date().toISOString(),
-      line_items_complete: !needsCorrectionBeforeTotals,
+      line_items_complete: false,
     })
     .select("id")
     .single();
   if (insertError || !inserted) throw insertError ?? new Error(`Unable to import HubSpot deal ${remoteId}`);
   const orderId = String(inserted.id);
 
-  for (const item of items) {
-    const { remote_line_id, remote_free_line_id, ...persistedItem } = item;
-    const { data: insertedItem, error: itemError } = await admin
-      .from("order_items")
-      .insert({
-        ...persistedItem,
-        brand_id: brandId,
-        order_id: orderId,
-      })
-      .select("id")
+  try {
+    for (const item of items) {
+      const { remote_line_id, remote_free_line_id, ...persistedItem } = item;
+      const { data: insertedItem, error: itemError } = await admin
+        .from("order_items")
+        .insert({
+          ...persistedItem,
+          brand_id: brandId,
+          order_id: orderId,
+        })
+        .select("id")
+        .single();
+      if (itemError || !insertedItem) throw itemError ?? new Error(`Unable to import HubSpot line for deal ${remoteId}`);
+  
+      const itemId = String(insertedItem.id);
+      if (remote_line_id) {
+        const { error: linkError } = await admin.rpc("upsert_connector_external_child_link", {
+          target_connection_id: connectionId,
+          target_parent_entity_type: "orders",
+          target_parent_tr1_record_id: orderId,
+          target_child_type: "line_item",
+          target_child_key: itemId,
+          target_external_id: remote_line_id,
+          target_external_updated_at: null,
+          target_sync_hash: null,
+        });
+        if (linkError) throw linkError;
+      }
+      if (remote_free_line_id && item.free_quantity > 0) {
+        const { error: freeLinkError } = await admin.rpc("upsert_connector_external_child_link", {
+          target_connection_id: connectionId,
+          target_parent_entity_type: "orders",
+          target_parent_tr1_record_id: orderId,
+          target_child_type: "line_item",
+          target_child_key: `${itemId}:free`,
+          target_external_id: remote_free_line_id,
+          target_external_updated_at: null,
+          target_sync_hash: null,
+        });
+        if (freeLinkError) throw freeLinkError;
+      }
+    }
+  
+    const { data: totals, error: totalsError } = await admin
+      .from("orders")
+      .select("net_amount_ht")
+      .eq("id", orderId)
       .single();
-    if (itemError || !insertedItem) throw itemError ?? new Error(`Unable to import HubSpot line for deal ${remoteId}`);
-
-    const itemId = String(insertedItem.id);
-    if (remote_line_id) {
-      const { error: linkError } = await admin.rpc("upsert_connector_external_child_link", {
-        target_connection_id: connectionId,
-        target_parent_entity_type: "orders",
-        target_parent_tr1_record_id: orderId,
-        target_child_type: "line_item",
-        target_child_key: itemId,
-        target_external_id: remote_line_id,
-        target_external_updated_at: null,
-        target_sync_hash: null,
-      });
-      if (linkError) throw linkError;
-    }
-    if (remote_free_line_id && item.free_quantity > 0) {
-      const { error: freeLinkError } = await admin.rpc("upsert_connector_external_child_link", {
-        target_connection_id: connectionId,
-        target_parent_entity_type: "orders",
-        target_parent_tr1_record_id: orderId,
-        target_child_type: "line_item",
-        target_child_key: `${itemId}:free`,
-        target_external_id: remote_free_line_id,
-        target_external_updated_at: null,
-        target_sync_hash: null,
-      });
-      if (freeLinkError) throw freeLinkError;
+    if (totalsError) throw totalsError;
+    const calculated = Number(totals?.net_amount_ht ?? 0);
+    const mismatch = sourceAmount !== null && Math.abs(calculated - sourceAmount) > 0.15;
+    const finalStatus = needsCorrectionBeforeTotals || mismatch ? "needs_correction" : targetStatus;
+    const { error: updateError } = await admin
+      .from("orders")
+      .update({
+        order_status: finalStatus,
+        line_items_complete: !needsCorrectionBeforeTotals && !mismatch,
+        notes: mismatch
+          ? `${notes} · écart lignes/source ${calculated.toFixed(2)} vs ${sourceAmount?.toFixed(2)}`
+          : notes,
+      })
+      .eq("id", orderId);
+    if (updateError) throw updateError;
+  
+    await saveExternalLink({
+      admin,
+      connectionId,
+      entityType: "orders",
+      externalId: remoteId,
+      tr1RecordId: orderId,
+      externalUpdatedAt: remote.updatedAt ?? text(properties.hs_lastmodifieddate),
+    });
+    orderLinks.set(remoteId, orderId);
+  
+    if (finalStatus === "needs_correction") {
+      console.warn(`[hubspot] imported deal ${remoteId} requires correction`);
     }
   }
-
-  const { data: totals, error: totalsError } = await admin
-    .from("orders")
-    .select("net_amount_ht")
-    .eq("id", orderId)
-    .single();
-  if (totalsError) throw totalsError;
-  const calculated = Number(totals?.net_amount_ht ?? 0);
-  const mismatch = sourceAmount !== null && Math.abs(calculated - sourceAmount) > 0.15;
-  const finalStatus = needsCorrectionBeforeTotals || mismatch ? "needs_correction" : targetStatus;
-  const { error: updateError } = await admin
-    .from("orders")
-    .update({
-      order_status: finalStatus,
-      line_items_complete: !needsCorrectionBeforeTotals && !mismatch,
-      notes: mismatch
-        ? `${notes} · écart lignes/source ${calculated.toFixed(2)} vs ${sourceAmount?.toFixed(2)}`
-        : notes,
-    })
-    .eq("id", orderId);
-  if (updateError) throw updateError;
-
-  await saveExternalLink({
-    admin,
-    connectionId,
-    entityType: "orders",
-    externalId: remoteId,
-    tr1RecordId: orderId,
-    externalUpdatedAt: remote.updatedAt ?? text(properties.hs_lastmodifieddate),
-  });
-  orderLinks.set(remoteId, orderId);
-
-  if (finalStatus === "needs_correction") {
-    console.warn(`[hubspot] imported deal ${remoteId} requires correction`);
+  } catch (error) {
+    await admin
+      .from("connector_external_child_links")
+      .delete()
+      .eq("connection_id", connectionId)
+      .eq("parent_entity_type", "orders")
+      .eq("parent_tr1_record_id", orderId);
+    await admin
+      .from("connector_external_links")
+      .delete()
+      .eq("connection_id", connectionId)
+      .eq("entity_type", "orders")
+      .eq("tr1_record_id", orderId);
+    const { error: cleanupError } = await admin
+      .from("orders")
+      .delete()
+      .eq("id", orderId)
+      .eq("brand_id", brandId)
+      .eq("order_status", "draft");
+    if (cleanupError) {
+      console.error(
+        `[hubspot] failed to cleanup draft order ${remoteId}: ${syncErrorMessage(cleanupError).slice(0, 400)}`,
+      );
+    }
+    throw error;
   }
-}
 
 async function importHubSpotAttachments(options: {
   admin: AdminClient;
@@ -1946,6 +2012,10 @@ async function syncInboundOrders(options: {
             organizationId: options.organizationId,
             connectionId: options.connection.id,
             actorId: options.actorId,
+            sourceAgentUserId:
+              (text(remote.properties?.hubspot_owner_id)
+                ? options.owners.get(text(remote.properties?.hubspot_owner_id)!)
+                : null) ?? pharmacy.currentAgentUserId,
             pharmacy,
             remote,
             orderLinks: links,
@@ -1955,7 +2025,7 @@ async function syncInboundOrders(options: {
         } catch (error) {
           counter.failed += 1;
           console.error(
-            `[hubspot] inbound order failed: ${error instanceof Error ? error.message.slice(0, 400) : "unknown"}`,
+            `[hubspot] inbound order failed: ${syncErrorMessage(error).slice(0, 400)}`,
           );
         }
       }
@@ -2024,7 +2094,7 @@ async function syncInboundOrders(options: {
           counter.seen += 1;
           counter.failed += 1;
           console.error(
-            `[hubspot] inbound order pharmacy resolution failed for deal ${remoteId}: ${lastError instanceof Error ? lastError.message.slice(0, 400) : "unknown"}`,
+            `[hubspot] inbound order pharmacy resolution failed for deal ${remoteId}: ${syncErrorMessage(lastError).slice(0, 400)}`,
           );
           continue;
         }
@@ -2043,6 +2113,10 @@ async function syncInboundOrders(options: {
           organizationId: options.organizationId,
           connectionId: options.connection.id,
           actorId: options.actorId,
+          sourceAgentUserId:
+            (text(remote.properties?.hubspot_owner_id)
+              ? options.owners.get(text(remote.properties?.hubspot_owner_id)!)
+              : null) ?? pharmacy.currentAgentUserId,
           pharmacy,
           remote,
           orderLinks: links,
@@ -2052,7 +2126,7 @@ async function syncInboundOrders(options: {
       } catch (error) {
         counter.failed += 1;
         console.error(
-          `[hubspot] inbound discovered order failed: ${error instanceof Error ? error.message.slice(0, 400) : "unknown"}`,
+          `[hubspot] inbound discovered order failed: ${syncErrorMessage(error).slice(0, 400)}`,
         );
       }
     }
