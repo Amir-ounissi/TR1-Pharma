@@ -15,7 +15,7 @@ insert into public.field_visits(
   scheduled_start_at, scheduled_end_at, source, created_by
 ) values (
   '00000000-0000-0000-0000-00000000f901',
-  '00000000-0000-0000-0000-0000000000a2',
+  '00000000-0000-0000-0000-0000000000b4',
   '00000000-0000-0000-0000-000000000402',
   'prospecting',
   'planned',
@@ -59,8 +59,8 @@ insert into public.tasks(
   'Appel P1',
   now() + interval '1 day',
   'open',
-  '00000000-0000-0000-0000-0000000000a2',
-  '00000000-0000-0000-0000-0000000000a2',
+  '00000000-0000-0000-0000-0000000000b4',
+  '00000000-0000-0000-0000-0000000000b4',
   'manual'
 );
 
@@ -73,7 +73,7 @@ select is(
 update public.tasks
 set status='completed',
     completed_at=now(),
-    completed_by='00000000-0000-0000-0000-0000000000a2'
+    completed_by='00000000-0000-0000-0000-0000000000b4'
 where id='00000000-0000-0000-0000-00000000f902';
 
 select is(
@@ -109,8 +109,8 @@ insert into public.missions(
   'scheduled',
   'animation',
   'Animation officine',
-  '00000000-0000-0000-0000-0000000000a2',
-  '00000000-0000-0000-0000-0000000000a2'
+  '00000000-0000-0000-0000-0000000000b4',
+  '00000000-0000-0000-0000-0000000000b4'
 );
 
 select is(
