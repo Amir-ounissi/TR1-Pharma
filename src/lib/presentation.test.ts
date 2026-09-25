@@ -9,6 +9,9 @@ describe("presentation", () => {
     expect(presentationLabel("reorder_overdue")).toBe("Réassort en retard");
     expect(presentationLabel("strong_decline")).toBe("Forte baisse");
     expect(presentationText("Suite : Compte rendu visit")).toBe("Suite — compte rendu de visite");
+    expect(presentationText("Action suggérée après passage à qualified")).toBe("Relancer la pharmacie");
+    expect(presentationText("Activité at_risk — action de suivi")).toBe("Relancer la pharmacie");
+    expect(presentationText("Activité dormant — action de suivi")).toBe("Réactiver la pharmacie");
   });
 
   it("formats today and tomorrow boundaries", () => {
