@@ -9,7 +9,7 @@ insert into public.pharmacy_assignments(brand_id,brand_pharmacy_id,user_id,assig
 ('00000000-0000-0000-0000-000000000102','00000000-0000-0000-0000-000000000414','00000000-0000-0000-0000-0000000000a3','commercial_agent',true,'00000000-0000-0000-0000-0000000000a4'),
 ('00000000-0000-0000-0000-000000000102','00000000-0000-0000-0000-000000000413','00000000-0000-0000-0000-0000000000a3','temporary_backup',false,'00000000-0000-0000-0000-0000000000a4');
 
-select plan(15);
+select plan(19);
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"00000000-0000-0000-0000-0000000000a5","role":"authenticated"}',true);
 select lives_ok($$select public.propose_mission('00000000-0000-0000-0000-000000000411','{"mission_type":"animation","title":"Proposition intervenant","objective":"Conseiller","briefing":"Présenter le produit prioritaire et documenter l’animation.","scheduled_start_at":"2030-06-10T08:00:00Z","scheduled_end_at":"2030-06-10T12:00:00Z","budget_estimated_ht":"250"}','[{"product_id":"00000000-0000-0000-0000-000000000601"}]')$$,'facilitator can propose an animation');
@@ -37,6 +37,10 @@ select set_config('request.jwt.claims','{"sub":"00000000-0000-0000-0000-00000000
 select lives_ok($$select public.create_field_visit('00000000-0000-0000-0000-000000000401','{"visit_kind":"client_visit","title":"Visite multimarque","scheduled_start_at":"2030-06-12T12:00:00Z","scheduled_end_at":"2030-06-12T12:45:00Z"}',array['00000000-0000-0000-0000-000000000411'::uuid,'00000000-0000-0000-0000-000000000414'::uuid])$$,'one visit can link two brands for the same pharmacy');
 select is((select count(*) from field_visits where title='Visite multimarque'),1::bigint,'multibrand visit is not duplicated');
 select is((select count(*) from field_visit_brands where visit_id=(select id from field_visits where title='Visite multimarque')),2::bigint,'both brand relations are linked');
+select is((select next_action_type from brand_pharmacies where id='00000000-0000-0000-0000-000000000411'),'visit','field visit becomes the next action for its primary brand relation');
+select is((select next_action_type from brand_pharmacies where id='00000000-0000-0000-0000-000000000414'),'visit','field visit becomes the next action for its second brand relation');
+select lives_ok($select public.reschedule_field_visit((select id from field_visits where title='Visite multimarque'),'2030-06-12T13:00:00Z')$,'visit owner can reschedule the field visit');
+select is((select count(*) from brand_pharmacies where id in ('00000000-0000-0000-0000-000000000411','00000000-0000-0000-0000-000000000414') and next_action_at='2030-06-12T13:00:00Z'::timestamptz),2::bigint,'rescheduling the field visit updates next action timing for every linked brand');
 select throws_ok($$select public.create_field_visit('00000000-0000-0000-0000-000000000401','{"visit_kind":"client_visit","title":"Mauvais mélange","scheduled_start_at":"2030-06-13T12:00:00Z","scheduled_end_at":"2030-06-13T12:45:00Z"}',array['00000000-0000-0000-0000-000000000411'::uuid,'00000000-0000-0000-0000-000000000413'::uuid])$$,'42501','Brand pharmacy unavailable for this visit','different physical pharmacies cannot be mixed');
 select set_config('request.jwt.claims','{"sub":"00000000-0000-0000-0000-0000000000a7","role":"authenticated"}',true);
 select throws_ok($$select public.reschedule_field_visit((select id from field_visits where title='Visite multimarque'),'2030-06-12T13:00:00Z')$$,'42501','Visit unavailable','user cannot move another user visit');
