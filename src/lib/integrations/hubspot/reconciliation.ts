@@ -1881,6 +1881,7 @@ async function syncInboundOrders(options: {
   pharmacies: PharmacyContext[];
   actorId: string;
   owners: Map<string, string>;
+  includeMappedPharmacySweep?: boolean;
 }) {
   const since = resolveHubSpotOrderSyncSince(
     await lastSuccessfulInboundSyncAt(options.admin, options.connection.id, "orders" as const),
@@ -1918,9 +1919,11 @@ async function syncInboundOrders(options: {
   ];
 
   return runInbound(options.admin, options.connection.id, "orders", async (counter) => {
-    // Preserve the existing brand-account behavior: every deal attached to an already
-    // mapped pharmacy is reconciled, regardless of which mapped commercial owns it.
-    for (const pharmacy of options.pharmacies) {
+    // Preserve the exhaustive brand-account sweep for explicit/full reconciliations.
+    // Background agent refreshes skip this expensive per-pharmacy pass and rely on
+    // mapped HubSpot owners instead.
+    if (options.includeMappedPharmacySweep !== false) {
+      for (const pharmacy of options.pharmacies) {
       const records = await searchAll(options.client, "deals", {
         filterGroups: [{
           filters: [
@@ -1955,6 +1958,7 @@ async function syncInboundOrders(options: {
             `[hubspot] inbound order failed: ${error instanceof Error ? error.message.slice(0, 400) : "unknown"}`,
           );
         }
+      }
       }
     }
 
@@ -2357,6 +2361,73 @@ async function replayOrdersCreatedWhileInactive(brandId: string, connectionId: s
 
   for (const orderId of candidateIds) {
     if (!alreadySynced.has(orderId)) await syncHubSpotOrderAfterPersistence(brandId, orderId);
+  }
+}
+
+export async function reconcileHubSpotOrdersIfStale(
+  brandId: string,
+  maxAgeMs = 60 * 60_000,
+) {
+  try {
+    const admin = createAdminClient();
+    const { data: connection, error: connectionError } = await admin
+      .from("connector_connections")
+      .select("id,base_url,credential_reference,configuration,updated_by,last_synced_at")
+      .eq("brand_id", brandId)
+      .eq("provider", "hubspot")
+      .eq("status", "active")
+      .is("archived_at", null)
+      .limit(1)
+      .maybeSingle();
+    if (connectionError || !connection) return null;
+
+    const lastSyncAt = await lastSuccessfulInboundSyncAt(
+      admin,
+      String(connection.id),
+      "orders",
+    );
+    if (lastSyncAt && Date.now() - new Date(lastSyncAt).getTime() < maxAgeMs) {
+      return null;
+    }
+
+    const runtime = await activeConnection(brandId, String(connection.id));
+    if (!runtime) return null;
+
+    const { data: brand, error: brandError } = await runtime.admin
+      .from("brands")
+      .select("organization_id")
+      .eq("id", brandId)
+      .single();
+    if (brandError || !brand?.organization_id) return null;
+
+    const pharmacies = await mappedPharmacies(
+      runtime.admin,
+      brandId,
+      String(connection.id),
+    );
+    const actorId = await syncActorUserId(
+      runtime.admin,
+      brandId,
+      runtime.connection,
+    );
+    const owners = await ownerMap(runtime.admin, String(connection.id));
+
+    return await syncInboundOrders({
+      admin: runtime.admin,
+      client: runtime.client,
+      brandId,
+      organizationId: String(brand.organization_id),
+      connection: runtime.connection,
+      pharmacies,
+      actorId,
+      owners,
+      includeMappedPharmacySweep: false,
+    });
+  } catch (error) {
+    console.error(
+      `[hubspot] background order reconcile failed: ${error instanceof Error ? error.message.slice(0, 500) : "unknown"}`,
+    );
+    return null;
   }
 }
 
