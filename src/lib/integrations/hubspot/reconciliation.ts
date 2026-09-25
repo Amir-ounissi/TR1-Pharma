@@ -7,6 +7,7 @@ import { NAALI_HUBSPOT_CONFIGURATION } from "./naali";
 import { resolveNaaliFreeUnitsRuleFromLeadStatus } from "./naali-pricing";
 import { syncHubSpotOrderAfterPersistence } from "./runtime";
 import { hubSpotCanMutateVisit, selectHubSpotVisitCandidate } from "./visit-identity";
+import { resolveHubSpotOrderSyncSince } from "./reconciliation-window";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
@@ -1881,7 +1882,9 @@ async function syncInboundOrders(options: {
   actorId: string;
   owners: Map<string, string>;
 }) {
-  const since = await lastSuccessfulInboundSyncAt(options.admin, options.connection.id, "orders" as const);
+  const since = resolveHubSpotOrderSyncSince(
+    await lastSuccessfulInboundSyncAt(options.admin, options.connection.id, "orders" as const),
+  );
   const products = await productMaps(options.admin, options.brandId);
   const links = await existingExternalLinks(options.admin, options.connection.id, "orders");
   const byCompany = new Map(options.pharmacies.map((pharmacy) => [pharmacy.companyId, pharmacy]));
