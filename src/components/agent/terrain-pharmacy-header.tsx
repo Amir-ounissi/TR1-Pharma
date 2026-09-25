@@ -306,7 +306,7 @@ export function TerrainPharmacyHeader(props: TerrainPharmacyHeaderProps) {
     });
   }
 
-  const visitLabel = resolvedVisit ? "Ouvrir la visite" : "Visite";
+  const visitIsOverdue = Boolean(\n    resolvedVisit &&\n      resolvedVisit.status !== "in_progress" &&\n      props.nextActionType === "visit_overdue",\n  );\n  const visitLabel = resolvedVisit ? "Ouvrir la visite" : "Visite";
 
   return (
     <section className="tr1-da-panel overflow-hidden" data-testid="terrain-pharmacy-header">
@@ -326,11 +326,28 @@ export function TerrainPharmacyHeader(props: TerrainPharmacyHeaderProps) {
         </div>
 
         {resolvedVisit ? (
-          <div className={resolvedVisit.status === "in_progress" ? "rounded-xl border border-emerald-300 bg-emerald-50 p-3" : "rounded-xl border border-orange-200 bg-orange-50 p-3"}>
+          <div
+            className={
+              resolvedVisit.status === "in_progress"
+                ? "rounded-xl border border-emerald-300 bg-emerald-50 p-3"
+                : visitIsOverdue
+                  ? "rounded-xl border border-amber-300 bg-amber-50 p-3"
+                  : "rounded-xl border border-orange-200 bg-orange-50 p-3"
+            }
+          >
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{resolvedVisit.status === "in_progress" ? "Visite en cours" : "Visite prévue"}</p>
-                <p className="font-semibold text-[var(--tr1-navy)]">{dateTime(resolvedVisit.scheduledStartAt)}</p>
+                <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                  {resolvedVisit.status === "in_progress"
+                    ? "Visite en cours"
+                    : visitIsOverdue
+                      ? "Visite non clôturée"
+                      : "Visite prévue"}
+                </p>
+                <p className="font-semibold text-[var(--tr1-navy)]">
+                  {dateTime(resolvedVisit.scheduledStartAt)}
+                  {visitIsOverdue ? " · À clôturer ou replanifier" : ""}
+                </p>
               </div>
               <CheckCircle2 className="size-5 text-[var(--tr1-orange)]" />
             </div>
