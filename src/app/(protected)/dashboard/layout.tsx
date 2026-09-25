@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { OfflineScopeRuntime } from "@/components/pwa/offline-scope-runtime";
 import { getBrandContexts, getOptionalActiveBrand, isPlatformAdmin } from "@/lib/auth";
+import { presentationLabel, presentationText } from "@/lib/presentation";
 import { isSaasCapability, type SaasCapability } from "@/lib/saas/capabilities";
 import { getNavigationItems, getRoleFamily } from "@/lib/ux/navigation";
 import type { SearchItem } from "@/lib/ux/search";
@@ -102,8 +103,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
     const pharmacy = Array.isArray(relation.pharmacies) ? relation.pharmacies[0] : relation.pharmacies;
     return { id: `pharmacy-${relation.id}`, kind: "pharmacy", label: pharmacy?.trade_name || pharmacy?.legal_name || "Pharmacie", description: pharmacy?.city ?? undefined, href: `/dashboard/pharmacies/${relation.id}` };
   });
-  const missionItems: SearchItem[] = missionRows.map((mission) => ({ id: `mission-${mission.id}`, kind: "mission", label: mission.title, description: mission.status, href: `/dashboard/missions/${mission.id}` }));
-  const taskItems: SearchItem[] = taskRows.map((task) => ({ id: `task-${task.id}`, kind: "task", label: task.title, description: task.status, href: "/dashboard/tasks" }));
+  const missionItems: SearchItem[] = missionRows.map((mission) => ({ id: `mission-${mission.id}`, kind: "mission", label: mission.title, description: presentationLabel(mission.status), href: `/dashboard/missions/${mission.id}` }));
+  const taskItems: SearchItem[] = taskRows.map((task) => ({ id: `task-${task.id}`, kind: "task", label: presentationText(task.title), description: presentationLabel(task.status), href: "/dashboard/tasks" }));
 
   return (
     <>

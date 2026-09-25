@@ -118,23 +118,23 @@ export default async function OrdersPage({ searchParams }: { searchParams: Searc
         <CardContent className="pt-6">
           <form className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
             <Select name="status" defaultValue={typeof params.status === "string" ? params.status : "all"}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger aria-label="Statut de la commande"><SelectValue /></SelectTrigger>
               <SelectContent><SelectItem value="all">Tous statuts</SelectItem>{["draft","pending","needs_correction","confirmed","invoiced","partially_delivered","delivered","rejected","cancelled","refunded"].map((value) => <SelectItem key={value} value={value}>{orderStatusLabel(value)}</SelectItem>)}</SelectContent>
             </Select>
             <Select name="type" defaultValue={typeof params.type === "string" ? params.type : "all"}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger aria-label="Type de commande"><SelectValue /></SelectTrigger>
               <SelectContent><SelectItem value="all">Tous types</SelectItem>{["initial","reorder","complementary","replacement","sample","return","credit_note","other"].map((value) => <SelectItem key={value} value={value}>{uiLabel(value)}</SelectItem>)}</SelectContent>
             </Select>
             <Select name="source" defaultValue={typeof params.source === "string" ? params.source : "all"}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger aria-label="Source de la commande"><SelectValue /></SelectTrigger>
               <SelectContent><SelectItem value="all">Toutes sources</SelectItem>{["manual","agent","brand","import","api","erp","system"].map((value) => <SelectItem key={value} value={value}>{uiLabel(value)}</SelectItem>)}</SelectContent>
             </Select>
             <Select name="classification" defaultValue={typeof params.classification === "string" ? params.classification : "all"}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger aria-label="Classification de la commande"><SelectValue /></SelectTrigger>
               <SelectContent><SelectItem value="all">Implantation + réassort</SelectItem><SelectItem value="initial">Implantations</SelectItem><SelectItem value="reorder">Réassorts</SelectItem></SelectContent>
             </Select>
-            <Input name="from" type="date" defaultValue={typeof params.from === "string" ? params.from : ""} />
-            <Input name="to" type="date" defaultValue={typeof params.to === "string" ? params.to : ""} />
+            <Input name="from" type="date" aria-label="Commandes à partir du" defaultValue={typeof params.from === "string" ? params.from : ""} />
+            <Input name="to" type="date" aria-label="Commandes jusqu’au" defaultValue={typeof params.to === "string" ? params.to : ""} />
             <Button>Filtrer</Button>
           </form>
         </CardContent>

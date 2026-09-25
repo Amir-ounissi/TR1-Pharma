@@ -222,7 +222,7 @@ function AssistantReply({ response, onResponse }: { response: AssistantResponse;
         )}
         {"status" in details && (
           <div className="grid gap-2 rounded-xl border bg-background p-4 text-sm sm:grid-cols-2">
-            <p><span className="text-muted-foreground">Statut :</span> {String(details.status)}</p>
+            <p><span className="text-muted-foreground">Statut :</span> {presentationLabel(String(details.status))}</p>
             <p><span className="text-muted-foreground">Potentiel :</span> {String(details.potential)}</p>
             <p><span className="text-muted-foreground">Dernière commande :</span> {formatDate(details.lastOrderAt)}</p>
             <p><span className="text-muted-foreground">Prochaine action :</span> {formatDate(details.nextActionAt)}</p>
