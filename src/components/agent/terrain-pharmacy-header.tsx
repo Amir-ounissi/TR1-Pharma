@@ -306,7 +306,12 @@ export function TerrainPharmacyHeader(props: TerrainPharmacyHeaderProps) {
     });
   }
 
-  const visitIsOverdue = Boolean(\n    resolvedVisit &&\n      resolvedVisit.status !== "in_progress" &&\n      props.nextActionType === "visit_overdue",\n  );\n  const visitLabel = resolvedVisit ? "Ouvrir la visite" : "Visite";
+  const visitIsOverdue = Boolean(
+    resolvedVisit &&
+      resolvedVisit.status !== "in_progress" &&
+      props.nextActionType === "visit_overdue",
+  );
+  const visitLabel = resolvedVisit ? "Ouvrir la visite" : "Visite";
 
   return (
     <section className="tr1-da-panel overflow-hidden" data-testid="terrain-pharmacy-header">
