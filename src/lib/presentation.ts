@@ -32,6 +32,7 @@ const presentationLabels = {
   commercial_visit: "Visite commerciale",
   prospecting_visit: "Visite de prospection",
   relationship_visit: "Visite relationnelle",
+  visit_overdue: "Visite non clôturée",
   training: "Formation",
   animation: "Animation",
   merchandising: "Merchandising",
