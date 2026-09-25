@@ -9,6 +9,7 @@ import {
 } from "@/app/(protected)/dashboard/pharmacies/[id]/prices/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { LocalizedFileInput } from "@/components/ui/localized-file-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -209,10 +210,9 @@ export function PriceObservationForm({
             <Camera className="size-4 text-[var(--tr1-orange)]" />
             Photo produit + étiquette prix
           </Label>
-          <Input
+          <LocalizedFileInput
             id="price-photo"
             name="photo"
-            type="file"
             accept="image/jpeg,image/png,image/webp"
             capture="environment"
             required
