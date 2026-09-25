@@ -38,6 +38,7 @@ import {
   buildWazeUrl,
   type NavigablePharmacy,
 } from "@/lib/agent-experience";
+import { presentationLabel } from "@/lib/presentation";
 
 type ActiveVisit = {
   id: string;
@@ -431,7 +432,7 @@ export function TerrainPharmacyHeader(props: TerrainPharmacyHeaderProps) {
           </div>
           <div className="border-l p-3">
             <p className="text-[0.65rem] font-bold uppercase tracking-wide text-muted-foreground">Prochaine action</p>
-            <strong className="text-[var(--tr1-orange)]">{props.nextActionType ? `${props.nextActionType} · ${date(props.nextActionAt)}` : "Aucune"}</strong>
+            <strong className="text-[var(--tr1-orange)]">{props.nextActionType ? `${presentationLabel(props.nextActionType)} · ${dateTime(props.nextActionAt)}` : "Aucune"}</strong>
           </div>
         </div>
       </div>
