@@ -747,6 +747,38 @@ async function ensurePharmacyForHubSpotCompany(options: {
     currentAgentUserId = options.ownerUserId;
   }
 
+  if (currentAgentUserId) {
+    const { data: activeAssignment, error: assignmentLookupError } = await options.admin
+      .from("pharmacy_assignments")
+      .select("id")
+      .eq("brand_id", options.brandId)
+      .eq("brand_pharmacy_id", brandPharmacyId)
+      .eq("user_id", currentAgentUserId)
+      .eq("assignment_type", "commercial_agent")
+      .is("archived_at", null)
+      .lte("starts_at", new Date().toISOString().slice(0, 10))
+      .or(`ends_at.is.null,ends_at.gte.${new Date().toISOString().slice(0, 10)}`)
+      .limit(1)
+      .maybeSingle();
+    if (assignmentLookupError) throw assignmentLookupError;
+
+    if (!activeAssignment) {
+      const { error: assignmentInsertError } = await options.admin
+        .from("pharmacy_assignments")
+        .insert({
+          brand_id: options.brandId,
+          brand_pharmacy_id: brandPharmacyId,
+          user_id: currentAgentUserId,
+          assignment_type: "commercial_agent",
+          is_primary: true,
+          assigned_by: options.actorId,
+          starts_at: new Date().toISOString().slice(0, 10),
+          assignment_reason: "Attribution HubSpot",
+        });
+      if (assignmentInsertError) throw assignmentInsertError;
+    }
+  }
+
   const context: PharmacyContext = {
     pharmacyId,
     brandPharmacyId,
