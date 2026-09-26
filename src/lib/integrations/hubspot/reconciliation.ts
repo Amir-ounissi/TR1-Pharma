@@ -1173,7 +1173,7 @@ async function importOrder(options: {
   const linkedOrderId = orderLinks.get(remoteId) ?? null;
   const { data: existingOrder, error: existingError } = await admin
     .from("orders")
-    .select("id,source,order_status,line_items_complete")
+    .select("id,source,order_status,line_items_complete,net_amount_ht")
     .eq("brand_id", brandId)
     .eq(linkedOrderId ? "id" : "external_order_id", linkedOrderId ?? remoteId)
     .is("archived_at", null)
@@ -1181,11 +1181,36 @@ async function importOrder(options: {
     .maybeSingle();
   if (existingError) throw existingError;
 
+  const desiredStatus = orderStatus(remote.properties?.dealstage);
+  const remoteAmount = numberValue(remote.properties?.amount);
+  const existingAmount = existingOrder?.net_amount_ht == null
+    ? null
+    : Number(existingOrder.net_amount_ht);
+  const rebuildableImportedStatuses = new Set([
+    "draft",
+    "pending",
+    "confirmed",
+    "invoiced",
+    "needs_correction",
+  ]);
+  const importedAmountDrift =
+    existingOrder?.source === "import" &&
+    remoteAmount !== null &&
+    existingAmount !== null &&
+    Math.abs(existingAmount - remoteAmount) > 0.01;
+  const shouldRebuildImportedOrder =
+    Boolean(existingOrder?.id) &&
+    existingOrder?.source === "import" &&
+    rebuildableImportedStatuses.has(String(existingOrder.order_status)) &&
+    (existingOrder.order_status === "needs_correction" || importedAmountDrift);
+
   if (
     existingOrder?.id &&
     existingOrder.source === "import" &&
-    existingOrder.order_status === "draft" &&
-    !linkedOrderId
+    (
+      (existingOrder.order_status === "draft" && !linkedOrderId) ||
+      shouldRebuildImportedOrder
+    )
   ) {
     const staleOrderId = String(existingOrder.id);
     await admin
@@ -1205,8 +1230,9 @@ async function importOrder(options: {
       .delete()
       .eq("id", staleOrderId)
       .eq("brand_id", brandId)
-      .eq("order_status", "draft");
+      .eq("source", "import");
     if (staleDeleteError) throw staleDeleteError;
+    orderLinks.delete(remoteId);
   } else if (existingOrder?.id) {
     const existingOrderId = String(existingOrder.id);
     await saveExternalLink({
@@ -1219,25 +1245,26 @@ async function importOrder(options: {
     });
     orderLinks.set(remoteId, existingOrderId);
 
-    // HubSpot remains the source for records originally imported from HubSpot.
-    // Never overwrite a TR1 correction workflow.
-    if (existingOrder.source === "import" && existingOrder.order_status !== "needs_correction") {
-      const desiredStatus = orderStatus(remote.properties?.dealstage);
-      const updates: Record<string, unknown> = {};
+    const updates: Record<string, unknown> = {};
+    const manualStatusCanFollowTerminalHubSpotStage =
+      existingOrder.source !== "import" &&
+      ["draft", "pending", "confirmed"].includes(String(existingOrder.order_status)) &&
+      (desiredStatus === "invoiced" || desiredStatus === "cancelled");
+    const shouldSyncStatus =
+      existingOrder.source === "import" || manualStatusCanFollowTerminalHubSpotStage;
 
-      if (desiredStatus !== existingOrder.order_status) {
-        updates.order_status = desiredStatus;
-        updates.cancellation_reason = desiredStatus === "cancelled" ? "Abandonnée dans HubSpot" : null;
-      }
+    if (shouldSyncStatus && desiredStatus !== existingOrder.order_status) {
+      updates.order_status = desiredStatus;
+      updates.cancellation_reason = desiredStatus === "cancelled" ? "Abandonnée dans HubSpot" : null;
+    }
 
-      if (Object.keys(updates).length) {
-        const { error: updateError } = await admin
-          .from("orders")
-          .update(updates)
-          .eq("id", existingOrderId)
-          .eq("brand_id", brandId);
-        if (updateError) throw updateError;
-      }
+    if (Object.keys(updates).length) {
+      const { error: updateError } = await admin
+        .from("orders")
+        .update(updates)
+        .eq("id", existingOrderId)
+        .eq("brand_id", brandId);
+      if (updateError) throw updateError;
     }
     return;
   }
