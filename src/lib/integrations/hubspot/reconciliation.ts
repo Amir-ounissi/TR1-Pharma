@@ -1228,7 +1228,7 @@ async function importOrder(options: {
   for (const line of lineRecords) {
     const properties = line.properties ?? {};
     const type = normalize(properties.type_de_produit_naali);
-    if (type === "ug" || type.includes("echantillon")) continue;
+    if (type === "ug" || type.includes("echantillon") || type === "plv") continue;
 
     const quantity = integerValue(properties.quantity);
     const price = numberValue(properties.price);
@@ -1340,13 +1340,13 @@ async function importOrder(options: {
       }
     }
   
-    const { data: totals, error: totalsError } = await admin
-      .from("orders")
-      .select("net_amount_ht")
-      .eq("id", orderId)
-      .single();
-    if (totalsError) throw totalsError;
-    const calculated = Number(totals?.net_amount_ht ?? 0);
+    // Order totals are maintained by DB triggers only once line items are declared complete.
+    // Calculate the imported commercial total from the persisted payload here, before
+    // finalizing line_items_complete, so a valid HubSpot order is not flagged at 0 EUR.
+    const calculated = items.reduce((total, item) => {
+      const discountMultiplier = 1 - (item.discount_rate ?? 0) / 100;
+      return total + item.quantity * item.unit_price_ht * discountMultiplier;
+    }, 0);
     const mismatch = sourceAmount !== null && Math.abs(calculated - sourceAmount) > 0.15;
     const finalStatus = needsCorrectionBeforeTotals || mismatch ? "needs_correction" : targetStatus;
 
