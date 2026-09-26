@@ -42,6 +42,7 @@ type PharmacyContext = {
 
 type ProductContext = {
   id: string;
+  name: string;
   sku: string | null;
   ean: string | null;
   taxRate: number;
@@ -135,6 +136,14 @@ function normalize(value: unknown) {
     .replace(/[\u0300-\u036f]/g, "")
     .trim()
     .toLowerCase();
+}
+
+function hubSpotProductNameKey(value: unknown) {
+  return normalize(value)
+    .replace(/^ug\s+/, "")
+    .replace(/^gommes?\s+/, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function parsePercentage(value: unknown) {
@@ -1063,7 +1072,7 @@ async function syncCommercialTerms(
 async function productMaps(admin: AdminClient, brandId: string) {
   const { data, error } = await admin
     .from("products")
-    .select("id,sku,ean,tax_rate")
+    .select("id,name,sku,ean,tax_rate")
     .eq("brand_id", brandId)
     .is("discontinued_at", null);
   if (error) throw error;
@@ -1073,6 +1082,7 @@ async function productMaps(admin: AdminClient, brandId: string) {
   for (const row of data ?? []) {
     const product: ProductContext = {
       id: String(row.id),
+      name: String(row.name ?? ""),
       sku: row.sku ? String(row.sku) : null,
       ean: row.ean ? String(row.ean) : null,
       taxRate: Number(row.tax_rate ?? 5.5),
@@ -1089,6 +1099,58 @@ function taxRateFor(groupId: unknown, product: ProductContext) {
   const pair = Object.entries(NAALI_HUBSPOT_CONFIGURATION.order.taxRateGroupIds ?? {})
     .find(([, value]) => value === id);
   return pair ? Number(pair[0]) : product.taxRate;
+}
+
+async function ensureHubSpotOrderAgentAssignment(options: {
+  admin: AdminClient;
+  brandId: string;
+  brandPharmacyId: string;
+  userId: string;
+  actorId: string;
+}) {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data: activeAssignment, error: assignmentLookupError } = await options.admin
+    .from("pharmacy_assignments")
+    .select("id")
+    .eq("brand_id", options.brandId)
+    .eq("brand_pharmacy_id", options.brandPharmacyId)
+    .eq("user_id", options.userId)
+    .eq("assignment_type", "commercial_agent")
+    .is("archived_at", null)
+    .lte("starts_at", today)
+    .or(`ends_at.is.null,ends_at.gt.${today}`)
+    .limit(1)
+    .maybeSingle();
+  if (assignmentLookupError) throw assignmentLookupError;
+  if (activeAssignment) return;
+
+  const { data: activePrimary, error: primaryLookupError } = await options.admin
+    .from("pharmacy_assignments")
+    .select("id")
+    .eq("brand_id", options.brandId)
+    .eq("brand_pharmacy_id", options.brandPharmacyId)
+    .eq("assignment_type", "commercial_agent")
+    .eq("is_primary", true)
+    .is("archived_at", null)
+    .lte("starts_at", today)
+    .or(`ends_at.is.null,ends_at.gt.${today}`)
+    .limit(1)
+    .maybeSingle();
+  if (primaryLookupError) throw primaryLookupError;
+
+  const { error: assignmentInsertError } = await options.admin
+    .from("pharmacy_assignments")
+    .insert({
+      brand_id: options.brandId,
+      brand_pharmacy_id: options.brandPharmacyId,
+      user_id: options.userId,
+      assignment_type: "commercial_agent",
+      is_primary: !activePrimary,
+      assigned_by: options.actorId,
+      starts_at: today,
+      assignment_reason: "Attribution HubSpot",
+    });
+  if (assignmentInsertError) throw assignmentInsertError;
 }
 
 async function importOrder(options: {
@@ -1180,6 +1242,17 @@ async function importOrder(options: {
     return;
   }
 
+  const resolvedSourceAgentUserId = sourceAgentUserId ?? pharmacy.currentAgentUserId ?? null;
+  if (resolvedSourceAgentUserId) {
+    await ensureHubSpotOrderAgentAssignment({
+      admin,
+      brandId,
+      brandPharmacyId: pharmacy.brandPharmacyId,
+      userId: resolvedSourceAgentUserId,
+      actorId,
+    });
+  }
+
   const lineRecords = await searchAll(client, "line_items", {
     filterGroups: [{
       filters: [{ propertyName: "associations.deal", operator: "EQ", value: remoteId }],
@@ -1198,18 +1271,30 @@ async function importOrder(options: {
   });
 
   const freeByEan = new Map<string, { quantity: number; externalId: string | null }>();
+  const freeByName = new Map<string, { quantity: number; externalId: string | null }>();
   for (const line of lineRecords) {
     const properties = line.properties ?? {};
     const type = normalize(properties.type_de_produit_naali);
     const reason = normalize(properties.test_type_dug);
     const ean = text(properties.code_ean);
     const quantity = integerValue(properties.quantity);
-    if (type === "ug" && reason.includes("conditions commerciale") && ean && quantity !== null && quantity >= 0) {
-      const previous = freeByEan.get(ean);
-      freeByEan.set(ean, {
-        quantity: (previous?.quantity ?? 0) + quantity,
-        externalId: previous?.externalId ?? externalId(line),
-      });
+    if (type === "ug" && reason.includes("conditions commerciale") && quantity !== null && quantity >= 0) {
+      if (ean) {
+        const previous = freeByEan.get(ean);
+        freeByEan.set(ean, {
+          quantity: (previous?.quantity ?? 0) + quantity,
+          externalId: previous?.externalId ?? externalId(line),
+        });
+      }
+
+      const nameKey = hubSpotProductNameKey(properties.name);
+      if (nameKey) {
+        const previous = freeByName.get(nameKey);
+        freeByName.set(nameKey, {
+          quantity: (previous?.quantity ?? 0) + quantity,
+          externalId: previous?.externalId ?? externalId(line),
+        });
+      }
     }
   }
 
@@ -1236,13 +1321,19 @@ async function importOrder(options: {
 
     const sku = text(properties.hs_sku);
     const ean = text(properties.code_ean);
-    const product = (sku ? products.bySku.get(sku.toLowerCase()) : null) ?? (ean ? products.byEan.get(ean) : null);
+    // Some historical HubSpot lines store the EAN in hs_sku while code_ean
+    // contains a stale value. Prefer the declared SKU, then interpret it as an
+    // EAN before falling back to code_ean.
+    const product =
+      (sku ? products.bySku.get(sku.toLowerCase()) ?? products.byEan.get(sku) : null)
+      ?? (ean ? products.byEan.get(ean) : null);
     if (!product) {
       unresolved.push(sku || ean || text(properties.name) || externalId(line) || "ligne inconnue");
       continue;
     }
 
-    const free = ean ? freeByEan.get(ean) : null;
+    const nameKey = hubSpotProductNameKey(properties.name);
+    const free = (ean ? freeByEan.get(ean) : null) ?? (nameKey ? freeByName.get(nameKey) : null);
     items.push({
       product_id: product.id,
       quantity,
@@ -1280,7 +1371,7 @@ async function importOrder(options: {
       pharmacy_id: pharmacy.pharmacyId,
       created_by: actorId,
       source_user_id: actorId,
-      source_agent_user_id: sourceAgentUserId ?? pharmacy.currentAgentUserId ?? null,
+      source_agent_user_id: resolvedSourceAgentUserId,
       order_status: "draft",
       order_date: date,
       external_order_id: remoteId,
@@ -1340,15 +1431,14 @@ async function importOrder(options: {
       }
     }
   
-    // Order totals are maintained by DB triggers only once line items are declared complete.
-    // Calculate the imported commercial total from the persisted payload here, before
-    // finalizing line_items_complete, so a valid HubSpot order is not flagged at 0 EUR.
+    // Calculate from the payload first so unresolved or inconsistent HubSpot
+    // lines never become commercially active.
     const calculated = items.reduce((total, item) => {
       const discountMultiplier = 1 - (item.discount_rate ?? 0) / 100;
       return total + item.quantity * item.unit_price_ht * discountMultiplier;
     }, 0);
     const mismatch = sourceAmount !== null && Math.abs(calculated - sourceAmount) > 0.15;
-    const finalStatus = needsCorrectionBeforeTotals || mismatch ? "needs_correction" : targetStatus;
+    const lineItemsComplete = !needsCorrectionBeforeTotals && !mismatch;
 
     // Keep the order in draft until every remote child/link has been persisted.
     // This makes any failure cleanup safe and prevents half-imported active orders.
@@ -1361,23 +1451,69 @@ async function importOrder(options: {
       externalUpdatedAt: remote.updatedAt ?? text(properties.hs_lastmodifieddate),
     });
 
-    const { error: updateError } = await admin
+    if (!lineItemsComplete) {
+      const { error: correctionError } = await admin
+        .from("orders")
+        .update({
+          order_status: "needs_correction",
+          line_items_complete: false,
+          notes: mismatch
+            ? `${notes} · écart lignes/source ${calculated.toFixed(2)} vs ${sourceAmount?.toFixed(2)}`
+            : notes,
+        })
+        .eq("id", orderId)
+        .eq("order_status", "draft");
+      if (correctionError) throw correctionError;
+      orderLinks.set(remoteId, orderId);
+      console.warn(`[hubspot] imported deal ${remoteId} requires correction`);
+      return;
+    }
+
+    // Complete the line set while the order is still a draft. The database
+    // completion trigger recalculates server-controlled totals at this point.
+    const { error: completionError } = await admin
       .from("orders")
       .update({
-        order_status: finalStatus,
-        line_items_complete: !needsCorrectionBeforeTotals && !mismatch,
-        notes: mismatch
-          ? `${notes} · écart lignes/source ${calculated.toFixed(2)} vs ${sourceAmount?.toFixed(2)}`
-          : notes,
+        line_items_complete: true,
+        notes,
       })
       .eq("id", orderId)
       .eq("order_status", "draft");
-    if (updateError) throw updateError;
-    orderLinks.set(remoteId, orderId);
-  
-    if (finalStatus === "needs_correction") {
-      console.warn(`[hubspot] imported deal ${remoteId} requires correction`);
+    if (completionError) throw completionError;
+
+    const { data: persistedTotals, error: totalsError } = await admin
+      .from("orders")
+      .select("net_amount_ht")
+      .eq("id", orderId)
+      .single();
+    if (totalsError) throw totalsError;
+
+    const persistedNet = Number(persistedTotals?.net_amount_ht ?? 0);
+    const persistedMismatch = sourceAmount !== null && Math.abs(persistedNet - sourceAmount) > 0.15;
+    if (persistedMismatch) {
+      const { error: correctionError } = await admin
+        .from("orders")
+        .update({
+          order_status: "needs_correction",
+          notes: `${notes} · écart lignes/source ${persistedNet.toFixed(2)} vs ${sourceAmount?.toFixed(2)}`,
+        })
+        .eq("id", orderId)
+        .eq("order_status", "draft");
+      if (correctionError) throw correctionError;
+      orderLinks.set(remoteId, orderId);
+      console.warn(`[hubspot] imported deal ${remoteId} requires correction after persisted total validation`);
+      return;
     }
+
+    // Only now expose the HubSpot status. Activity/revenue triggers therefore
+    // observe the final, server-recalculated amount rather than 0 EUR.
+    const { error: statusError } = await admin
+      .from("orders")
+      .update({ order_status: targetStatus })
+      .eq("id", orderId)
+      .eq("order_status", "draft");
+    if (statusError) throw statusError;
+    orderLinks.set(remoteId, orderId);
   } catch (error) {
     await admin
       .from("connector_external_child_links")
