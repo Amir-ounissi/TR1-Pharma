@@ -193,12 +193,12 @@ reset role;
 set local role service_role;
 select set_config(
   'request.jwt.claims',
-  '{"sub":"00000000-0000-0000-0000-0000000000a1","role":"service_role"}',
+  '{}',
   true
 );
 
 select lives_ok(
-  $$select public.register_connector_sync_run(
+  $select public.register_connector_sync_run(
     (select id from public.connector_connections where name = 'HubSpot France'),
     'pharmacies'::public.import_entity_type,
     'inbound',
