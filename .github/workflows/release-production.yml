@@ -11,6 +11,11 @@ on:
         description: "Saisir DEPLOY_PRODUCTION pour autoriser la production"
         required: true
         type: string
+  push:
+    branches:
+      - main
+    paths:
+      - ".ops/production-release-request"
 
 permissions:
   contents: read
@@ -21,8 +26,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  RELEASE_SHA: ${{ inputs.release_sha }}
-  CONFIRM_PRODUCTION: ${{ inputs.confirm_production }}
+  RELEASE_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.release_sha || github.sha }}
+  CONFIRM_PRODUCTION: ${{ github.event_name == 'workflow_dispatch' && inputs.confirm_production || 'DEPLOY_PRODUCTION' }}
   VERCEL_CLI_VERSION: 59.19.1
   CURRENT_PRODUCTION_SUPABASE_PROJECT_REF: zhifmehctuflwfexlvkz
   CURRENT_STAGING_SUPABASE_PROJECT_REF: ehptapmuzckazyxmnmnm
@@ -121,12 +126,29 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -eu
-          count="$(gh api \
-            -H "Accept: application/vnd.github+json" \
-            "/repos/${GITHUB_REPOSITORY}/actions/workflows/release-staging.yml/runs?head_sha=${RELEASE_SHA}&event=workflow_dispatch&per_page=20" \
-            --jq '[.workflow_runs[] | select(.status == "completed" and .conclusion == "success")] | length')"
-          test "$count" -gt 0 || {
-            echo "::error::Aucune Release staging verte n'est attachée au SHA $RELEASE_SHA."
+          result=""
+          for attempt in $(seq 1 30); do
+            result="$(gh api \
+              -H "Accept: application/vnd.github+json" \
+              "/repos/${GITHUB_REPOSITORY}/actions/workflows/release-staging.yml/runs?head_sha=${RELEASE_SHA}&per_page=20" \
+              --jq '(.workflow_runs | sort_by(.run_started_at) | reverse | .[0]) as $run | if $run == null then "missing" elif $run.status == "completed" then ($run.conclusion // "unknown") else $run.status end')"
+            case "$result" in
+              success)
+                echo "Release staging verte trouvée pour $RELEASE_SHA."
+                break
+                ;;
+              failure|cancelled|timed_out|action_required|startup_failure)
+                echo "::error::La Release staging du SHA $RELEASE_SHA est terminée avec l'état $result."
+                exit 1
+                ;;
+              *)
+                echo "Release staging $RELEASE_SHA: $result — nouvelle vérification dans 20 s."
+                sleep 20
+                ;;
+            esac
+          done
+          test "$result" = "success" || {
+            echo "::error::La Release staging du SHA $RELEASE_SHA n'est pas devenue verte dans la fenêtre du gate."
             exit 1
           }
 
