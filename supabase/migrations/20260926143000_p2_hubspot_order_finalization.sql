@@ -17,7 +17,7 @@ declare
   should_recalculate boolean := true;
 begin
   select
-    coalesce(o.rounding_adjustment_ht, 0),
+    coalesce(nullif(to_jsonb(o) ->> 'rounding_adjustment_ht', '')::numeric, 0),
     coalesce(o.line_items_complete, true)
   into rounding_adjustment, should_recalculate
   from public.orders o
