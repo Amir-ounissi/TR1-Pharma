@@ -2154,20 +2154,35 @@ async function syncInboundOrders(options: {
   const products = await productMaps(options.admin, options.brandId);
   const links = await existingExternalLinks(options.admin, options.connection.id, "orders");
   const byCompany = new Map(options.pharmacies.map((pharmacy) => [pharmacy.companyId, pharmacy]));
+  const byBrandPharmacyId = new Map(
+    options.pharmacies.map((pharmacy) => [pharmacy.brandPharmacyId, pharmacy]),
+  );
   const ownerExternalIds = [...options.owners.keys()];
 
   const { data: existingOrders, error: existingOrdersError } = await options.admin
     .from("orders")
-    .select("external_order_id")
+    .select("id,external_order_id,brand_pharmacy_id,source_agent_user_id")
     .eq("brand_id", options.brandId)
-    .is("archived_at", null)
-    .not("external_order_id", "is", null);
+    .is("archived_at", null);
   if (existingOrdersError) throw existingOrdersError;
-  const existingExternalOrderIds = new Set(
-    (existingOrders ?? [])
-      .map((row) => row.external_order_id ? String(row.external_order_id) : null)
-      .filter((value): value is string => Boolean(value)),
+
+  const existingOrderById = new Map(
+    (existingOrders ?? []).map((row) => [
+      String(row.id),
+      {
+        id: String(row.id),
+        externalOrderId: row.external_order_id ? String(row.external_order_id) : null,
+        brandPharmacyId: row.brand_pharmacy_id ? String(row.brand_pharmacy_id) : null,
+        sourceAgentUserId: row.source_agent_user_id ? String(row.source_agent_user_id) : null,
+      },
+    ]),
   );
+  const existingOrderByExternalId = new Map(
+    [...existingOrderById.values()]
+      .filter((row) => Boolean(row.externalOrderId))
+      .map((row) => [row.externalOrderId!, row]),
+  );
+  const processedRemoteIds = new Set<string>();
 
   const properties = [
     "dealname",
@@ -2206,6 +2221,9 @@ async function syncInboundOrders(options: {
       });
 
       for (const remote of records) {
+        const remoteId = externalId(remote);
+        if (remoteId && processedRemoteIds.has(remoteId)) continue;
+        if (remoteId) processedRemoteIds.add(remoteId);
         counter.seen += 1;
         try {
           await importOrder({
@@ -2258,7 +2276,48 @@ async function syncInboundOrders(options: {
 
     for (const remote of discoveryRecords) {
       const remoteId = externalId(remote);
-      if (!remoteId || links.has(remoteId) || existingExternalOrderIds.has(remoteId)) continue;
+      if (!remoteId || processedRemoteIds.has(remoteId)) continue;
+
+      const linkedOrderId =
+        links.get(remoteId) ?? existingOrderByExternalId.get(remoteId)?.id ?? null;
+      if (linkedOrderId) {
+        const localOrder = existingOrderById.get(linkedOrderId) ?? null;
+        const linkedPharmacy = localOrder?.brandPharmacyId
+          ? byBrandPharmacyId.get(localOrder.brandPharmacyId) ?? null
+          : null;
+
+        if (linkedPharmacy) {
+          processedRemoteIds.add(remoteId);
+          counter.seen += 1;
+          try {
+            await importOrder({
+              admin: options.admin,
+              client: options.client,
+              brandId: options.brandId,
+              organizationId: options.organizationId,
+              connectionId: options.connection.id,
+              actorId: options.actorId,
+              sourceAgentUserId:
+                (text(remote.properties?.hubspot_owner_id)
+                  ? options.owners.get(text(remote.properties?.hubspot_owner_id)!)
+                  : null) ??
+                localOrder?.sourceAgentUserId ??
+                linkedPharmacy.currentAgentUserId,
+              pharmacy: linkedPharmacy,
+              remote,
+              orderLinks: links,
+              products,
+            });
+            counter.succeeded += 1;
+          } catch (error) {
+            counter.failed += 1;
+            console.error(
+              `[hubspot] inbound linked order failed: ${syncErrorMessage(error).slice(0, 400)}`,
+            );
+          }
+          continue;
+        }
+      }
 
       const companyIds = await dealCompanyIds(options.client, remoteId);
       if (!companyIds.length) continue;
@@ -2311,6 +2370,7 @@ async function syncInboundOrders(options: {
         }
       }
 
+      processedRemoteIds.add(remoteId);
       counter.seen += 1;
       try {
         await importOrder({
