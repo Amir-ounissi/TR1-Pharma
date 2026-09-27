@@ -8,6 +8,7 @@ import { resolveNaaliFreeUnitsRuleFromLeadStatus } from "./naali-pricing";
 import { syncHubSpotOrderAfterPersistence } from "./runtime";
 import { hubSpotCanMutateVisit, selectHubSpotVisitCandidate } from "./visit-identity";
 import { resolveHubSpotOrderSyncWindow } from "./reconciliation-window";
+import { selectHistoricalHubSpotOrderCandidate } from "./order-reconciliation";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
@@ -2161,7 +2162,7 @@ async function syncInboundOrders(options: {
 
   const { data: existingOrders, error: existingOrdersError } = await options.admin
     .from("orders")
-    .select("id,external_order_id,brand_pharmacy_id,source_agent_user_id")
+    .select("id,external_order_id,brand_pharmacy_id,source_agent_user_id,net_amount_ht,order_date,order_status")
     .eq("brand_id", options.brandId)
     .is("archived_at", null);
   if (existingOrdersError) throw existingOrdersError;
@@ -2174,6 +2175,9 @@ async function syncInboundOrders(options: {
         externalOrderId: row.external_order_id ? String(row.external_order_id) : null,
         brandPharmacyId: row.brand_pharmacy_id ? String(row.brand_pharmacy_id) : null,
         sourceAgentUserId: row.source_agent_user_id ? String(row.source_agent_user_id) : null,
+        netAmountHt: row.net_amount_ht == null ? null : Number(row.net_amount_ht),
+        orderDate: row.order_date ? String(row.order_date) : null,
+        orderStatus: row.order_status ? String(row.order_status) : null,
       },
     ]),
   );
@@ -2182,6 +2186,7 @@ async function syncInboundOrders(options: {
       .filter((row) => Boolean(row.externalOrderId))
       .map((row) => [row.externalOrderId!, row]),
   );
+  const linkedLocalOrderIds = new Set([...links.values()]);
   const processedRemoteIds = new Set<string>();
 
   const properties = [
@@ -2329,16 +2334,20 @@ async function syncInboundOrders(options: {
       if (!pharmacy) {
         const dealName = text(remote.properties?.dealname) ?? "";
         const dealCip = dealName.match(/\b\d{6,8}\b/)?.[0] ?? null;
-        // Non-pharmacy commercial deals (for example service/medical entities without
-        // a CIP in their deal name) must not create fake pharmacy records.
-        if (!dealCip) continue;
-
         const ownerExternalId = text(remote.properties?.hubspot_owner_id);
         const ownerUserId = (ownerExternalId ? options.owners.get(ownerExternalId) : null) ?? options.actorId;
         let lastError: unknown = null;
 
         for (const companyId of companyIds) {
           try {
+            // A Naali client can legitimately be a parapharmacy and therefore have
+            // no CIP. In that case the explicit client_naali flag is the eligibility
+            // signal; other CIP-less commercial entities remain ignored.
+            if (!dealCip) {
+              const relationship = await naaliCompanyRelationship(options.client, companyId, new Map());
+              if (relationship !== "client") continue;
+            }
+
             pharmacy = await ensurePharmacyForHubSpotCompany({
               admin: options.admin,
               client: options.client,
@@ -2370,6 +2379,43 @@ async function syncInboundOrders(options: {
         }
       }
 
+      const resolvedSourceAgentUserId =
+        (text(remote.properties?.hubspot_owner_id)
+          ? options.owners.get(text(remote.properties?.hubspot_owner_id)!)
+          : null) ?? pharmacy.currentAgentUserId;
+
+      if (!links.has(remoteId)) {
+        const remoteAmount = numberValue(remote.properties?.amount);
+        const remoteDate =
+          text(remote.properties?.closedate)
+          ?? text(remote.properties?.createdate)
+          ?? remote.createdAt
+          ?? null;
+        const historicalOrderId = selectHistoricalHubSpotOrderCandidate(
+          [...existingOrderById.values()],
+          {
+            remoteAmount,
+            remoteDate,
+            brandPharmacyId: pharmacy.brandPharmacyId,
+            sourceAgentUserId: resolvedSourceAgentUserId ?? null,
+            linkedOrderIds: linkedLocalOrderIds,
+          },
+        );
+
+        if (historicalOrderId) {
+          await saveExternalLink({
+            admin: options.admin,
+            connectionId: options.connection.id,
+            entityType: "orders",
+            externalId: remoteId,
+            tr1RecordId: historicalOrderId,
+            externalUpdatedAt: remote.updatedAt ?? text(remote.properties?.hs_lastmodifieddate),
+          });
+          links.set(remoteId, historicalOrderId);
+          linkedLocalOrderIds.add(historicalOrderId);
+        }
+      }
+
       processedRemoteIds.add(remoteId);
       counter.seen += 1;
       try {
@@ -2380,10 +2426,7 @@ async function syncInboundOrders(options: {
           organizationId: options.organizationId,
           connectionId: options.connection.id,
           actorId: options.actorId,
-          sourceAgentUserId:
-            (text(remote.properties?.hubspot_owner_id)
-              ? options.owners.get(text(remote.properties?.hubspot_owner_id)!)
-              : null) ?? pharmacy.currentAgentUserId,
+          sourceAgentUserId: resolvedSourceAgentUserId,
           pharmacy,
           remote,
           orderLinks: links,
