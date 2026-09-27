@@ -2337,6 +2337,7 @@ async function syncInboundOrders(options: {
         const ownerExternalId = text(remote.properties?.hubspot_owner_id);
         const ownerUserId = (ownerExternalId ? options.owners.get(ownerExternalId) : null) ?? options.actorId;
         let lastError: unknown = null;
+        let eligibleCompanySeen = Boolean(dealCip);
 
         for (const companyId of companyIds) {
           try {
@@ -2346,6 +2347,7 @@ async function syncInboundOrders(options: {
             if (!dealCip) {
               const relationship = await naaliCompanyRelationship(options.client, companyId, new Map());
               if (relationship !== "client") continue;
+              eligibleCompanySeen = true;
             }
 
             pharmacy = await ensurePharmacyForHubSpotCompany({
@@ -2363,6 +2365,13 @@ async function syncInboundOrders(options: {
           } catch (error) {
             lastError = error;
           }
+        }
+
+        if (!pharmacy && !eligibleCompanySeen) {
+          processedRemoteIds.add(remoteId);
+          counter.seen += 1;
+          counter.succeeded += 1;
+          continue;
         }
 
         if (!pharmacy) {
