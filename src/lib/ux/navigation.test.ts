@@ -38,6 +38,7 @@ describe("role navigation", () => {
 
     expect(globalLinks).toEqual([
       "/dashboard",
+      "/dashboard/admin/prestations",
       "/dashboard/admin/access-requests",
       "/dashboard/admin/onboarding",
       "/dashboard/admin/users",
