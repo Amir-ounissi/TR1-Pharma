@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   selectHistoricalHubSpotOrderCandidate,
+  selectHistoricalOutboundHubSpotOrderCandidate,
   type HistoricalHubSpotOrderCandidate,
 } from "./order-reconciliation";
 
@@ -73,6 +74,42 @@ describe("historical HubSpot order reconciliation", () => {
         remoteDate,
         brandPharmacyId: "bp-1",
         sourceAgentUserId: "amir",
+        linkedOrderIds: new Set(),
+      },
+    )).toBeNull();
+  });
+});
+
+
+describe("historical outbound HubSpot order identity", () => {
+  it("reuses the unique order that originally created the HubSpot deal even after amount drift", () => {
+    expect(selectHistoricalOutboundHubSpotOrderCandidate(
+      [candidate({ id: "original", netAmountHt: 822.82 })],
+      {
+        outboundOrderIds: new Set(["original"]),
+        brandPharmacyId: "bp-1",
+        linkedOrderIds: new Set(),
+      },
+    )).toBe("original");
+  });
+
+  it("does not reuse an outbound order already linked elsewhere", () => {
+    expect(selectHistoricalOutboundHubSpotOrderCandidate(
+      [candidate({ id: "original" })],
+      {
+        outboundOrderIds: new Set(["original"]),
+        brandPharmacyId: "bp-1",
+        linkedOrderIds: new Set(["original"]),
+      },
+    )).toBeNull();
+  });
+
+  it("refuses ambiguous outbound history instead of guessing", () => {
+    expect(selectHistoricalOutboundHubSpotOrderCandidate(
+      [candidate({ id: "one" }), candidate({ id: "two" })],
+      {
+        outboundOrderIds: new Set(["one", "two"]),
+        brandPharmacyId: "bp-1",
         linkedOrderIds: new Set(),
       },
     )).toBeNull();
