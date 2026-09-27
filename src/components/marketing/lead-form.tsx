@@ -10,7 +10,7 @@ import { trackMarketingEvent } from "@/lib/marketing/analytics";
 
 const initialState: LeadCaptureState = {};
 
-export function LeadForm() {
+export function LeadForm({ audience = "brand" }: { audience?: "brand" | "pharmacy" }) {
   const [state, action, pending] = useActionState(captureLeadAction, initialState);
   const started = useRef(false);
 
@@ -26,7 +26,7 @@ export function LeadForm() {
   };
 
   return (
-    <form action={action} className="grid gap-5" id="diagnostic-form" onFocus={start}>
+    <form action={action} className="grid gap-5" onFocus={start}>\n      <input name="leadAudience" type="hidden" value={audience} />
       {state.error ? (
         <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800" role="alert">{state.error}</p>
       ) : null}
@@ -55,7 +55,7 @@ export function LeadForm() {
         defaultValue={state.fields?.companyName}
         error={state.fieldErrors?.companyName}
         id="companyName"
-        label="Marque ou laboratoire"
+        label={audience === "pharmacy" ? "Nom de la pharmacie" : "Marque ou laboratoire"}
         maxLength={160}
         name="companyName"
       />
@@ -71,7 +71,7 @@ export function LeadForm() {
         onClick={() => trackMarketingEvent("lead_form_submit")}
         type="submit"
       >
-        {pending ? "Envoi…" : "Demander une démo"}
+        {pending ? "Envoi…" : audience === "pharmacy" ? "Être recontacté" : "Parler de mon développement"}
       </Button>
 
       <p className="text-sm font-semibold text-[var(--tr1-muted)]">Nous vous recontacterons pour convenir d’un créneau.</p>
