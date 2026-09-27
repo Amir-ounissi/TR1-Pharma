@@ -33,12 +33,12 @@ const fieldJourney = [
   {
     number: "02",
     title: "Rencontrer",
-    copy: "Présenter la gamme aux bons interlocuteurs et comprendre le contexte réel de l'officine.",
+    copy: "Présenter la gamme aux bons interlocuteurs et comprendre le contexte réel de l’officine.",
   },
   {
     number: "03",
     title: "Implanter",
-    copy: "Construire l'assortiment, accompagner la première commande et poser les bases du lancement.",
+    copy: "Construire l’assortiment, accompagner la première commande et poser les bases du lancement.",
   },
   {
     number: "04",
@@ -53,8 +53,8 @@ const fieldJourney = [
 ] as const;
 
 const pharmacyBenefits = [
-  ["Un interlocuteur terrain", "La même logique de suivi avant, pendant et après l'implantation.", Users],
-  ["Des marques ciblées", "Des propositions adaptées au profil de l'officine, pas un catalogue généraliste.", Store],
+  ["Un interlocuteur terrain", "La même logique de suivi avant, pendant et après l’implantation.", Users],
+  ["Des marques ciblées", "Des propositions adaptées au profil de l’officine, pas un catalogue généraliste.", Store],
   ["Une activation concrète", "Formation, animation ou merchandising lorsque le plan de la marque le prévoit.", GraduationCap],
 ] as const;
 
@@ -145,7 +145,7 @@ export default function LandingPage() {
               <h2>Une marque se développe visite après visite.</h2>
             </div>
             <p>
-              TR1 PHARMA ne s'arrête pas à la première commande. Le travail continue avec l'équipe officinale, les réassorts et les
+              TR1 PHARMA ne s’arrête pas à la première commande. Le travail continue avec l’équipe officinale, les réassorts et les
               prochaines actions utiles.
             </p>
           </div>
@@ -167,9 +167,9 @@ export default function LandingPage() {
         <div className={[styles.container, styles.reportGrid].join(" ")}>
           <div className={styles.reportCopy}>
             <p className={styles.eyebrow}>Après une visite</p>
-            <h2>Vous savez ce qui s'est passé. Et ce qui vient ensuite.</h2>
+            <h2>Vous savez ce qui s’est passé. Et ce qui vient ensuite.</h2>
             <p>
-              La plateforme TR1 soutient l'exécution terrain : préparation, compte rendu, commandes, actions menées et prochaine
+              La plateforme TR1 soutient l’exécution terrain : préparation, compte rendu, commandes, actions menées et prochaine
               étape au même endroit.
             </p>
             <Link href="/connexion" className={styles.textLink}>
@@ -274,7 +274,7 @@ export default function LandingPage() {
           <div className={styles.contactHeading}>
             <p className={styles.eyebrow}>Prendre contact</p>
             <h2>Parlons de votre développement.</h2>
-            <p>Dites-nous où en est votre marque aujourd'hui et ce que vous voulez construire sur le terrain.</p>
+            <p>Dites-nous où en est votre marque aujourd’hui et ce que vous voulez construire sur le terrain.</p>
           </div>
 
           <div className={styles.contactLayout}>
