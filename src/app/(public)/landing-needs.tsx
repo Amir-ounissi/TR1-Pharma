@@ -10,7 +10,7 @@ const needs = [
     label: "Je lance ma marque",
     kicker: "Lancement",
     title: "Créer les premiers points de vente avec une méthode terrain claire.",
-    copy: "On part du positionnement, de la zone et du profil d'officine recherché pour organiser la prospection et les premiers rendez-vous.",
+    copy: "On part du positionnement, de la zone et du profil d’officine recherché pour organiser la prospection et les premiers rendez-vous.",
     actions: ["Ciblage des officines", "Prospection et rendez-vous", "Premières implantations", "Suivi des retours terrain"],
   },
   {
@@ -18,7 +18,7 @@ const needs = [
     label: "Je veux développer une zone",
     kicker: "Développement régional",
     title: "Donner plus de rythme à un territoire déjà ouvert.",
-    copy: "On priorise les comptes, organise les tournées et travaille les opportunités de réassort, de réactivation ou d'extension de gamme.",
+    copy: "On priorise les comptes, organise les tournées et travaille les opportunités de réassort, de réactivation ou d’extension de gamme.",
     actions: ["Priorisation du portefeuille", "Tournées terrain", "Réassort et réactivation", "Lecture des prochaines actions"],
   },
   {
@@ -26,7 +26,7 @@ const needs = [
     label: "Je veux activer après implantation",
     kicker: "Activation",
     title: "Faire vivre la gamme après son arrivée en officine.",
-    copy: "Selon le dispositif prévu par la marque, TR1 coordonne les actions utiles pour aider l'équipe officinale à connaître, voir et conseiller la gamme.",
+    copy: "Selon le dispositif prévu par la marque, TR1 coordonne les actions utiles pour aider l’équipe officinale à connaître, voir et conseiller la gamme.",
     actions: ["Formation équipe", "Animation", "Merchandising", "Suivi après activation"],
   },
 ] as const;
@@ -43,7 +43,7 @@ export function LandingNeeds() {
             <p className={styles.eyebrow}>Selon votre situation</p>
             <h2>Le terrain ne commence pas au même endroit pour tout le monde.</h2>
           </div>
-          <p>Choisissez votre point de départ. L'accompagnement s'adapte au niveau de maturité de votre développement en pharmacie.</p>
+          <p>Choisissez votre point de départ. L’accompagnement s’adapte au niveau de maturité de votre développement en pharmacie.</p>
         </div>
 
         <div className={styles.needsControls} role="tablist" aria-label="Besoins de développement">
