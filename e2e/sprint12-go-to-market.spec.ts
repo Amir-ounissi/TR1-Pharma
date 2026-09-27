@@ -24,16 +24,16 @@ test.beforeAll(() => mkdirSync(artifacts, { recursive: true }));
 
 test("landing desktop, parcours marque/pharmacie et capture des leads", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1, name: "Développez votre marque en pharmacie." })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Votre prochain point de vente commence sur le terrain." })).toBeVisible();
   await expect(page.getByText("Du sell-in au sell-out.", { exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Je représente une marque" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Parlons de votre marque" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Je suis pharmacien" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Votre développement ne s’arrête pas au bon de commande." })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Des marques choisies pour votre officine. Un suivi après l’implantation." })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Sélectionner → Implanter → Activer → Suivre." })).toBeVisible();
-  await expect(page.getByText(/Les commandes et réassorts sont distingués des ventes consommateur/)).toBeVisible();
-  await expect(page.getByRole("link", { name: "Voir les contenus LinkedIn" })).toHaveAttribute("href", "https://fr.linkedin.com/in/amirounissi");
-  await expect(page.locator("main > section")).toHaveCount(6);
+  await expect(page.getByRole("heading", { name: "Une marque se développe visite après visite." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Une gamme ne doit pas juste arriver. Elle doit être accompagnée." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Vous savez ce qui s’est passé. Et ce qui vient ensuite." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Le terrain ne commence pas au même endroit pour tout le monde." })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Voir le travail terrain" })).toHaveAttribute("href", "https://fr.linkedin.com/in/amirounissi");
+  await expect(page.locator("main > section")).toHaveCount(7);
   await page.screenshot({ path: `${artifacts}/landing-desktop.png`, fullPage: true });
 
   await page.getByRole("link", { name: "Nous contacter" }).first().click();
@@ -71,10 +71,10 @@ test("landing desktop, parcours marque/pharmacie et capture des leads", async ({
 test("landing mobile reste lisible et sans débordement", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1, name: "Développez votre marque en pharmacie." })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Je représente une marque" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Votre prochain point de vente commence sur le terrain." })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Parlons de votre marque" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Je suis pharmacien" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Sélectionner → Implanter → Activer → Suivre." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Vous savez ce qui s’est passé. Et ce qui vient ensuite." })).toBeVisible();
   await expect(page.locator("#contact-marque")).toBeVisible();
   await expect(page.locator("#contact-pharmacie")).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
