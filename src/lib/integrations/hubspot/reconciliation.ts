@@ -8,7 +8,7 @@ import { resolveNaaliFreeUnitsRuleFromLeadStatus } from "./naali-pricing";
 import { syncHubSpotOrderAfterPersistence } from "./runtime";
 import { hubSpotCanMutateVisit, selectHubSpotVisitCandidate } from "./visit-identity";
 import { resolveHubSpotOrderSyncWindow } from "./reconciliation-window";
-import { selectHistoricalHubSpotOrderCandidate } from "./order-reconciliation";
+import { selectHistoricalHubSpotOrderCandidate, selectHistoricalOutboundHubSpotOrderCandidate } from "./order-reconciliation";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
@@ -2162,13 +2162,43 @@ async function syncInboundOrders(options: {
 
   const { data: existingOrders, error: existingOrdersError } = await options.admin
     .from("orders")
-    .select("id,external_order_id,brand_pharmacy_id,source_agent_user_id,net_amount_ht,order_date,order_status")
+    .select("id,external_order_id,brand_pharmacy_id,source_agent_user_id,net_amount_ht,order_date,order_status,source,notes")
     .eq("brand_id", options.brandId)
     .is("archived_at", null);
   if (existingOrdersError) throw existingOrdersError;
 
+  // Production must never count dry-run fixtures as booked revenue. This marker is
+  // intentionally exact so legitimate manual orders are never touched.
+  const dryRunOrderIds = (existingOrders ?? [])
+    .filter((row) => row.source === "manual" && row.notes === "Test E2E staging — HubSpot dry-run")
+    .map((row) => String(row.id));
+  for (const dryRunOrderId of dryRunOrderIds) {
+    await options.admin
+      .from("connector_external_child_links")
+      .delete()
+      .eq("connection_id", options.connection.id)
+      .eq("parent_entity_type", "orders")
+      .eq("parent_tr1_record_id", dryRunOrderId);
+    await options.admin
+      .from("connector_external_links")
+      .delete()
+      .eq("connection_id", options.connection.id)
+      .eq("entity_type", "orders")
+      .eq("tr1_record_id", dryRunOrderId);
+    const { error: dryRunDeleteError } = await options.admin
+      .from("orders")
+      .delete()
+      .eq("id", dryRunOrderId)
+      .eq("brand_id", options.brandId)
+      .eq("source", "manual")
+      .eq("notes", "Test E2E staging — HubSpot dry-run");
+    if (dryRunDeleteError) throw dryRunDeleteError;
+  }
+
+  const activeExistingOrders = (existingOrders ?? [])
+    .filter((row) => !dryRunOrderIds.includes(String(row.id)));
   const existingOrderById = new Map(
-    (existingOrders ?? []).map((row) => [
+    activeExistingOrders.map((row) => [
       String(row.id),
       {
         id: String(row.id),
@@ -2178,6 +2208,7 @@ async function syncInboundOrders(options: {
         netAmountHt: row.net_amount_ht == null ? null : Number(row.net_amount_ht),
         orderDate: row.order_date ? String(row.order_date) : null,
         orderStatus: row.order_status ? String(row.order_status) : null,
+        source: row.source ? String(row.source) : null,
       },
     ]),
   );
@@ -2187,7 +2218,115 @@ async function syncInboundOrders(options: {
       .map((row) => [row.externalOrderId!, row]),
   );
   const linkedLocalOrderIds = new Set([...links.values()]);
+
+  const { data: outboundIdentityEvents, error: outboundIdentityEventsError } = await options.admin
+    .from("connector_sync_events")
+    .select("tr1_record_id,external_id")
+    .eq("connection_id", options.connection.id)
+    .eq("entity_type", "orders")
+    .eq("status", "succeeded")
+    .is("child_key", null)
+    .in("event_type", ["create", "update", "associate"]);
+  if (outboundIdentityEventsError) throw outboundIdentityEventsError;
+
+  const outboundOrderIdsByRemote = new Map<string, Set<string>>();
+  for (const event of outboundIdentityEvents ?? []) {
+    const remoteId = event.external_id ? String(event.external_id) : null;
+    const orderId = event.tr1_record_id ? String(event.tr1_record_id) : null;
+    if (!remoteId || !orderId) continue;
+    const orderIds = outboundOrderIdsByRemote.get(remoteId) ?? new Set<string>();
+    orderIds.add(orderId);
+    outboundOrderIdsByRemote.set(remoteId, orderIds);
+  }
+
+  // If an outbound TR1 order created a HubSpot deal and a later inbound amount
+  // correction created a second imported order, the current HubSpot-linked order is
+  // canonical. Remove only the older unlinked import that has the same provider
+  // identity; this is stronger than amount/date matching and survives amount drift.
+  for (const [remoteId, canonicalOrderId] of links.entries()) {
+    const canonicalOrder = existingOrderById.get(canonicalOrderId);
+    if (!canonicalOrder || canonicalOrder.source !== "import") continue;
+    const historicalOrderIds = outboundOrderIdsByRemote.get(remoteId) ?? new Set<string>();
+    for (const historicalOrderId of historicalOrderIds) {
+      if (historicalOrderId === canonicalOrderId || linkedLocalOrderIds.has(historicalOrderId)) continue;
+      const historicalOrder = existingOrderById.get(historicalOrderId);
+      if (
+        !historicalOrder
+        || historicalOrder.source !== "import"
+        || historicalOrder.brandPharmacyId !== canonicalOrder.brandPharmacyId
+      ) continue;
+
+      await options.admin
+        .from("connector_external_child_links")
+        .delete()
+        .eq("connection_id", options.connection.id)
+        .eq("parent_entity_type", "orders")
+        .eq("parent_tr1_record_id", historicalOrderId);
+      await options.admin
+        .from("connector_external_links")
+        .delete()
+        .eq("connection_id", options.connection.id)
+        .eq("entity_type", "orders")
+        .eq("tr1_record_id", historicalOrderId);
+      const { error: duplicateDeleteError } = await options.admin
+        .from("orders")
+        .delete()
+        .eq("id", historicalOrderId)
+        .eq("brand_id", options.brandId)
+        .eq("source", "import");
+      if (duplicateDeleteError) throw duplicateDeleteError;
+      existingOrderById.delete(historicalOrderId);
+      if (historicalOrder.externalOrderId) existingOrderByExternalId.delete(historicalOrder.externalOrderId);
+    }
+  }
+
   const processedRemoteIds = new Set<string>();
+
+  async function linkHistoricalOrderIfPossible(
+    remote: HubSpotRecord,
+    pharmacy: PharmacyContext,
+    sourceAgentUserId: string | null,
+  ) {
+    const remoteId = externalId(remote);
+    if (!remoteId || links.has(remoteId)) return;
+
+    const outboundOrderId = selectHistoricalOutboundHubSpotOrderCandidate(
+      [...existingOrderById.values()],
+      {
+        outboundOrderIds: outboundOrderIdsByRemote.get(remoteId) ?? new Set<string>(),
+        brandPharmacyId: pharmacy.brandPharmacyId,
+        linkedOrderIds: linkedLocalOrderIds,
+      },
+    );
+    const remoteAmount = numberValue(remote.properties?.amount);
+    const remoteDate =
+      text(remote.properties?.closedate)
+      ?? text(remote.properties?.createdate)
+      ?? remote.createdAt
+      ?? null;
+    const historicalOrderId = outboundOrderId ?? selectHistoricalHubSpotOrderCandidate(
+      [...existingOrderById.values()],
+      {
+        remoteAmount,
+        remoteDate,
+        brandPharmacyId: pharmacy.brandPharmacyId,
+        sourceAgentUserId,
+        linkedOrderIds: linkedLocalOrderIds,
+      },
+    );
+
+    if (!historicalOrderId) return;
+    await saveExternalLink({
+      admin: options.admin,
+      connectionId: options.connection.id,
+      entityType: "orders",
+      externalId: remoteId,
+      tr1RecordId: historicalOrderId,
+      externalUpdatedAt: remote.updatedAt ?? text(remote.properties?.hs_lastmodifieddate),
+    });
+    links.set(remoteId, historicalOrderId);
+    linkedLocalOrderIds.add(historicalOrderId);
+  }
 
   const properties = [
     "dealname",
@@ -2231,6 +2370,11 @@ async function syncInboundOrders(options: {
         if (remoteId) processedRemoteIds.add(remoteId);
         counter.seen += 1;
         try {
+          const sourceAgentUserId =
+            (text(remote.properties?.hubspot_owner_id)
+              ? options.owners.get(text(remote.properties?.hubspot_owner_id)!)
+              : null) ?? pharmacy.currentAgentUserId;
+          await linkHistoricalOrderIfPossible(remote, pharmacy, sourceAgentUserId);
           await importOrder({
             admin: options.admin,
             client: options.client,
@@ -2238,10 +2382,7 @@ async function syncInboundOrders(options: {
             organizationId: options.organizationId,
             connectionId: options.connection.id,
             actorId: options.actorId,
-            sourceAgentUserId:
-              (text(remote.properties?.hubspot_owner_id)
-                ? options.owners.get(text(remote.properties?.hubspot_owner_id)!)
-                : null) ?? pharmacy.currentAgentUserId,
+            sourceAgentUserId,
             pharmacy,
             remote,
             orderLinks: links,
@@ -2393,37 +2534,11 @@ async function syncInboundOrders(options: {
           ? options.owners.get(text(remote.properties?.hubspot_owner_id)!)
           : null) ?? pharmacy.currentAgentUserId;
 
-      if (!links.has(remoteId)) {
-        const remoteAmount = numberValue(remote.properties?.amount);
-        const remoteDate =
-          text(remote.properties?.closedate)
-          ?? text(remote.properties?.createdate)
-          ?? remote.createdAt
-          ?? null;
-        const historicalOrderId = selectHistoricalHubSpotOrderCandidate(
-          [...existingOrderById.values()],
-          {
-            remoteAmount,
-            remoteDate,
-            brandPharmacyId: pharmacy.brandPharmacyId,
-            sourceAgentUserId: resolvedSourceAgentUserId ?? null,
-            linkedOrderIds: linkedLocalOrderIds,
-          },
-        );
-
-        if (historicalOrderId) {
-          await saveExternalLink({
-            admin: options.admin,
-            connectionId: options.connection.id,
-            entityType: "orders",
-            externalId: remoteId,
-            tr1RecordId: historicalOrderId,
-            externalUpdatedAt: remote.updatedAt ?? text(remote.properties?.hs_lastmodifieddate),
-          });
-          links.set(remoteId, historicalOrderId);
-          linkedLocalOrderIds.add(historicalOrderId);
-        }
-      }
+      await linkHistoricalOrderIfPossible(
+        remote,
+        pharmacy,
+        resolvedSourceAgentUserId ?? null,
+      );
 
       processedRemoteIds.add(remoteId);
       counter.seen += 1;
