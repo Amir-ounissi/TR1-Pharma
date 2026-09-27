@@ -177,9 +177,9 @@ jobs:
       SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
       HUBSPOT_ACCESS_TOKEN: ${{ secrets.HUBSPOT_ACCESS_TOKEN }}
       AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}
-      LEAD_CAPTURE_SALT: ${{ secrets.LEAD_CAPTURE_SALT }}
-      LEAD_CAPTURE_ENABLED: ${{ vars.LEAD_CAPTURE_ENABLED }}
-      BOOKING_URL: ${{ vars.BOOKING_URL }}
+      LEAD_CAPTURE_SALT_OVERRIDE: ${{ secrets.LEAD_CAPTURE_SALT }}
+      LEAD_CAPTURE_ENABLED_OVERRIDE: ${{ vars.LEAD_CAPTURE_ENABLED }}
+      BOOKING_URL_OVERRIDE: ${{ vars.BOOKING_URL }}
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
       VERCEL_ORG_ID: team_WhI0GBrg7UZgZpDsvTwUGZ8V
@@ -199,7 +199,7 @@ jobs:
       - name: Vérifier la configuration production
         run: |
           set -eu
-          for name in STAGING_DATABASE_URL STAGING_SUPABASE_PROJECT_REF PRODUCTION_DATABASE_URL PRODUCTION_SUPABASE_PROJECT_REF PRODUCTION_SUPABASE_URL PRODUCTION_SUPABASE_PUBLISHABLE_KEY SUPABASE_SECRET_KEY HUBSPOT_ACCESS_TOKEN AI_GATEWAY_API_KEY LEAD_CAPTURE_SALT LEAD_CAPTURE_ENABLED BOOKING_URL VERCEL_TOKEN VERCEL_AUTOMATION_BYPASS_SECRET VERCEL_ORG_ID VERCEL_PROJECT_ID PRODUCTION_URL; do
+          for name in STAGING_DATABASE_URL STAGING_SUPABASE_PROJECT_REF PRODUCTION_DATABASE_URL PRODUCTION_SUPABASE_PROJECT_REF PRODUCTION_SUPABASE_URL PRODUCTION_SUPABASE_PUBLISHABLE_KEY SUPABASE_SECRET_KEY HUBSPOT_ACCESS_TOKEN AI_GATEWAY_API_KEY VERCEL_TOKEN VERCEL_AUTOMATION_BYPASS_SECRET VERCEL_ORG_ID VERCEL_PROJECT_ID PRODUCTION_URL; do
             eval "value=\${$name:-}"
             test -n "$value" || {
               echo "::error::$name n'est pas configuré pour l'environnement production."
@@ -267,7 +267,11 @@ jobs:
           # GitHub production environment. Vercel env pull intentionally redacts
           # sensitive values, so it cannot be used as a secret transport.
           SUPABASE_ADMIN_KEY="$SUPABASE_SECRET_KEY"
+          LEAD_CAPTURE_SALT="${LEAD_CAPTURE_SALT_OVERRIDE:-$(printf 'tr1-lead-capture:%s' "$SUPABASE_SECRET_KEY" | sha256sum | awk '{print $1}')}"
+          LEAD_CAPTURE_ENABLED="${LEAD_CAPTURE_ENABLED_OVERRIDE:-true}"
+          BOOKING_URL="${BOOKING_URL_OVERRIDE:-}"
           echo "::add-mask::$SUPABASE_ADMIN_KEY"
+          echo "::add-mask::$LEAD_CAPTURE_SALT"
           echo "::add-mask::$AI_GATEWAY_API_KEY"
           RECONCILE_TOKEN="$(printf 'tr1-hubspot-reconcile:%s' "$VERCEL_AUTOMATION_BYPASS_SECRET" | sha256sum | awk '{print $1}')"
           echo "::add-mask::$RECONCILE_TOKEN"
