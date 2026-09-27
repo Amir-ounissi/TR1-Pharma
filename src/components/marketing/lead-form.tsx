@@ -62,8 +62,8 @@ export function LeadForm({ audience = "brand" }: { audience?: "brand" | "pharmac
       />
 
       <div aria-hidden="true" className="absolute -left-[10000px] h-px w-px overflow-hidden">
-        <Label htmlFor="website">Site web</Label>
-        <Input autoComplete="off" id="website" name="website" tabIndex={-1} />
+        <Label htmlFor={`${audience}-website`}>Site web</Label>
+        <Input autoComplete="off" id={`${audience}-website`} name="website" tabIndex={-1} />
       </div>
 
       <Button
