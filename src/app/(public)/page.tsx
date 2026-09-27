@@ -1,46 +1,29 @@
 import type { Metadata } from "next";
-import { ArrowRight, BriefcaseBusiness, CalendarDays, Check, Clock3, GraduationCap, MoveUpRight } from "lucide-react";
-import { LandingPilotageMap } from "@/components/marketing/landing-pilotage-map";
+import Link from "next/link";
+import { ArrowRight, BarChart3, Check, GraduationCap, Handshake, MapPin, PackageCheck, RefreshCw, Store, Users } from "lucide-react";
 import { LeadForm } from "@/components/marketing/lead-form";
 import { MarketingPageEvent, MarketingTrackedLink } from "@/components/marketing/marketing-events";
 import { RecoveryHashRedirect } from "@/components/auth/recovery-hash-redirect";
-import { demoPharmacyById } from "@/lib/marketing/demo-network";
 import styles from "./landing.module.css";
 
 export const metadata: Metadata = {
-  title: "TR1 Pharma | Du sell-in au sell-out en pharmacie",
-  description:
-    "Pilotez visites commerciales, animations, formations et prochaines actions dans votre réseau officinal avec TR1 Pharma.",
+  title: "TR1 Pharma | Développement commercial terrain en pharmacie",
+  description: "TR1 Pharma accompagne les marques en pharmacie, du sell-in au sell-out : prospection, implantation, activation, formation, animation et suivi terrain.",
 };
 
-const useCases = [
-  {
-    number: "01", label: "Commercial", icon: BriefcaseBusiness,
-    title: "Développez vos comptes.",
-    description: "Le bon contexte avant la visite. Une commande, un compte rendu et une prochaine action directement depuis le terrain.",
-    features: ["Visites et portefeuille pharmacies", "Commandes et réassorts", "Compte rendu mobile"],
-    outcome: "Chaque visite prépare la suivante.",
-  },
-  {
-    number: "02", label: "Animations", icon: CalendarDays,
-    title: "Activez vos points de vente.",
-    description: "Un brief clair pour l’intervenant. Un planning partagé pour la marque. Les preuves et le bilan réunis après chaque animation.",
-    features: ["Intervenants, briefs et planning", "Photos et ventes déclarées", "Coûts et suivi de facturation"],
-    outcome: "Chaque animation reste suivie.",
-  },
-  {
-    number: "03", label: "Formations", icon: GraduationCap,
-    title: "Accompagnez le conseil.",
-    description: "Des modules pour les équipes officinales. Le suivi des participants et les résultats des quiz pour savoir ce qui a été retenu.",
-    features: ["Modules par gamme ou produit", "Formations et participants", "Quiz, scores et progression"],
-    outcome: "Chaque formation laisse une trace utile.",
-  },
+const brandActions = [
+  ["Prospection ciblée", "Identifier et approcher les officines pertinentes pour la marque.", Store],
+  ["Implantation", "Construire l’entrée en pharmacie et développer les références adaptées.", PackageCheck],
+  ["Réassort", "Suivre les commandes, les stocks disponibles et les prochaines actions commerciales.", RefreshCw],
+  ["Activation", "Former les équipes, coordonner les animations et soutenir la visibilité en officine.", GraduationCap],
+  ["Pilotage", "Tracer les actions terrain et restituer les indicateurs réellement disponibles.", BarChart3],
 ] as const;
 
-const priorities = [
-  { pharmacy: demoPharmacyById.get("arcades-lille")!, mode: "commercial", label: "Commercial" },
-  { pharmacy: demoPharmacyById.get("republique-paris")!, mode: "animations", label: "Animation" },
-  { pharmacy: demoPharmacyById.get("prado-marseille")!, mode: "formations", label: "Formation" },
+const method = [
+  ["01", "Sélectionner", "Cibler les pharmacies cohérentes avec le positionnement, la catégorie et le potentiel de la marque."],
+  ["02", "Implanter", "Présenter la gamme, construire l’assortiment et accompagner la première commande."],
+  ["03", "Activer", "Former, animer, travailler la visibilité et donner à l’équipe officinale les moyens de conseiller."],
+  ["04", "Suivre", "Revenir sur les commandes, réassorts, actions réalisées et ventes lorsqu’elles sont effectivement mesurées."],
 ] as const;
 
 export default function LandingPage() {
@@ -49,146 +32,68 @@ export default function LandingPage() {
       <RecoveryHashRedirect />
       <MarketingPageEvent event="landing_view" />
 
-      <section className="px-5 pb-12 pt-9 sm:py-14 lg:px-8 lg:py-16">
-        <div className="mx-auto max-w-7xl">
-          <div className="mx-auto max-w-5xl text-center">
-            <div className="inline-flex max-w-full items-center justify-center rounded-full border border-[#0b1e32]/10 bg-white/80 px-4 py-2 font-mono text-[.58rem] font-black uppercase leading-5 tracking-[.13em] text-[#c84f24] shadow-[0_8px_24px_rgba(7,20,33,.04)] sm:text-[.62rem]">
-              Cockpit d’exécution commerciale terrain
-            </div>
-
-            <h1 className="mx-auto mt-5 max-w-[23rem] text-balance text-[3.2rem] font-black leading-[.9] tracking-[-.065em] text-[#c84f24] sm:mt-6 sm:max-w-5xl sm:text-[5.25rem] sm:leading-[.88] lg:text-[6.35rem]">
-              Du sell-in au sell-out<span className="text-[#0b1e32]">.</span>
-            </h1>
-
-            <p className="mx-auto mt-4 max-w-[22rem] text-balance text-[1.45rem] font-black leading-[1.03] tracking-[-.035em] text-[#0b1e32] sm:mt-5 sm:max-w-3xl sm:text-[2.15rem] sm:leading-[1.08] lg:text-[2.5rem]">
-              Pilotez chaque action qui fait vendre en pharmacie.
-            </p>
-
-            <p className="mx-auto mt-5 max-w-[24rem] text-[.98rem] leading-[1.65] text-[#667384] sm:mt-6 sm:max-w-2xl sm:text-[1.05rem] sm:leading-7">
-              TR1 réunit visites commerciales, commandes, animations, formations et suivi du réseau dans un même cockpit terrain. Vos équipes savent où agir. Vous savez ce qui a été fait et ce qui doit suivre.
-            </p>
-
-            <div className="mt-6 sm:mt-7">
-              <MarketingTrackedLink
-                className="inline-flex min-h-12 w-full max-w-[22rem] items-center justify-center gap-2 rounded-xl bg-[#c84f24] px-5 font-mono text-[.68rem] font-black uppercase tracking-[.06em] text-white shadow-[0_14px_30px_rgba(200,79,36,.18)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#b64620] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b1e32] focus-visible:ring-offset-2 motion-reduce:transition-none sm:w-auto"
-                event="primary_cta_click"
-                href="#diagnostic"
-                properties={{ placement: "hero" }}
-              >
-                Demander une démo
-                <ArrowRight className="size-4" />
-              </MarketingTrackedLink>
-            </div>
-            <p className="mx-auto mt-4 max-w-[22rem] font-mono text-[.58rem] font-bold uppercase leading-5 tracking-[.09em] text-[#667384] sm:max-w-none sm:text-[.62rem]">
-              30 minutes · Votre organisation terrain · Vos cas d’usage
-            </p>
-          </div>
-
-          <div className="mx-auto mt-10 max-w-6xl rounded-[1.6rem] border border-[#0b1e32]/10 bg-white/72 p-2 shadow-[0_24px_70px_rgba(7,20,33,.10)] sm:mt-14 sm:p-3">
-            <LandingPilotageMap />
-          </div>
-        </div>
-      </section>
-
-      <section className={styles.platform} id="plateforme" aria-labelledby="platform-title">
+      <section className={styles.hero}>
         <div className={styles.container}>
-          <div className={styles.sectionHeading}>
-            <div>
-              <p className={styles.eyebrow}>La plateforme</p>
-              <h2 id="platform-title" className={styles.heading}>Trois métiers.<br />Un même suivi.</h2>
-            </div>
-            <p className={styles.intro}>Du premier contact au réassort, vos équipes travaillent autour de la même pharmacie. Vous gardez une lecture commune de votre réseau.</p>
+          <div className={styles.heroBadge}><MapPin size={14} /> PACA · Gard · Hérault</div>
+          <h1>Développez votre marque <span>en pharmacie.</span></h1>
+          <p className={styles.heroPromise}>Du sell-in au sell-out.</p>
+          <p className={styles.heroIntro}>TR1 PHARMA est un partenaire commercial terrain multimarque. Nous ouvrons les bonnes portes, accompagnons l’implantation et organisons les actions qui font vivre une gamme dans la durée.</p>
+          <div className={styles.heroChoices}>
+            <MarketingTrackedLink event="primary_cta_click" href="#marques" properties={{ placement: "hero_brand" }} className={styles.primaryCta}>Je représente une marque <ArrowRight size={17} /></MarketingTrackedLink>
+            <MarketingTrackedLink event="primary_cta_click" href="#pharmacies" properties={{ placement: "hero_pharmacy" }} className={styles.secondaryCta}>Je suis pharmacien <ArrowRight size={17} /></MarketingTrackedLink>
           </div>
+          <p className={styles.heroNote}>Une exécution terrain structurée. Pas une promesse de sell-out garanti.</p>
+        </div>
+      </section>
 
-          <div className={styles.useCases}>
-            {useCases.map(({ number, label, icon: Icon, title, description, features, outcome }, index) => (
-              <article className={styles.useCase} key={label} id={index === 1 ? "animations-formations" : undefined}>
-                <div className={styles.useCaseTop}>
-                  <span className={styles.role}><Icon size={18} strokeWidth={1.6} aria-hidden="true" />{label}</span>
-                  <span className={styles.number} aria-hidden="true">{number}</span>
-                </div>
-                <h3>{title}</h3>
-                <p className={styles.description}>{description}</p>
-                <ul className={styles.features}>
-                  {features.map((feature) => <li key={feature}><Check size={15} strokeWidth={1.8} aria-hidden="true" />{feature}</li>)}
-                </ul>
-                <p className={styles.outcome}>{outcome}</p>
-              </article>
-            ))}
+      <section className={styles.brandSection} id="marques">
+        <div className={styles.container}>
+          <div className={styles.splitHeading}>
+            <div><p className={styles.eyebrow}>Pour les marques</p><h2>Votre développement ne s’arrête pas au bon de commande.</h2></div>
+            <p>TR1 PHARMA prend en charge l’exécution commerciale locale : de la prospection jusqu’au suivi après implantation, avec un interlocuteur terrain et une lecture claire des actions menées.</p>
           </div>
-          <div className={styles.platformFoot}>
-            <p>Visites, commandes, animations et formations. <strong>Tout reste lié au compte pharmacie.</strong></p>
-            <DemoLink placement="after_use_cases" className={styles.textLink} />
+          <div className={styles.actionGrid}>
+            {brandActions.map(([title, copy, Icon]) => <article key={title} className={styles.actionCard}><Icon size={20} /><h3>{title}</h3><p>{copy}</p></article>)}
+          </div>
+          <div className={styles.platformStrip}><div><strong>La plateforme soutient le terrain.</strong><span>Visites, missions, animateurs, formateurs et reporting sont organisés au même endroit.</span></div><Link href="/connexion">Accès plateforme <ArrowRight size={15} /></Link></div>
+        </div>
+      </section>
+
+      <section className={styles.pharmacySection} id="pharmacies">
+        <div className={[styles.container, styles.pharmacyGrid].join(" ")}>
+          <div><p className={styles.eyebrow}>Pour les pharmacies</p><h2>Des marques choisies pour votre officine. Un suivi après l’implantation.</h2><p className={styles.sectionCopy}>L’objectif n’est pas d’empiler des références. Nous présentons des marques que nous estimons cohérentes avec votre officine et restons identifiés pour la suite.</p></div>
+          <div className={styles.pharmacyBenefits}>
+            <div><Handshake size={20} /><p><strong>Un interlocuteur identifié</strong><span>Pour la présentation, l’implantation et le suivi commercial.</span></p></div>
+            <div><Store size={20} /><p><strong>Une sélection ciblée</strong><span>Des propositions adaptées au profil de l’officine, pas un catalogue généraliste.</span></p></div>
+            <div><Users size={20} /><p><strong>Un accompagnement terrain</strong><span>Formation, animation ou activation lorsque le dispositif de la marque le prévoit.</span></p></div>
           </div>
         </div>
       </section>
 
-      <section className={styles.brand} aria-labelledby="brand-title">
-        <div className={`${styles.container} ${styles.brandGrid}`}>
-          <div className={styles.brandCopy}>
-            <p className={styles.eyebrow}>Côté marque</p>
-            <h2 id="brand-title" className={styles.heading}>Le terrain avance.<br />Vous savez où agir.</h2>
-            <p>Pharmacies à relancer, interventions à suivre, résultats à consulter : retrouvez les priorités sans reconstituer l’histoire du réseau.</p>
-            <ul className={styles.brandBenefits}>
-              <li><Check size={16} aria-hidden="true" />Coordonnez vos équipes et prestataires.</li>
-              <li><Check size={16} aria-hidden="true" />Suivez la réalisation et les résultats disponibles.</li>
-              <li><Check size={16} aria-hidden="true" />Décidez de la prochaine action.</li>
-            </ul>
-          </div>
-
-          <div className={styles.networkPreview} aria-label="Exemple de priorités pour la marque">
-            <div className={styles.previewHead}>
-              <span>Votre réseau · les prochaines actions</span>
-              <span className={styles.demoLabel}>Démonstration</span>
-            </div>
-            <div className={styles.priorities}>
-              {priorities.map(({ pharmacy, mode, label }) => (
-                <div className={styles.priority} key={pharmacy.id}>
-                  <div className={styles.priorityLabel}><span>{label}</span><span>{pharmacy.city}</span></div>
-                  <p className={styles.pharmacyName}>{pharmacy.name}</p>
-                  <p className={styles.signal}>{pharmacy[mode].status}</p>
-                  <div className={styles.nextAction}><span>{pharmacy[mode].nextAction}</span><MoveUpRight size={15} aria-hidden="true" /></div>
-                </div>
-              ))}
-            </div>
-            <p className={styles.previewFoot}>Une pharmacie. Son historique. La suite à donner.</p>
-          </div>
+      <section className={styles.methodSection} id="methode">
+        <div className={styles.container}>
+          <p className={styles.eyebrow}>La méthode TR1</p><h2>Sélectionner → Implanter → Activer → Suivre.</h2>
+          <div className={styles.methodGrid}>{method.map(([number, title, copy]) => <article key={title}><span>{number}</span><h3>{title}</h3><p>{copy}</p></article>)}</div>
+          <p className={styles.dataNote}><Check size={16} /> Les commandes et réassorts sont distingués des ventes consommateur. Le sell-out n’est présenté que lorsqu’une donnée de vente est réellement disponible.</p>
         </div>
       </section>
 
-      <section className={styles.founder} id="pourquoi-tr1" aria-labelledby="founder-title">
-        <div className={`${styles.container} ${styles.founderGrid}`}>
-          <div>
-            <p className={styles.eyebrow}>Pourquoi TR1</p>
-            <h2 id="founder-title" className={styles.heading}>Né sur le terrain.</h2>
-            <p className={styles.founderContext}>L’expérience d’un délégué pharmaceutique, à l’origine du produit.</p>
-          </div>
-          <div className={styles.founderStory}>
-            <blockquote>« Je voulais juste un outil qui colle davantage à ma réalité de délégué : préparer ma tournée plus rapidement, retrouver les bonnes infos avant d’entrer dans une pharmacie et faire mon retour directement sur mon téléphone en sortant. »</blockquote>
-            <p className={styles.signature}><strong>Amir Ounissi</strong><span>Délégué pharmaceutique · Fondateur de TR1 Pharma</span></p>
-          </div>
+      <section className={styles.proofSection} id="terrain">
+        <div className={[styles.container, styles.proofGrid].join(" ")}>
+          <div><p className={styles.eyebrow}>Le terrain, documenté</p><h2>Voir le travail, pas une promesse marketing.</h2></div>
+          <div className={styles.proofCard}><p>Implantations, merchandising, formations, animations et réflexions métier sont documentés publiquement par le fondateur sur LinkedIn.</p><a href="https://fr.linkedin.com/in/amirounissi" target="_blank" rel="noreferrer">Voir les contenus LinkedIn <ArrowRight size={16} /></a><small>Ces contenus illustrent une expérience terrain personnelle et ne sont pas présentés comme des références clients de TR1 PHARMA.</small></div>
         </div>
       </section>
 
-      <section className={styles.contact} id="diagnostic" aria-labelledby="contact-title">
-        <div className={`${styles.container} ${styles.contactGrid}`}>
-          <div className={styles.contactCopy}>
-            <p className={styles.eyebrow}>Démonstration personnalisée</p>
-            <h2 id="contact-title" className={styles.heading}>Votre réseau.<br />Vos équipes.<br /><span>Voyons ça ensemble.</span></h2>
-            <p>Partons de votre organisation pour vous montrer comment TR1 relie le pilotage de la marque aux actions du terrain.</p>
-            <div className={styles.duration}><Clock3 size={18} aria-hidden="true" /><span>30 minutes · Un échange autour de vos usages</span></div>
+      <section className={styles.contactSection} id="contact">
+        <div className={styles.container}>
+          <div className={styles.contactHeading}><p className={styles.eyebrow}>Prendre contact</p><h2>Deux besoins. Deux échanges différents.</h2></div>
+          <div className={styles.contactGrid}>
+            <article id="contact-marque" className={styles.contactCard}><div><span className={styles.contactTag}>Marque / laboratoire</span><h3>Vous voulez développer votre présence en pharmacie ?</h3><p>Présentez-nous votre marque et votre besoin terrain. Nous revenons vers vous pour qualifier le périmètre.</p></div><LeadForm audience="brand" /></article>
+            <article id="contact-pharmacie" className={styles.contactCard}><div><span className={styles.contactTag}>Pharmacie</span><h3>Vous souhaitez découvrir les marques accompagnées ?</h3><p>Laissez vos coordonnées et le nom de votre officine. Nous vous recontactons directement.</p></div><LeadForm audience="pharmacy" /></article>
           </div>
-          <div className={styles.formPanel}><LeadForm /></div>
         </div>
       </section>
     </main>
-  );
-}
-
-function DemoLink({ placement, className }: { placement: string; className: string }) {
-  return (
-    <MarketingTrackedLink className={className} event="primary_cta_click" href="#diagnostic" properties={{ placement }}>
-      Demander une démo<ArrowRight size={16} aria-hidden="true" />
-    </MarketingTrackedLink>
   );
 }

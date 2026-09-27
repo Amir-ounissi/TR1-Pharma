@@ -12,26 +12,26 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
           </Link>
 
           <nav className="ml-auto hidden items-center gap-6 text-sm font-semibold text-[#445265] lg:flex">
-            <Link className="transition hover:text-[#c84f24]" href="/#plateforme">La plateforme</Link>
-            <Link className="transition hover:text-[#c84f24]" href="/#animations-formations">Animations & formations</Link>
-            <Link className="transition hover:text-[#c84f24]" href="/#pourquoi-tr1">Pourquoi TR1</Link>
+            <Link className="transition hover:text-[#c84f24]" href="/#marques">Marques</Link>
+            <Link className="transition hover:text-[#c84f24]" href="/#pharmacies">Pharmacies</Link>
+            <Link className="transition hover:text-[#c84f24]" href="/#methode">Méthode</Link>
           </nav>
 
           <MarketingTrackedLink
             className="ml-auto inline-flex min-h-11 shrink-0 items-center rounded-xl bg-[#c84f24] px-4 font-mono text-[.64rem] font-black uppercase tracking-[.06em] text-white shadow-[0_10px_24px_rgba(200,79,36,.18)] transition hover:-translate-y-0.5 hover:bg-[#b64620] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0b1e32] focus-visible:ring-offset-2 lg:ml-2"
             event="primary_cta_click"
-            href="/#diagnostic"
+            href="/#contact"
             properties={{ placement: "header" }}
           >
-            Demander une démo
+            Nous contacter
           </MarketingTrackedLink>
 
           <details className="relative lg:hidden">
             <summary className="grid min-h-11 cursor-pointer list-none place-items-center rounded-xl border border-[#0b1e32]/15 bg-white/80 px-3 font-mono text-[.64rem] font-black uppercase tracking-[.06em] outline-none focus-visible:ring-2 focus-visible:ring-[#c84f24]">Menu</summary>
             <nav className="absolute right-0 top-[calc(100%+.5rem)] z-50 grid w-60 gap-1 rounded-2xl border border-[#0b1e32]/10 bg-[#fffdf8] p-2 text-sm font-semibold shadow-[0_20px_50px_rgba(7,20,33,.14)]">
-              <Link className="rounded-xl px-3 py-2.5 hover:bg-white" href="/#plateforme">La plateforme</Link>
-              <Link className="rounded-xl px-3 py-2.5 hover:bg-white" href="/#animations-formations">Animations & formations</Link>
-              <Link className="rounded-xl px-3 py-2.5 hover:bg-white" href="/#pourquoi-tr1">Pourquoi TR1</Link>
+              <Link className="rounded-xl px-3 py-2.5 hover:bg-white" href="/#marques">Marques</Link>
+              <Link className="rounded-xl px-3 py-2.5 hover:bg-white" href="/#pharmacies">Pharmacies</Link>
+              <Link className="rounded-xl px-3 py-2.5 hover:bg-white" href="/#methode">Méthode</Link>
               <Link className="rounded-xl px-3 py-2.5 text-[#667384] hover:bg-white" href="/connexion">Connexion</Link>
             </nav>
           </details>
@@ -48,7 +48,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
         <div className="mx-auto flex max-w-7xl flex-col gap-7 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <Tr1BrandLogo className="block h-14 w-[96px]" />
-            <p className="mt-3 max-w-md text-sm leading-6 text-[#667384]">Pilotage commercial et coordination des actions terrain en pharmacie.</p>
+            <p className="mt-3 max-w-md text-sm leading-6 text-[#667384]">Partenaire commercial terrain multimarque en pharmacie. Du sell-in au sell-out.</p>
           </div>
           <div className="flex flex-wrap gap-x-5 gap-y-2 font-mono text-[.66rem] font-bold uppercase tracking-[.06em] text-[#667384]">
             <Link className="hover:text-[#c84f24]" href="/connexion">Connexion</Link>

@@ -10,7 +10,7 @@ import { trackMarketingEvent } from "@/lib/marketing/analytics";
 
 const initialState: LeadCaptureState = {};
 
-export function LeadForm() {
+export function LeadForm({ audience = "brand" }: { audience?: "brand" | "pharmacy" }) {
   const [state, action, pending] = useActionState(captureLeadAction, initialState);
   const started = useRef(false);
 
@@ -26,7 +26,8 @@ export function LeadForm() {
   };
 
   return (
-    <form action={action} className="grid gap-5" id="diagnostic-form" onFocus={start}>
+    <form action={action} className="grid gap-5" onFocus={start}>
+      <input name="leadAudience" type="hidden" value={audience} />
       {state.error ? (
         <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800" role="alert">{state.error}</p>
       ) : null}
@@ -35,7 +36,7 @@ export function LeadForm() {
         autoComplete="name"
         defaultValue={state.fields?.fullName}
         error={state.fieldErrors?.fullName}
-        id="fullName"
+        id={`${audience}-fullName`}
         label="Nom et prénom"
         maxLength={120}
         name="fullName"
@@ -44,7 +45,7 @@ export function LeadForm() {
         autoComplete="email"
         defaultValue={state.fields?.professionalEmail}
         error={state.fieldErrors?.professionalEmail}
-        id="professionalEmail"
+        id={`${audience}-professionalEmail`}
         label="Email professionnel"
         maxLength={254}
         name="professionalEmail"
@@ -54,15 +55,15 @@ export function LeadForm() {
         autoComplete="organization"
         defaultValue={state.fields?.companyName}
         error={state.fieldErrors?.companyName}
-        id="companyName"
-        label="Marque ou laboratoire"
+        id={`${audience}-companyName`}
+        label={audience === "pharmacy" ? "Nom de la pharmacie" : "Marque ou laboratoire"}
         maxLength={160}
         name="companyName"
       />
 
       <div aria-hidden="true" className="absolute -left-[10000px] h-px w-px overflow-hidden">
-        <Label htmlFor="website">Site web</Label>
-        <Input autoComplete="off" id="website" name="website" tabIndex={-1} />
+        <Label htmlFor={`${audience}-website`}>Site web</Label>
+        <Input autoComplete="off" id={`${audience}-website`} name="website" tabIndex={-1} />
       </div>
 
       <Button
@@ -71,7 +72,7 @@ export function LeadForm() {
         onClick={() => trackMarketingEvent("lead_form_submit")}
         type="submit"
       >
-        {pending ? "Envoi…" : "Demander une démo"}
+        {pending ? "Envoi…" : audience === "pharmacy" ? "Être recontacté" : "Parler de mon développement"}
       </Button>
 
       <p className="text-sm font-semibold text-[var(--tr1-muted)]">Nous vous recontacterons pour convenir d’un créneau.</p>
