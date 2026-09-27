@@ -2370,6 +2370,11 @@ async function syncInboundOrders(options: {
         if (remoteId) processedRemoteIds.add(remoteId);
         counter.seen += 1;
         try {
+          const sourceAgentUserId =
+            (text(remote.properties?.hubspot_owner_id)
+              ? options.owners.get(text(remote.properties?.hubspot_owner_id)!)
+              : null) ?? pharmacy.currentAgentUserId;
+          await linkHistoricalOrderIfPossible(remote, pharmacy, sourceAgentUserId);
           await importOrder({
             admin: options.admin,
             client: options.client,
@@ -2377,10 +2382,7 @@ async function syncInboundOrders(options: {
             organizationId: options.organizationId,
             connectionId: options.connection.id,
             actorId: options.actorId,
-            sourceAgentUserId:
-              (text(remote.properties?.hubspot_owner_id)
-                ? options.owners.get(text(remote.properties?.hubspot_owner_id)!)
-                : null) ?? pharmacy.currentAgentUserId,
+            sourceAgentUserId,
             pharmacy,
             remote,
             orderLinks: links,
@@ -2532,37 +2534,11 @@ async function syncInboundOrders(options: {
           ? options.owners.get(text(remote.properties?.hubspot_owner_id)!)
           : null) ?? pharmacy.currentAgentUserId;
 
-      if (!links.has(remoteId)) {
-        const remoteAmount = numberValue(remote.properties?.amount);
-        const remoteDate =
-          text(remote.properties?.closedate)
-          ?? text(remote.properties?.createdate)
-          ?? remote.createdAt
-          ?? null;
-        const historicalOrderId = selectHistoricalHubSpotOrderCandidate(
-          [...existingOrderById.values()],
-          {
-            remoteAmount,
-            remoteDate,
-            brandPharmacyId: pharmacy.brandPharmacyId,
-            sourceAgentUserId: resolvedSourceAgentUserId ?? null,
-            linkedOrderIds: linkedLocalOrderIds,
-          },
-        );
-
-        if (historicalOrderId) {
-          await saveExternalLink({
-            admin: options.admin,
-            connectionId: options.connection.id,
-            entityType: "orders",
-            externalId: remoteId,
-            tr1RecordId: historicalOrderId,
-            externalUpdatedAt: remote.updatedAt ?? text(remote.properties?.hs_lastmodifieddate),
-          });
-          links.set(remoteId, historicalOrderId);
-          linkedLocalOrderIds.add(historicalOrderId);
-        }
-      }
+      await linkHistoricalOrderIfPossible(
+        remote,
+        pharmacy,
+        resolvedSourceAgentUserId ?? null,
+      );
 
       processedRemoteIds.add(remoteId);
       counter.seen += 1;
