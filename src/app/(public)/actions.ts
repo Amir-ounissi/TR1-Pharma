@@ -17,7 +17,8 @@ export type LeadCaptureState = {
 
 export async function captureLeadAction(_state: LeadCaptureState, formData: FormData): Promise<LeadCaptureState> {
   const correlationId = randomUUID();
-  const website = String(formData.get("website") ?? "");\n  const leadAudience = String(formData.get("leadAudience") ?? "brand") === "pharmacy" ? "pharmacy" : "brand";
+  const website = String(formData.get("website") ?? "");
+  const leadAudience = String(formData.get("leadAudience") ?? "brand") === "pharmacy" ? "pharmacy" : "brand";
   if (website) redirect("/merci");
   const fields = {
     fullName: String(formData.get("fullName") ?? ""),
