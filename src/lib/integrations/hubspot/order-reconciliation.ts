@@ -18,6 +18,25 @@ type HistoricalHubSpotOrderMatchInput = {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+
+export function selectHistoricalOutboundHubSpotOrderCandidate(
+  candidates: HistoricalHubSpotOrderCandidate[],
+  input: {
+    outboundOrderIds: Set<string>;
+    brandPharmacyId: string;
+    linkedOrderIds: Set<string>;
+  },
+) {
+  const eligible = candidates.filter((candidate) => {
+    if (!input.outboundOrderIds.has(candidate.id)) return false;
+    if (input.linkedOrderIds.has(candidate.id)) return false;
+    if (candidate.brandPharmacyId !== input.brandPharmacyId) return false;
+    return candidate.orderStatus !== "cancelled" && candidate.orderStatus !== "draft";
+  });
+
+  return eligible.length === 1 ? eligible[0].id : null;
+}
+
 export function selectHistoricalHubSpotOrderCandidate(
   candidates: HistoricalHubSpotOrderCandidate[],
   input: HistoricalHubSpotOrderMatchInput,
