@@ -26,7 +26,8 @@ export function LeadForm({ audience = "brand" }: { audience?: "brand" | "pharmac
   };
 
   return (
-    <form action={action} className="grid gap-5" onFocus={start}>\n      <input name="leadAudience" type="hidden" value={audience} />
+    <form action={action} className="grid gap-5" onFocus={start}>
+      <input name="leadAudience" type="hidden" value={audience} />
       {state.error ? (
         <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800" role="alert">{state.error}</p>
       ) : null}
