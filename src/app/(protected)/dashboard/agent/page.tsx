@@ -44,6 +44,18 @@ type ObjectiveProgressRow = {
   realized_value: number;
 };
 
+async function timedQuery<T>(label: string, query: PromiseLike<T>): Promise<T> {
+  const startedAt = Date.now();
+  try {
+    return await query;
+  } finally {
+    const durationMs = Date.now() - startedAt;
+    if (durationMs >= 250) {
+      console.info(JSON.stringify({ event: "agent_query_timing", label, durationMs }));
+    }
+  }
+}
+
 export default async function AgentPage() {
   const [saas, session] = await Promise.all([
     requireActiveBrandCapability("agent_day"),
@@ -58,7 +70,7 @@ export default async function AgentPage() {
 
   const today = parisBusinessDate();
   const monthStart = `${today.slice(0, 7)}-01`;
-  const planningHorizon = addCalendarDays(today, 90);
+  const planningHorizon = addCalendarDays(today, 14);
   const now = new Date();
 
   const [
@@ -73,18 +85,18 @@ export default async function AgentPage() {
     monthOrdersResult,
     personalTargetResult,
   ] = await Promise.all([
-    supabase.rpc("get_agent_today", { target_brand_id: brand.id, target_date: today }),
-    supabase.rpc("get_next_agent_visit", { target_brand_id: brand.id }),
-    supabase.rpc("get_my_field_agenda", {
+    timedQuery("get_agent_today", supabase.rpc("get_agent_today", { target_brand_id: brand.id, target_date: today })),
+    timedQuery("get_next_agent_visit", supabase.rpc("get_next_agent_visit", { target_brand_id: brand.id })),
+    timedQuery("get_my_field_agenda_today", supabase.rpc("get_my_field_agenda", {
       start_date: today,
       end_date: today,
       brand_filter: brand.id,
-    }),
-    supabase.rpc("get_my_field_agenda", {
+    })),
+    timedQuery("get_my_field_agenda_14d", supabase.rpc("get_my_field_agenda", {
       start_date: today,
       end_date: planningHorizon,
       brand_filter: brand.id,
-    }),
+    })),
     saas.capabilities.has("sell_out")
       ? loadStockAlerts(supabase, brand.id, userId).catch((error) => {
           console.error(
@@ -93,39 +105,39 @@ export default async function AgentPage() {
           return [];
         })
       : Promise.resolve([]),
-    supabase.rpc("get_agent_today_multibrand", {
+    timedQuery("get_agent_today_multibrand", supabase.rpc("get_agent_today_multibrand", {
       target_date: today,
       brand_filter: brand.id,
-    }),
-    supabase
+    })),
+    timedQuery("performance_booked_order_facts", supabase
       .from("performance_booked_order_facts")
       .select("net_amount_ht")
       .eq("brand_id", brand.id)
       .eq("agent_user_id_at_order", userId)
       .gte("order_date", `${monthStart}T00:00:00.000Z`)
-      .lt("order_date", `${nextIsoDate(today)}T00:00:00.000Z`),
-    supabase.rpc("get_objective_progress", {
+      .lt("order_date", `${nextIsoDate(today)}T00:00:00.000Z`)),
+    timedQuery("get_objective_progress", supabase.rpc("get_objective_progress", {
       target_brand_id: brand.id,
       target_filter_start: monthStart,
       target_filter_end: today,
       target_scope_type: "agent",
       target_territory_id: null,
       target_agent_id: userId,
-    }),
-    supabase
+    })),
+    timedQuery("performance_order_count", supabase
       .from("performance_order_facts")
       .select("order_id", { count: "exact", head: true })
       .eq("brand_id", brand.id)
       .eq("agent_user_id_at_order", userId)
       .gte("order_date", `${monthStart}T00:00:00.000Z`)
-      .lt("order_date", `${nextIsoDate(today)}T00:00:00.000Z`),
-    supabase
+      .lt("order_date", `${nextIsoDate(today)}T00:00:00.000Z`)),
+    timedQuery("agent_personal_monthly_targets", supabase
       .from("agent_personal_monthly_targets")
       .select("revenue_target_ht")
       .eq("brand_id", brand.id)
       .eq("user_id", userId)
       .eq("month_start", monthStart)
-      .maybeSingle(),
+      .maybeSingle()),
   ]);
 
   const optionalQueryErrors = [

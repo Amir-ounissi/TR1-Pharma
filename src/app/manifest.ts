@@ -9,7 +9,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "TR1",
     description:
       "Exécution commerciale terrain pour les marques qui se développent en pharmacie.",
-    start_url: "/dashboard/field?source=pwa",
+    start_url: "/pwa-start?source=pwa",
     scope: "/",
     display: "standalone",
     orientation: "portrait-primary",

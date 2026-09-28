@@ -62,7 +62,7 @@ export function RoleNavigation({
                   )}
                   href={item.href}
                   key={item.href}
-                  prefetch={false}
+                  prefetch={item.href === "/dashboard/agent" || item.href === "/dashboard/agenda"}
                   onPointerEnter={warmRoute}
                   onPointerDown={warmRoute}
                   onFocus={warmRoute}
