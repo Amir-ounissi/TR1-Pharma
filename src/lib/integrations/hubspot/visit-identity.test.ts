@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   hubSpotCanMutateVisit,
+  resolveHubSpotMeetingStart,
   selectHubSpotVisitCandidate,
   type HubSpotVisitCandidate,
 } from "./visit-identity";
@@ -45,6 +46,26 @@ describe("HubSpot visit identity", () => {
     );
 
     expect(picked).toBe("free-candidate");
+  });
+
+  it("requires a real HubSpot meeting start for future planning", () => {
+    expect(resolveHubSpotMeetingStart({
+      meetingStartTime: "2026-10-05T08:30:00Z",
+      activityTimestamp: "2026-10-05T08:30:00Z",
+      outcome: "SCHEDULED",
+    })).toEqual({ start: "2026-10-05T08:30:00Z", isScheduled: true });
+
+    expect(resolveHubSpotMeetingStart({
+      meetingStartTime: null,
+      activityTimestamp: "2026-10-05T08:30:00Z",
+      outcome: null,
+    })).toEqual({ start: null, isScheduled: false });
+
+    expect(resolveHubSpotMeetingStart({
+      meetingStartTime: null,
+      activityTimestamp: "2026-09-20T08:30:00Z",
+      outcome: "COMPLETED",
+    })).toEqual({ start: "2026-09-20T08:30:00Z", isScheduled: false });
   });
 
   it("lets HubSpot refresh only import-origin visits that TR1 has not taken over", () => {
