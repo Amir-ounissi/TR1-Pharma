@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getBrandContexts, requireCompletedOnboarding } from "@/lib/auth";
-import { parisLocalToIso } from "@/lib/agenda";
+import { addCalendarDays, mondayOfWeek, parseCalendarDate, parisLocalToIso, todayInParis } from "@/lib/agenda";
 
 const uuid = z.string().uuid();
 const dateTime = z.string().min(16).transform(parisLocalToIso);
@@ -88,6 +88,62 @@ export async function loadAgendaPharmaciesAction() {
   }
 
   return [...grouped.values()].sort((a, b) => a.label.localeCompare(b.label, "fr"));
+}
+
+
+
+type AgendaWindowEvent = {
+  source_kind: string;
+  source_id: string;
+  pharmacy_id: string | null;
+  brand_ids: string[];
+  detail_url: string;
+  [key: string]: unknown;
+};
+
+export async function loadAgendaWindowAction(rawDate: string, rawView: "day" | "week") {
+  const parsed = z.object({
+    date: z.string().min(10),
+    view: z.enum(["day", "week"]),
+  }).parse({ date: rawDate, view: rawView });
+
+  const [{ supabase }, contexts] = await Promise.all([
+    requireCompletedOnboarding(),
+    getBrandContexts(),
+  ]);
+
+  const today = todayInParis();
+  const safeDate = parseCalendarDate(parsed.date) ? parsed.date : today;
+  const date = parsed.view === "week" ? mondayOfWeek(safeDate) : safeDate;
+  const end = parsed.view === "week" ? addCalendarDays(date, 6) : date;
+  const facilitatorOnly = contexts.length > 0 && contexts.every((context) => context.role === "facilitator");
+
+  const { data, error } = await supabase.rpc("get_my_field_agenda", {
+    start_date: date,
+    end_date: end,
+    brand_filter: null,
+  });
+  if (error) throw new Error(error.message);
+
+  const events = ((data ?? []) as AgendaWindowEvent[]).map((event) => {
+    if (event.source_kind === "field_visit") {
+      return { ...event, detail_url: `/dashboard/visits/${event.source_id}` };
+    }
+    if (facilitatorOnly && event.source_kind === "mission") {
+      return { ...event, detail_url: `/dashboard/field/missions/${event.source_id}` };
+    }
+    if (event.pharmacy_id) {
+      const brand = event.brand_ids[0];
+      const query = brand ? `?brand=${encodeURIComponent(brand)}` : "";
+      return {
+        ...event,
+        detail_url: `/dashboard/pharmacies/open-pharmacy/${event.pharmacy_id}${query}`,
+      };
+    }
+    return event;
+  });
+
+  return { date, view: parsed.view, events };
 }
 
 export async function createAgendaBlockAction(_: unknown, formData: FormData) {

@@ -2,7 +2,6 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   CalendarDays,
   ChevronLeft,
@@ -22,9 +21,10 @@ import {
   createAgendaBlockAction,
   createFieldVisitAction,
   loadAgendaPharmaciesAction,
+  loadAgendaWindowAction,
   rescheduleFieldVisitAction,
 } from "@/app/(protected)/dashboard/agenda/actions";
-import { addCalendarDays, isoToParisLocal, parisLocalToIso } from "@/lib/agenda";
+import { addCalendarDays, isoToParisLocal, mondayOfWeek, parisLocalToIso } from "@/lib/agenda";
 import { uiLabel } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -126,10 +126,10 @@ type PositionedEvent = {
 };
 
 export function AgendaPlanner({
-  date,
+  date: initialDate,
   today,
-  view,
-  events,
+  view: initialView,
+  events: initialEvents,
   backlog,
   brands,
   canCreateVisit,
@@ -142,7 +142,17 @@ export function AgendaPlanner({
   brands: Array<{ id: string; name: string }>;
   canCreateVisit: boolean;
 }) {
-  const router = useRouter();
+  const windowCache = useRef(
+    new Map<string, AgendaEvent[]>([[`${initialView}:${initialDate}`, initialEvents]]),
+  );
+  const [windowState, setWindowState] = useState(() => ({
+    date: initialDate,
+    view: initialView,
+    events: initialEvents,
+  }));
+  const date = windowState.date;
+  const view = windowState.view;
+  const events = windowState.events;
   const [eventState, setEventState] = useState(() => ({ base: events, local: events }));
   const localEvents = eventState.base === events ? eventState.local : events;
   const setLocalEvents = (update: (current: AgendaEvent[]) => AgendaEvent[]) => {
@@ -160,7 +170,9 @@ export function AgendaPlanner({
     nextLocal: string;
     message: string;
   } | null>(null);
+  const [windowPending, startWindowTransition] = useTransition();
   const [, startTransition] = useTransition();
+  const [navigationError, setNavigationError] = useState<string | null>(null);
 
   const days = useMemo(
     () => Array.from({ length: view === "week" ? 7 : 1 }, (_, index) => addCalendarDays(date, index)),
@@ -193,16 +205,48 @@ export function AgendaPlanner({
   const dayActions = actionEvents.filter((event) => localDay(event.start_at) === date);
   const dayContext = contextEvents.filter((event) => localDay(event.start_at) === date);
 
-  useEffect(() => {
-    const step = view === "week" ? 7 : 1;
-    router.prefetch(`/dashboard/agenda?date=${addCalendarDays(date, -step)}&view=${view}`);
-    router.prefetch(`/dashboard/agenda?date=${addCalendarDays(date, step)}&view=${view}`);
-  }, [date, router, view]);
+  const loadWindow = (requestedDate: string, nextView: "day" | "week") => {
+    const nextDate = nextView === "week" ? mondayOfWeek(requestedDate) : requestedDate;
+    const cacheKey = `${nextView}:${nextDate}`;
 
-  const navigate = (next: string) =>
-    router.push(`/dashboard/agenda?date=${next}&view=${view}`, { scroll: false });
-  const setView = (nextView: "day" | "week") =>
-    router.push(`/dashboard/agenda?date=${date}&view=${nextView}`, { scroll: false });
+    const applyWindow = (loadedEvents: AgendaEvent[]) => {
+      windowCache.current.set(cacheKey, loadedEvents);
+      setWindowState({ date: nextDate, view: nextView, events: loadedEvents });
+      setNavigationError(null);
+      window.history.replaceState(
+        null,
+        "",
+        `/dashboard/agenda?date=${encodeURIComponent(nextDate)}&view=${nextView}`,
+      );
+    };
+
+    const cached = windowCache.current.get(cacheKey);
+    if (cached) {
+      applyWindow(cached);
+      return;
+    }
+
+    startWindowTransition(async () => {
+      try {
+        const result = await loadAgendaWindowAction(nextDate, nextView);
+        const loadedEvents = result.events as AgendaEvent[];
+        const resolvedKey = `${result.view}:${result.date}`;
+        windowCache.current.set(resolvedKey, loadedEvents);
+        setWindowState({ date: result.date, view: result.view, events: loadedEvents });
+        setNavigationError(null);
+        window.history.replaceState(
+          null,
+          "",
+          `/dashboard/agenda?date=${encodeURIComponent(result.date)}&view=${result.view}`,
+        );
+      } catch {
+        setNavigationError("Impossible d’actualiser cette période. Réessayez dans un instant.");
+      }
+    });
+  };
+
+  const navigate = (next: string) => loadWindow(next, view);
+  const setView = (nextView: "day" | "week") => loadWindow(date, nextView);
 
   const openVisit = (startAt: string) => {
     setVisitStart(startAt);
@@ -311,7 +355,16 @@ export function AgendaPlanner({
         </div>
       </header>
 
-      <section className="rounded-2xl border border-[var(--tr1-line)] bg-white/85 shadow-sm">
+      {navigationError ? (
+        <p role="alert" className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+          {navigationError}
+        </p>
+      ) : null}
+
+      <section
+        className="rounded-2xl border border-[var(--tr1-line)] bg-white/85 shadow-sm"
+        aria-busy={windowPending || undefined}
+      >
         <div className="flex flex-col gap-3 border-b border-[var(--tr1-line)] p-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-1">
             <Button size="sm" variant={date === today ? "secondary" : "outline"} onClick={() => navigate(today)}>
@@ -337,6 +390,7 @@ export function AgendaPlanner({
 
           <div className="order-first flex min-w-0 items-center gap-2 sm:order-none">
             <CalendarDays className="size-4 shrink-0 text-[var(--tr1-orange)]" />
+            {windowPending ? <span className="text-xs font-medium text-[var(--tr1-orange)]">Actualisation…</span> : null}
             <strong className="truncate text-sm text-[var(--tr1-navy)]">
               {view === "week"
                 ? `Semaine du ${formatDate(date, { day: "numeric", month: "long" })}`
