@@ -9,7 +9,7 @@ test("PWA manifest exposes installable TR1 field metadata", async ({ request }) 
     id: "/dashboard/field",
     name: "TR1 Pharma",
     short_name: "TR1",
-    start_url: "/dashboard/field?source=pwa",
+    start_url: "/pwa-start?source=pwa",
     scope: "/",
     display: "standalone",
     theme_color: "#0e1d31",
@@ -44,7 +44,10 @@ test("PWA icons, service worker and Apple install metadata are served", async ({
 
   const serviceWorker = await request.get("/sw.js");
   expect(serviceWorker.ok()).toBe(true);
-  expect(await serviceWorker.text()).toContain("tr1-pwa-static-v2");
+  expect(await serviceWorker.text()).toContain("tr1-pwa-static-v3");
+
+  const pwaStart = await request.get("/pwa-start");
+  expect(pwaStart.ok()).toBe(true);
 
   const offline = await request.get("/offline");
   expect(offline.ok()).toBe(true);
