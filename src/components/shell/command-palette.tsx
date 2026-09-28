@@ -1,23 +1,27 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { ArrowRight, Search, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { groupSearchItems, moveSearchSelection, searchScopedItems, type SearchItem } from "@/lib/ux/search";
 
-export function CommandPalette({ items }: { items: SearchItem[] }) {
+export function CommandPalette({ items, loadItemsAction }: { items: SearchItem[]; loadItemsAction?: (query: string) => Promise<SearchItem[]> }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const results = useMemo(() => searchScopedItems(items, query), [items, query]);
+  const [remoteItems, setRemoteItems] = useState<SearchItem[]>([]);
+  const [remotePending, startRemoteTransition] = useTransition();
+  const searchableItems = useMemo(() => [...items, ...remoteItems], [items, remoteItems]);
+  const results = useMemo(() => searchScopedItems(searchableItems, query), [searchableItems, query]);
   const groups = useMemo(() => groupSearchItems(results), [results]);
 
   const openPalette = useCallback(() => {
     setQuery("");
+    setRemoteItems([]);
     setSelectedIndex(0);
     setOpen(true);
   }, []);
@@ -38,6 +42,22 @@ export function CommandPalette({ items }: { items: SearchItem[] }) {
     if (!open) return;
     requestAnimationFrame(() => inputRef.current?.focus());
   }, [open]);
+
+  useEffect(() => {
+    if (!open || !loadItemsAction || query.trim().length < 2) return;
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      startRemoteTransition(async () => {
+        const nextItems = await loadItemsAction(query);
+        if (!cancelled) setRemoteItems(nextItems);
+      });
+    }, 160);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [loadItemsAction, open, query]);
+
 
   function navigate(item: SearchItem) {
     setOpen(false);
@@ -86,7 +106,12 @@ export function CommandPalette({ items }: { items: SearchItem[] }) {
                 aria-controls="command-results"
                 aria-label="Rechercher une pharmacie, mission ou tâche"
                 className="h-14 min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
-                onChange={(event) => { setQuery(event.target.value); setSelectedIndex(0); }}
+                onChange={(event) => {
+                  const nextQuery = event.target.value;
+                  setQuery(nextQuery);
+                  setSelectedIndex(0);
+                  if (nextQuery.trim().length < 2) setRemoteItems([]);
+                }}
                 onKeyDown={handleKeyDown}
                 placeholder="Pharmacie, mission, tâche ou action…"
                 ref={inputRef}
@@ -116,7 +141,8 @@ export function CommandPalette({ items }: { items: SearchItem[] }) {
                   })}
                 </div>
               ))}
-              {!results.length && <p className="px-4 py-12 text-center text-sm text-muted-foreground">Aucun résultat dans votre périmètre.</p>}
+              {remotePending ? <p className="px-4 py-3 text-center text-xs text-muted-foreground">Recherche dans votre portefeuille…</p> : null}
+              {!results.length && !remotePending ? <p className="px-4 py-12 text-center text-sm text-muted-foreground">Aucun résultat dans votre périmètre.</p> : null}
             </div>
             <div className="flex gap-4 border-t bg-muted/40 px-4 py-2 text-xs text-muted-foreground"><span>↑↓ Naviguer</span><span>↵ Ouvrir</span><span>Esc Fermer</span></div>
           </section>
