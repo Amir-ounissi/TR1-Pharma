@@ -10,6 +10,8 @@ describe("presentation", () => {
     expect(presentationLabel("strong_decline")).toBe("Forte baisse");
     expect(presentationText("Suite : Compte rendu visit")).toBe("Suite — compte rendu de visite");
     expect(presentationText("Action suggérée après passage à qualified")).toBe("Relancer la pharmacie");
+    expect(presentationText("Action suggérée après passage à pending_order")).toBe("Commande en attente · Relancer");
+    expect(presentationLabel("pending_order")).toBe("Commande en attente");
     expect(presentationText("Activité at_risk — action de suivi")).toBe("Relancer la pharmacie");
     expect(presentationText("Activité dormant — action de suivi")).toBe("Réactiver la pharmacie");
   });
