@@ -30,14 +30,29 @@ export function PwaStartScreen() {
   const [online, setOnline] = useState(true);
 
   useEffect(() => {
-    setSnapshot(loadActiveOfflineDaySnapshot(window.localStorage));
-    setOnline(window.navigator.onLine);
-    router.prefetch("/dashboard/agent");
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      if (cancelled) return;
+      const isOnline = window.navigator.onLine;
+      setSnapshot(loadActiveOfflineDaySnapshot(window.localStorage));
+      setOnline(isOnline);
+      router.prefetch("/dashboard/agent");
+      if (isOnline) router.replace("/dashboard/agent");
+    }, 0);
 
-    const onConnectivityChange = () => setOnline(window.navigator.onLine);
+    const onConnectivityChange = () => {
+      const isOnline = window.navigator.onLine;
+      setOnline(isOnline);
+      if (isOnline) {
+        router.prefetch("/dashboard/agent");
+        router.replace("/dashboard/agent");
+      }
+    };
     window.addEventListener("online", onConnectivityChange);
     window.addEventListener("offline", onConnectivityChange);
     return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
       window.removeEventListener("online", onConnectivityChange);
       window.removeEventListener("offline", onConnectivityChange);
     };
