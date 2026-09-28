@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { getBrandContexts, getOptionalActiveBrand, requireActiveBrand } from "@/lib/auth";
 import {
@@ -35,7 +36,7 @@ function enabledCapabilities(rows: CapabilityRow[] | null) {
   );
 }
 
-export async function getActiveBrandSaasContext(): Promise<ActiveBrandSaasContext> {
+export const getActiveBrandSaasContext = cache(async function getActiveBrandSaasContext(): Promise<ActiveBrandSaasContext> {
   const { supabase, brand } = await requireActiveBrand();
   const [{ data: rows, error: capabilityError }, { data: settings, error: settingsError }] = await Promise.all([
     supabase.rpc("get_my_brand_capabilities", { target_brand_id: brand.id }),
@@ -67,7 +68,7 @@ export async function getActiveBrandSaasContext(): Promise<ActiveBrandSaasContex
         ? (settings.configuration as Record<string, unknown>)
         : {},
   };
-}
+});
 
 export async function activeBrandHasCapability(capability: SaasCapability) {
   const context = await getActiveBrandSaasContext();
@@ -113,12 +114,8 @@ export async function requireAnyWorkspaceCapability(
   const session = await getOptionalActiveBrand();
 
   if (session.brand) {
-    const { data, error } = await session.supabase.rpc("get_my_brand_capabilities", {
-      target_brand_id: session.brand.id,
-    });
-    if (error) throw error;
-    const enabled = enabledCapabilities((data ?? []) as CapabilityRow[]);
-    if (!capabilities.some((capability) => enabled.has(capability))) redirect(fallback);
+    const context = await getActiveBrandSaasContext();
+    if (!capabilities.some((capability) => context.capabilities.has(capability))) redirect(fallback);
     return { mode: "brand" as const, brandIds: [session.brand.id] };
   }
 

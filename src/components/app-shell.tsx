@@ -20,10 +20,11 @@ type AppShellProps = {
   navigationScope?: NavigationScope;
   capabilities?: SaasCapability[];
   searchItems: SearchItem[];
+  searchAction?: (query: string) => Promise<SearchItem[]>;
   userName: string;
 };
 
-export function AppShell({ children, brandName, brandHint = "Marque active", role, navigationScope = "tenant", capabilities, searchItems, userName }: AppShellProps) {
+export function AppShell({ children, brandName, brandHint = "Marque active", role, navigationScope = "tenant", capabilities, searchItems, searchAction, userName }: AppShellProps) {
   const showPlatformAdministrationReturn = role === "super_admin" && navigationScope === "tenant";
 
   return (
@@ -76,7 +77,7 @@ export function AppShell({ children, brandName, brandHint = "Marque active", rol
             {roleLabel(role)}
           </span>
 
-          <div className="ml-auto flex min-w-0 flex-1 justify-end md:ml-3 md:justify-center"><RouteAwareCommandPalette items={searchItems} /></div>
+          <div className="ml-auto flex min-w-0 flex-1 justify-end md:ml-3 md:justify-center"><RouteAwareCommandPalette items={searchItems} loadItemsAction={searchAction} /></div>
           <Link className="hidden size-9 shrink-0 place-items-center rounded-md border border-[var(--tr1-line-strong)] bg-transparent text-[0.65rem] font-semibold text-[var(--tr1-navy)] hover:bg-muted lg:grid" href="/dashboard/account" title="Mon compte">{initials(userName)}</Link>
         </header>
         <main className="mx-auto w-full max-w-[100rem] p-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:p-6 md:pb-8 lg:p-8">{children}</main>
