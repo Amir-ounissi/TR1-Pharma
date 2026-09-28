@@ -48,8 +48,12 @@ export function CommandPalette({ items, loadItemsAction }: { items: SearchItem[]
     let cancelled = false;
     const timer = window.setTimeout(() => {
       startRemoteTransition(async () => {
-        const nextItems = await loadItemsAction(query);
-        if (!cancelled) setRemoteItems(nextItems);
+        try {
+          const nextItems = await loadItemsAction(query);
+          if (!cancelled) setRemoteItems(nextItems);
+        } catch {
+          if (!cancelled) setRemoteItems([]);
+        }
       });
     }, 160);
     return () => {
