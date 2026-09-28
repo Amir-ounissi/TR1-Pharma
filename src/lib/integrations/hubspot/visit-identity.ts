@@ -40,3 +40,30 @@ export function selectHubSpotVisitCandidate(
 export function hubSpotCanMutateVisit(source: string | null, status: string) {
   return source === "import" && status !== "in_progress" && status !== "completed";
 }
+
+
+export function resolveHubSpotMeetingStart(options: {
+  meetingStartTime: unknown;
+  activityTimestamp: unknown;
+  outcome: unknown;
+}) {
+  const scheduledStart =
+    typeof options.meetingStartTime === "string" && options.meetingStartTime.trim()
+      ? options.meetingStartTime.trim()
+      : null;
+  if (scheduledStart) {
+    return { start: scheduledStart, isScheduled: true };
+  }
+
+  const outcome = String(options.outcome ?? "").trim().toUpperCase();
+  const activityTimestamp =
+    typeof options.activityTimestamp === "string" && options.activityTimestamp.trim()
+      ? options.activityTimestamp.trim()
+      : null;
+
+  if (outcome === "COMPLETED" && activityTimestamp) {
+    return { start: activityTimestamp, isScheduled: false };
+  }
+
+  return { start: null, isScheduled: false };
+}
