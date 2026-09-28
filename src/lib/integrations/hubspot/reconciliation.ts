@@ -6,7 +6,7 @@ import { hubSpotRunFailureStatus } from "./runtime-status";
 import { NAALI_HUBSPOT_CONFIGURATION } from "./naali";
 import { resolveNaaliFreeUnitsRuleFromLeadStatus } from "./naali-pricing";
 import { syncHubSpotOrderAfterPersistence } from "./runtime";
-import { hubSpotCanMutateVisit, selectHubSpotVisitCandidate } from "./visit-identity";
+import { hubSpotCanMutateVisit, resolveHubSpotMeetingStart, selectHubSpotVisitCandidate } from "./visit-identity";
 import { resolveHubSpotOrderSyncWindow } from "./reconciliation-window";
 import { selectHistoricalHubSpotOrderCandidate, selectHistoricalOutboundHubSpotOrderCandidate } from "./order-reconciliation";
 
@@ -1704,8 +1704,13 @@ async function importVisit(options: {
   const properties = options.remote.properties ?? {};
   const resolvedVisitKind = options.visitKindOverride ?? visitKind(properties.hs_activity_type);
   const resolvedObjective = visitObjective(resolvedVisitKind);
-  const start = text(properties.hs_meeting_start_time) ?? text(properties.hs_timestamp);
-  if (!start) throw new Error(`HubSpot meeting ${remoteId} has no start time`);
+  const timing = resolveHubSpotMeetingStart({
+    meetingStartTime: properties.hs_meeting_start_time,
+    activityTimestamp: properties.hs_timestamp,
+    outcome: properties.hs_meeting_outcome,
+  });
+  const start = timing.start;
+  if (!start) throw new Error(`HubSpot meeting ${remoteId} has no scheduled start time`);
   const rawEnd = text(properties.hs_meeting_end_time);
   const startMs = new Date(start).getTime();
   const rawEndMs = rawEnd ? new Date(rawEnd).getTime() : Number.NaN;
@@ -2590,6 +2595,29 @@ async function naaliCompanyRelationship(
   return relationship;
 }
 
+async function cancelLinkedHubSpotPlan(admin: AdminClient, visitId: string) {
+  const { data: visit, error: readError } = await admin
+    .from("field_visits")
+    .select("id,source,status")
+    .eq("id", visitId)
+    .is("archived_at", null)
+    .maybeSingle();
+  if (readError) throw readError;
+  if (!visit || !hubSpotCanMutateVisit(visit.source ? String(visit.source) : null, String(visit.status))) {
+    return;
+  }
+
+  const { error: updateError } = await admin
+    .from("field_visits")
+    .update({
+      status: "cancelled",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", visitId)
+    .is("archived_at", null);
+  if (updateError) throw updateError;
+}
+
 async function syncInboundVisits(options: {
   admin: AdminClient;
   client: HubSpotClient;
@@ -2655,9 +2683,24 @@ async function syncInboundVisits(options: {
       try {
         const remoteId = externalId(remote);
         if (!remoteId) throw new Error("HubSpot meeting has no id");
-        const start = text(remote.properties?.hs_meeting_start_time) ?? text(remote.properties?.hs_timestamp);
-        const startMs = start ? new Date(start).getTime() : Number.NaN;
-        if (!start || !Number.isFinite(startMs)) throw new Error(`HubSpot meeting ${remoteId} has no valid start time`);
+
+        const timing = resolveHubSpotMeetingStart({
+          meetingStartTime: remote.properties?.hs_meeting_start_time,
+          activityTimestamp: remote.properties?.hs_timestamp,
+          outcome: remote.properties?.hs_meeting_outcome,
+        });
+        const start = timing.start;
+        if (!start) {
+          const linkedVisitId = links.get(remoteId);
+          if (linkedVisitId) {
+            await cancelLinkedHubSpotPlan(options.admin, linkedVisitId);
+          }
+          counter.succeeded += 1;
+          continue;
+        }
+
+        const startMs = new Date(start).getTime();
+        if (!Number.isFinite(startMs)) throw new Error(`HubSpot meeting ${remoteId} has no valid start time`);
 
         const ownerExternalId = text(remote.properties?.hubspot_owner_id);
         const ownerUserId = (ownerExternalId ? options.owners.get(ownerExternalId) : null) ?? options.actorId;
