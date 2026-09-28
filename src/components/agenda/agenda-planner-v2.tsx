@@ -25,6 +25,7 @@ import {
   rescheduleFieldVisitAction,
 } from "@/app/(protected)/dashboard/agenda/actions";
 import { addCalendarDays, isoToParisLocal, mondayOfWeek, parisLocalToIso } from "@/lib/agenda";
+import { presentationLabel, presentationText, formatActionTiming } from "@/lib/presentation";
 import { uiLabel } from "@/lib/ui-copy";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -339,8 +340,7 @@ export function AgendaPlanner({
           </p>
           <h1 className="mt-1 text-3xl font-black tracking-tight text-[var(--tr1-navy)]">Planifier votre terrain</h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            L&apos;Agenda répond à une question simple : quand et où allez-vous agir ? Les tâches restent à faire,
-            les animations restent des informations, seuls les vrais rendez-vous occupent votre temps.
+            Planifiez vos visites et gardez les actions à traiter sous les yeux.
           </p>
         </div>
 
@@ -432,7 +432,7 @@ export function AgendaPlanner({
         {view === "day" ? (
           <div className="grid divide-y border-b border-[var(--tr1-line)] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
             <SummaryItem value={dayVisits.length} label={dayVisits.length > 1 ? "visites prévues" : "visite prévue"} />
-            <SummaryItem value={dayActions.length} label="actions à faire" emphasis={dayActions.length > 0} />
+            <SummaryItem value={dayActions.length} label="actions ce jour" emphasis={dayActions.length > 0} />
             <SummaryItem value={dayContext.length} label="infos terrain" info />
           </div>
         ) : null}
@@ -550,6 +550,7 @@ function SummaryItem({ value, label, emphasis = false, info = false }: { value: 
 }
 
 function ContextStrip({ events, planning }: { events: AgendaEvent[]; planning: AgendaEvent[] }) {
+  if (!events.length) return null;
   const plannedPharmacyIds = new Set(planning.map((event) => event.pharmacy_id).filter(Boolean));
   return (
     <section className="rounded-2xl border border-[var(--tr1-line)] bg-slate-50/80 p-3">
@@ -562,8 +563,7 @@ function ContextStrip({ events, planning }: { events: AgendaEvent[]; planning: A
           <p className="text-xs text-muted-foreground">Informations terrain — elles ne bloquent aucun créneau.</p>
         </div>
       </div>
-      {events.length ? (
-        <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className="flex gap-2 overflow-x-auto pb-1">
           {events.map((event) => {
             const onRoute = !!event.pharmacy_id && plannedPharmacyIds.has(event.pharmacy_id);
             return (
@@ -581,9 +581,6 @@ function ContextStrip({ events, planning }: { events: AgendaEvent[]; planning: A
             );
           })}
         </div>
-      ) : (
-        <div className="rounded-xl border border-dashed bg-white/60 px-4 py-3 text-xs text-muted-foreground">Aucune animation ou activité signalée dans vos pharmacies aujourd&apos;hui.</div>
-      )}
     </section>
   );
 }
@@ -883,15 +880,25 @@ function EventCard({ event, relatedContext, fillHeight = false, onReschedule }: 
 
 function ActionPanel({ date, actions, backlog }: { date: string; actions: AgendaEvent[]; backlog: BacklogItem[] }) {
   const actionKeys = new Set(actions.map((item) => `${item.source_kind}:${item.source_id}`));
-  const remainingBacklog = backlog.filter((item) => !actionKeys.has(`${item.source_kind}:${item.source_id}`));
+  const remainingBacklog = backlog
+    .filter((item) => !actionKeys.has(`${item.source_kind}:${item.source_id}`))
+    .sort(compareBacklogItems);
+  const visibleBacklog = remainingBacklog.slice(0, 12);
+  const groups = [
+    { key: "overdue", label: "En retard", items: visibleBacklog.filter((item) => formatActionTiming(item.due_at).kind === "overdue") },
+    { key: "today", label: "Aujourd’hui", items: visibleBacklog.filter((item) => formatActionTiming(item.due_at).kind === "today") },
+    { key: "upcoming", label: "À venir", items: visibleBacklog.filter((item) => ["tomorrow", "future"].includes(formatActionTiming(item.due_at).kind)) },
+    { key: "unscheduled", label: "À planifier", items: visibleBacklog.filter((item) => formatActionTiming(item.due_at).kind === "unscheduled") },
+  ].filter((group) => group.items.length);
+
   return (
     <aside className="h-fit rounded-2xl border border-[var(--tr1-line)] bg-white/85 p-3 shadow-sm xl:sticky xl:top-4">
-      <div className="mb-3">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="font-bold text-[var(--tr1-navy)]">À faire / à planifier</h2>
-          <Badge variant="secondary">{actions.length + remainingBacklog.length}</Badge>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div>
+          <h2 className="font-bold text-[var(--tr1-navy)]">À faire</h2>
+          <p className="text-xs text-muted-foreground">Les actions les plus urgentes d’abord.</p>
         </div>
-        <p className="text-xs text-muted-foreground">Les actions ne bloquent plus artificiellement votre calendrier.</p>
+        <Badge variant="secondary">{actions.length + remainingBacklog.length} à traiter</Badge>
       </div>
 
       {actions.length ? (
@@ -900,7 +907,7 @@ function ActionPanel({ date, actions, backlog }: { date: string; actions: Agenda
           {actions.map((item) => (
             <Link href={item.detail_url || "#"} key={item.event_key} className="block rounded-xl border border-[var(--tr1-line)] bg-white p-3 text-sm transition hover:border-slate-300 hover:shadow-sm">
               <div className="flex items-start justify-between gap-2">
-                <strong className="line-clamp-2 text-[var(--tr1-navy)]">{item.title}</strong>
+                <strong className="line-clamp-2 text-[var(--tr1-navy)]">{presentationText(item.title)}</strong>
                 <Badge variant="outline">{item.source_kind === "report" ? "CR" : "Tâche"}</Badge>
               </div>
               <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">{[item.pharmacy_name, item.brand_names.join(" · ")].filter(Boolean).join(" · ")}</p>
@@ -909,15 +916,33 @@ function ActionPanel({ date, actions, backlog }: { date: string; actions: Agenda
         </div>
       ) : null}
 
-      <div className="space-y-2">
-        {remainingBacklog.slice(0, 8).map((item) => (
-          <Link href={item.detail_url || "#"} className="block rounded-xl border border-[var(--tr1-line)] bg-white p-3 text-sm transition hover:border-slate-300 hover:shadow-sm" key={item.item_key}>
-            <div className="flex items-start justify-between gap-2">
-              <strong className="line-clamp-2 text-[var(--tr1-navy)]">{item.title}</strong>
-              <Badge variant={item.status === "overdue" ? "destructive" : "secondary"}>{uiLabel(item.status)}</Badge>
+      <div className="space-y-4">
+        {groups.map((group) => (
+          <section key={group.key} className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <p className={cn(
+                "text-[0.65rem] font-bold uppercase tracking-wide text-muted-foreground",
+                group.key === "overdue" && "text-red-700",
+              )}>{group.label}</p>
+              <span className="text-[0.65rem] font-semibold text-muted-foreground">{group.items.length}</span>
             </div>
-            <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">{[item.pharmacy_name, item.brand_name].filter(Boolean).join(" · ")}</p>
-          </Link>
+            {group.items.map((item) => {
+              const timing = formatActionTiming(item.due_at);
+              return (
+                <Link href={item.detail_url || "#"} className={cn(
+                  "block rounded-xl border bg-white p-3 text-sm transition hover:border-slate-300 hover:shadow-sm",
+                  timing.kind === "overdue" ? "border-red-200" : "border-[var(--tr1-line)]",
+                )} key={item.item_key}>
+                  <div className="flex items-start justify-between gap-2">
+                    <strong className="line-clamp-2 text-[var(--tr1-navy)]">{presentationText(item.title)}</strong>
+                    <Badge variant={timing.kind === "overdue" ? "destructive" : "secondary"}>{timing.label}</Badge>
+                  </div>
+                  <p className="mt-1 line-clamp-1 text-xs font-medium text-[var(--tr1-navy)]">{item.pharmacy_name || "Pharmacie à identifier"}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{[item.brand_name, presentationLabel(item.priority)].filter(Boolean).join(" · ")}</p>
+                </Link>
+              );
+            })}
+          </section>
         ))}
         {!actions.length && !remainingBacklog.length ? (
           <div className="rounded-xl border border-dashed bg-slate-50/60 p-5 text-center">
@@ -925,10 +950,26 @@ function ActionPanel({ date, actions, backlog }: { date: string; actions: Agenda
             <p className="mt-2 text-xs text-muted-foreground">Rien à traiter pour le moment.</p>
           </div>
         ) : null}
-        {remainingBacklog.length > 8 ? <p className="pt-1 text-center text-xs text-muted-foreground">+ {remainingBacklog.length - 8} autres actions</p> : null}
+        {remainingBacklog.length > visibleBacklog.length ? <p className="pt-1 text-center text-xs text-muted-foreground">+ {remainingBacklog.length - visibleBacklog.length} autres actions</p> : null}
       </div>
     </aside>
   );
+}
+
+function compareBacklogItems(left: BacklogItem, right: BacklogItem) {
+  const timingOrder = { overdue: 0, today: 1, tomorrow: 2, future: 3, unscheduled: 4 } as const;
+  const leftTiming = formatActionTiming(left.due_at);
+  const rightTiming = formatActionTiming(right.due_at);
+  const timingDifference = timingOrder[leftTiming.kind] - timingOrder[rightTiming.kind];
+  if (timingDifference !== 0) return timingDifference;
+
+  if (left.due_at && right.due_at) {
+    const dateDifference = Date.parse(left.due_at) - Date.parse(right.due_at);
+    if (dateDifference !== 0) return dateDifference;
+  }
+
+  const priorityOrder: Record<string, number> = { urgent: 0, strategic: 1, high: 2, normal: 3, low: 4 };
+  return (priorityOrder[left.priority] ?? 9) - (priorityOrder[right.priority] ?? 9);
 }
 
 function EmptyPlanning({ onAddVisit }: { onAddVisit?: () => void }) {
