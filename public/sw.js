@@ -1,6 +1,7 @@
-const STATIC_CACHE = "tr1-pwa-static-v2";
+const STATIC_CACHE = "tr1-pwa-static-v3";
 const STATIC_PREFIX = "tr1-pwa-static-";
 const PRECACHE = [
+  "/pwa-start",
   "/offline",
   "/manifest.webmanifest",
   "/pwa/icon/180",
@@ -43,6 +44,16 @@ self.addEventListener("fetch", (event) => {
   if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/auth/")) return;
 
   if (request.mode === "navigate") {
+    if (url.pathname === "/pwa-start") {
+      event.respondWith(
+        caches.match("/pwa-start").then((cached) => {
+          if (cached) return cached;
+          return fetch(request);
+        }),
+      );
+      return;
+    }
+
     event.respondWith(
       fetch(request).catch(async () => {
         if (url.pathname !== "/offline") {
