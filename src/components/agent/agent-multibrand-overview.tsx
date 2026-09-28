@@ -208,6 +208,7 @@ export function AgentMultibrandOverview({
     })),
   ].sort((a, b) => b.score - a.score);
   const progress = getVisitProgress(visits);
+  const showBrandBadges = new Set(visits.flatMap((visit) => visit.brandNames)).size > 1;
 
   function actionRow(action: PriorityAction) {
     const existingVisit = plannedVisits.find(
@@ -262,7 +263,7 @@ export function AgentMultibrandOverview({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <h2 className="text-lg font-semibold">Mon programme</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Touchez une visite pour saisir directement son compte rendu et la clôturer.</p>
+              <p className="mt-1 text-sm text-muted-foreground">Ouvrez une visite pour la préparer, la reprendre ou la clôturer.</p>
             </div>
             <Link href="/dashboard/agenda" className="inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-md px-2 text-sm font-semibold hover:underline focus-visible:ring-2">
               Voir l’agenda <ArrowRight className="size-4" aria-hidden="true" />
@@ -281,11 +282,11 @@ export function AgentMultibrandOverview({
                       <div className="min-w-0 flex-1">
                         <p className="break-words text-base font-semibold">{visit.pharmacyName}</p>
                         {visit.city ? <p className="mt-1 text-sm text-muted-foreground">{visit.city}</p> : null}
-                        <div className="mt-2 flex flex-wrap gap-1.5">{visit.brandNames.map((name) => <BrandBadge key={`${visit.id}:${name}`} name={name} />)}</div>
-                        <p className="mt-2 text-sm text-muted-foreground">{visitStatusLabel(visit.status)}</p>
+                        {showBrandBadges ? <div className="mt-2 flex flex-wrap gap-1.5">{visit.brandNames.map((name) => <BrandBadge key={`${visit.id}:${name}`} name={name} />)}</div> : null}
+                        {!["planned", "scheduled"].includes(visit.status.trim().toLowerCase()) ? <p className="mt-2 text-sm text-muted-foreground">{visitStatusLabel(visit.status)}</p> : null}
                       </div>
                       <span className="mt-1 inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-[var(--tr1-navy)]">
-                        {closed ? "Voir" : "Clôturer"} <ArrowRight className="size-4" aria-hidden="true" />
+                        {closed ? "Voir" : "Ouvrir"} <ArrowRight className="size-4" aria-hidden="true" />
                       </span>
                     </Link>
                   </li>
