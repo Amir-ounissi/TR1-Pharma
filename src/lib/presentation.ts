@@ -10,7 +10,7 @@ const presentationLabels = {
   contacted: "Contactée",
   appointment_scheduled: "Rendez-vous planifié",
   offer_sent: "Offre envoyée",
-  pending_order: "Commande attendue",
+  pending_order: "Commande en attente",
   implanted: "Implantée",
   to_develop: "À développer",
   dormant: "Dormante",
@@ -91,6 +91,7 @@ export function presentationText(value: string) {
     .replace(/Action suggérée après passage à contacted/gi, "Assurer le suivi commercial")
     .replace(/Action suggérée après passage à appointment_scheduled/gi, "Préparer le rendez-vous")
     .replace(/Action suggérée après passage à offer_sent/gi, "Relancer l’offre")
+    .replace(/Action suggérée après passage à pending_order/gi, "Commande en attente · Relancer")
     .replace(/Activité watch — action de suivi/gi, "Vérifier l’activité de la pharmacie")
     .replace(/Activité at_risk — action de suivi/gi, "Relancer la pharmacie")
     .replace(/Activité dormant — action de suivi/gi, "Réactiver la pharmacie")
