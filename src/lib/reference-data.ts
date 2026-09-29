@@ -15,7 +15,7 @@ export const labels = {
   commercialStatus: {
     targeted: "Ciblée", qualified: "Qualifiée", contacted: "Contactée",
     appointment_scheduled: "Rendez-vous planifié", offer_sent: "Offre envoyée",
-    pending_order: "Commande attendue", implanted: "Implantée", active: "Active",
+    pending_order: "Commande en attente", implanted: "Implantée", active: "Active",
     to_develop: "À développer", dormant: "Dormante", lost: "Perdue",
   },
   activityStatus: {

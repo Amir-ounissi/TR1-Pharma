@@ -56,6 +56,44 @@ async function timedQuery<T>(label: string, query: PromiseLike<T>): Promise<T> {
   }
 }
 
+const closedVisitStatuses = new Set(["completed", "cancelled", "canceled", "missed", "no_show"]);
+
+function visitNeedsCloseout(event: FieldAgendaEvent, nowMs: number) {
+  const status = event.status.trim().toLowerCase();
+  if (closedVisitStatuses.has(status)) return false;
+  const endAt = Date.parse(event.end_at);
+  return Number.isFinite(endAt) && endAt <= nowMs;
+}
+
+function cleanVisitObjective(value: string | null | undefined, pharmacyName: string, fallback = "Suivi commercial") {
+  const objective = value?.trim();
+  if (!objective) return fallback;
+
+  const normalize = (text: string) => text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/gi, " ")
+    .trim()
+    .toLowerCase();
+
+  const normalizedObjective = normalize(objective);
+  const normalizedPharmacy = normalize(pharmacyName);
+  if (normalizedObjective === normalizedPharmacy) return fallback;
+
+  const visitType = objective.match(/^\s*(VP|RP|RC|VC|F)\s*[-–—:]\s*(.+)$/i);
+  if (visitType && normalize(visitType[2]) === normalizedPharmacy) {
+    return ({
+      VP: "Visite de prospection",
+      RP: "Rendez-vous prospect",
+      RC: "Rendez-vous client",
+      VC: "Visite client",
+      F: "Formation",
+    } as Record<string, string>)[visitType[1].toUpperCase()] ?? fallback;
+  }
+
+  return objective;
+}
+
 export default async function AgentPage() {
   const [saas, session] = await Promise.all([
     requireActiveBrandCapability("agent_day"),
@@ -205,11 +243,15 @@ export default async function AgentPage() {
         name: primaryFieldVisit.pharmacy_name || primaryFieldVisit.title,
         address: primaryVisitContext?.address || primaryFieldVisit.city || "Adresse disponible dans la visite",
         scheduledAt: primaryFieldVisit.start_at,
-        objective: primaryVisitContext?.objective || primaryFieldVisit.title || "Visite terrain",
+        objective: cleanVisitObjective(
+          primaryVisitContext?.objective || primaryFieldVisit.title,
+          primaryFieldVisit.pharmacy_name || primaryFieldVisit.title,
+          "Visite terrain",
+        ),
         href: `/dashboard/visits/${primaryFieldVisit.source_id}`,
         ctaLabel: primaryFieldVisit.status.toLowerCase() === "in_progress"
           ? "Reprendre la visite"
-          : Date.parse(primaryFieldVisit.start_at) <= now.getTime()
+          : visitNeedsCloseout(primaryFieldVisit, now.getTime())
             ? "Clôturer la visite"
             : "Préparer la visite",
       }
@@ -218,7 +260,7 @@ export default async function AgentPage() {
           name: visit.name,
           address: visit.address,
           scheduledAt: visit.scheduled_at,
-          objective: visit.objective,
+          objective: cleanVisitObjective(visit.objective, visit.name),
           href: `/dashboard/pharmacies/${visit.brand_pharmacy_id}`,
           ctaLabel: "Préparer la visite",
         }
@@ -243,8 +285,7 @@ export default async function AgentPage() {
     (event) => event.ownership === "mine" && event.source_kind === "field_visit" && Boolean(event.pharmacy_id),
   );
   const pendingVisitCount = activeFieldVisits.filter(
-    (event) => !["completed", "cancelled"].includes(event.status)
-      && new Date(event.start_at).getTime() <= now.getTime(),
+    (event) => visitNeedsCloseout(event, now.getTime()),
   ).length;
 
   const monthBookedRevenue = (monthBookedOrdersResult.data ?? []).reduce(

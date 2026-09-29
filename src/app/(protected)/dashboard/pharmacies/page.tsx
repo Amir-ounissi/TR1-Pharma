@@ -49,7 +49,7 @@ export default async function PharmaciesPage({ searchParams }: { searchParams: S
   const { data, count, error } = await query.order(sort, { ascending: !descending }).range((page - 1) * pageSize, page * pageSize - 1);
   const rows = data ?? [];
   const totalPages = Math.max(1, Math.ceil((count ?? 0) / pageSize));
-  const strategicCount = rows.filter((row) => row.priority_level === "strategic").length;
+  const priorityCount = rows.filter((row) => row.priority_level === "high" || row.priority_level === "strategic").length;
   const unassignedCount = rows.filter((row) => !row.agent_name).length;
   const cityCount = new Set(rows.map((row) => row.city).filter(Boolean)).size;
   let mapDataset = null;
@@ -80,7 +80,7 @@ export default async function PharmaciesPage({ searchParams }: { searchParams: S
             <CompactPageHeader
               eyebrow={`Réseau officinal / ${brand.name}`}
               title="Pharmacies"
-              description="Le portefeuille, les affectations et les priorités commerciales se lisent ici en une seule vue dense."
+              description="Retrouvez votre portefeuille et les pharmacies qui demandent votre attention."
               actions={role !== "agent" ? (
                 <Button asChild className="h-9 rounded-md bg-[var(--tr1-navy)] px-3.5 text-sm font-medium text-white hover:bg-[var(--tr1-navy-soft)]">
                   <Link href="/dashboard/pharmacies/new">
@@ -110,7 +110,7 @@ export default async function PharmaciesPage({ searchParams }: { searchParams: S
           <MetricStrip
             items={[
               { icon: Building2, label: role === "agent" ? "Mon portefeuille" : "Portefeuille total", value: count ?? 0, detail: "Pharmacies référencées" },
-              { icon: CircleAlert, label: "Priorités", value: strategicCount, detail: "Sur cette page", accent: true },
+              { icon: CircleAlert, label: "Priorités affichées", value: priorityCount, detail: "Haute ou stratégique", accent: true },
               role === "agent" ? { icon: CircleAlert, label: "À relancer", value: rows.filter((row) => row.activity_status === "at_risk" || row.activity_status === "dormant").length, detail: "Sur cette page" } : { icon: UserRound, label: "Sans agent", value: unassignedCount, detail: "Sur cette page · affectation à compléter" },
               { icon: MapPin, label: "Villes couvertes", value: cityCount, detail: "Sur cette page" },
             ]}
@@ -186,8 +186,12 @@ export default async function PharmaciesPage({ searchParams }: { searchParams: S
                     <Input name="postalCode" defaultValue={typeof params.postalCode === "string" ? params.postalCode : ""} className="h-10 rounded-md bg-white text-sm" placeholder="Code postal" />
                     <Select name="priority" defaultValue={typeof params.priority === "string" ? params.priority : "all"}><SelectTrigger className="h-10 w-full rounded-md bg-white"><SelectValue placeholder="Priorité" /></SelectTrigger><SelectContent><SelectItem value="all">Toute priorité</SelectItem>{priorityLevels.map((value) => <SelectItem key={value} value={value}>{labels.priorityLevel[value]}</SelectItem>)}</SelectContent></Select>
                     <Select name="potential" defaultValue={typeof params.potential === "string" ? params.potential : "all"}><SelectTrigger className="h-10 w-full rounded-md bg-white"><SelectValue placeholder="Potentiel" /></SelectTrigger><SelectContent><SelectItem value="all">Tout potentiel</SelectItem>{potentialLevels.map((value) => <SelectItem key={value} value={value}>{labels.potentialLevel[value]}</SelectItem>)}</SelectContent></Select>
-                    <Input name="agent" defaultValue={typeof params.agent === "string" ? params.agent : ""} className="h-10 rounded-md bg-white text-sm" placeholder="Agent" />
-                    <Input name="territory" defaultValue={typeof params.territory === "string" ? params.territory : ""} className="h-10 rounded-md bg-white text-sm" placeholder="Territoire" />
+                    {role !== "agent" ? (
+                      <>
+                        <Input name="agent" defaultValue={typeof params.agent === "string" ? params.agent : ""} className="h-10 rounded-md bg-white text-sm" placeholder="Agent" />
+                        <Input name="territory" defaultValue={typeof params.territory === "string" ? params.territory : ""} className="h-10 rounded-md bg-white text-sm" placeholder="Territoire" />
+                      </>
+                    ) : null}
                     <Input name="group" defaultValue={typeof params.group === "string" ? params.group : ""} className="h-10 rounded-md bg-white text-sm sm:col-span-2" placeholder="Groupement" />
                     <Select name="sort" defaultValue={sort}><SelectTrigger className="h-10 w-full rounded-md bg-white"><SelectValue placeholder="Trier par" /></SelectTrigger><SelectContent><SelectItem value="trade_name">Nom</SelectItem><SelectItem value="city">Ville</SelectItem><SelectItem value="commercial_status">Statut</SelectItem><SelectItem value="priority_level">Priorité</SelectItem><SelectItem value="potential_level">Potentiel</SelectItem></SelectContent></Select>
                     <Select name="direction" defaultValue={descending ? "desc" : "asc"}><SelectTrigger className="h-10 w-full rounded-md bg-white sm:col-span-2"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="asc">Tri croissant</SelectItem><SelectItem value="desc">Tri décroissant</SelectItem></SelectContent></Select>
@@ -248,7 +252,7 @@ export default async function PharmaciesPage({ searchParams }: { searchParams: S
           }
         />
       ) : (
-        <PharmacyListWithPanel rows={rows} loadSummaryAction={loadPharmacySummaryAction} />
+        <PharmacyListWithPanel rows={rows} loadSummaryAction={loadPharmacySummaryAction} showOwnershipColumns={role !== "agent"} />
       )}
 
       {rows.length > 0 ? (

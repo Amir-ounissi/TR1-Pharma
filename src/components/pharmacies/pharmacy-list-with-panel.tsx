@@ -29,9 +29,10 @@ export type PharmacyListRow = {
 type PharmacyListWithPanelProps = {
   rows: PharmacyListRow[];
   loadSummaryAction: (brandPharmacyId: string) => Promise<{ summary: PharmacySummary | null; error: string | null }>;
+  showOwnershipColumns?: boolean;
 };
 
-export function PharmacyListWithPanel({ rows, loadSummaryAction }: PharmacyListWithPanelProps) {
+export function PharmacyListWithPanel({ rows, loadSummaryAction, showOwnershipColumns = true }: PharmacyListWithPanelProps) {
   const [open, setOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [summaryById, setSummaryById] = useState<Record<string, PharmacySummary | null>>({});
@@ -60,7 +61,7 @@ export function PharmacyListWithPanel({ rows, loadSummaryAction }: PharmacyListW
         {rows.map((row) => {
           const pharmacyName = row.trade_name || row.legal_name || "Pharmacie";
           const needsAttention = row.activity_status === "at_risk" || row.activity_status === "dormant";
-          const strategic = row.priority_level === "strategic";
+          const strategic = row.priority_level === "strategic" || row.priority_level === "high";
 
           return (
             <Link
@@ -127,8 +128,8 @@ export function PharmacyListWithPanel({ rows, loadSummaryAction }: PharmacyListW
               <TableHead className="px-3 font-mono text-[0.54rem] font-bold uppercase tracking-[0.12em] text-white">Statut</TableHead>
               <TableHead className="px-3 font-mono text-[0.54rem] font-bold uppercase tracking-[0.12em] text-white">Priorité</TableHead>
               <TableHead className="px-3 font-mono text-[0.54rem] font-bold uppercase tracking-[0.12em] text-white">Potentiel</TableHead>
-              <TableHead className="px-3 font-mono text-[0.54rem] font-bold uppercase tracking-[0.12em] text-white">Agent</TableHead>
-              <TableHead className="px-3 font-mono text-[0.54rem] font-bold uppercase tracking-[0.12em] text-white">Territoire</TableHead>
+              {showOwnershipColumns ? <TableHead className="px-3 font-mono text-[0.54rem] font-bold uppercase tracking-[0.12em] text-white">Agent</TableHead> : null}
+              {showOwnershipColumns ? <TableHead className="px-3 font-mono text-[0.54rem] font-bold uppercase tracking-[0.12em] text-white">Territoire</TableHead> : null}
             </TableRow>
           </TableHeader>
           <TableBody>
