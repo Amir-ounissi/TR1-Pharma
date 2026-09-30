@@ -68,9 +68,12 @@
     "supabase": "2.109.1",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
   },
   "overrides": {
-    "postcss": "8.5.23"
+    "postcss": "8.5.23",
+    "fast-uri": "3.1.7",
+    "qs": "6.16.0",
+    "undici": "7.29.1"
   }
 }
