@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requirePlatformAdmin } from "@/lib/auth";
 import { isSaasCapability } from "@/lib/saas/capabilities";
+import { parseOrderCcEmails } from "@/lib/orders/order-email-transmission";
 
 const planSchema = z.object({
   brandId: z.string().uuid(),
@@ -39,6 +40,14 @@ const terminologySchema = z.object({
   reorder: z.string().trim().min(1).max(80),
   missionSingular: z.string().trim().min(1).max(80),
   missionPlural: z.string().trim().min(1).max(80),
+});
+
+const orderEmailTransmissionSchema = z.object({
+  brandId: z.string().uuid(),
+  recipientEmail: z.union([z.literal(""), z.string().trim().email().max(320)]),
+  ccEmails: z.string().max(2000),
+  subjectTemplate: z.string().max(300),
+  bodyTemplate: z.string().max(20_000),
 });
 
 function revalidateSaas(brandId: string) {
@@ -140,4 +149,40 @@ export async function updateBrandTerminologyAction(formData: FormData) {
   });
   if (error) throw new Error(error.message);
   revalidateSaas(parsed.brandId);
+}
+
+
+export async function updateOrderEmailTransmissionSettingsAction(formData: FormData) {
+  const parsed = orderEmailTransmissionSchema.parse({
+    brandId: formData.get("brandId"),
+    recipientEmail: formData.get("recipientEmail") ?? "",
+    ccEmails: formData.get("ccEmails") ?? "",
+    subjectTemplate: formData.get("subjectTemplate") ?? "",
+    bodyTemplate: formData.get("bodyTemplate") ?? "",
+  });
+  const ccEmails = parseOrderCcEmails(parsed.ccEmails);
+  const requiredDocuments = [
+    ...(formData.get("requireKbis") === "on" ? ["kbis"] : []),
+    ...(formData.get("requireRib") === "on" ? ["rib"] : []),
+  ];
+
+  const { supabase } = await requirePlatformAdmin();
+  const { error } = await supabase.rpc("update_brand_saas_settings", {
+    target_brand_id: parsed.brandId,
+    terminology_patch: null,
+    configuration_patch: {
+      order_email_transmission: {
+        enabled: formData.get("enabled") === "on",
+        recipient_email: parsed.recipientEmail || null,
+        cc_emails: ccEmails,
+        require_vat: formData.get("requireVat") === "on",
+        required_documents: requiredDocuments,
+        subject_template: parsed.subjectTemplate.trim() || null,
+        body_template: parsed.bodyTemplate.trim() || null,
+      },
+    },
+  });
+  if (error) throw new Error(error.message);
+  revalidateSaas(parsed.brandId);
+  revalidatePath("/dashboard/orders");
 }

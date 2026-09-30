@@ -666,6 +666,7 @@ function foldBase64(buffer: Buffer) {
 export function buildMimeMessage(input: {
   from: string;
   to: string;
+  cc?: string[];
   subject: string;
   body: string;
   attachments: EmailAttachment[];
@@ -674,6 +675,7 @@ export function buildMimeMessage(input: {
   const headers = [
     `From: ${input.from}`,
     `To: ${input.to}`,
+    ...(input.cc?.length ? [`Cc: ${input.cc.join(", ")}`] : []),
     `Subject: ${encodedHeader(input.subject)}`,
     "MIME-Version: 1.0",
     `Content-Type: multipart/mixed; boundary=\"${boundary}\"`,

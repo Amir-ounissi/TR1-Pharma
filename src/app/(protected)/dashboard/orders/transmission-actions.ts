@@ -7,7 +7,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { decryptCredential } from "@/lib/integrations/gmail/credentials";
 import { refreshGoogleAccessToken, sendGmailRawMessage } from "@/lib/integrations/gmail/google";
 import { buildMimeMessage, buildTr1OrderPdf, type EmailAttachment } from "@/lib/orders/order-email";
+import {
+  parseOrderCcEmails,
+  resolveOrderEmailTransmissionConfig,
+} from "@/lib/orders/order-email-transmission";
 import { buildOrderPdfPayload } from "@/lib/orders/order-pdf-payload";
+import { lookupFrenchVatNumber } from "@/lib/pharmacies/fr-vat-lookup";
 
 const uuid = z.string().uuid();
 const allowedRoles = new Set(["agent", "brand_user", "brand_admin", "tr1_manager", "super_admin"]);
@@ -38,6 +43,19 @@ async function requireTransmissionOrder(orderId: string) {
   const role = contexts.find((context) => context.id === brand.id)?.role ?? "brand_user";
   if (!allowedRoles.has(role)) throw new Error("Vous n’avez pas accès à la transmission de commandes.");
 
+  const { data: transmissionSettings, error: settingsError } = await supabase
+    .from("brand_saas_settings")
+    .select("configuration")
+    .eq("brand_id", brand.id)
+    .maybeSingle();
+  if (settingsError) throw new Error("Impossible de charger la configuration de transmission.");
+  const transmissionConfig = resolveOrderEmailTransmissionConfig(
+    transmissionSettings?.configuration as Record<string, unknown> | null | undefined,
+  );
+  if (!transmissionConfig.enabled) {
+    throw new Error("La transmission de commandes par email n’est pas activée pour cette marque.");
+  }
+
   const { data: order, error } = await supabase
     .from("orders")
     .select("id,brand_id,pharmacy_id,brand_pharmacy_id,order_number,external_order_id,order_date,order_status,subtotal_ht,discount_amount_ht,net_amount_ht,tax_amount,total_ttc,notes,created_by")
@@ -46,7 +64,60 @@ async function requireTransmissionOrder(orderId: string) {
     .maybeSingle();
   if (error || !order) throw new Error("Commande introuvable.");
 
-  return { supabase, brand, userId, order };
+  return { supabase, brand, userId, order, transmissionConfig };
+}
+
+export async function lookupPharmacyVatNumberAction(
+  _state: OrderTransmissionActionState,
+  formData: FormData,
+): Promise<OrderTransmissionActionState> {
+  const parsed = z.object({ orderId: uuid }).safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "Commande invalide." };
+
+  try {
+    const { supabase, order } = await requireTransmissionOrder(parsed.data.orderId);
+    const { data: pharmacy, error: pharmacyError } = await supabase
+      .from("pharmacies")
+      .select("legal_name,trade_name,siret,postal_code,city,vat_number")
+      .eq("id", order.pharmacy_id)
+      .single();
+    if (pharmacyError || !pharmacy) throw new Error("Pharmacie introuvable.");
+    if (pharmacy.vat_number?.trim()) return { success: `TVA déjà enregistrée : ${pharmacy.vat_number}.` };
+
+    const lookup = await lookupFrenchVatNumber({
+      siret: pharmacy.siret,
+      legalName: pharmacy.legal_name,
+      tradeName: pharmacy.trade_name,
+      postalCode: pharmacy.postal_code,
+      city: pharmacy.city,
+    });
+
+    if (lookup.status !== "found") {
+      return { error: lookup.reason };
+    }
+
+    const admin = createAdminClient();
+    const update: { vat_number: string; siret?: string } = { vat_number: lookup.vatNumber };
+    if (!pharmacy.siret?.trim() && lookup.siret) update.siret = lookup.siret;
+
+    const { error } = await admin
+      .from("pharmacies")
+      .update(update)
+      .eq("id", order.pharmacy_id);
+    if (error) throw error;
+
+    revalidatePath(`/dashboard/orders/${order.id}`);
+    revalidatePath(`/dashboard/pharmacies/${order.brand_pharmacy_id}`);
+    return {
+      success: `TVA officielle trouvée et enregistrée : ${lookup.vatNumber} · ${lookup.companyName}.`,
+    };
+  } catch (error) {
+    return {
+      error: error instanceof Error
+        ? error.message
+        : "Impossible de rechercher automatiquement le numéro de TVA.",
+    };
+  }
 }
 
 export async function updatePharmacyVatNumberAction(
@@ -146,12 +217,18 @@ export async function sendOrderByEmailAction(
   _state: OrderTransmissionActionState,
   formData: FormData,
 ): Promise<OrderTransmissionActionState> {
-  const parsed = z.object({ orderId: uuid }).safeParse(Object.fromEntries(formData));
-  if (!parsed.success) return { error: "Commande invalide." };
+  const parsed = z.object({
+    orderId: uuid,
+    recipientEmail: z.string().trim().email().max(320),
+    ccEmails: z.string().max(2000).optional().default(""),
+    subject: z.string().trim().min(1).max(300),
+    body: z.string().max(20_000),
+  }).safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "Vérifiez le destinataire, l’objet et le contenu du mail." };
 
   let transmissionId: string | null = null;
   try {
-    const { supabase, brand, userId, order } = await requireTransmissionOrder(parsed.data.orderId);
+    const { supabase, brand, userId, order, transmissionConfig } = await requireTransmissionOrder(parsed.data.orderId);
     if (["draft", "needs_correction", "rejected", "cancelled"].includes(order.order_status)) {
       return { error: "La commande doit être validée avant transmission." };
     }
@@ -179,13 +256,28 @@ export async function sendOrderByEmailAction(
       throw new Error("Impossible de préparer les données de transmission.");
     }
 
-    const recipient = brandData.order_email?.trim();
+    const recipient = parsed.data.recipientEmail;
+    const ccEmails = parseOrderCcEmails(parsed.data.ccEmails);
+    const subject = parsed.data.subject;
+    const body = parsed.data.body;
+    const config = resolveOrderEmailTransmissionConfig(
+      { order_email_transmission: {
+        enabled: transmissionConfig.enabled,
+        recipient_email: transmissionConfig.recipientEmail,
+        cc_emails: transmissionConfig.ccEmails,
+        require_vat: transmissionConfig.requireVat,
+        required_documents: transmissionConfig.requiredDocuments,
+        subject_template: transmissionConfig.subjectTemplate,
+        body_template: transmissionConfig.bodyTemplate,
+      } },
+      brandData.order_email,
+    );
     const byType = new Map((documents ?? []).map((document) => [document.document_type, document]));
     const missing: string[] = [];
-    if (!recipient) missing.push("email de prise de commande de la marque");
-    if (!pharmacy.vat_number?.trim()) missing.push("numéro de TVA pharmacie");
-    if (!byType.has("kbis")) missing.push("KBIS");
-    if (!byType.has("rib")) missing.push("RIB");
+    if (config.requireVat && !pharmacy.vat_number?.trim()) missing.push("numéro de TVA pharmacie");
+    for (const documentType of config.requiredDocuments) {
+      if (!byType.has(documentType)) missing.push(documentType.toUpperCase());
+    }
     if (!gmail) missing.push("connexion Gmail");
     if (!(items ?? []).length) missing.push("lignes de commande");
     if (missing.length) return { error: `Transmission bloquée : ${missing.join(", ")}.` };
@@ -215,27 +307,13 @@ export async function sendOrderByEmailAction(
       commercialEmail: commercialLabel(creatorProfile?.full_name, creator?.email || gmail!.email),
     });
     const reference = pdfPayload.reference;
-    const pharmacyName = pdfPayload.pharmacy.name;
-    const subject = `Commande ${brandData.name} · ${pharmacyName} · ${reference}`;
-    const body = [
-      "Bonjour,",
-      "",
-      `Vous trouverez ci-joint la commande ${reference} pour ${pharmacyName}, ainsi que le KBIS et le RIB de la pharmacie.`,
-      "",
-      `N° TVA : ${pharmacy.vat_number}`,
-      `Total TTC : ${Number(order.total_ttc ?? 0).toFixed(2)} €`,
-      "",
-      "Bonne réception,",
-      "",
-      "Ceci est un message automatique, mais vous pouvez y répondre directement.",
-    ].join("\n");
 
     const pdf = buildTr1OrderPdf(pdfPayload);
     const attachments: EmailAttachment[] = [
       { filename: `bon-de-commande-${safeFileName(reference)}.pdf`, contentType: "application/pdf", data: pdf },
     ];
 
-    for (const type of ["kbis", "rib"] as const) {
+    for (const type of config.requiredDocuments) {
       const document = byType.get(type)!;
       const { data, error } = await admin.storage.from("pharmacy-documents").download(document.object_path);
       if (error || !data) throw new Error(`Impossible de charger le ${type.toUpperCase()}.`);
@@ -255,7 +333,7 @@ export async function sendOrderByEmailAction(
         actor_user_id: userId,
         status: "sending",
         sender_email: gmail!.email,
-        recipient_email: recipient!,
+        recipient_email: recipient,
         subject,
         body_text: body,
         attachment_manifest: attachments.map((attachment) => ({ filename: attachment.filename, content_type: attachment.contentType })),
@@ -266,7 +344,14 @@ export async function sendOrderByEmailAction(
     transmissionId = transmission.id;
 
     const accessToken = await refreshGoogleAccessToken(decryptCredential(gmail!.refresh_token_ciphertext));
-    const raw = buildMimeMessage({ from: gmail!.email, to: recipient!, subject, body, attachments });
+    const raw = buildMimeMessage({
+      from: gmail!.email,
+      to: recipient,
+      cc: ccEmails,
+      subject,
+      body,
+      attachments,
+    });
     const messageId = await sendGmailRawMessage(accessToken, raw);
 
     const { error: updateError } = await admin
@@ -276,7 +361,7 @@ export async function sendOrderByEmailAction(
     if (updateError) throw updateError;
 
     revalidatePath(`/dashboard/orders/${order.id}`);
-    return { success: `Commande envoyée depuis ${gmail!.email} à ${recipient}.` };
+    return { success: `Commande envoyée depuis ${gmail!.email} à ${recipient}${ccEmails.length ? ` · Cc : ${ccEmails.join(", ")}` : ""}.` };
   } catch (error) {
     if (transmissionId) {
       const admin = createAdminClient();

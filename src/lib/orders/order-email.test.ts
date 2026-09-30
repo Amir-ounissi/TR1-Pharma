@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildTr1OrderPdf } from "./order-email";
+import { buildMimeMessage, buildTr1OrderPdf } from "./order-email";
 
 function sampleOrder(overrides: Partial<Parameters<typeof buildTr1OrderPdf>[0]> = {}) {
   return {
@@ -125,5 +125,22 @@ describe("buildTr1OrderPdf", () => {
     expect(content).toContain("BDC-MULTIPAGE");
     expect(content).toContain("page 1 / 2");
     expect(content).toContain("page 2 / 2");
+  });
+});
+
+
+describe("buildMimeMessage", () => {
+  it("includes editable To and Cc recipients in the Gmail MIME envelope", () => {
+    const raw = buildMimeMessage({
+      from: "commercial@example.test",
+      to: "orders@example.test",
+      cc: ["manager@example.test", "ops@example.test"],
+      subject: "Commande test",
+      body: "Bonjour",
+      attachments: [],
+    });
+
+    expect(raw).toContain("To: orders@example.test");
+    expect(raw).toContain("Cc: manager@example.test, ops@example.test");
   });
 });

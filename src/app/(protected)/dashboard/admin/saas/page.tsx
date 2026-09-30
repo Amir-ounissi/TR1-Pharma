@@ -4,6 +4,7 @@ import {
   setBrandPlanAction,
   setCapabilityOverrideAction,
   updateBrandTerminologyAction,
+  updateOrderEmailTransmissionSettingsAction,
 } from "./actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { PageHeader } from "@/components/ux/page-header";
 import { requirePlatformAdmin } from "@/lib/auth";
 import { resolveBrandTerminology } from "@/lib/saas/capabilities";
+import { resolveOrderEmailTransmissionConfig } from "@/lib/orders/order-email-transmission";
 
 type CapabilityRow = {
   key: string;
@@ -82,7 +84,7 @@ export default async function SaasAdministrationPage({
     { data: capabilities, error: capabilitiesError },
     { data: entitlements, error: entitlementError },
   ] = await Promise.all([
-    supabase.from("brands").select("id,name,slug,status,is_active,organization_id").order("name"),
+    supabase.from("brands").select("id,name,slug,status,is_active,organization_id,order_email").order("name"),
     supabase.from("saas_plans").select("id,key,name,description,is_public").eq("is_active", true).order("sort_order"),
     supabase.from("saas_capabilities").select("key,label,description,category").eq("is_active", true).order("category").order("key"),
     supabase.from("brand_saas_entitlements").select("brand_id,status,seat_limit,starts_at,ends_at,saas_plans(id,key,name,description,is_public)"),
@@ -129,6 +131,10 @@ export default async function SaasAdministrationPage({
     ((overridesResult.data ?? []) as OverrideRow[]).map((item) => [item.capability_key, item]),
   );
   const terminology = resolveBrandTerminology(settingsResult.data?.terminology);
+  const orderEmailTransmission = resolveOrderEmailTransmissionConfig(
+    settingsResult.data?.configuration as Record<string, unknown> | null | undefined,
+    selectedBrand?.order_email ?? null,
+  );
   const publicPlans = ((plans ?? []) as PlanRow[]).filter((plan) => plan.is_public);
   const allPlans = (plans ?? []) as PlanRow[];
 
@@ -278,6 +284,119 @@ export default async function SaasAdministrationPage({
               </CardContent>
             </Card>
           </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Transmission des commandes</CardTitle>
+              <CardDescription>
+                Activez et configurez l’envoi Gmail des commandes pour {selectedBrand.name}. Les valeurs servent de modèle ; le commercial peut modifier le mail avant chaque envoi.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form action={updateOrderEmailTransmissionSettingsAction} className="grid gap-5">
+                <input type="hidden" name="brandId" value={selectedBrand.id} />
+
+                <label className="flex items-center justify-between gap-4 rounded-lg border p-4">
+                  <div>
+                    <p className="font-medium">Activer la transmission par Gmail</p>
+                    <p className="text-xs text-muted-foreground">
+                      Si désactivé, le bloc de transmission n’apparaît pas sur les commandes de cette marque.
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    name="enabled"
+                    defaultChecked={orderEmailTransmission.enabled}
+                    className="h-4 w-4"
+                  />
+                </label>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="orderTransmissionRecipient">Destinataire par défaut</Label>
+                    <Input
+                      id="orderTransmissionRecipient"
+                      name="recipientEmail"
+                      type="email"
+                      placeholder="commandes@marque.fr"
+                      defaultValue={orderEmailTransmission.recipientEmail ?? ""}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="orderTransmissionCc">Cc par défaut</Label>
+                    <Input
+                      id="orderTransmissionCc"
+                      name="ccEmails"
+                      placeholder="manager@marque.fr, logistique@marque.fr"
+                      defaultValue={orderEmailTransmission.ccEmails.join(", ")}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <label className="flex items-center gap-3 rounded-lg border p-3 text-sm">
+                    <input
+                      type="checkbox"
+                      name="requireVat"
+                      defaultChecked={orderEmailTransmission.requireVat}
+                      className="h-4 w-4"
+                    />
+                    TVA obligatoire
+                  </label>
+                  <label className="flex items-center gap-3 rounded-lg border p-3 text-sm">
+                    <input
+                      type="checkbox"
+                      name="requireKbis"
+                      defaultChecked={orderEmailTransmission.requiredDocuments.includes("kbis")}
+                      className="h-4 w-4"
+                    />
+                    KBIS obligatoire
+                  </label>
+                  <label className="flex items-center gap-3 rounded-lg border p-3 text-sm">
+                    <input
+                      type="checkbox"
+                      name="requireRib"
+                      defaultChecked={orderEmailTransmission.requiredDocuments.includes("rib")}
+                      className="h-4 w-4"
+                    />
+                    RIB obligatoire
+                  </label>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="orderTransmissionSubject">Modèle d’objet</Label>
+                  <Input
+                    id="orderTransmissionSubject"
+                    name="subjectTemplate"
+                    maxLength={300}
+                    placeholder="Commande {{brand_name}} · {{pharmacy_name}} · {{reference}}"
+                    defaultValue={orderEmailTransmission.subjectTemplate ?? ""}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Variables : {"{{brand_name}}"}, {"{{pharmacy_name}}"}, {"{{reference}}"}, {"{{vat_number}}"}, {"{{total_ttc}}"}.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="orderTransmissionBody">Modèle du message</Label>
+                  <textarea
+                    id="orderTransmissionBody"
+                    name="bodyTemplate"
+                    rows={8}
+                    maxLength={20000}
+                    defaultValue={orderEmailTransmission.bodyTemplate ?? ""}
+                    placeholder={"Bonjour,\n\nVous trouverez ci-joint la commande {{reference}} pour {{pharmacy_name}}.\n\nBonne réception,"}
+                    className="min-h-40 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    L’objet et le message restent modifiables dans la commande avant l’envoi.
+                  </p>
+                </div>
+
+                <Button>Enregistrer la transmission</Button>
+              </form>
+            </CardContent>
+          </Card>
 
           <Card>
             <CardHeader>
