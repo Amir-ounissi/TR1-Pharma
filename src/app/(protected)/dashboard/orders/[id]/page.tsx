@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
+  OrderDeleteDraftForm,
   OrderRevisionForm,
   OrderStatusForm,
 } from "@/components/orders/order-forms";
@@ -220,6 +221,11 @@ export default async function OrderDetailPage({
     (transmission) => transmission.status === "sent",
   );
 
+  const canDeleteDraft =
+    order.order_status === "draft" &&
+    !hasSentTransmission &&
+    ((isAgent && order.created_by === userId) || canOperate);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -409,22 +415,25 @@ export default async function OrderDetailPage({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {isAgent && order.order_status === "pending" ? (
-                <div className="space-y-2">
-                  <Badge variant="secondary">À valider par la marque</Badge>
-                  <p className="text-sm text-muted-foreground">
-                    Vous pouvez encore modifier la commande tant qu’elle n’a pas été validée.
-                  </p>
+              <OrderStatusForm
+                orderId={order.id}
+                currentStatus={order.order_status}
+                isAgent={isAgent}
+                canOperate={canOperate}
+                reviewNote={order.review_note}
+              />
+
+              {canDeleteDraft ? (
+                <div className="mt-4">
+                  <OrderDeleteDraftForm orderId={order.id} />
                 </div>
-              ) : (
-                <OrderStatusForm
-                  orderId={order.id}
-                  currentStatus={order.order_status}
-                  isAgent={isAgent}
-                  canOperate={canOperate}
-                  reviewNote={order.review_note}
-                />
-              )}
+              ) : null}
+
+              {order.order_status === "draft" && hasSentTransmission ? (
+                <p className="mt-3 text-xs text-muted-foreground">
+                  Ce bon a déjà été envoyé par email : son historique ne peut plus être supprimé. Utilisez l’annulation si nécessaire.
+                </p>
+              ) : null}
             </CardContent>
           </Card>
 
