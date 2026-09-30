@@ -12,6 +12,7 @@ import {
   resolveOrderEmailTransmissionConfig,
 } from "@/lib/orders/order-email-transmission";
 import { buildOrderPdfPayload } from "@/lib/orders/order-pdf-payload";
+import { lookupFrenchVatNumber } from "@/lib/pharmacies/fr-vat-lookup";
 
 const uuid = z.string().uuid();
 const allowedRoles = new Set(["agent", "brand_user", "brand_admin", "tr1_manager", "super_admin"]);
@@ -64,6 +65,59 @@ async function requireTransmissionOrder(orderId: string) {
   if (error || !order) throw new Error("Commande introuvable.");
 
   return { supabase, brand, userId, order, transmissionConfig };
+}
+
+export async function lookupPharmacyVatNumberAction(
+  _state: OrderTransmissionActionState,
+  formData: FormData,
+): Promise<OrderTransmissionActionState> {
+  const parsed = z.object({ orderId: uuid }).safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "Commande invalide." };
+
+  try {
+    const { supabase, order } = await requireTransmissionOrder(parsed.data.orderId);
+    const { data: pharmacy, error: pharmacyError } = await supabase
+      .from("pharmacies")
+      .select("legal_name,trade_name,siret,postal_code,city,vat_number")
+      .eq("id", order.pharmacy_id)
+      .single();
+    if (pharmacyError || !pharmacy) throw new Error("Pharmacie introuvable.");
+    if (pharmacy.vat_number?.trim()) return { success: `TVA déjà enregistrée : ${pharmacy.vat_number}.` };
+
+    const lookup = await lookupFrenchVatNumber({
+      siret: pharmacy.siret,
+      legalName: pharmacy.legal_name,
+      tradeName: pharmacy.trade_name,
+      postalCode: pharmacy.postal_code,
+      city: pharmacy.city,
+    });
+
+    if (lookup.status !== "found") {
+      return { error: lookup.reason };
+    }
+
+    const admin = createAdminClient();
+    const update: { vat_number: string; siret?: string } = { vat_number: lookup.vatNumber };
+    if (!pharmacy.siret?.trim() && lookup.siret) update.siret = lookup.siret;
+
+    const { error } = await admin
+      .from("pharmacies")
+      .update(update)
+      .eq("id", order.pharmacy_id);
+    if (error) throw error;
+
+    revalidatePath(`/dashboard/orders/${order.id}`);
+    revalidatePath(`/dashboard/pharmacies/${order.brand_pharmacy_id}`);
+    return {
+      success: `TVA officielle trouvée et enregistrée : ${lookup.vatNumber} · ${lookup.companyName}.`,
+    };
+  } catch (error) {
+    return {
+      error: error instanceof Error
+        ? error.message
+        : "Impossible de rechercher automatiquement le numéro de TVA.",
+    };
+  }
 }
 
 export async function updatePharmacyVatNumberAction(
