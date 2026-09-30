@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import Link from "next/link";
 import {
   disconnectGmailAction,
+  lookupPharmacyVatNumberAction,
   sendOrderByEmailAction,
   updatePharmacyVatNumberAction,
   uploadPharmacyDocumentAction,
@@ -118,6 +119,7 @@ export function OrderEmailTransmissionCard({
   previewBody: string;
   transmissions: OrderEmailTransmission[];
 }) {
+  const [vatLookupState, vatLookupAction, vatLookupPending] = useActionState(lookupPharmacyVatNumberAction, initialState);
   const [vatState, vatAction, vatPending] = useActionState(updatePharmacyVatNumberAction, initialState);
   const [kbisState, kbisAction, kbisPending] = useActionState(uploadPharmacyDocumentAction, initialState);
   const [ribState, ribAction, ribPending] = useActionState(uploadPharmacyDocumentAction, initialState);
@@ -190,23 +192,43 @@ export function OrderEmailTransmissionCard({
         </div>
 
         {requireVat && !vatNumber ? (
-          <form action={vatAction} className="space-y-2 rounded-xl border p-4">
-            <input type="hidden" name="orderId" value={orderId} />
-            <label className="text-sm font-medium" htmlFor="vatNumber">Numéro de TVA de la pharmacie</label>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <input
-                id="vatNumber"
-                name="vatNumber"
-                required
-                placeholder="FR..."
-                className="h-10 flex-1 rounded-md border bg-background px-3 text-sm"
-              />
-              <Button type="submit" disabled={vatPending}>
-                {vatPending ? "Enregistrement…" : "Enregistrer"}
-              </Button>
+          <div className="space-y-4 rounded-xl border p-4">
+            <div>
+              <p className="text-sm font-medium">Numéro de TVA de la pharmacie</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                TR1 peut le rechercher automatiquement dans l’Annuaire des Entreprises. En cas de doute sur l’identité de la société, aucun numéro n’est enregistré.
+              </p>
             </div>
-            <Feedback state={vatState} />
-          </form>
+
+            <form action={vatLookupAction} className="space-y-2">
+              <input type="hidden" name="orderId" value={orderId} />
+              <Button type="submit" disabled={vatLookupPending}>
+                {vatLookupPending ? "Recherche officielle…" : "Rechercher automatiquement la TVA"}
+              </Button>
+              <Feedback state={vatLookupState} />
+            </form>
+
+            <details className="rounded-lg border bg-muted/20 p-3">
+              <summary className="cursor-pointer text-sm font-medium">Saisir la TVA manuellement</summary>
+              <form action={vatAction} className="mt-3 space-y-2">
+                <input type="hidden" name="orderId" value={orderId} />
+                <label className="sr-only" htmlFor="vatNumber">Numéro de TVA</label>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    id="vatNumber"
+                    name="vatNumber"
+                    required
+                    placeholder="FR..."
+                    className="h-10 flex-1 rounded-md border bg-background px-3 text-sm"
+                  />
+                  <Button type="submit" variant="outline" disabled={vatPending}>
+                    {vatPending ? "Enregistrement…" : "Enregistrer manuellement"}
+                  </Button>
+                </div>
+                <Feedback state={vatState} />
+              </form>
+            </details>
+          </div>
         ) : null}
 
         {requiredDocuments.length ? (
