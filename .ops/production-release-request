@@ -1,3 +1,3 @@
-release_sha=cb5d83a9d63bdedd050102a9a3dbfca98a8e11e7
-reason=Stabilize production after stale queued release retry
-requested_at=2026-09-30T20:41:00+02:00
+release_sha=dcd50318ed7fe3f8fb1210127eb626d2906899fe
+reason=Deploy configurable Gmail transmission and official VAT lookup
+requested_at=2026-09-30T20:54:00+02:00
