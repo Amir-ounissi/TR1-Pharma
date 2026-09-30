@@ -2,6 +2,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 export const HUBSPOT_ORDER_BOOTSTRAP_DAYS = 300;
 export const HUBSPOT_ORDER_REPLAY_DAYS = 7;
+export const HUBSPOT_ORDER_RELEASE_REPLAY_MINUTES = 15;
+export const HUBSPOT_ORDER_RELEASE_MAX_STALENESS_HOURS = 24;
 
 export type HubSpotOrderSyncWindow = {
   since: string;
@@ -35,4 +37,26 @@ export function resolveHubSpotOrderSyncSince(
   nowMs = Date.now(),
 ) {
   return resolveHubSpotOrderSyncWindow(lastSuccessfulInboundSyncAt, nowMs).since;
+}
+
+
+export function resolveHubSpotReleaseOrderSyncWindow(
+  lastSuccessfulInboundSyncAt: string | null | undefined,
+  nowMs = Date.now(),
+): HubSpotOrderSyncWindow | null {
+  if (!lastSuccessfulInboundSyncAt) return null;
+
+  const lastSuccessfulMs = new Date(lastSuccessfulInboundSyncAt).getTime();
+  if (!Number.isFinite(lastSuccessfulMs)) return null;
+
+  const maxStalenessMs =
+    HUBSPOT_ORDER_RELEASE_MAX_STALENESS_HOURS * 60 * 60 * 1000;
+  if (nowMs - lastSuccessfulMs > maxStalenessMs) return null;
+
+  return {
+    since: new Date(
+      lastSuccessfulMs - HUBSPOT_ORDER_RELEASE_REPLAY_MINUTES * 60 * 1000,
+    ).toISOString(),
+    propertyName: "hs_lastmodifieddate",
+  };
 }

@@ -7,7 +7,11 @@ import { NAALI_HUBSPOT_CONFIGURATION } from "./naali";
 import { resolveNaaliFreeUnitsRuleFromLeadStatus } from "./naali-pricing";
 import { syncHubSpotOrderAfterPersistence } from "./runtime";
 import { hubSpotCanMutateVisit, resolveHubSpotMeetingStart, selectHubSpotVisitCandidate } from "./visit-identity";
-import { resolveHubSpotOrderSyncWindow } from "./reconciliation-window";
+import {
+  resolveHubSpotOrderSyncWindow,
+  resolveHubSpotReleaseOrderSyncWindow,
+  type HubSpotOrderSyncWindow,
+} from "./reconciliation-window";
 import { selectHistoricalHubSpotOrderCandidate, selectHistoricalOutboundHubSpotOrderCandidate } from "./order-reconciliation";
 
 type AdminClient = ReturnType<typeof createAdminClient>;
@@ -2153,8 +2157,9 @@ async function syncInboundOrders(options: {
   actorId: string;
   owners: Map<string, string>;
   includeMappedPharmacySweep?: boolean;
+  syncWindowOverride?: HubSpotOrderSyncWindow;
 }) {
-  const syncWindow = resolveHubSpotOrderSyncWindow(
+  const syncWindow = options.syncWindowOverride ?? resolveHubSpotOrderSyncWindow(
     await lastSuccessfulInboundSyncAt(options.admin, options.connection.id, "orders" as const),
   );
   const products = await productMaps(options.admin, options.brandId);
@@ -2918,9 +2923,27 @@ async function replayOrdersCreatedWhileInactive(brandId: string, connectionId: s
 export async function reconcileHubSpotOrdersNow(
   brandId: string,
   connectionId: string,
+  options?: { releaseGate?: boolean },
 ) {
   const runtime = await activeConnection(brandId, connectionId);
   if (!runtime) throw new Error("HubSpot connection is not active");
+
+  let syncWindowOverride: HubSpotOrderSyncWindow | undefined;
+  if (options?.releaseGate) {
+    const releaseWindow = resolveHubSpotReleaseOrderSyncWindow(
+      await lastSuccessfulInboundSyncAt(
+        runtime.admin,
+        connectionId,
+        "orders" as const,
+      ),
+    );
+    if (!releaseWindow) {
+      throw new Error(
+        "HubSpot orders do not have a successful reconciliation from the last 24 hours",
+      );
+    }
+    syncWindowOverride = releaseWindow;
+  }
 
   const { data: brand, error: brandError } = await runtime.admin
     .from("brands")
@@ -2945,6 +2968,7 @@ export async function reconcileHubSpotOrdersNow(
     actorId,
     owners,
     includeMappedPharmacySweep: false,
+    syncWindowOverride,
   });
 }
 
