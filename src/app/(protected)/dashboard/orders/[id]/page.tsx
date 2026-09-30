@@ -26,6 +26,11 @@ import {
 } from "@/components/ui/table";
 import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
 import { isIncompleteHubSpotHistory } from "@/lib/orders/historical-import";
+import {
+  buildOrderEmailDraft,
+  resolveOrderEmailTransmissionConfig,
+  type OrderTransmissionDocumentType,
+} from "@/lib/orders/order-email-transmission";
 import { formatCurrency } from "@/lib/reference-data";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
@@ -48,6 +53,15 @@ export default async function OrderDetailPage({
     contexts.find((context) => context.id === brand.id)?.role ??
     "brand_user";
 
+  const { data: transmissionSettings } = await supabase
+    .from("brand_saas_settings")
+    .select("configuration")
+    .eq("brand_id", brand.id)
+    .maybeSingle();
+  let transmissionConfig = resolveOrderEmailTransmissionConfig(
+    transmissionSettings?.configuration as Record<string, unknown> | null | undefined,
+  );
+
   const isAgent = role === "agent";
   const canOperate = [
     "tr1_manager",
@@ -62,13 +76,15 @@ export default async function OrderDetailPage({
     "super_admin",
   ].includes(role);
 
-  const canTransmitOrder = [
-    "agent",
-    "brand_user",
-    "tr1_manager",
-    "brand_admin",
-    "super_admin",
-  ].includes(role);
+  const canTransmitOrder =
+    transmissionConfig.enabled &&
+    [
+      "agent",
+      "brand_user",
+      "tr1_manager",
+      "brand_admin",
+      "super_admin",
+    ].includes(role);
 
   const [
     { data: order },
@@ -137,6 +153,9 @@ export default async function OrderDetailPage({
 
   let gmailEmail: string | null = null;
   let recipientEmail: string | null = null;
+  let ccEmails: string[] = [];
+  let requireVat = true;
+  let requiredDocuments: OrderTransmissionDocumentType[] = ["kbis", "rib"];
   let hasKbis = false;
   let hasRib = false;
   let transmissions: OrderEmailTransmission[] = [];
@@ -173,8 +192,15 @@ export default async function OrderDetailPage({
         .maybeSingle(),
     ]);
 
+    transmissionConfig = resolveOrderEmailTransmissionConfig(
+      transmissionSettings?.configuration as Record<string, unknown> | null | undefined,
+      brandTransmission?.order_email ?? null,
+    );
     gmailEmail = gmail?.email ?? null;
-    recipientEmail = brandTransmission?.order_email ?? null;
+    recipientEmail = transmissionConfig.recipientEmail;
+    ccEmails = transmissionConfig.ccEmails;
+    requireVat = transmissionConfig.requireVat;
+    requiredDocuments = transmissionConfig.requiredDocuments;
     hasKbis = (documents ?? []).some((document) => document.document_type === "kbis");
     hasRib = (documents ?? []).some((document) => document.document_type === "rib");
     transmissions = (transmissionRows ?? []) as OrderEmailTransmission[];
@@ -182,7 +208,14 @@ export default async function OrderDetailPage({
 
   const pharmacyName = pharmacy?.trade_name || pharmacy?.legal_name || "Pharmacie";
   const orderReference = order.order_number || order.external_order_id || order.id.slice(0, 8);
-  const previewSubject = `Commande ${brand.name} · ${pharmacyName} · ${orderReference}`;
+  const emailDraft = buildOrderEmailDraft({
+    brandName: brand.name,
+    pharmacyName,
+    reference: orderReference,
+    vatNumber: pharmacy?.vat_number ?? null,
+    totalTtc: order.total_ttc,
+    config: transmissionConfig,
+  });
   const hasSentTransmission = transmissions.some(
     (transmission) => transmission.status === "sent",
   );
@@ -242,10 +275,14 @@ export default async function OrderDetailPage({
           orderId={order.id}
           gmailEmail={gmailEmail}
           recipientEmail={recipientEmail}
+          ccEmails={ccEmails}
           vatNumber={pharmacy?.vat_number ?? null}
+          requireVat={requireVat}
+          requiredDocuments={requiredDocuments}
           hasKbis={hasKbis}
           hasRib={hasRib}
-          previewSubject={previewSubject}
+          previewSubject={emailDraft.subject}
+          previewBody={emailDraft.body}
           transmissions={transmissions}
         />
       ) : null}
