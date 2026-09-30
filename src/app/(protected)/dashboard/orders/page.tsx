@@ -43,7 +43,11 @@ export default async function OrdersPage({ searchParams }: { searchParams: Searc
     .order("order_date", { ascending: false });
 
   if (isAgent) query = query.or(`created_by.eq.${userId},source_agent_user_id.eq.${userId}`);
-  if (typeof params.status === "string" && params.status !== "all") query = query.eq("order_status", params.status);
+  if (params.view === "in_progress") {
+    query = query.in("order_status", ["draft", "pending", "needs_correction"]);
+  } else if (typeof params.status === "string" && params.status !== "all") {
+    query = query.eq("order_status", params.status);
+  }
   if (typeof params.type === "string" && params.type !== "all") query = query.eq("order_type", params.type);
   if (typeof params.source === "string" && params.source !== "all") query = query.eq("source", params.source);
   if (typeof params.from === "string" && params.from) query = query.gte("order_date", params.from);
@@ -107,11 +111,14 @@ export default async function OrdersPage({ searchParams }: { searchParams: Searc
       </section>
 
       <div className="flex flex-wrap gap-2">
-        <Button asChild variant={params.status === "pending" ? "default" : "outline"}><Link href="?status=pending">{isAgent ? "En attente" : "À valider"}</Link></Button>
-        <Button asChild variant={params.status === "needs_correction" ? "default" : "outline"}><Link href="?status=needs_correction">À corriger</Link></Button>
-        <Button asChild variant={params.status === "confirmed" ? "default" : "outline"}><Link href="?status=confirmed">Validées</Link></Button>
-        <Button asChild variant={params.status === "rejected" ? "default" : "outline"}><Link href="?status=rejected">Refusées</Link></Button>
-        <Button asChild variant={!params.status || params.status === "all" ? "default" : "outline"}><Link href="/dashboard/orders">Toutes</Link></Button>
+        <Button asChild variant={params.view === "in_progress" ? "default" : "outline"}>
+          <Link href="?view=in_progress">Brouillons / en cours</Link>
+        </Button>
+        <Button asChild variant={params.status === "pending" && params.view !== "in_progress" ? "default" : "outline"}><Link href="?status=pending">{isAgent ? "En attente" : "À valider"}</Link></Button>
+        <Button asChild variant={params.status === "needs_correction" && params.view !== "in_progress" ? "default" : "outline"}><Link href="?status=needs_correction">À corriger</Link></Button>
+        <Button asChild variant={params.status === "confirmed" && params.view !== "in_progress" ? "default" : "outline"}><Link href="?status=confirmed">Validées</Link></Button>
+        <Button asChild variant={params.status === "rejected" && params.view !== "in_progress" ? "default" : "outline"}><Link href="?status=rejected">Refusées</Link></Button>
+        <Button asChild variant={params.view !== "in_progress" && (!params.status || params.status === "all") ? "default" : "outline"}><Link href="/dashboard/orders">Toutes</Link></Button>
       </div>
 
       <Card>

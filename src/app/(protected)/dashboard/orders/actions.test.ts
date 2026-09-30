@@ -5,12 +5,14 @@ const mocks = vi.hoisted(() => ({
   requireActiveBrand: vi.fn(),
   getBrandContexts: vi.fn(),
   syncHubSpotOrderAfterPersistence: vi.fn(),
+  createAdminClient: vi.fn(),
 }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 vi.mock("@/lib/auth", () => ({ requireActiveBrand: mocks.requireActiveBrand, getBrandContexts: mocks.getBrandContexts }));
 vi.mock("@/lib/integrations/hubspot/runtime", () => ({ syncHubSpotOrderAfterPersistence: mocks.syncHubSpotOrderAfterPersistence }));
+vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: mocks.createAdminClient }));
 
-import { changeOrderStatusAction, createOrderAction } from "./actions";
+import { changeOrderStatusAction, createOrderAction, deleteDraftOrderAction } from "./actions";
 
 const relationId = "11111111-1111-4111-8111-111111111111";
 const productId = "22222222-2222-4222-8222-222222222222";
@@ -21,6 +23,7 @@ describe("order server actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.syncHubSpotOrderAfterPersistence.mockResolvedValue(undefined);
+    mocks.createAdminClient.mockReturnValue({ from: vi.fn() });
     rpc.mockResolvedValue({ data: [{ order_id: "33333333-3333-4333-8333-333333333333", brand_pharmacy_id: relationId }], error: null });
     const productResult = { in: async () => ({ data: [{ id: productId, tax_rate: 5.5 }], error: null }) };
     const productScope: { eq: () => typeof productScope; is: () => typeof productResult } = { eq: () => productScope, is: () => productResult };
@@ -87,6 +90,72 @@ describe("order server actions", () => {
     const formData = new FormData();
     Object.entries({ brandPharmacyId: relationId, pharmacyId: "", orderType: "other", orderStatus: "draft", orderDate: "2026-07-21T10:00", shippingAmountHt: "0", paymentStatus: "pending", productId, quantity: "1", freeQuantity: "0", unitPriceHt: "10", taxRate: "20" }).forEach(([key,value]) => formData.append(key,value));
     expect(await createOrderAction({}, formData)).toEqual({ error: "Brand pharmacy unavailable" });
+  });
+
+  it("soft-deletes an unsent draft after cancelling it through the protected workflow", async () => {
+    const orderId = "33333333-3333-4333-8333-333333333333";
+    const orderChain = {
+      select: vi.fn(),
+      eq: vi.fn(),
+      maybeSingle: vi.fn(),
+    };
+    orderChain.select.mockReturnValue(orderChain);
+    orderChain.eq.mockReturnValue(orderChain);
+    orderChain.maybeSingle.mockResolvedValue({
+      data: {
+        id: orderId,
+        brand_id: "brand-id",
+        created_by: "user-id",
+        order_status: "draft",
+        archived_at: null,
+      },
+      error: null,
+    });
+
+    const transmissionChain = {
+      select: vi.fn(),
+      eq: vi.fn(),
+      limit: vi.fn(),
+      maybeSingle: vi.fn(),
+    };
+    transmissionChain.select.mockReturnValue(transmissionChain);
+    transmissionChain.eq.mockReturnValue(transmissionChain);
+    transmissionChain.limit.mockReturnValue(transmissionChain);
+    transmissionChain.maybeSingle.mockResolvedValue({ data: null, error: null });
+
+    const archiveChain = {
+      update: vi.fn(),
+      eq: vi.fn(),
+      is: vi.fn(),
+    };
+    archiveChain.update.mockReturnValue(archiveChain);
+    archiveChain.eq.mockReturnValue(archiveChain);
+    archiveChain.is.mockResolvedValue({ error: null });
+
+    mocks.requireActiveBrand.mockResolvedValue({
+      brand: { id: "brand-id" },
+      userId: "user-id",
+      supabase: {
+        rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
+        from: vi.fn((table: string) => table === "orders" ? orderChain : productQuery()),
+      },
+    });
+    mocks.getBrandContexts.mockResolvedValue([{ id: "brand-id", role: "agent" }]);
+    mocks.createAdminClient.mockReturnValue({
+      from: vi.fn((table: string) =>
+        table === "order_email_transmissions" ? transmissionChain : archiveChain,
+      ),
+    });
+
+    const formData = new FormData();
+    formData.set("orderId", orderId);
+
+    await expect(deleteDraftOrderAction({}, formData)).resolves.toEqual({
+      success: "Brouillon supprimé.",
+    });
+    expect(archiveChain.update).toHaveBeenCalledWith({
+      archived_at: expect.any(String),
+    });
   });
 
   it("changes status through the protected RPC and asks the connector to resync", async () => {

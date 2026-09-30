@@ -5,6 +5,7 @@ import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
 import { syncHubSpotOrderAfterPersistence } from "@/lib/integrations/hubspot/runtime";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { translateUiMessage } from "@/lib/ui-copy";
 
 export type OrderActionState = { error?: string; success?: string; orderId?: string };
@@ -261,6 +262,90 @@ export async function reviseOrderAction(
       ? "Commande corrigée et renvoyée à la marque."
       : "Modifications enregistrées.",
   };
+}
+
+export async function deleteDraftOrderAction(
+  _state: OrderActionState,
+  formData: FormData,
+): Promise<OrderActionState> {
+  const parsed = z.object({ orderId: uuid }).safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "Brouillon invalide." };
+
+  const { supabase, brand, userId } = await requireActiveBrand();
+  const contexts = await getBrandContexts();
+  const role = contexts.find((context) => context.id === brand.id)?.role;
+
+  if (!role || !["agent", "tr1_manager", "brand_admin", "super_admin"].includes(role)) {
+    return { error: "Votre rôle ne permet pas de supprimer ce brouillon." };
+  }
+
+  const { data: order, error: orderError } = await supabase
+    .from("orders")
+    .select("id,brand_id,created_by,order_status,archived_at")
+    .eq("id", parsed.data.orderId)
+    .eq("brand_id", brand.id)
+    .maybeSingle();
+
+  if (orderError || !order || order.archived_at) {
+    return { error: "Ce brouillon n’est plus disponible." };
+  }
+
+  if (order.order_status !== "draft") {
+    return { error: "Seul un brouillon non envoyé peut être supprimé." };
+  }
+
+  if (role === "agent" && order.created_by !== userId) {
+    return { error: "Vous ne pouvez supprimer que vos propres brouillons." };
+  }
+
+  const admin = createAdminClient();
+  const { data: sentTransmission, error: transmissionError } = await admin
+    .from("order_email_transmissions")
+    .select("id")
+    .eq("order_id", order.id)
+    .eq("brand_id", brand.id)
+    .eq("status", "sent")
+    .limit(1)
+    .maybeSingle();
+
+  if (transmissionError) {
+    return { error: "Impossible de vérifier l’historique d’envoi du bon de commande." };
+  }
+
+  if (sentTransmission) {
+    return {
+      error:
+        "Ce bon de commande a déjà été envoyé par email. Annulez la commande au lieu de supprimer son historique.",
+    };
+  }
+
+  const { error: cancellationError } = await supabase.rpc("change_order_status", {
+    target_order_id: order.id,
+    target_status: "cancelled",
+    reason: "Brouillon supprimé avant envoi.",
+  });
+
+  if (cancellationError) {
+    return { error: translateUiMessage(cancellationError.message) };
+  }
+
+  const { error: archiveError } = await admin
+    .from("orders")
+    .update({ archived_at: new Date().toISOString() })
+    .eq("id", order.id)
+    .eq("brand_id", brand.id)
+    .eq("order_status", "cancelled")
+    .is("archived_at", null);
+
+  if (archiveError) {
+    return { error: "La commande a été annulée, mais le brouillon n’a pas pu être retiré de la liste." };
+  }
+
+  revalidatePath("/dashboard/orders");
+  revalidatePath("/dashboard/network");
+  revalidatePath("/dashboard/pharmacies");
+
+  return { success: "Brouillon supprimé." };
 }
 
 export async function searchOrderPharmaciesAction(search: string): Promise<OrderPharmacySearchResult[]> {

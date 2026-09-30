@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { changeOrderStatusAction, createOrderAction, reviseOrderAction, searchOrderPharmaciesAction, type OrderPharmacySearchResult } from "@/app/(protected)/dashboard/orders/actions";
+import { changeOrderStatusAction, createOrderAction, deleteDraftOrderAction, reviseOrderAction, searchOrderPharmaciesAction, type OrderPharmacySearchResult } from "@/app/(protected)/dashboard/orders/actions";
 import { ActionFeedback } from "@/components/reference/action-feedback";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -449,37 +449,93 @@ export function OrderRevisionForm({
   );
 }
 
+export function OrderDeleteDraftForm({ orderId }: { orderId: string }) {
+  const [state, action, pending] = useActionState(deleteDraftOrderAction, {});
+
+  return (
+    <form action={action} className="space-y-3 rounded-md border border-destructive/30 bg-destructive/5 p-3">
+      <input type="hidden" name="orderId" value={orderId} />
+      <ActionFeedback {...state} />
+      <div>
+        <p className="text-sm font-medium text-destructive">Supprimer ce brouillon</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Disponible uniquement avant envoi. Le brouillon disparaîtra des commandes actives, mais l’opération restera traçable.
+        </p>
+      </div>
+      <label className="flex items-start gap-2 text-xs text-muted-foreground">
+        <input type="checkbox" required className="mt-0.5" />
+        <span>Je confirme la suppression de ce brouillon.</span>
+      </label>
+      <Button type="submit" variant="destructive" disabled={pending} className="w-full">
+        {pending ? "Suppression…" : "Supprimer le brouillon"}
+      </Button>
+    </form>
+  );
+}
+
 export function OrderStatusForm({ orderId, currentStatus, isAgent = false, canOperate = false, reviewNote = null }: { orderId: string; currentStatus: string; isAgent?: boolean; canOperate?: boolean; reviewNote?: string | null }) {
   const [state, action, pending] = useActionState(changeOrderStatusAction, {});
 
   if (isAgent && currentStatus === "pending") {
-    return <div className="space-y-2"><Badge variant="secondary">À valider par la marque</Badge><p className="text-sm text-muted-foreground">La commande a été envoyée. Elle est verrouillée jusqu’à la décision de la marque.</p></div>;
+    return <form action={action} className="space-y-3">
+      <input type="hidden" name="orderId" value={orderId} />
+      <ActionFeedback {...state} />
+      <Badge variant="secondary">À valider par la marque</Badge>
+      <p className="text-sm text-muted-foreground">
+        La commande reste modifiable tant qu’elle n’est pas validée. Vous pouvez aussi l’annuler avec un motif.
+      </p>
+      <div className="space-y-2">
+        <Label>Motif d’annulation</Label>
+        <Input name="reason" required placeholder="Ex. erreur de saisie, pharmacie finalement non partante…" />
+      </div>
+      <Button name="orderStatus" value="cancelled" variant="destructive" disabled={pending} className="w-full">
+        Annuler la commande
+      </Button>
+    </form>;
   }
 
   if (isAgent && currentStatus === "rejected") {
     return <div className="space-y-2"><Badge variant="destructive">Refusée</Badge>{reviewNote ? <p className="text-sm">{reviewNote}</p> : null}</div>;
   }
 
-  if (isAgent && (currentStatus === "draft" || currentStatus === "needs_correction")) {
+  if (isAgent && currentStatus === "draft") {
     return <div className="space-y-2">
-      <Badge variant={currentStatus === "needs_correction" ? "destructive" : "secondary"}>
-        {orderStatusLabel(currentStatus)}
-      </Badge>
+      <Badge variant="secondary">{orderStatusLabel(currentStatus)}</Badge>
       <p className="text-sm text-muted-foreground">
-        Modifiez les lignes de la commande puis enregistrez ou renvoyez-la à la marque.
+        Modifiez le brouillon, envoyez-le à la marque quand il est prêt, ou supprimez-le tant qu’il n’a pas été envoyé.
       </p>
     </div>;
+  }
+
+  if (isAgent && currentStatus === "needs_correction") {
+    return <form action={action} className="space-y-3">
+      <input type="hidden" name="orderId" value={orderId} />
+      <ActionFeedback {...state} />
+      <Badge variant="destructive">{orderStatusLabel(currentStatus)}</Badge>
+      {reviewNote ? <p className="text-sm">{reviewNote}</p> : null}
+      <p className="text-sm text-muted-foreground">
+        Corrigez la commande puis renvoyez-la à la marque, ou annulez-la avec un motif.
+      </p>
+      <div className="space-y-2">
+        <Label>Motif d’annulation</Label>
+        <Input name="reason" required />
+      </div>
+      <Button name="orderStatus" value="cancelled" variant="destructive" disabled={pending} className="w-full">
+        Annuler la commande
+      </Button>
+    </form>;
   }
 
   if (canOperate && currentStatus === "pending") {
     return <form action={action} className="space-y-3">
       <input type="hidden" name="orderId" value={orderId} />
       <ActionFeedback {...state} />
-      <div className="space-y-2"><Label>Motif si correction ou refus</Label><Input name="reason" placeholder="Obligatoire pour demander une correction ou refuser" /></div>
+      <div className="space-y-2"><Label>Motif si correction, refus ou annulation</Label><Input name="reason" placeholder="Obligatoire pour demander une correction, refuser ou annuler" /></div>
       <div className="grid gap-2">
         <Button name="orderStatus" value="confirmed" disabled={pending}>Valider la commande</Button>
         <Button name="orderStatus" value="needs_correction" variant="outline" disabled={pending}>Demander une correction</Button>
         <Button name="orderStatus" value="rejected" variant="destructive" disabled={pending}>Refuser la commande</Button>
+        <Button name="orderStatus" value="cancelled" variant="destructive" disabled={pending}>Annuler la commande</Button>
       </div>
     </form>;
   }
@@ -498,7 +554,9 @@ export function OrderStatusForm({ orderId, currentStatus, isAgent = false, canOp
   const nextStatuses =
     currentStatus === "draft"
       ? ["draft", "confirmed", "cancelled"]
-      : currentStatus === "confirmed"
+      : currentStatus === "needs_correction"
+        ? ["needs_correction", "pending", "cancelled"]
+        : currentStatus === "confirmed"
         ? ["confirmed", "invoiced", "cancelled"]
         : currentStatus === "invoiced"
           ? ["invoiced", "partially_delivered", "delivered", "cancelled", "refunded"]
