@@ -48,7 +48,11 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const orders = await reconcileHubSpotOrdersNow(String(brand.id), String(connection.id));
+    const orders = await reconcileHubSpotOrdersNow(
+      String(brand.id),
+      String(connection.id),
+      { releaseGate: true },
+    );
     return NextResponse.json({ ok: true, summary: { orders } });
   } catch (error) {
     const message = error instanceof Error ? error.message : "unknown_error";
