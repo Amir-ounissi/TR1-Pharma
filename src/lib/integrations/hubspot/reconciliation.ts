@@ -2928,20 +2928,21 @@ export async function reconcileHubSpotOrdersNow(
   const runtime = await activeConnection(brandId, connectionId);
   if (!runtime) throw new Error("HubSpot connection is not active");
 
-  const syncWindowOverride = options?.releaseGate
-    ? resolveHubSpotReleaseOrderSyncWindow(
-        await lastSuccessfulInboundSyncAt(
-          runtime.admin,
-          connectionId,
-          "orders" as const,
-        ),
-      )
-    : undefined;
-
-  if (options?.releaseGate && !syncWindowOverride) {
-    throw new Error(
-      "HubSpot orders do not have a successful reconciliation from the last 24 hours",
+  let syncWindowOverride: HubSpotOrderSyncWindow | undefined;
+  if (options?.releaseGate) {
+    const releaseWindow = resolveHubSpotReleaseOrderSyncWindow(
+      await lastSuccessfulInboundSyncAt(
+        runtime.admin,
+        connectionId,
+        "orders" as const,
+      ),
     );
+    if (!releaseWindow) {
+      throw new Error(
+        "HubSpot orders do not have a successful reconciliation from the last 24 hours",
+      );
+    }
+    syncWindowOverride = releaseWindow;
   }
 
   const { data: brand, error: brandError } = await runtime.admin
