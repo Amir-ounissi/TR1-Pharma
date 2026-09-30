@@ -534,7 +534,8 @@ export function OrderStatusForm({ orderId, currentStatus, isAgent = false, canOp
       <div className="grid gap-2">
         <Button name="orderStatus" value="confirmed" disabled={pending}>Valider la commande</Button>
         <Button name="orderStatus" value="needs_correction" variant="outline" disabled={pending}>Demander une correction</Button>
-        <Button name="orderStatus" value="rejected" variant="destructive" disabled={pending}>Refuser la commande</Button>\n        <Button name="orderStatus" value="cancelled" variant="destructive" disabled={pending}>Annuler la commande</Button>
+        <Button name="orderStatus" value="rejected" variant="destructive" disabled={pending}>Refuser la commande</Button>
+        <Button name="orderStatus" value="cancelled" variant="destructive" disabled={pending}>Annuler la commande</Button>
       </div>
     </form>;
   }
@@ -553,7 +554,9 @@ export function OrderStatusForm({ orderId, currentStatus, isAgent = false, canOp
   const nextStatuses =
     currentStatus === "draft"
       ? ["draft", "confirmed", "cancelled"]
-      : currentStatus === "confirmed"
+      : currentStatus === "needs_correction"
+        ? ["needs_correction", "pending", "cancelled"]
+        : currentStatus === "confirmed"
         ? ["confirmed", "invoiced", "cancelled"]
         : currentStatus === "invoiced"
           ? ["invoiced", "partially_delivered", "delivered", "cancelled", "refunded"]
