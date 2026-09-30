@@ -94,10 +94,14 @@ describe("order server actions", () => {
 
   it("soft-deletes an unsent draft after cancelling it through the protected workflow", async () => {
     const orderId = "33333333-3333-4333-8333-333333333333";
-    const orderChain: any = {};
-    orderChain.select = vi.fn(() => orderChain);
-    orderChain.eq = vi.fn(() => orderChain);
-    orderChain.maybeSingle = vi.fn().mockResolvedValue({
+    const orderChain = {
+      select: vi.fn(),
+      eq: vi.fn(),
+      maybeSingle: vi.fn(),
+    };
+    orderChain.select.mockReturnValue(orderChain);
+    orderChain.eq.mockReturnValue(orderChain);
+    orderChain.maybeSingle.mockResolvedValue({
       data: {
         id: orderId,
         brand_id: "brand-id",
@@ -108,16 +112,25 @@ describe("order server actions", () => {
       error: null,
     });
 
-    const transmissionChain: any = {};
-    transmissionChain.select = vi.fn(() => transmissionChain);
-    transmissionChain.eq = vi.fn(() => transmissionChain);
-    transmissionChain.limit = vi.fn(() => transmissionChain);
-    transmissionChain.maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
+    const transmissionChain = {
+      select: vi.fn(),
+      eq: vi.fn(),
+      limit: vi.fn(),
+      maybeSingle: vi.fn(),
+    };
+    transmissionChain.select.mockReturnValue(transmissionChain);
+    transmissionChain.eq.mockReturnValue(transmissionChain);
+    transmissionChain.limit.mockReturnValue(transmissionChain);
+    transmissionChain.maybeSingle.mockResolvedValue({ data: null, error: null });
 
-    const archiveChain: any = {};
-    archiveChain.update = vi.fn(() => archiveChain);
-    archiveChain.eq = vi.fn(() => archiveChain);
-    archiveChain.is = vi.fn().mockResolvedValue({ error: null });
+    const archiveChain = {
+      update: vi.fn(),
+      eq: vi.fn(),
+      is: vi.fn(),
+    };
+    archiveChain.update.mockReturnValue(archiveChain);
+    archiveChain.eq.mockReturnValue(archiveChain);
+    archiveChain.is.mockResolvedValue({ error: null });
 
     mocks.requireActiveBrand.mockResolvedValue({
       brand: { id: "brand-id" },
