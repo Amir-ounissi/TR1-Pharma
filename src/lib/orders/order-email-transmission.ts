@@ -42,7 +42,7 @@ export function resolveOrderEmailTransmissionConfig(
   fallbackRecipient?: string | null,
 ): OrderEmailTransmissionConfig {
   const raw = asRecord(configuration?.order_email_transmission);
-  const requiredDocuments = Array.isArray(raw?.required_documents)
+  const requiredDocuments: OrderTransmissionDocumentType[] = Array.isArray(raw?.required_documents)
     ? raw.required_documents.filter(
         (value): value is OrderTransmissionDocumentType =>
           typeof value === "string" && allowedDocuments.has(value as OrderTransmissionDocumentType),
