@@ -279,6 +279,14 @@ export function QuickOrderForm({
     ));
   }
 
+  function updateCommercialFreeQuantity(index: number, commercialFreeQuantity: number) {
+    setLines((current) => current.map((line, lineIndex) =>
+      lineIndex === index
+        ? { ...line, commercialFreeQuantity, freeQuantity: commercialFreeQuantity + line.manualFreeQuantity }
+        : line,
+    ));
+  }
+
   function updateManualFreeQuantity(index: number, manualFreeQuantity: number) {
     setLines((current) => current.map((line, lineIndex) =>
       lineIndex === index
@@ -533,8 +541,20 @@ export function QuickOrderForm({
                   </div>
                   <div className="space-y-2">
                     <Label>UG conditions</Label>
-                    <Input value={line.commercialFreeQuantity} readOnly className="h-11 w-full min-w-16 bg-muted text-center font-bold" />
-                    <input type="hidden" name="commercialFreeQuantity" value={line.commercialFreeQuantity} />
+                    <Input
+                      name="commercialFreeQuantity"
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={line.commercialFreeQuantity}
+                      onChange={(event) =>
+                        updateCommercialFreeQuantity(
+                          index,
+                          Math.max(0, Number(event.target.value) || 0),
+                        )
+                      }
+                      className="h-11 w-full min-w-16 text-center font-bold"
+                    />
                     <input type="hidden" name="freeQuantity" value={line.freeQuantity} />
                   </div>
                 </div>
