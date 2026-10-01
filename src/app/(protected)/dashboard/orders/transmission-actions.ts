@@ -12,7 +12,8 @@ import {
   resolveOrderEmailTransmissionConfig,
 } from "@/lib/orders/order-email-transmission";
 import { buildOrderPdfPayload } from "@/lib/orders/order-pdf-payload";
-import { lookupFrenchVatNumber } from "@/lib/pharmacies/fr-vat-lookup";
+import { lookupFrenchVatNumber, siretMatchesSiren } from "@/lib/pharmacies/fr-vat-lookup";
+import { getHubSpotPharmacySiren } from "@/lib/integrations/hubspot/reconciliation";
 
 const uuid = z.string().uuid();
 const allowedRoles = new Set(["agent", "brand_user", "brand_admin", "tr1_manager", "super_admin"]);
@@ -83,17 +84,30 @@ export async function lookupPharmacyVatNumberAction(
   }
 
   try {
-    const { supabase, order } = await requireTransmissionOrder(parsed.data.orderId);
+    const { supabase, brand, order } = await requireTransmissionOrder(parsed.data.orderId);
     const { data: pharmacy, error: pharmacyError } = await supabase
       .from("pharmacies")
       .select("legal_name,trade_name,siret,postal_code,city,vat_number")
       .eq("id", order.pharmacy_id)
       .single();
     if (pharmacyError || !pharmacy) throw new Error("Pharmacie introuvable.");
+
+    const hubSpotSiren = await getHubSpotPharmacySiren(brand.id, order.pharmacy_id);
+    const storedSiret = String(pharmacy.siret ?? "").replace(/\D/g, "");
+    const effectiveSiret = requestedSiret || storedSiret;
+
+    if (hubSpotSiren && effectiveSiret && !siretMatchesSiren(effectiveSiret, hubSpotSiren)) {
+      return {
+        error: requestedSiret
+          ? `Le SIRET saisi ne correspond pas au SIREN HubSpot ${hubSpotSiren}. Vérifiez le SIRET de la pharmacie.`
+          : `Le SIRET enregistré dans TR1 ne correspond pas au SIREN HubSpot ${hubSpotSiren}. Saisissez le SIRET exact avant de rechercher la TVA.`,
+      };
+    }
+
     if (pharmacy.vat_number?.trim()) return { success: `TVA déjà enregistrée : ${pharmacy.vat_number}.` };
 
     const lookup = await lookupFrenchVatNumber({
-      siret: requestedSiret || pharmacy.siret,
+      siret: effectiveSiret,
       legalName: pharmacy.legal_name,
       tradeName: pharmacy.trade_name,
       postalCode: pharmacy.postal_code,
@@ -102,6 +116,11 @@ export async function lookupPharmacyVatNumberAction(
 
     if (lookup.status !== "found") {
       return { error: lookup.reason };
+    }
+    if (hubSpotSiren && lookup.siren !== hubSpotSiren) {
+      return {
+        error: `La société trouvée officiellement (SIREN ${lookup.siren}) ne correspond pas au SIREN HubSpot ${hubSpotSiren}. TVA non enregistrée.`,
+      };
     }
 
     const admin = createAdminClient();
@@ -172,24 +191,23 @@ export async function uploadPharmacyDocumentAction(
   }
 
   try {
-    const { brand, userId, order } = await requireTransmissionOrder(orderId.data);
+    const { userId, order } = await requireTransmissionOrder(orderId.data);
     const admin = createAdminClient();
     const { data: existing } = await admin
       .from("pharmacy_documents")
       .select("id,object_path")
-      .eq("brand_id", brand.id)
       .eq("pharmacy_id", order.pharmacy_id)
       .eq("document_type", documentType)
       .maybeSingle();
 
-    const objectPath = `${brand.id}/${order.pharmacy_id}/${documentType}-${Date.now()}-${safeFileName(file.name)}`;
+    const objectPath = `global/${order.pharmacy_id}/${documentType}-${Date.now()}-${safeFileName(file.name)}`;
     const { error: uploadError } = await admin.storage
       .from("pharmacy-documents")
       .upload(objectPath, file, { contentType: file.type, upsert: false });
     if (uploadError) throw uploadError;
 
     const payload = {
-      brand_id: brand.id,
+      brand_id: null,
       pharmacy_id: order.pharmacy_id,
       document_type: documentType,
       file_name: file.name.slice(0, 255),
@@ -259,13 +277,24 @@ export async function sendOrderByEmailAction(
       supabase.from("brands").select("name,code,order_email").eq("id", brand.id).single(),
       supabase.from("pharmacies").select("legal_name,trade_name,cip_code,siret,vat_number,email,phone,address_line_1,address_line_2,postal_code,city").eq("id", order.pharmacy_id).single(),
       supabase.from("order_items").select("product_id,product_name_snapshot,sku_snapshot,quantity,free_quantity,unit_price_ht,discount_rate,net_unit_price_ht,line_total_ht,tax_rate").eq("order_id", order.id).order("created_at"),
-      admin.from("pharmacy_documents").select("document_type,file_name,content_type,object_path").eq("brand_id", brand.id).eq("pharmacy_id", order.pharmacy_id),
+      admin.from("pharmacy_documents").select("document_type,file_name,content_type,object_path").eq("pharmacy_id", order.pharmacy_id),
       admin.from("user_gmail_connections").select("email,refresh_token_ciphertext").eq("user_id", userId).maybeSingle(),
       admin.from("users").select("email").eq("id", creatorId).maybeSingle(),
       admin.from("user_profiles").select("full_name").eq("user_id", creatorId).maybeSingle(),
     ]);
     if (brandError || pharmacyError || itemsError || documentsError || gmailError || !brandData || !pharmacy) {
       throw new Error("Impossible de préparer les données de transmission.");
+    }
+
+    const hubSpotSiren = await getHubSpotPharmacySiren(brand.id, order.pharmacy_id);
+    if (
+      hubSpotSiren
+      && pharmacy.siret?.trim()
+      && !siretMatchesSiren(pharmacy.siret, hubSpotSiren)
+    ) {
+      return {
+        error: `Transmission bloquée : le SIRET de la pharmacie ne correspond pas au SIREN HubSpot ${hubSpotSiren}. Vérifiez l’identité juridique avant l’envoi.`,
+      };
     }
 
     const recipient = parsed.data.recipientEmail;

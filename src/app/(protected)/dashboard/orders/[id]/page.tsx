@@ -177,7 +177,6 @@ export default async function OrderDetailPage({
       admin
         .from("pharmacy_documents")
         .select("document_type")
-        .eq("brand_id", brand.id)
         .eq("pharmacy_id", order.pharmacy_id),
       admin
         .from("order_email_transmissions")
