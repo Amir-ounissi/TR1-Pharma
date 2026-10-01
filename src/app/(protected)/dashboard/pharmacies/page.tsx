@@ -31,7 +31,8 @@ export default async function PharmaciesPage({ searchParams }: { searchParams: S
   const search = typeof params.q === "string" ? params.q.trim() : "";
   const page = Math.max(1, Number(params.page ?? 1) || 1);
   const pageSize = 20;
-  let query = supabase.from("brand_pharmacy_directory").select("*", { count: "exact" }).eq("brand_id", brand.id).is("archived_at", null);
+  const pharmacyListColumns = "id,trade_name,legal_name,pharmacy_group_name,city,postal_code,commercial_status,activity_status,priority_level,potential_level,agent_name,territory_name";
+  let query = supabase.from("brand_pharmacy_directory").select(pharmacyListColumns).eq("brand_id", brand.id).is("archived_at", null);
   if (search) query = query.ilike("search_text", `%${search}%`);
   if (params.attention === "1") query = query.in("activity_status", ["at_risk", "dormant"]);
   for (const [parameter, column] of [["status", "commercial_status"], ["activity", "activity_status"], ["priority", "priority_level"], ["potential", "potential_level"]] as const) {
@@ -46,9 +47,13 @@ export default async function PharmaciesPage({ searchParams }: { searchParams: S
   const requestedSort = typeof params.sort === "string" ? params.sort : "trade_name";
   const sort = sortableColumns.includes(requestedSort as typeof sortableColumns[number]) ? requestedSort : "trade_name";
   const descending = params.direction === "desc";
-  const { data, count, error } = await query.order(sort, { ascending: !descending }).range((page - 1) * pageSize, page * pageSize - 1);
-  const rows = data ?? [];
-  const totalPages = Math.max(1, Math.ceil((count ?? 0) / pageSize));
+  const listResult = view === "list"
+    ? await query.order(sort, { ascending: !descending }).range((page - 1) * pageSize, page * pageSize)
+    : { data: [], error: null };
+  const pageRows = listResult.data ?? [];
+  const hasNextPage = pageRows.length > pageSize;
+  const rows = pageRows.slice(0, pageSize);
+  const error = listResult.error;
   const priorityCount = rows.filter((row) => row.priority_level === "high" || row.priority_level === "strategic").length;
   const unassignedCount = rows.filter((row) => !row.agent_name).length;
   const cityCount = new Set(rows.map((row) => row.city).filter(Boolean)).size;
@@ -94,7 +99,7 @@ export default async function PharmaciesPage({ searchParams }: { searchParams: S
           <MobilePharmacyPortfolioControls
             params={params}
             search={search}
-            count={count ?? 0}
+            count={rows.length}
             role={role}
             hasActiveFilters={hasActiveFilters}
           />
@@ -109,7 +114,7 @@ export default async function PharmaciesPage({ searchParams }: { searchParams: S
         <div className="hidden md:block">
           <MetricStrip
             items={[
-              { icon: Building2, label: role === "agent" ? "Mon portefeuille" : "Portefeuille total", value: count ?? 0, detail: "Pharmacies référencées" },
+              { icon: Building2, label: "Résultats affichés", value: rows.length, detail: `Page ${page}` },
               { icon: CircleAlert, label: "Priorités affichées", value: priorityCount, detail: "Haute ou stratégique", accent: true },
               role === "agent" ? { icon: CircleAlert, label: "À relancer", value: rows.filter((row) => row.activity_status === "at_risk" || row.activity_status === "dormant").length, detail: "Sur cette page" } : { icon: UserRound, label: "Sans agent", value: unassignedCount, detail: "Sur cette page · affectation à compléter" },
               { icon: MapPin, label: "Villes couvertes", value: cityCount, detail: "Sur cette page" },
@@ -140,7 +145,7 @@ export default async function PharmaciesPage({ searchParams }: { searchParams: S
       <div className="hidden md:block">
       <Toolbar>
         <ToolbarRow className="justify-between">
-          <ToolbarMeta>{count ?? 0} résultat(s)</ToolbarMeta>
+          <ToolbarMeta>{rows.length} résultat(s) affiché(s)</ToolbarMeta>
           {hasActiveFilters ? (
             <Button asChild size="sm" variant="ghost" className="h-8 px-2.5 text-[var(--tr1-navy)]">
               <Link href="/dashboard/pharmacies?view=list">
@@ -258,14 +263,14 @@ export default async function PharmaciesPage({ searchParams }: { searchParams: S
       {rows.length > 0 ? (
         <div className="flex items-center justify-between pt-1">
           <span className="font-mono text-[0.58rem] font-bold uppercase tracking-[0.12em] text-muted-foreground">
-            Page {page} / {totalPages}
+            Page {page}
           </span>
           <div className="flex gap-2">
             <Button asChild variant="outline" size="sm" className="rounded-md" disabled={page <= 1}>
               <Link href={buildPageHref(urlParams, Math.max(1, page - 1))}>Précédent</Link>
             </Button>
-            <Button asChild variant="outline" size="sm" className="rounded-md" disabled={page >= totalPages}>
-              <Link href={buildPageHref(urlParams, Math.min(totalPages, page + 1))}>Suivant</Link>
+            <Button asChild variant="outline" size="sm" className="rounded-md" disabled={!hasNextPage}>
+              <Link href={buildPageHref(urlParams, page + 1)}>Suivant</Link>
             </Button>
           </div>
         </div>
