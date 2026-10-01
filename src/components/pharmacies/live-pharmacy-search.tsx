@@ -31,7 +31,7 @@ export function LivePharmacySearch({ initialValue, params }: LivePharmacySearchP
       startTransition(() => {
         router.replace(`/dashboard/pharmacies?${next.toString()}`, { scroll: false });
       });
-    }, 220);
+    }, 350);
 
     return () => window.clearTimeout(timeout);
   }, [initialValue, params, query, router]);
