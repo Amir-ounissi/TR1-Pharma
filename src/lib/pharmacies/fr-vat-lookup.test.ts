@@ -25,6 +25,15 @@ describe("French VAT lookup", () => {
     ).toBe(1);
   });
 
+  it("rejects a SIRET whose SIREN prefix differs", () => {
+    expect(
+      frenchVatLookupInternals.siretMatchesSiren("49497266400028", "494972664"),
+    ).toBe(true);
+    expect(
+      frenchVatLookupInternals.siretMatchesSiren("38749755500020", "494972664"),
+    ).toBe(false);
+  });
+
   it("finds an official VAT from a confident name and postcode match", async () => {
     const fetcher = (() =>
       response({
