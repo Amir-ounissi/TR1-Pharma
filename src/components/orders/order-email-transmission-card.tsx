@@ -98,6 +98,7 @@ export function OrderEmailTransmissionCard({
   recipientEmail,
   ccEmails,
   vatNumber,
+  pharmacySiret,
   requireVat,
   requiredDocuments,
   hasKbis,
@@ -111,6 +112,7 @@ export function OrderEmailTransmissionCard({
   recipientEmail: string | null;
   ccEmails: string[];
   vatNumber: string | null;
+  pharmacySiret: string | null;
   requireVat: boolean;
   requiredDocuments: OrderTransmissionDocumentType[];
   hasKbis: boolean;
@@ -200,11 +202,31 @@ export function OrderEmailTransmissionCard({
               </p>
             </div>
 
-            <form action={vatLookupAction} className="space-y-2">
+            <form action={vatLookupAction} className="space-y-3">
               <input type="hidden" name="orderId" value={orderId} />
-              <Button type="submit" disabled={vatLookupPending}>
-                {vatLookupPending ? "Recherche officielle…" : "Rechercher automatiquement la TVA"}
-              </Button>
+              <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium" htmlFor={`vat-siret-${orderId}`}>
+                    SIRET pour sécuriser la recherche
+                  </label>
+                  <input
+                    id={`vat-siret-${orderId}`}
+                    name="siret"
+                    defaultValue={pharmacySiret ?? ""}
+                    inputMode="numeric"
+                    autoComplete="off"
+                    placeholder="14 chiffres"
+                    maxLength={20}
+                    className="h-10 w-full rounded-md border bg-background px-3 font-mono text-sm"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Facultatif si l’identification est unique. En cas de plusieurs sociétés homonymes, saisissez le SIRET exact puis relancez.
+                  </p>
+                </div>
+                <Button type="submit" disabled={vatLookupPending}>
+                  {vatLookupPending ? "Recherche officielle…" : "Rechercher la TVA"}
+                </Button>
+              </div>
               <Feedback state={vatLookupState} />
             </form>
 
