@@ -300,6 +300,44 @@ async function activeConnection(brandId: string, connectionId: string) {
   return { admin, connection, client };
 }
 
+export async function getHubSpotPharmacySiren(
+  brandId: string,
+  pharmacyId: string,
+): Promise<string | null> {
+  const admin = createAdminClient();
+  const { data: connection, error: connectionError } = await admin
+    .from("connector_connections")
+    .select("id")
+    .eq("brand_id", brandId)
+    .eq("provider", "hubspot")
+    .eq("status", "active")
+    .is("archived_at", null)
+    .limit(1)
+    .maybeSingle();
+  if (connectionError) throw connectionError;
+  if (!connection?.id) return null;
+
+  const { data: link, error: linkError } = await admin
+    .from("connector_external_links")
+    .select("external_id")
+    .eq("connection_id", connection.id)
+    .eq("entity_type", "pharmacies")
+    .eq("tr1_record_id", pharmacyId)
+    .limit(1)
+    .maybeSingle();
+  if (linkError) throw linkError;
+  if (!link?.external_id) return null;
+
+  const runtime = await activeConnection(brandId, String(connection.id));
+  if (!runtime) return null;
+
+  const response = await runtime.client.read<{ properties?: Record<string, unknown> }>(
+    `/crm/v3/objects/companies/${encodeURIComponent(String(link.external_id))}?properties=siren`,
+  );
+  const siren = String(response.data?.properties?.siren ?? "").replace(/\D/g, "");
+  return /^[0-9]{9}$/.test(siren) ? siren : null;
+}
+
 async function searchAll(
   client: HubSpotClient,
   objectType: string,
