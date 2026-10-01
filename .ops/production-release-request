@@ -1,3 +1,3 @@
-release_sha=20290ff1b95ec55fdd425f07e78d18c3cebadc37
-reason=Deploy desktop multi-reference picker and VAT SIRET retry
-requested_at=2026-10-01T10:08:00+02:00
+release_sha=50fae5e8e66f95ee43c4b42afd546e90da5ed081
+reason=Deploy global pharmacy documents and VAT identity guard
+requested_at=2026-10-01T11:10:00+02:00
