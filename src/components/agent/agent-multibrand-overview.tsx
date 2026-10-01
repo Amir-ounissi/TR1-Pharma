@@ -226,7 +226,7 @@ export function AgentMultibrandOverview({
     return (
       <article key={action.key} className="relative overflow-hidden rounded-xl border bg-white/60 p-4 transition active:scale-[0.995] hover:border-[var(--tr1-orange)] hover:bg-white">
         <Link
-          href={action.href}
+          prefetch={false} href={action.href}
           aria-label={`Ouvrir ${action.pharmacyName} — ${action.title}`}
           className="absolute inset-0 z-0 touch-manipulation rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-orange)] focus-visible:ring-inset"
         >
@@ -242,7 +242,7 @@ export function AgentMultibrandOverview({
           {action.reason ? <p className="mt-1 text-sm text-muted-foreground">{action.reason}</p> : null}
           <div className="mt-4 flex flex-wrap items-center gap-2">
             {canPlanVisit ? (
-              <Link href={existingVisit?.href || planningHref} className="pointer-events-auto relative z-20 inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-lg bg-[var(--tr1-navy)] px-3.5 py-2 text-sm font-semibold text-white transition active:scale-[0.98] hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-navy)] focus-visible:ring-offset-2">
+              <Link prefetch={false} href={existingVisit?.href || planningHref} className="pointer-events-auto relative z-20 inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-lg bg-[var(--tr1-navy)] px-3.5 py-2 text-sm font-semibold text-white transition active:scale-[0.98] hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-navy)] focus-visible:ring-offset-2">
                 <CalendarPlus className="size-4" aria-hidden="true" />
                 {existingVisit ? "Voir la visite" : "Planifier une visite"}
               </Link>
@@ -265,7 +265,7 @@ export function AgentMultibrandOverview({
               <h2 className="text-lg font-semibold">Mon programme</h2>
               <p className="mt-1 text-sm text-muted-foreground">Ouvrez une visite pour la préparer, la reprendre ou la clôturer.</p>
             </div>
-            <Link href="/dashboard/agenda" className="inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-md px-2 text-sm font-semibold hover:underline focus-visible:ring-2">
+            <Link prefetch={false} href="/dashboard/agenda" className="inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-md px-2 text-sm font-semibold hover:underline focus-visible:ring-2">
               Voir l’agenda <ArrowRight className="size-4" aria-hidden="true" />
             </Link>
           </div>
@@ -277,7 +277,7 @@ export function AgentMultibrandOverview({
                 const closed = ["completed", "cancelled", "canceled", "missed"].includes(visit.status.toLowerCase());
                 return (
                   <li key={visit.id}>
-                    <Link href={visit.href} className="flex min-h-[4.75rem] touch-manipulation items-start gap-3 rounded-md py-4 transition active:bg-muted/50 hover:bg-muted/30 focus-visible:ring-2">
+                    <Link prefetch={false} href={visit.href} className="flex min-h-[4.75rem] touch-manipulation items-start gap-3 rounded-md py-4 transition active:bg-muted/50 hover:bg-muted/30 focus-visible:ring-2">
                       <time dateTime={visit.startAt} className="w-12 shrink-0 text-sm font-semibold tabular-nums">{formatTime(visit.startAt)}</time>
                       <div className="min-w-0 flex-1">
                         <p className="break-words text-base font-semibold">{visit.pharmacyName}</p>
@@ -299,7 +299,7 @@ export function AgentMultibrandOverview({
               <div>
                 <p className="text-base font-medium">Aucune visite planifiée aujourd’hui</p>
                 <p className="mt-1 text-sm leading-relaxed text-muted-foreground">Ajoutez un rendez-vous depuis votre agenda.</p>
-                {canPlanVisit ? <Link href="/dashboard/agenda/new" className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-lg bg-[var(--tr1-navy)] px-3.5 py-2 text-sm font-semibold text-white"><CalendarPlus className="size-4" />Planifier une visite</Link> : null}
+                {canPlanVisit ? <Link prefetch={false} href="/dashboard/agenda/new" className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-lg bg-[var(--tr1-navy)] px-3.5 py-2 text-sm font-semibold text-white"><CalendarPlus className="size-4" />Planifier une visite</Link> : null}
               </div>
             </div>
           )}
