@@ -52,6 +52,14 @@ function textValue(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+export function siretMatchesSiren(siret?: string | null, siren?: string | null) {
+  const normalizedSiret = String(siret ?? "").replace(/\D/g, "");
+  const normalizedSiren = String(siren ?? "").replace(/\D/g, "");
+  return SIRET.test(normalizedSiret)
+    && /^[0-9]{9}$/.test(normalizedSiren)
+    && normalizedSiret.slice(0, 9) === normalizedSiren;
+}
+
 function normalizePostalCode(value?: string | null) {
   const digits = String(value ?? "").replace(/\D/g, "");
   if (digits.length === 4) return digits.padStart(5, "0");
@@ -303,4 +311,5 @@ export const frenchVatLookupInternals = {
   normalizeName,
   nameScore,
   validVatNumbers,
+  siretMatchesSiren,
 };
