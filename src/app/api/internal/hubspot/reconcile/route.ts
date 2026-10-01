@@ -1,9 +1,10 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { reconcileHubSpotOrdersNow } from "@/lib/integrations/hubspot/reconciliation";
+import { reconcileHubSpotOrdersIfStale, reconcileHubSpotOrdersNow, reconcileHubSpotVisitsIfStale } from "@/lib/integrations/hubspot/reconciliation";
 
 export const runtime = "nodejs";
+export const maxDuration = 300;
 
 function authorized(request: NextRequest) {
   const expected = process.env.TR1_INTERNAL_RECONCILE_TOKEN?.trim();
@@ -14,6 +15,36 @@ function authorized(request: NextRequest) {
   const expectedDigest = createHash("sha256").update(expected).digest();
   const providedDigest = createHash("sha256").update(provided).digest();
   return timingSafeEqual(expectedDigest, providedDigest);
+}
+
+export async function GET(request: NextRequest) {
+  if (process.env.VERCEL_ENV !== "production" || !authorized(request)) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+
+  const admin = createAdminClient();
+  const { data: brand, error: brandError } = await admin
+    .from("brands")
+    .select("id")
+    .eq("slug", "naali")
+    .limit(1)
+    .maybeSingle();
+
+  if (brandError || !brand?.id) {
+    return NextResponse.json({ error: "naali_brand_unavailable" }, { status: 500 });
+  }
+
+  const brandId = String(brand.id);
+  const visits = await reconcileHubSpotVisitsIfStale(brandId, 15 * 60_000);
+  const orders = await reconcileHubSpotOrdersIfStale(brandId, 60 * 60_000);
+
+  return NextResponse.json({
+    ok: true,
+    summary: {
+      visits,
+      orders,
+    },
+  });
 }
 
 export async function POST(request: NextRequest) {
