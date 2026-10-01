@@ -67,6 +67,7 @@ export function PharmacyListWithPanel({ rows, loadSummaryAction, showOwnershipCo
             <Link
               key={row.id}
               href={`/dashboard/pharmacies/${row.id}`}
+              prefetch={false}
               className={cn(
                 "block rounded-xl border bg-white/90 px-4 py-3.5 shadow-sm transition active:scale-[0.99]",
                 strategic || needsAttention
