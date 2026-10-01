@@ -1,4 +1,3 @@
-import { after } from "next/server";
 import type { AgentNextVisit, AgentTodayData } from "@/components/agent/agent-day-experience";
 import {
   AgentMultibrandOverview,
@@ -12,7 +11,6 @@ import { addCalendarDays } from "@/lib/agenda";
 import { requireActiveBrand } from "@/lib/auth";
 import { nextIsoDate, parisBusinessDate } from "@/lib/business-date";
 import { requireActiveBrandCapability } from "@/lib/saas/server";
-import { reconcileHubSpotOrdersIfStale, reconcileHubSpotVisitsIfStale } from "@/lib/integrations/hubspot/reconciliation";
 import { loadStockAlerts } from "@/lib/stock-alerts-server";
 
 type FieldAgendaEvent = {
@@ -101,18 +99,12 @@ export default async function AgentPage() {
   ]);
   const { supabase, brand, profile, userId } = session;
 
-  after(async () => {
-    await reconcileHubSpotOrdersIfStale(brand.id);
-    await reconcileHubSpotVisitsIfStale(brand.id);
-  });
-
   const today = parisBusinessDate();
   const monthStart = `${today.slice(0, 7)}-01`;
   const planningHorizon = addCalendarDays(today, 14);
   const now = new Date();
 
   const [
-    { data: agenda },
     { data: nextVisit },
     multibrandFieldAgendaResult,
     upcomingFieldAgendaResult,
@@ -123,7 +115,6 @@ export default async function AgentPage() {
     monthOrdersResult,
     personalTargetResult,
   ] = await Promise.all([
-    timedQuery("get_agent_today", supabase.rpc("get_agent_today", { target_brand_id: brand.id, target_date: today })),
     timedQuery("get_next_agent_visit", supabase.rpc("get_next_agent_visit", { target_brand_id: brand.id })),
     timedQuery("get_my_field_agenda_today", supabase.rpc("get_my_field_agenda", {
       start_date: today,
@@ -194,9 +185,43 @@ export default async function AgentPage() {
     }
   }
 
-  const day = (agenda ?? { tasks: [], missions: [], reports: [], follow_ups: [] }) as AgentTodayData;
   const visit = nextVisit as AgentNextVisit | null;
   const multibrandDay = (multibrandDayResult.data ?? { tasks: [], missions: [], reports: [], follow_ups: [] }) as AgentMultibrandDay;
+  const day: AgentTodayData = {
+    tasks: multibrandDay.tasks.map((task) => ({
+      id: task.id,
+      brand_pharmacy_id: task.brand_pharmacy_id,
+      title: task.title,
+      task_type: task.task_type,
+      priority: task.priority as AgentTodayData["tasks"][number]["priority"],
+      due_at: task.due_at,
+      is_overdue: task.is_overdue,
+      pharmacy_name: task.pharmacy_name,
+      city: task.city ?? "",
+    })),
+    missions: multibrandDay.missions.map((mission) => ({
+      id: mission.id,
+      brand_pharmacy_id: mission.brand_pharmacy_id,
+      title: mission.title,
+      objective: mission.objective ?? "",
+      scheduled_start_at: mission.scheduled_start_at,
+      priority: mission.priority,
+      pharmacy_name: mission.pharmacy_name,
+    })),
+    reports: multibrandDay.reports.map((report) => ({
+      id: report.id,
+      mission_id: report.mission_id,
+      title: report.title,
+      brand_pharmacy_id: report.brand_pharmacy_id,
+      report_status: report.report_status,
+    })),
+    follow_ups: multibrandDay.follow_ups.map((followUp) => ({
+      brand_pharmacy_id: followUp.brand_pharmacy_id,
+      pharmacy_name: followUp.pharmacy_name,
+      last_interaction_at: followUp.last_interaction_at,
+      priority: followUp.priority,
+    })),
+  };
   const firstName = profile.full_name.split(" ")[0];
   const dayLabel = new Intl.DateTimeFormat("fr-FR", {
     weekday: "long",
