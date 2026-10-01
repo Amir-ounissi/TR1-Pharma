@@ -71,8 +71,16 @@ export async function lookupPharmacyVatNumberAction(
   _state: OrderTransmissionActionState,
   formData: FormData,
 ): Promise<OrderTransmissionActionState> {
-  const parsed = z.object({ orderId: uuid }).safeParse(Object.fromEntries(formData));
+  const parsed = z.object({
+    orderId: uuid,
+    siret: z.string().trim().max(32).optional().default(""),
+  }).safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: "Commande invalide." };
+
+  const requestedSiret = parsed.data.siret.replace(/\D/g, "");
+  if (requestedSiret && requestedSiret.length !== 14) {
+    return { error: "Le SIRET doit contenir exactement 14 chiffres." };
+  }
 
   try {
     const { supabase, order } = await requireTransmissionOrder(parsed.data.orderId);
@@ -85,7 +93,7 @@ export async function lookupPharmacyVatNumberAction(
     if (pharmacy.vat_number?.trim()) return { success: `TVA déjà enregistrée : ${pharmacy.vat_number}.` };
 
     const lookup = await lookupFrenchVatNumber({
-      siret: pharmacy.siret,
+      siret: requestedSiret || pharmacy.siret,
       legalName: pharmacy.legal_name,
       tradeName: pharmacy.trade_name,
       postalCode: pharmacy.postal_code,
@@ -98,7 +106,11 @@ export async function lookupPharmacyVatNumberAction(
 
     const admin = createAdminClient();
     const update: { vat_number: string; siret?: string } = { vat_number: lookup.vatNumber };
-    if (!pharmacy.siret?.trim() && lookup.siret) update.siret = lookup.siret;
+    if (requestedSiret) {
+      update.siret = requestedSiret;
+    } else if (!pharmacy.siret?.trim() && lookup.siret) {
+      update.siret = lookup.siret;
+    }
 
     const { error } = await admin
       .from("pharmacies")
