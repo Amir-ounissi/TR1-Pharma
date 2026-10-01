@@ -56,7 +56,7 @@ export function MobilePharmacyPortfolioControls({
             Pharmacies
           </h1>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            {count} pharmacie{count > 1 ? "s" : ""}
+            {count} pharmacie{count > 1 ? "s" : ""} affichée{count > 1 ? "s" : ""}
           </p>
         </div>
         <Button
