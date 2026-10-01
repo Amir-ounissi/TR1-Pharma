@@ -301,7 +301,7 @@ jobs:
             --env "BOOKING_URL=$BOOKING_URL" \
             --env "TR1_HUBSPOT_MODE=write" \
             --env "TR1_HUBSPOT_WRITE_ENABLED=true" \
-            --env "TR1_INTERNAL_RECONCILE_TOKEN=$RECONCILE_TOKEN" \\
+            --env "TR1_INTERNAL_RECONCILE_TOKEN=$RECONCILE_TOKEN" \
             --env "CRON_SECRET=$RECONCILE_TOKEN" | tail -n 1)"
           case "$deployment_url" in
             https://tr-1-pharma-*.vercel.app) ;;
