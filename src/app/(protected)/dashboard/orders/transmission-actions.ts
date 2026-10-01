@@ -191,7 +191,7 @@ export async function uploadPharmacyDocumentAction(
   }
 
   try {
-    const { brand, userId, order } = await requireTransmissionOrder(orderId.data);
+    const { userId, order } = await requireTransmissionOrder(orderId.data);
     const admin = createAdminClient();
     const { data: existing } = await admin
       .from("pharmacy_documents")
@@ -284,6 +284,17 @@ export async function sendOrderByEmailAction(
     ]);
     if (brandError || pharmacyError || itemsError || documentsError || gmailError || !brandData || !pharmacy) {
       throw new Error("Impossible de préparer les données de transmission.");
+    }
+
+    const hubSpotSiren = await getHubSpotPharmacySiren(brand.id, order.pharmacy_id);
+    if (
+      hubSpotSiren
+      && pharmacy.siret?.trim()
+      && !siretMatchesSiren(pharmacy.siret, hubSpotSiren)
+    ) {
+      return {
+        error: `Transmission bloquée : le SIRET de la pharmacie ne correspond pas au SIREN HubSpot ${hubSpotSiren}. Vérifiez l’identité juridique avant l’envoi.`,
+      };
     }
 
     const recipient = parsed.data.recipientEmail;
