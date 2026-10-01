@@ -97,7 +97,7 @@ export default async function OrderDetailPage({
     supabase
       .from("orders")
       .select(
-        "*,pharmacies(legal_name,trade_name,city,vat_number),brand_pharmacies(id)",
+        "*,pharmacies(legal_name,trade_name,city,siret,vat_number),brand_pharmacies(id)",
       )
       .eq("id", id)
       .eq("brand_id", brand.id)
@@ -283,6 +283,7 @@ export default async function OrderDetailPage({
           recipientEmail={recipientEmail}
           ccEmails={ccEmails}
           vatNumber={pharmacy?.vat_number ?? null}
+          pharmacySiret={pharmacy?.siret ?? null}
           requireVat={requireVat}
           requiredDocuments={requiredDocuments}
           hasKbis={hasKbis}
