@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useMemo, useState } from "react";
-import { Minus, Plus, RotateCcw } from "lucide-react";
+import { Check, Minus, PackagePlus, Plus, RotateCcw, Search, X } from "lucide-react";
 import {
   createOrderAction,
   searchOrderPharmaciesAction,
@@ -22,11 +22,13 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { uiLabel } from "@/lib/ui-copy";
+import { cn } from "@/lib/utils";
 
 type ProductOption = {
   id: string;
   name: string;
   detail?: string;
+  ean?: string | null;
   price?: number | null;
   taxRate?: number | null;
   unitsPerCase?: number | null;
@@ -240,26 +242,60 @@ export function QuickOrderForm({
   ]);
   const [orderType, setOrderType] = useState(initialOrderType);
   const [initialContextChanged, setInitialContextChanged] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerQuery, setPickerQuery] = useState("");
+  const [pickerSelection, setPickerSelection] = useState<string[]>([]);
 
   function defaultDiscountValue() {
     return defaultDiscountRate == null ? "" : String(defaultDiscountRate);
   }
 
-  function addLine() {
-    setLines((current) => [
-      ...current,
-      {
-        key: crypto.randomUUID(),
-        productId: "",
-        quantity: 1,
-        freeQuantity: 0,
-        commercialFreeQuantity: 0,
-        manualFreeQuantity: 0,
-        freeClassification: "",
-        unitPriceHt: "",
-        discountRate: defaultDiscountValue(),
-      },
-    ]);
+  function openProductPicker() {
+    setPickerQuery("");
+    setPickerSelection(
+      lines.map((line) => line.productId).filter((productId) => Boolean(productId)),
+    );
+    setPickerOpen(true);
+  }
+
+  function toggleProduct(productId: string) {
+    setPickerSelection((current) =>
+      current.includes(productId)
+        ? current.filter((id) => id !== productId)
+        : [...current, productId],
+    );
+  }
+
+  function applyProductSelection() {
+    setLines((current) => {
+      const byProduct = new Map(
+        current
+          .filter((line) => line.productId)
+          .map((line) => [line.productId, line]),
+      );
+
+      return products
+        .filter((product) => pickerSelection.includes(product.id))
+        .map((product) => {
+          const existing = byProduct.get(product.id);
+          if (existing) return existing;
+
+          const quantity = Math.max(1, product.minimumOrderQuantity ?? 1);
+          const commercialFreeQuantity = freeQuantityFor(quantity, freeUnitsRule);
+          return {
+            key: crypto.randomUUID(),
+            productId: product.id,
+            quantity,
+            freeQuantity: commercialFreeQuantity,
+            commercialFreeQuantity,
+            manualFreeQuantity: 0,
+            freeClassification: "",
+            unitPriceHt: product.price == null ? "" : String(product.price),
+            discountRate: defaultDiscountValue(),
+          };
+        });
+    });
+    setPickerOpen(false);
   }
 
   function updateLine(index: number, patch: Partial<DraftLine>) {
@@ -350,6 +386,18 @@ export function QuickOrderForm({
     }
   }
 
+  const filteredProducts = useMemo(() => {
+    const query = pickerQuery.trim().toLocaleLowerCase("fr");
+    if (!query) return products;
+    return products.filter((product) =>
+      [product.name, product.detail, product.ean]
+        .filter(Boolean)
+        .some((value) =>
+          String(value).toLocaleLowerCase("fr").includes(query),
+        ),
+    );
+  }, [pickerQuery, products]);
+
   const totalHt = useMemo(
     () =>
       lines.reduce((sum, line) => {
@@ -368,7 +416,8 @@ export function QuickOrderForm({
   const validLines = lines.filter((line) => line.productId).length;
 
   return (
-    <form action={action} className="space-y-5">
+    <>
+      <form action={action} className="space-y-5">
       <ActionFeedback {...state} />
       {isAgent ? <input type="hidden" name="orderStatus" value="pending" /> : null}
 
@@ -432,8 +481,8 @@ export function QuickOrderForm({
                 <RotateCcw className="size-4" /> Reprendre la dernière
               </Button>
             ) : null}
-            <Button type="button" variant="outline" onClick={addLine}>
-              <Plus className="size-4" /> Référence
+            <Button type="button" variant="outline" onClick={openProductPicker}>
+              <PackagePlus className="size-4" /> Choisir les références
             </Button>
           </div>
         </div>
@@ -740,6 +789,161 @@ export function QuickOrderForm({
               : "Créer la commande"}
         </Button>
       </div>
-    </form>
+      </form>
+
+      {pickerOpen ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Choisir les références"
+          className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/35 p-4 backdrop-blur-[1px] sm:p-8"
+          onMouseDown={(event) => {
+            if (event.currentTarget === event.target) setPickerOpen(false);
+          }}
+        >
+          <div className="w-full max-w-5xl overflow-hidden rounded-2xl border bg-background shadow-2xl">
+            <div className="sticky top-0 z-20 border-b bg-background/95 p-4 backdrop-blur sm:p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--tr1-orange)]">
+                    Catalogue
+                  </p>
+                  <h2 className="mt-1 text-xl font-black text-[var(--tr1-navy)]">
+                    Choisir plusieurs références
+                  </h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Cochez toutes les références de la commande, puis validez la sélection.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-10 shrink-0 rounded-full"
+                  aria-label="Fermer le catalogue"
+                  onClick={() => setPickerOpen(false)}
+                >
+                  <X className="size-5" />
+                </Button>
+              </div>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={pickerQuery}
+                    onChange={(event) => setPickerQuery(event.target.value)}
+                    placeholder="Rechercher un produit, SKU ou EAN…"
+                    className="h-11 pl-9"
+                    autoFocus
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-2 sm:justify-end">
+                  <span className="text-xs font-semibold text-muted-foreground">
+                    {pickerSelection.length} sélectionnée
+                    {pickerSelection.length > 1 ? "s" : ""}
+                  </span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() =>
+                      setPickerSelection(products.map((product) => product.id))
+                    }
+                  >
+                    Tout
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setPickerSelection([])}
+                  >
+                    Effacer
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="max-h-[62vh] overflow-y-auto p-4 sm:p-5">
+              <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+                {filteredProducts.map((product) => {
+                  const selected = pickerSelection.includes(product.id);
+                  return (
+                    <button
+                      key={product.id}
+                      type="button"
+                      onClick={() => toggleProduct(product.id)}
+                      className={cn(
+                        "flex min-h-24 w-full items-start gap-3 rounded-xl border p-3 text-left transition",
+                        selected
+                          ? "border-[var(--tr1-orange)] bg-[var(--tr1-orange)]/7 shadow-sm"
+                          : "border-[var(--tr1-line-strong)] bg-background hover:bg-muted/60",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "mt-0.5 grid size-6 shrink-0 place-items-center rounded-lg border",
+                          selected
+                            ? "border-[var(--tr1-orange)] bg-[var(--tr1-orange)] text-white"
+                            : "border-[var(--tr1-line-strong)] bg-background",
+                        )}
+                      >
+                        {selected ? <Check className="size-4" /> : null}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-bold leading-tight text-[var(--tr1-navy)]">
+                          {product.name}
+                        </span>
+                        <span className="mt-1 block text-xs text-muted-foreground">
+                          {[product.detail, product.ean ? `EAN ${product.ean}` : null]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
+                        <span className="mt-2 flex flex-wrap gap-1.5 text-xs">
+                          {product.price != null ? (
+                            <Badge variant="outline">
+                              {money(Number(product.price))} HT
+                            </Badge>
+                          ) : null}
+                          {product.unitsPerCase ? (
+                            <Badge variant="outline">x{product.unitsPerCase}</Badge>
+                          ) : null}
+                          {product.minimumOrderQuantity ? (
+                            <span className="self-center text-muted-foreground">
+                              min. {product.minimumOrderQuantity}
+                            </span>
+                          ) : null}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {!filteredProducts.length ? (
+                <p className="py-12 text-center text-sm text-muted-foreground">
+                  Aucune référence trouvée.
+                </p>
+              ) : null}
+            </div>
+
+            <div className="sticky bottom-0 flex flex-col-reverse gap-2 border-t bg-background/95 p-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs text-muted-foreground">
+                Les quantités et UG déjà saisies sont conservées pour les références qui restent sélectionnées.
+              </p>
+              <Button
+                type="button"
+                className="h-11 bg-[var(--tr1-orange)] text-white hover:bg-[var(--tr1-orange)]/90 sm:min-w-56"
+                onClick={applyProductSelection}
+              >
+                Valider {pickerSelection.length} référence
+                {pickerSelection.length > 1 ? "s" : ""}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }

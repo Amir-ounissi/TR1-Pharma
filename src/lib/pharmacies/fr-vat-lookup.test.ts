@@ -70,6 +70,17 @@ describe("French VAT lookup", () => {
       response({
         results: [
           {
+            siren: "987654321",
+            nom_complet: "PHARMACIE DU PRADO",
+            nom_raison_sociale: "SELARL PHARMACIE DU PRADO",
+            tva: ["FR11987654321"],
+            siege: {
+              siret: "98765432100022",
+              code_postal: "13008",
+            },
+            matching_etablissements: [],
+          },
+          {
             siren: "123456789",
             nom_complet: "SELARL ABC",
             nom_raison_sociale: "SELARL ABC",

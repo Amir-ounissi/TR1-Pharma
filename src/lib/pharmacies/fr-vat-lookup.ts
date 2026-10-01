@@ -283,7 +283,7 @@ export async function lookupFrenchVatNumber(
     if (second && second.score >= best.score - 0.15 && second.siren !== best.siren) {
       return {
         status: "ambiguous",
-        reason: "Plusieurs sociétés correspondent à cette pharmacie. Vérifiez le SIRET ou saisissez la TVA manuellement.",
+        reason: "Plusieurs sociétés correspondent à cette pharmacie. Saisissez le SIRET exact dans la recherche officielle puis relancez-la.",
       };
     }
   }
