@@ -60,11 +60,11 @@ export function PwaRuntime() {
       .then(() => navigator.serviceWorker.ready)
       .then(() => {
         if (cancelled) return;
-        // Charge le module de l'écran hors ligne pendant que le réseau est disponible.
-        // Les chunks Next statiques sont ensuite conservés par le service worker / cache HTTP.
+        // Le module hors ligne reste préchargé, mais seulement après le chemin critique
+        // afin de ne pas concurrencer l'ouverture de l'écran terrain.
         window.setTimeout(() => {
           if (!cancelled) void import("@/components/pwa/offline-day-screen").catch(() => undefined);
-        }, 250);
+        }, 2500);
       })
       .catch(() => {
         // The web app remains fully usable when service-worker registration is unavailable.
