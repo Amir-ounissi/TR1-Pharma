@@ -36,7 +36,6 @@ export function PwaStartScreen() {
       const isOnline = window.navigator.onLine;
       setSnapshot(loadActiveOfflineDaySnapshot(window.localStorage));
       setOnline(isOnline);
-      router.prefetch("/dashboard/agent");
       if (isOnline) router.replace("/dashboard/agent");
     }, 0);
 
@@ -44,7 +43,6 @@ export function PwaStartScreen() {
       const isOnline = window.navigator.onLine;
       setOnline(isOnline);
       if (isOnline) {
-        router.prefetch("/dashboard/agent");
         router.replace("/dashboard/agent");
       }
     };
