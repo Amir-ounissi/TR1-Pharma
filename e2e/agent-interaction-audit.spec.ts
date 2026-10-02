@@ -54,12 +54,12 @@ function escapeRegExp(value: string) {
 function attachRuntimeGuards(page: Page) {
   const failures: string[] = [];
 
-  page.on("pageerror", (error) => failures.push(\`pageerror: \${error.message}\`));
+  page.on("pageerror", (error) => failures.push(`pageerror: ${error.message}`));
   page.on("response", (response) => {
     const url = new URL(response.url());
     const current = new URL(page.url() || "http://127.0.0.1");
     if (url.origin === current.origin && response.status() >= 500) {
-      failures.push(\`\${response.status()} \${url.pathname}\`);
+      failures.push(`${response.status()} ${url.pathname}`);
     }
   });
 
@@ -75,12 +75,12 @@ async function assertHealthy(page: Page) {
 }
 
 async function clickInternalLink(page: Page, href: string, label?: string) {
-  const link = page.locator(\`a[href="\${href}"]\`).filter({ visible: true }).first();
+  const link = page.locator(`a[href="${href}"]`).filter({ visible: true }).first();
   await expect(link, label ?? href).toBeVisible();
   const startedAt = Date.now();
   await link.click();
   await expect(page).toHaveURL(new RegExp(escapeRegExp(href)));
-  console.log(\`AUDIT_NAV \${href} \${Date.now() - startedAt}ms\`);
+  console.log(`AUDIT_NAV ${href} ${Date.now() - startedAt}ms`);
   await assertHealthy(page);
 }
 
@@ -104,11 +104,11 @@ async function exerciseSafeButtons(page: Page, route: string) {
 
     const currentUrl = page.url();
     await button.click({ timeout: 10_000 }).catch((error) => {
-      throw new Error(\`Button failed on \${route}: "\${text}" — \${String(error)}\`);
+      throw new Error(`Button failed on ${route}: "${text}" — ${String(error)}`);
     });
     tested += 1;
     await page.waitForTimeout(60);
-    await expect(page.locator("[data-nextjs-dialog]"), \`Next.js overlay after "\${text}" on \${route}\`).toHaveCount(0);
+    await expect(page.locator("[data-nextjs-dialog]"), `Next.js overlay after "${text}" on ${route}`).toHaveCount(0);
 
     if (page.url() !== currentUrl) {
       await page.goto(route);
@@ -118,7 +118,7 @@ async function exerciseSafeButtons(page: Page, route: string) {
     }
   }
 
-  console.log(\`AUDIT_CONTROLS \${route} tested=\${tested} skipped_mutation=\${skippedMutation}\`);
+  console.log(`AUDIT_CONTROLS ${route} tested=${tested} skipped_mutation=${skippedMutation}`);
 }
 
 test("audit agent desktop — navigation, écrans et contrôles non destructifs", async ({ page }) => {
@@ -129,12 +129,12 @@ test("audit agent desktop — navigation, écrans et contrôles non destructifs"
   for (const [href, label] of desktopDestinations) {
     await page.goto("/dashboard/agent");
     const nav = page.getByRole("navigation", { name: "Navigation principale" });
-    const link = nav.locator(\`a[href="\${href}"]\`);
+    const link = nav.locator(`a[href="${href}"]`);
     await expect(link, label).toBeVisible();
     const startedAt = Date.now();
     await link.click();
     await expect(page).toHaveURL(new RegExp(escapeRegExp(href)));
-    console.log(\`AUDIT_DESKTOP_NAV \${label} \${Date.now() - startedAt}ms\`);
+    console.log(`AUDIT_DESKTOP_NAV ${label} ${Date.now() - startedAt}ms`);
     await assertHealthy(page);
   }
 
@@ -159,26 +159,26 @@ test("audit fiche pharmacie desktop — tous les onglets terrain", async ({ page
   await signIn(page, AGENT_EMAIL, BRAND);
 
   for (const [tab, label] of pharmacyDesktopTabs) {
-    await page.goto(\`/dashboard/pharmacies/\${PHARMACY_ID}\`);
+    await page.goto(`/dashboard/pharmacies/${PHARMACY_ID}`);
     const nav = page.getByRole("navigation", { name: "Sections de la pharmacie" });
     const link = nav.getByRole("link", { name: label, exact: true });
     await expect(link).toBeVisible();
     const startedAt = Date.now();
     await link.click();
-    await expect(page).toHaveURL(new RegExp(\`/dashboard/pharmacies/\${PHARMACY_ID}\\\\?tab=\${tab}\`));
-    console.log(\`AUDIT_PHARMACY_DESKTOP \${label} \${Date.now() - startedAt}ms\`);
+    await expect(page).toHaveURL(new RegExp(`/dashboard/pharmacies/${PHARMACY_ID}\\\\?tab=${tab}`));
+    console.log(`AUDIT_PHARMACY_DESKTOP ${label} ${Date.now() - startedAt}ms`);
     await assertHealthy(page);
   }
 
-  await page.goto(\`/dashboard/pharmacies/\${PHARMACY_ID}\`);
-  await clickInternalLink(page, \`/dashboard/pharmacies/\${PHARMACY_ID}/commercial-terms\`, "Conditions commerciales");
+  await page.goto(`/dashboard/pharmacies/${PHARMACY_ID}`);
+  await clickInternalLink(page, `/dashboard/pharmacies/${PHARMACY_ID}/commercial-terms`, "Conditions commerciales");
 
-  await page.goto(\`/dashboard/pharmacies/\${PHARMACY_ID}\`);
-  await clickInternalLink(page, \`/dashboard/pharmacies/\${PHARMACY_ID}/brief\`, "Préparer ma visite");
+  await page.goto(`/dashboard/pharmacies/${PHARMACY_ID}`);
+  await clickInternalLink(page, `/dashboard/pharmacies/${PHARMACY_ID}/brief`, "Préparer ma visite");
 
   for (const route of [
-    \`/dashboard/pharmacies/\${PHARMACY_ID}/notes\`,
-    \`/dashboard/pharmacies/\${PHARMACY_ID}/prices\`,
+    `/dashboard/pharmacies/${PHARMACY_ID}/notes`,
+    `/dashboard/pharmacies/${PHARMACY_ID}/prices`,
   ]) {
     await page.goto(route);
     await assertHealthy(page);
@@ -196,19 +196,19 @@ test("audit agent PWA — navigation basse, Plus et onglets pharmacie", async ({
   for (const [href, label] of mobileDestinations) {
     await page.goto("/dashboard/agent");
     const nav = page.getByRole("navigation", { name: "Navigation mobile" });
-    const link = nav.locator(\`a[href="\${href}"]\`);
+    const link = nav.locator(`a[href="${href}"]`);
     await expect(link, label).toBeVisible();
     const startedAt = Date.now();
     await link.click();
     await expect(page).toHaveURL(new RegExp(escapeRegExp(href)));
-    console.log(\`AUDIT_MOBILE_NAV \${label} \${Date.now() - startedAt}ms\`);
+    console.log(`AUDIT_MOBILE_NAV ${label} ${Date.now() - startedAt}ms`);
     await assertHealthy(page);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
   }
 
   for (const [href, label] of moreDestinations) {
     await page.goto("/dashboard/agent/more");
-    const link = page.locator(\`a[href="\${href}"]\`).filter({ visible: true }).first();
+    const link = page.locator(`a[href="${href}"]`).filter({ visible: true }).first();
     if (await link.count()) {
       await expect(link, label).toBeVisible();
       await link.click();
@@ -223,10 +223,10 @@ test("audit agent PWA — navigation basse, Plus et onglets pharmacie", async ({
   ] as const;
 
   for (const [tab, label] of primaryTabs) {
-    await page.goto(\`/dashboard/pharmacies/\${PHARMACY_ID}\`);
+    await page.goto(`/dashboard/pharmacies/${PHARMACY_ID}`);
     const nav = page.getByRole("navigation", { name: "Sections principales de la pharmacie" });
     await nav.getByRole("link", { name: label, exact: true }).click();
-    await expect(page).toHaveURL(new RegExp(\`tab=\${tab}\`));
+    await expect(page).toHaveURL(new RegExp(`tab=${tab}`));
     await assertHealthy(page);
   }
 
@@ -239,19 +239,19 @@ test("audit agent PWA — navigation basse, Plus et onglets pharmacie", async ({
   ] as const;
 
   for (const [tab, label] of moreTabs) {
-    await page.goto(\`/dashboard/pharmacies/\${PHARMACY_ID}\`);
+    await page.goto(`/dashboard/pharmacies/${PHARMACY_ID}`);
     const nav = page.getByRole("navigation", { name: "Sections principales de la pharmacie" });
     await nav.getByRole("button", { name: /Plus/i }).click();
     await page.getByRole("link", { name: label, exact: true }).click();
-    await expect(page).toHaveURL(new RegExp(\`tab=\${tab}\`));
+    await expect(page).toHaveURL(new RegExp(`tab=${tab}`));
     await assertHealthy(page);
   }
 
-  await page.goto(\`/dashboard/pharmacies/\${PHARMACY_ID}\`);
+  await page.goto(`/dashboard/pharmacies/${PHARMACY_ID}`);
   const nav = page.getByRole("navigation", { name: "Sections principales de la pharmacie" });
   await nav.getByRole("button", { name: /Plus/i }).click();
   await page.getByRole("link", { name: "Conditions commerciales", exact: true }).click();
-  await expect(page).toHaveURL(new RegExp(\`/dashboard/pharmacies/\${PHARMACY_ID}/commercial-terms\`));
+  await expect(page).toHaveURL(new RegExp(`/dashboard/pharmacies/${PHARMACY_ID}/commercial-terms`));
   await assertHealthy(page);
 
   assertNoRuntimeFailures();
