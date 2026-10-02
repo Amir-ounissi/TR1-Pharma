@@ -6,7 +6,7 @@ import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { decryptCredential } from "@/lib/integrations/gmail/credentials";
 import { refreshGoogleAccessToken, sendGmailRawMessage } from "@/lib/integrations/gmail/google";
-import { buildBlankSepaMandatePdf, buildMimeMessage, buildTr1OrderPdf, type EmailAttachment } from "@/lib/orders/order-email";
+import { buildMimeMessage, buildTr1OrderPdf, type EmailAttachment } from "@/lib/orders/order-email";
 import {
   isVkSwissBrand,
   parseOrderCcEmails,
@@ -377,12 +377,6 @@ export async function sendOrderByEmailAction(
           filename: `mandat-sepa-${safeFileName(sepaDocument.file_name)}`,
           contentType: sepaDocument.content_type,
           data: Buffer.from(await data.arrayBuffer()),
-        });
-      } else {
-        attachments.push({
-          filename: "mandat-sepa-core-a-remplir.pdf",
-          contentType: "application/pdf",
-          data: buildBlankSepaMandatePdf(),
         });
       }
     }
