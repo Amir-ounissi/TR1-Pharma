@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildMimeMessage, buildTr1OrderPdf } from "./order-email";
+import { buildBlankSepaMandatePdf, buildMimeMessage, buildTr1OrderPdf } from "./order-email";
 
 function sampleOrder(overrides: Partial<Parameters<typeof buildTr1OrderPdf>[0]> = {}) {
   return {
@@ -142,5 +142,18 @@ describe("buildMimeMessage", () => {
 
     expect(raw).toContain("To: orders@example.test");
     expect(raw).toContain("Cc: manager@example.test, ops@example.test");
+  });
+});
+
+
+describe("buildBlankSepaMandatePdf", () => {
+  it("generates a printable blank SEPA mandate without sending it automatically", () => {
+    const pdf = buildBlankSepaMandatePdf();
+    const content = pdf.toString("latin1");
+
+    expect(content.startsWith("%PDF-1.4")).toBe(true);
+    expect(content).toContain("MANDAT DE DOMICILIATION EUROPEENNE SEPA");
+    expect(content).toContain("IBAN");
+    expect(content).toContain("Signature");
   });
 });
