@@ -5,7 +5,9 @@ import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
 import { getNaaliHubSpotPharmacyPricing } from "@/lib/integrations/hubspot/naali-pricing";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-const uuid = z.string().uuid();
+const uuid = z
+  .string()
+  .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, "UUID invalide.");
 const allowedRoles = new Set(["agent", "tr1_manager", "brand_admin", "super_admin"]);
 
 function emptyCommercialTerms() {
