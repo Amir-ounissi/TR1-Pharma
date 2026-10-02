@@ -1,16 +1,17 @@
 import { z } from "zod";
 
 const emailSchema = z.string().trim().email().max(320);
-const allowedDocuments = new Set(["kbis", "rib"] as const);
+const allowedRequiredDocuments = new Set(["kbis", "rib"] as const);
 
-export type OrderTransmissionDocumentType = "kbis" | "rib";
+export type OrderTransmissionDocumentType = "kbis" | "rib" | "sepa";
+export type OrderTransmissionRequiredDocumentType = "kbis" | "rib";
 
 export type OrderEmailTransmissionConfig = {
   enabled: boolean;
   recipientEmail: string | null;
   ccEmails: string[];
   requireVat: boolean;
-  requiredDocuments: OrderTransmissionDocumentType[];
+  requiredDocuments: OrderTransmissionRequiredDocumentType[];
   subjectTemplate: string | null;
   bodyTemplate: string | null;
 };
@@ -42,10 +43,10 @@ export function resolveOrderEmailTransmissionConfig(
   fallbackRecipient?: string | null,
 ): OrderEmailTransmissionConfig {
   const raw = asRecord(configuration?.order_email_transmission);
-  const requiredDocuments: OrderTransmissionDocumentType[] = Array.isArray(raw?.required_documents)
+  const requiredDocuments: OrderTransmissionRequiredDocumentType[] = Array.isArray(raw?.required_documents)
     ? raw.required_documents.filter(
-        (value): value is OrderTransmissionDocumentType =>
-          typeof value === "string" && allowedDocuments.has(value as OrderTransmissionDocumentType),
+        (value): value is OrderTransmissionRequiredDocumentType =>
+          typeof value === "string" && allowedRequiredDocuments.has(value as OrderTransmissionRequiredDocumentType),
       )
     : ["kbis", "rib"];
 

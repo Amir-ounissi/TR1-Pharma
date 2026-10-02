@@ -31,7 +31,7 @@ import { isIncompleteHubSpotHistory } from "@/lib/orders/historical-import";
 import {
   buildOrderEmailDraft,
   resolveOrderEmailTransmissionConfig,
-  type OrderTransmissionDocumentType,
+  type OrderTransmissionRequiredDocumentType,
 } from "@/lib/orders/order-email-transmission";
 import { formatCurrency } from "@/lib/reference-data";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -157,7 +157,7 @@ export default async function OrderDetailPage({
   let recipientEmail: string | null = null;
   let ccEmails: string[] = [];
   let requireVat = true;
-  let requiredDocuments: OrderTransmissionDocumentType[] = ["kbis", "rib"];
+  let requiredDocuments: OrderTransmissionRequiredDocumentType[] = ["kbis", "rib"];
   let hasKbis = false;
   let hasRib = false;
   let transmissionDocuments: OrderTransmissionDocument[] = [];
@@ -205,7 +205,7 @@ export default async function OrderDetailPage({
     requiredDocuments = transmissionConfig.requiredDocuments;
     transmissionDocuments = (documents ?? []).filter(
       (document): document is OrderTransmissionDocument =>
-        (document.document_type === "kbis" || document.document_type === "rib")
+        (document.document_type === "kbis" || document.document_type === "rib" || document.document_type === "sepa")
         && Boolean(document.file_name)
         && Boolean(document.content_type)
         && Boolean(document.updated_at),

@@ -15,10 +15,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LocalizedFileInput } from "@/components/ui/localized-file-input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { OrderTransmissionDocumentType } from "@/lib/orders/order-email-transmission";
+import type { OrderTransmissionDocumentType, OrderTransmissionRequiredDocumentType } from "@/lib/orders/order-email-transmission";
 
 const initialState: OrderTransmissionActionState = {};
 const pharmacyDocumentAccept = "application/pdf,image/jpeg,image/png";
+const pharmacyDocumentLabels: Record<OrderTransmissionDocumentType, string> = {
+  kbis: "KBIS",
+  rib: "RIB",
+  sepa: "Mandat SEPA",
+};
 
 function Feedback({ state }: { state: OrderTransmissionActionState }) {
   if (state.error) return <p className="text-sm text-destructive">{state.error}</p>;
@@ -67,6 +72,7 @@ function DocumentUpload({
   action,
   pending,
   state,
+  optional = false,
 }: {
   orderId: string;
   documentType: OrderTransmissionDocumentType;
@@ -74,8 +80,9 @@ function DocumentUpload({
   action: (payload: FormData) => void;
   pending: boolean;
   state: OrderTransmissionActionState;
+  optional?: boolean;
 }) {
-  const label = documentType.toUpperCase();
+  const label = pharmacyDocumentLabels[documentType];
   return (
     <form action={action} className="space-y-3 rounded-xl border p-4">
       <input type="hidden" name="orderId" value={orderId} />
@@ -94,13 +101,13 @@ function DocumentUpload({
               </div>
             </div>
           ) : (
-            <div className="mt-1 flex items-center gap-2 text-xs text-destructive">
-              <XCircle className="h-4 w-4" />
-              <span>Aucun fichier enregistré</span>
+            <div className={`mt-1 flex items-center gap-2 text-xs ${optional ? "text-muted-foreground" : "text-destructive"}`}>
+              {optional ? <FileText className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+              <span>{optional ? "Aucun fichier enregistré — non joint au mail" : "Aucun fichier enregistré"}</span>
             </div>
           )}
         </div>
-        {document ? <Badge>Enregistré</Badge> : <Badge variant="outline">Manquant</Badge>}
+        {document ? <Badge>Enregistré</Badge> : <Badge variant="outline">{optional ? "Optionnel" : "Manquant"}</Badge>}
       </div>
       <LocalizedFileInput
         id={`${documentType}-${orderId}`}
@@ -196,7 +203,7 @@ export function OrderEmailTransmissionCard({
   vatNumber: string | null;
   pharmacySiret: string | null;
   requireVat: boolean;
-  requiredDocuments: OrderTransmissionDocumentType[];
+  requiredDocuments: OrderTransmissionRequiredDocumentType[];
   hasKbis: boolean;
   hasRib: boolean;
   documents: OrderTransmissionDocument[];
@@ -208,6 +215,7 @@ export function OrderEmailTransmissionCard({
   const [vatState, vatAction, vatPending] = useActionState(updatePharmacyVatNumberAction, initialState);
   const [kbisState, kbisAction, kbisPending] = useActionState(uploadPharmacyDocumentAction, initialState);
   const [ribState, ribAction, ribPending] = useActionState(uploadPharmacyDocumentAction, initialState);
+  const [sepaState, sepaAction, sepaPending] = useActionState(uploadPharmacyDocumentAction, initialState);
   const [sendState, sendAction, sendPending] = useActionState(sendOrderByEmailAction, initialState);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewConfirmed, setPreviewConfirmed] = useState(false);
@@ -220,12 +228,14 @@ export function OrderEmailTransmissionCard({
   const requiresRib = requiredDocuments.includes("rib");
   const kbisDocument = documents.find((document) => document.document_type === "kbis") ?? null;
   const ribDocument = documents.find((document) => document.document_type === "rib") ?? null;
+  const sepaDocument = documents.find((document) => document.document_type === "sepa") ?? null;
   const documentsReady = (!requiresKbis || hasKbis) && (!requiresRib || hasRib);
-  const expectedAttachmentCount = 1 + requiredDocuments.length;
+  const expectedAttachmentCount = 1 + requiredDocuments.length + (sepaDocument ? 1 : 0);
   const readyAttachmentCount =
     1 +
     (requiresKbis && kbisDocument ? 1 : 0) +
-    (requiresRib && ribDocument ? 1 : 0);
+    (requiresRib && ribDocument ? 1 : 0) +
+    (sepaDocument ? 1 : 0);
   const ready = Boolean(
     gmailEmail &&
       toEmail.trim() &&
@@ -296,6 +306,14 @@ export function OrderEmailTransmissionCard({
                 description={ribDocument ? `${ribDocument.file_name} · Stocké dans TR1` : "Aucun RIB stocké dans TR1 — l’envoi sera bloqué"}
                 ready={Boolean(ribDocument)}
                 href={ribDocument ? `/api/orders/${orderId}/documents/rib` : undefined}
+              />
+            ) : null}
+            {sepaDocument ? (
+              <AttachmentRow
+                label="Mandat SEPA"
+                description={`${sepaDocument.file_name} · Stocké dans TR1`}
+                ready
+                href={`/api/orders/${orderId}/documents/sepa`}
               />
             ) : null}
           </div>
@@ -394,7 +412,13 @@ export function OrderEmailTransmissionCard({
           </div>
         ) : null}
 
-        {requiredDocuments.length ? (
+        <div className="space-y-3 rounded-xl border p-4">
+          <div>
+            <p className="font-medium">Documents pharmacie</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Le mandat SEPA est optionnel. S’il n’est pas téléversé, il n’apparaît pas dans les pièces jointes du mail et n’empêche jamais l’envoi.
+            </p>
+          </div>
           <div className="grid gap-3 sm:grid-cols-2">
             {requiresKbis ? (
               <DocumentUpload
@@ -416,8 +440,17 @@ export function OrderEmailTransmissionCard({
                 state={ribState}
               />
             ) : null}
+            <DocumentUpload
+              orderId={orderId}
+              documentType="sepa"
+              document={sepaDocument}
+              action={sepaAction}
+              pending={sepaPending}
+              state={sepaState}
+              optional
+            />
           </div>
-        ) : null}
+        </div>
 
         <form action={sendAction} className="space-y-6">
           <input type="hidden" name="orderId" value={orderId} />
