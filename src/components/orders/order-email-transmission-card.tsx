@@ -67,6 +67,7 @@ function DocumentUpload({
   action,
   pending,
   state,
+  optional = false,
 }: {
   orderId: string;
   documentType: OrderTransmissionDocumentType;
@@ -74,8 +75,9 @@ function DocumentUpload({
   action: (payload: FormData) => void;
   pending: boolean;
   state: OrderTransmissionActionState;
+  optional?: boolean;
 }) {
-  const label = documentType.toUpperCase();
+  const label = documentType === "sepa" ? "Mandat SEPA" : documentType.toUpperCase();
   return (
     <form action={action} className="space-y-3 rounded-xl border p-4">
       <input type="hidden" name="orderId" value={orderId} />
@@ -93,6 +95,11 @@ function DocumentUpload({
                 <p className="break-all text-muted-foreground">{document.file_name}</p>
               </div>
             </div>
+          ) : optional ? (
+            <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+              <FileText className="h-4 w-4" />
+              <span>Aucun fichier rempli enregistré — le modèle vierge sera utilisé</span>
+            </div>
           ) : (
             <div className="mt-1 flex items-center gap-2 text-xs text-destructive">
               <XCircle className="h-4 w-4" />
@@ -100,7 +107,7 @@ function DocumentUpload({
             </div>
           )}
         </div>
-        {document ? <Badge>Enregistré</Badge> : <Badge variant="outline">Manquant</Badge>}
+        {document ? <Badge>Enregistré</Badge> : <Badge variant="outline">{optional ? "Optionnel" : "Manquant"}</Badge>}
       </div>
       <LocalizedFileInput
         id={`${documentType}-${orderId}`}
@@ -185,6 +192,7 @@ export function OrderEmailTransmissionCard({
   hasKbis,
   hasRib,
   documents,
+  includeSepaMandate,
   previewSubject,
   previewBody,
   transmissions,
@@ -200,6 +208,7 @@ export function OrderEmailTransmissionCard({
   hasKbis: boolean;
   hasRib: boolean;
   documents: OrderTransmissionDocument[];
+  includeSepaMandate: boolean;
   previewSubject: string;
   previewBody: string;
   transmissions: OrderEmailTransmission[];
@@ -208,6 +217,7 @@ export function OrderEmailTransmissionCard({
   const [vatState, vatAction, vatPending] = useActionState(updatePharmacyVatNumberAction, initialState);
   const [kbisState, kbisAction, kbisPending] = useActionState(uploadPharmacyDocumentAction, initialState);
   const [ribState, ribAction, ribPending] = useActionState(uploadPharmacyDocumentAction, initialState);
+  const [sepaState, sepaAction, sepaPending] = useActionState(uploadPharmacyDocumentAction, initialState);
   const [sendState, sendAction, sendPending] = useActionState(sendOrderByEmailAction, initialState);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewConfirmed, setPreviewConfirmed] = useState(false);
@@ -220,12 +230,14 @@ export function OrderEmailTransmissionCard({
   const requiresRib = requiredDocuments.includes("rib");
   const kbisDocument = documents.find((document) => document.document_type === "kbis") ?? null;
   const ribDocument = documents.find((document) => document.document_type === "rib") ?? null;
+  const sepaDocument = documents.find((document) => document.document_type === "sepa") ?? null;
   const documentsReady = (!requiresKbis || hasKbis) && (!requiresRib || hasRib);
-  const expectedAttachmentCount = 1 + requiredDocuments.length;
+  const expectedAttachmentCount = 1 + requiredDocuments.length + (includeSepaMandate ? 1 : 0);
   const readyAttachmentCount =
     1 +
     (requiresKbis && kbisDocument ? 1 : 0) +
-    (requiresRib && ribDocument ? 1 : 0);
+    (requiresRib && ribDocument ? 1 : 0) +
+    (includeSepaMandate ? 1 : 0);
   const ready = Boolean(
     gmailEmail &&
       toEmail.trim() &&
@@ -296,6 +308,18 @@ export function OrderEmailTransmissionCard({
                 description={ribDocument ? `${ribDocument.file_name} · Stocké dans TR1` : "Aucun RIB stocké dans TR1 — l’envoi sera bloqué"}
                 ready={Boolean(ribDocument)}
                 href={ribDocument ? `/api/orders/${orderId}/documents/rib` : undefined}
+              />
+            ) : null}
+            {includeSepaMandate ? (
+              <AttachmentRow
+                label="Mandat SEPA"
+                description={
+                  sepaDocument
+                    ? `${sepaDocument.file_name} · Le fichier rempli remplace le modèle vierge`
+                    : "Modèle vierge généré automatiquement · optionnel · à remplir à la main"
+                }
+                ready
+                href={sepaDocument ? `/api/orders/${orderId}/documents/sepa` : `/api/orders/${orderId}/sepa`}
               />
             ) : null}
           </div>
@@ -394,7 +418,7 @@ export function OrderEmailTransmissionCard({
           </div>
         ) : null}
 
-        {requiredDocuments.length ? (
+        {requiredDocuments.length || includeSepaMandate ? (
           <div className="grid gap-3 sm:grid-cols-2">
             {requiresKbis ? (
               <DocumentUpload
@@ -414,6 +438,17 @@ export function OrderEmailTransmissionCard({
                 action={ribAction}
                 pending={ribPending}
                 state={ribState}
+              />
+            ) : null}
+            {includeSepaMandate ? (
+              <DocumentUpload
+                orderId={orderId}
+                documentType="sepa"
+                document={sepaDocument}
+                action={sepaAction}
+                pending={sepaPending}
+                state={sepaState}
+                optional
               />
             ) : null}
           </div>
