@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 const emailSchema = z.string().trim().email().max(320);
-const allowedDocuments = new Set(["kbis", "rib"] as const);
+const allowedDocuments = new Set<string>(["kbis", "rib"]);
 
 export type OrderTransmissionDocumentType = "kbis" | "rib" | "sepa";
 
