@@ -1,3 +1,3 @@
-release_sha=ddbabb40ed788faa89a2591eb9ab82ecf316b5eb
-reason=Redeploy production with restored Gmail OAuth environment variables
-requested_at=2026-10-02T13:30:00+02:00
+release_sha=4118019db48bad8cc9fed1ef9478ff910ec23409
+reason=Deploy optional SEPA mandate integration for order transmission
+requested_at=2026-10-02T14:36:37+02:00
