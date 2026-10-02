@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import Link from "next/link";
+import { CheckCircle2, Eye, FileText, XCircle } from "lucide-react";
 import {
   disconnectGmailAction,
   lookupPharmacyVatNumberAction,
@@ -38,6 +39,13 @@ function gmailMessageUrl(senderEmail: string, messageId: string) {
   return `https://mail.google.com/mail/u/?authuser=${encodeURIComponent(senderEmail)}#all/${encodeURIComponent(messageId)}`;
 }
 
+export type OrderTransmissionDocument = {
+  document_type: OrderTransmissionDocumentType;
+  file_name: string;
+  content_type: string;
+  updated_at: string;
+};
+
 export type OrderEmailTransmission = {
   id: string;
   status: string;
@@ -55,26 +63,45 @@ export type OrderEmailTransmission = {
 function DocumentUpload({
   orderId,
   documentType,
-  hasDocument,
+  document,
   action,
   pending,
   state,
 }: {
   orderId: string;
   documentType: OrderTransmissionDocumentType;
-  hasDocument: boolean;
+  document: OrderTransmissionDocument | null;
   action: (payload: FormData) => void;
   pending: boolean;
   state: OrderTransmissionActionState;
 }) {
   const label = documentType.toUpperCase();
   return (
-    <form action={action} className="space-y-2 rounded-xl border p-4">
+    <form action={action} className="space-y-3 rounded-xl border p-4">
       <input type="hidden" name="orderId" value={orderId} />
       <input type="hidden" name="documentType" value={documentType} />
-      <label className="text-sm font-medium" htmlFor={`${documentType}-${orderId}`}>
-        {label} {hasDocument ? "· enregistré" : ""}
-      </label>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <label className="text-sm font-medium" htmlFor={`${documentType}-${orderId}`}>
+            {label}
+          </label>
+          {document ? (
+            <div className="mt-1 flex items-start gap-2 text-xs text-emerald-700">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+              <div>
+                <p className="font-medium">Fichier actuellement enregistré</p>
+                <p className="break-all text-muted-foreground">{document.file_name}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-1 flex items-center gap-2 text-xs text-destructive">
+              <XCircle className="h-4 w-4" />
+              <span>Aucun fichier enregistré</span>
+            </div>
+          )}
+        </div>
+        {document ? <Badge>Enregistré</Badge> : <Badge variant="outline">Manquant</Badge>}
+      </div>
       <LocalizedFileInput
         id={`${documentType}-${orderId}`}
         name="file"
@@ -84,11 +111,65 @@ function DocumentUpload({
       <p className="text-xs text-muted-foreground">
         PDF ou photo · JPG/PNG · 10 Mo max. Sur mobile, vous pouvez prendre la photo directement.
       </p>
-      <Button type="submit" variant="outline" size="sm" disabled={pending}>
-        {pending ? "Envoi…" : hasDocument ? "Remplacer" : `Ajouter / photographier le ${label}`}
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" variant="outline" size="sm" disabled={pending}>
+          {pending ? "Envoi…" : document ? "Remplacer le fichier" : `Ajouter / photographier le ${label}`}
+        </Button>
+        {document ? (
+          <Button asChild type="button" variant="ghost" size="sm">
+            <a
+              href={`/api/orders/${orderId}/documents/${documentType}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Voir le fichier
+            </a>
+          </Button>
+        ) : null}
+      </div>
       <Feedback state={state} />
     </form>
+  );
+}
+
+function AttachmentRow({
+  label,
+  description,
+  ready,
+  href,
+}: {
+  label: string;
+  description: string;
+  ready: boolean;
+  href?: string;
+}) {
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 items-start gap-3">
+        {ready ? (
+          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
+        ) : (
+          <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
+        )}
+        <div className="min-w-0">
+          <p className="font-medium">{label}</p>
+          <p className="break-all text-xs text-muted-foreground">{description}</p>
+        </div>
+      </div>
+      <div className="flex shrink-0 items-center gap-2">
+        <Badge variant={ready ? "default" : "outline"}>
+          {ready ? "Joint à l’envoi" : "Manquant"}
+        </Badge>
+        {ready && href ? (
+          <Button asChild type="button" variant="outline" size="sm">
+            <a href={href} target="_blank" rel="noreferrer">
+              <Eye className="mr-1.5 h-4 w-4" />
+              Voir
+            </a>
+          </Button>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
@@ -103,6 +184,7 @@ export function OrderEmailTransmissionCard({
   requiredDocuments,
   hasKbis,
   hasRib,
+  documents,
   previewSubject,
   previewBody,
   transmissions,
@@ -117,6 +199,7 @@ export function OrderEmailTransmissionCard({
   requiredDocuments: OrderTransmissionDocumentType[];
   hasKbis: boolean;
   hasRib: boolean;
+  documents: OrderTransmissionDocument[];
   previewSubject: string;
   previewBody: string;
   transmissions: OrderEmailTransmission[];
@@ -135,7 +218,14 @@ export function OrderEmailTransmissionCard({
 
   const requiresKbis = requiredDocuments.includes("kbis");
   const requiresRib = requiredDocuments.includes("rib");
+  const kbisDocument = documents.find((document) => document.document_type === "kbis") ?? null;
+  const ribDocument = documents.find((document) => document.document_type === "rib") ?? null;
   const documentsReady = (!requiresKbis || hasKbis) && (!requiresRib || hasRib);
+  const expectedAttachmentCount = 1 + requiredDocuments.length;
+  const readyAttachmentCount =
+    1 +
+    (requiresKbis && kbisDocument ? 1 : 0) +
+    (requiresRib && ribDocument ? 1 : 0);
   const ready = Boolean(
     gmailEmail &&
       toEmail.trim() &&
@@ -170,6 +260,57 @@ export function OrderEmailTransmissionCard({
           {requiresKbis ? <Requirement ready={hasKbis} label="KBIS" /> : null}
           {requiresRib ? <Requirement ready={hasRib} label="RIB" /> : null}
           <Requirement ready={previewConfirmed} label="Bon de commande vérifié" />
+        </div>
+
+        <div className="space-y-3 rounded-xl border p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="font-medium">Pièces jointes à l’envoi</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Cette liste correspond exactement aux fichiers que TR1 joindra au prochain email.
+              </p>
+            </div>
+            <Badge variant={readyAttachmentCount === expectedAttachmentCount ? "default" : "outline"}>
+              {readyAttachmentCount}/{expectedAttachmentCount} pièces prêtes
+            </Badge>
+          </div>
+
+          <div className="space-y-2">
+            <AttachmentRow
+              label="Bon de commande PDF"
+              description="Généré automatiquement à partir de cette commande"
+              ready
+              href={pdfUrl}
+            />
+            {requiresKbis ? (
+              <AttachmentRow
+                label="KBIS"
+                description={kbisDocument ? `${kbisDocument.file_name} · Stocké dans TR1` : "Aucun KBIS stocké dans TR1 — l’envoi sera bloqué"}
+                ready={Boolean(kbisDocument)}
+                href={kbisDocument ? `/api/orders/${orderId}/documents/kbis` : undefined}
+              />
+            ) : null}
+            {requiresRib ? (
+              <AttachmentRow
+                label="RIB"
+                description={ribDocument ? `${ribDocument.file_name} · Stocké dans TR1` : "Aucun RIB stocké dans TR1 — l’envoi sera bloqué"}
+                ready={Boolean(ribDocument)}
+                href={ribDocument ? `/api/orders/${orderId}/documents/rib` : undefined}
+              />
+            ) : null}
+          </div>
+
+          {readyAttachmentCount === expectedAttachmentCount ? (
+            <p className="flex items-center gap-2 text-sm font-medium text-emerald-700">
+              <CheckCircle2 className="h-4 w-4" />
+              Toutes les pièces jointes sont présentes et prêtes à être envoyées.
+            </p>
+          ) : (
+            <p className="flex items-center gap-2 text-sm font-medium text-destructive">
+              <XCircle className="h-4 w-4" />
+              Une ou plusieurs pièces manquent. TR1 bloquera l’envoi.
+            </p>
+          )}
         </div>
 
         <div className="space-y-3 rounded-xl border p-4">
@@ -259,7 +400,7 @@ export function OrderEmailTransmissionCard({
               <DocumentUpload
                 orderId={orderId}
                 documentType="kbis"
-                hasDocument={hasKbis}
+                document={kbisDocument}
                 action={kbisAction}
                 pending={kbisPending}
                 state={kbisState}
@@ -269,7 +410,7 @@ export function OrderEmailTransmissionCard({
               <DocumentUpload
                 orderId={orderId}
                 documentType="rib"
-                hasDocument={hasRib}
+                document={ribDocument}
                 action={ribAction}
                 pending={ribPending}
                 state={ribState}
@@ -350,10 +491,9 @@ export function OrderEmailTransmissionCard({
                 />
               </div>
 
-              <p className="text-xs text-muted-foreground">
-                Pièces jointes : bon de commande PDF
-                {requiresKbis ? ", KBIS" : ""}
-                {requiresRib ? ", RIB" : ""}.
+              <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                <FileText className="h-4 w-4" />
+                Les pièces listées dans « Pièces jointes à l’envoi » ci-dessus seront jointes à ce message.
               </p>
             </div>
           </div>
