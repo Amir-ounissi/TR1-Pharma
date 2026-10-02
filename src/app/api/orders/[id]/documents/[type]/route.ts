@@ -3,7 +3,7 @@ import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const allowedRoles = new Set(["agent", "brand_user", "brand_admin", "tr1_manager", "super_admin"]);
-const allowedDocumentTypes = new Set(["kbis", "rib"]);
+const allowedDocumentTypes = new Set(["kbis", "rib", "sepa"]);
 
 function safeFileName(value: string) {
   return value
@@ -53,7 +53,7 @@ export async function GET(
       .maybeSingle();
 
     if (documentError || !document) {
-      return NextResponse.json({ error: `${documentType.toUpperCase()} introuvable.` }, { status: 404 });
+      return NextResponse.json({ error: `${documentType === "sepa" ? "Mandat SEPA" : documentType.toUpperCase()} introuvable.` }, { status: 404 });
     }
 
     const { data, error: storageError } = await admin.storage
