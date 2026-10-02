@@ -655,6 +655,38 @@ export function buildSimpleOrderPdf(lines: string[]) {
   return buildPdfPages(pages);
 }
 
+
+export function buildBlankSepaMandatePdf() {
+  return buildSimpleOrderPdf([
+    "MANDAT DE DOMICILIATION EUROPEENNE SEPA",
+    "",
+    "En signant ce mandat, vous autorisez le creancier a transmettre des instructions a votre banque pour debiter votre compte, et votre banque a debiter votre compte conformement a ces instructions.",
+    "",
+    "IDENTIFICATION DU MANDAT - A COMPLETER PAR LE CREANCIER",
+    "Objet du mandat : Paiements factures Complements alimentaires",
+    "Type d'encaissement : Recurrent",
+    "",
+    "IDENTIFICATION DU DEBITEUR - A COMPLETER A LA MAIN",
+    "Nom : ________________________________________________________________",
+    "Adresse : _____________________________________________________________",
+    "Code postal : __________________    Ville : ____________________________",
+    "Pays : ________________________________________________________________",
+    "",
+    "Votre numero de compte (IBAN) : _______________________________________",
+    "Code BIC de votre banque : ____________________________________________",
+    "N° TVA Intracommunautaire : ___________________________________________",
+    "",
+    "Date : ____ / ____ / ________    Lieu : _______________________________",
+    "Nom : _________________________________________________________________",
+    "",
+    "Signature :",
+    "",
+    "",
+    "Le debiteur doit faire parvenir ce mandat au creancier.",
+    "Mandat SEPA CORE - document a completer et signer manuellement.",
+  ]);
+}
+
 function encodedHeader(value: string) {
   return `=?UTF-8?B?${Buffer.from(value, "utf8").toString("base64")}?=`;
 }
