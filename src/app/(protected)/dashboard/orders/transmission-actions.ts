@@ -6,8 +6,9 @@ import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { decryptCredential } from "@/lib/integrations/gmail/credentials";
 import { refreshGoogleAccessToken, sendGmailRawMessage } from "@/lib/integrations/gmail/google";
-import { buildMimeMessage, buildTr1OrderPdf, type EmailAttachment } from "@/lib/orders/order-email";
+import { buildBlankSepaMandatePdf, buildMimeMessage, buildTr1OrderPdf, type EmailAttachment } from "@/lib/orders/order-email";
 import {
+  isVkSwissBrand,
   parseOrderCcEmails,
   resolveOrderEmailTransmissionConfig,
 } from "@/lib/orders/order-email-transmission";
@@ -17,7 +18,7 @@ import { getHubSpotPharmacySiren } from "@/lib/integrations/hubspot/reconciliati
 
 const uuid = z.string().uuid();
 const allowedRoles = new Set(["agent", "brand_user", "brand_admin", "tr1_manager", "super_admin"]);
-const allowedDocumentTypes = new Set(["kbis", "rib"]);
+const allowedDocumentTypes = new Set(["kbis", "rib", "sepa"]);
 const allowedMimeTypes = new Set(["application/pdf", "image/jpeg", "image/png"]);
 
 export type OrderTransmissionActionState = {
@@ -228,7 +229,7 @@ export async function uploadPharmacyDocumentAction(
     }
 
     revalidatePath(`/dashboard/orders/${order.id}`);
-    return { success: `${documentType.toUpperCase()} enregistré.` };
+    return { success: `${documentType === "sepa" ? "Mandat SEPA" : documentType.toUpperCase()} enregistré.` };
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Impossible d’enregistrer le document." };
   }
@@ -363,6 +364,27 @@ export async function sendOrderByEmailAction(
         contentType: document.content_type,
         data: Buffer.from(await data.arrayBuffer()),
       });
+    }
+
+    if (isVkSwissBrand({ name: brandData.name, code: brandData.code })) {
+      const sepaDocument = byType.get("sepa");
+      if (sepaDocument) {
+        const { data, error } = await admin.storage
+          .from("pharmacy-documents")
+          .download(sepaDocument.object_path);
+        if (error || !data) throw new Error("Impossible de charger le mandat SEPA.");
+        attachments.push({
+          filename: `mandat-sepa-${safeFileName(sepaDocument.file_name)}`,
+          contentType: sepaDocument.content_type,
+          data: Buffer.from(await data.arrayBuffer()),
+        });
+      } else {
+        attachments.push({
+          filename: "mandat-sepa-core-a-remplir.pdf",
+          contentType: "application/pdf",
+          data: buildBlankSepaMandatePdf(),
+        });
+      }
     }
 
     const { data: transmission, error: transmissionError } = await admin
