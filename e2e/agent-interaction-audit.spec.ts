@@ -45,7 +45,7 @@ const pharmacyDesktopTabs = [
 ] as const;
 
 const mutationPattern =
-  /supprimer|retirer|déconnect|envoyer|créer|ajouter|enregistrer|valider|confirmer|clôturer|terminer|démarrer|annuler.*commande|importer|téléverser|upload/i;
+  /supprimer|retirer|déconn|envoyer|créer|ajouter|enregistrer|valider|confirmer|clôturer|terminer|démarrer|annuler.*commande|importer|téléverser|upload/i;
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^$()|[\]\\]/g, "\\$&");
