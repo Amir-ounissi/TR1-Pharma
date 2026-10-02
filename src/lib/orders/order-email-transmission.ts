@@ -3,7 +3,7 @@ import { z } from "zod";
 const emailSchema = z.string().trim().email().max(320);
 const allowedDocuments = new Set(["kbis", "rib"] as const);
 
-export type OrderTransmissionDocumentType = "kbis" | "rib";
+export type OrderTransmissionDocumentType = "kbis" | "rib" | "sepa";
 
 export type OrderEmailTransmissionConfig = {
   enabled: boolean;
@@ -116,4 +116,18 @@ export function buildOrderEmailDraft(input: {
     subject: renderTemplate(input.config.subjectTemplate ?? defaultSubject, values),
     body: renderTemplate(input.config.bodyTemplate ?? defaultBody, values),
   };
+}
+
+
+export function isVkSwissBrand(input: { name?: string | null; code?: string | null }) {
+  const normalize = (value: string | null | undefined) =>
+    (value ?? "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9]/g, "")
+      .toUpperCase();
+
+  const code = normalize(input.code);
+  const name = normalize(input.name);
+  return code === "VKSWISS" || name === "VKSWISS" || (name.includes("VK") && name.includes("SWISS"));
 }
