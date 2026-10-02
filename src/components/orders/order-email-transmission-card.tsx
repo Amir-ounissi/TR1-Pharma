@@ -98,7 +98,7 @@ function DocumentUpload({
           ) : optional ? (
             <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
               <FileText className="h-4 w-4" />
-              <span>Aucun fichier rempli enregistré — le modèle vierge sera utilisé</span>
+              <span>Aucun mandat rempli enregistré — il ne sera pas joint au mail</span>
             </div>
           ) : (
             <div className="mt-1 flex items-center gap-2 text-xs text-destructive">
@@ -130,6 +130,17 @@ function DocumentUpload({
               rel="noreferrer"
             >
               Voir le fichier
+            </a>
+          </Button>
+        ) : null}
+        {documentType === "sepa" ? (
+          <Button asChild type="button" variant="ghost" size="sm">
+            <a
+              href={`/api/orders/${orderId}/sepa`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Télécharger le modèle vierge
             </a>
           </Button>
         ) : null}
@@ -232,12 +243,12 @@ export function OrderEmailTransmissionCard({
   const ribDocument = documents.find((document) => document.document_type === "rib") ?? null;
   const sepaDocument = documents.find((document) => document.document_type === "sepa") ?? null;
   const documentsReady = (!requiresKbis || hasKbis) && (!requiresRib || hasRib);
-  const expectedAttachmentCount = 1 + requiredDocuments.length + (includeSepaMandate ? 1 : 0);
+  const expectedAttachmentCount = 1 + requiredDocuments.length + (includeSepaMandate && sepaDocument ? 1 : 0);
   const readyAttachmentCount =
     1 +
     (requiresKbis && kbisDocument ? 1 : 0) +
     (requiresRib && ribDocument ? 1 : 0) +
-    (includeSepaMandate ? 1 : 0);
+    (includeSepaMandate && sepaDocument ? 1 : 0);
   const ready = Boolean(
     gmailEmail &&
       toEmail.trim() &&
@@ -310,16 +321,12 @@ export function OrderEmailTransmissionCard({
                 href={ribDocument ? `/api/orders/${orderId}/documents/rib` : undefined}
               />
             ) : null}
-            {includeSepaMandate ? (
+            {includeSepaMandate && sepaDocument ? (
               <AttachmentRow
                 label="Mandat SEPA"
-                description={
-                  sepaDocument
-                    ? `${sepaDocument.file_name} · Le fichier rempli remplace le modèle vierge`
-                    : "Modèle vierge généré automatiquement · optionnel · à remplir à la main"
-                }
+                description={`${sepaDocument.file_name} · Mandat rempli stocké dans TR1`}
                 ready
-                href={sepaDocument ? `/api/orders/${orderId}/documents/sepa` : `/api/orders/${orderId}/sepa`}
+                href={`/api/orders/${orderId}/documents/sepa`}
               />
             ) : null}
           </div>
