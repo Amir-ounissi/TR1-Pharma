@@ -17,7 +17,7 @@ import { getHubSpotPharmacySiren } from "@/lib/integrations/hubspot/reconciliati
 
 const uuid = z.string().uuid();
 const allowedRoles = new Set(["agent", "brand_user", "brand_admin", "tr1_manager", "super_admin"]);
-const allowedDocumentTypes = new Set(["kbis", "rib"]);
+const allowedDocumentTypes = new Set(["kbis", "rib", "sepa"]);
 const allowedMimeTypes = new Set(["application/pdf", "image/jpeg", "image/png"]);
 
 export type OrderTransmissionActionState = {
@@ -361,6 +361,17 @@ export async function sendOrderByEmailAction(
       attachments.push({
         filename: `${type}-${safeFileName(document.file_name)}`,
         contentType: document.content_type,
+        data: Buffer.from(await data.arrayBuffer()),
+      });
+    }
+
+    const sepaDocument = byType.get("sepa");
+    if (sepaDocument) {
+      const { data, error } = await admin.storage.from("pharmacy-documents").download(sepaDocument.object_path);
+      if (error || !data) throw new Error("Impossible de charger le mandat SEPA enregistré.");
+      attachments.push({
+        filename: `mandat-sepa-${safeFileName(sepaDocument.file_name)}`,
+        contentType: sepaDocument.content_type,
         data: Buffer.from(await data.arrayBuffer()),
       });
     }
