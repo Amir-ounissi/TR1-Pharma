@@ -1,3 +1,3 @@
-release_sha=559430e5d832324efaa97704b55d71f9cba079dc
-reason=Redeploy with restored Gmail credential encryption key
-requested_at=2026-10-02T07:25:00+02:00
+release_sha=5317ee09c7db78fdf2837c4f4906584dce8348fb
+reason=Deploy explicit outgoing attachment status and document viewer
+requested_at=2026-10-02T07:55:00+02:00
