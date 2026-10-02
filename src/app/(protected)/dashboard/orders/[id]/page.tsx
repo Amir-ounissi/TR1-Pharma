@@ -30,6 +30,7 @@ import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
 import { isIncompleteHubSpotHistory } from "@/lib/orders/historical-import";
 import {
   buildOrderEmailDraft,
+  isVkSwissBrand,
   resolveOrderEmailTransmissionConfig,
   type OrderTransmissionDocumentType,
 } from "@/lib/orders/order-email-transmission";
@@ -205,7 +206,7 @@ export default async function OrderDetailPage({
     requiredDocuments = transmissionConfig.requiredDocuments;
     transmissionDocuments = (documents ?? []).filter(
       (document): document is OrderTransmissionDocument =>
-        (document.document_type === "kbis" || document.document_type === "rib")
+        (document.document_type === "kbis" || document.document_type === "rib" || document.document_type === "sepa")
         && Boolean(document.file_name)
         && Boolean(document.content_type)
         && Boolean(document.updated_at),
@@ -297,6 +298,7 @@ export default async function OrderDetailPage({
           hasKbis={hasKbis}
           hasRib={hasRib}
           documents={transmissionDocuments}
+          includeSepaMandate={isVkSwissBrand({ name: brand.name })}
           previewSubject={emailDraft.subject}
           previewBody={emailDraft.body}
           transmissions={transmissions}
