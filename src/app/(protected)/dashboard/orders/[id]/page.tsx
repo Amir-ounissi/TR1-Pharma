@@ -8,6 +8,7 @@ import {
 import {
   OrderEmailTransmissionCard,
   type OrderEmailTransmission,
+  type OrderTransmissionDocument,
 } from "@/components/orders/order-email-transmission-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -159,6 +160,7 @@ export default async function OrderDetailPage({
   let requiredDocuments: OrderTransmissionDocumentType[] = ["kbis", "rib"];
   let hasKbis = false;
   let hasRib = false;
+  let transmissionDocuments: OrderTransmissionDocument[] = [];
   let transmissions: OrderEmailTransmission[] = [];
 
   if (canTransmitOrder) {
@@ -176,7 +178,7 @@ export default async function OrderDetailPage({
         .maybeSingle(),
       admin
         .from("pharmacy_documents")
-        .select("document_type")
+        .select("document_type,file_name,content_type,updated_at")
         .eq("pharmacy_id", order.pharmacy_id),
       admin
         .from("order_email_transmissions")
@@ -201,8 +203,15 @@ export default async function OrderDetailPage({
     ccEmails = transmissionConfig.ccEmails;
     requireVat = transmissionConfig.requireVat;
     requiredDocuments = transmissionConfig.requiredDocuments;
-    hasKbis = (documents ?? []).some((document) => document.document_type === "kbis");
-    hasRib = (documents ?? []).some((document) => document.document_type === "rib");
+    transmissionDocuments = (documents ?? []).filter(
+      (document): document is OrderTransmissionDocument =>
+        (document.document_type === "kbis" || document.document_type === "rib")
+        && Boolean(document.file_name)
+        && Boolean(document.content_type)
+        && Boolean(document.updated_at),
+    );
+    hasKbis = transmissionDocuments.some((document) => document.document_type === "kbis");
+    hasRib = transmissionDocuments.some((document) => document.document_type === "rib");
     transmissions = (transmissionRows ?? []) as OrderEmailTransmission[];
   }
 
@@ -287,6 +296,7 @@ export default async function OrderDetailPage({
           requiredDocuments={requiredDocuments}
           hasKbis={hasKbis}
           hasRib={hasRib}
+          documents={transmissionDocuments}
           previewSubject={emailDraft.subject}
           previewBody={emailDraft.body}
           transmissions={transmissions}
