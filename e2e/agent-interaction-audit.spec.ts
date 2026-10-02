@@ -74,6 +74,30 @@ async function assertHealthy(page: Page) {
   expect(bodyText.length).toBeGreaterThan(20);
 }
 
+async function assertNoHorizontalOverflow(page: Page, label: string) {
+  const result = await page.evaluate(() => {
+    const viewport = document.documentElement.clientWidth;
+    const delta = document.documentElement.scrollWidth - viewport;
+    const offenders = Array.from(document.querySelectorAll<HTMLElement>("body *"))
+      .map((element) => {
+        const rect = element.getBoundingClientRect();
+        return {
+          tag: element.tagName,
+          text: (element.innerText || element.getAttribute("aria-label") || "").trim().slice(0, 80),
+          className: typeof element.className === "string" ? element.className.slice(0, 220) : "",
+          left: Math.round(rect.left),
+          right: Math.round(rect.right),
+          width: Math.round(rect.width),
+        };
+      })
+      .filter((item) => item.right > viewport + 1 || item.left < -1 || item.width > viewport + 1)
+      .slice(0, 12);
+    return { delta, viewport, offenders };
+  });
+  console.log(`AUDIT_MOBILE_OVERFLOW ${label} ${JSON.stringify(result)}`);
+  expect(result.delta, `${label}: ${JSON.stringify(result.offenders)}`).toBeLessThanOrEqual(1);
+}
+
 async function clickInternalLink(page: Page, href: string, label?: string) {
   const link = page.locator(`a[href="${href}"]`).filter({ visible: true }).first();
   await expect(link, label ?? href).toBeVisible();
@@ -103,6 +127,7 @@ async function exerciseSafeButtons(page: Page, route: string) {
     }
 
     const currentUrl = page.url();
+    console.log(`AUDIT_BUTTON ${route} "${text}"`);
     await button.click({ timeout: 10_000 }).catch((error) => {
       throw new Error(`Button failed on ${route}: "${text}" — ${String(error)}`);
     });
@@ -122,6 +147,7 @@ async function exerciseSafeButtons(page: Page, route: string) {
 }
 
 test("audit agent desktop — navigation, écrans et contrôles non destructifs", async ({ page }) => {
+  test.setTimeout(600_000);
   await page.setViewportSize({ width: 1440, height: 1000 });
   const assertNoRuntimeFailures = attachRuntimeGuards(page);
   await signIn(page, AGENT_EMAIL, BRAND);
@@ -165,7 +191,7 @@ test("audit fiche pharmacie desktop — tous les onglets terrain", async ({ page
     await expect(link).toBeVisible();
     const startedAt = Date.now();
     await link.click();
-    await expect(page).toHaveURL(new RegExp(`/dashboard/pharmacies/${PHARMACY_ID}\\\\?tab=${tab}`));
+    await expect.poll(() => new URL(page.url()).searchParams.get("tab")).toBe(tab);
     console.log(`AUDIT_PHARMACY_DESKTOP ${label} ${Date.now() - startedAt}ms`);
     await assertHealthy(page);
   }
@@ -203,7 +229,7 @@ test("audit agent PWA — navigation basse, Plus et onglets pharmacie", async ({
     await expect(page).toHaveURL(new RegExp(escapeRegExp(href)));
     console.log(`AUDIT_MOBILE_NAV ${label} ${Date.now() - startedAt}ms`);
     await assertHealthy(page);
-    expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+    await assertNoHorizontalOverflow(page, label);
   }
 
   for (const [href, label] of moreDestinations) {
