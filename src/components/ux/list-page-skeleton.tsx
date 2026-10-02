@@ -7,20 +7,20 @@ export function ListPageSkeleton({
 }) {
   return (
     <div className="space-y-4">
-      <div className="flex items-end justify-between gap-4 border-b border-[var(--tr1-line-strong)] pb-4">
+      <div className="flex flex-col gap-3 border-b border-[var(--tr1-line-strong)] pb-4 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
         <div className="space-y-2">
           <Skeleton className="h-3 w-36" />
           <Skeleton className="h-9 w-60" />
           <Skeleton className="h-4 w-[32rem] max-w-full" />
         </div>
-        <Skeleton className="h-10 w-44" />
+        <Skeleton className="h-10 w-full max-w-44" />
       </div>
       <div className="flex flex-wrap gap-2">
         <Skeleton className="h-9 w-20" />
         <Skeleton className="h-9 w-20" />
-        <div className="ml-auto flex gap-2">
-          <Skeleton className="h-9 w-44" />
-          <Skeleton className="h-9 w-44" />
+        <div className="grid w-full grid-cols-2 gap-2 sm:ml-auto sm:flex sm:w-auto">
+          <Skeleton className="h-9 w-full sm:w-44" />
+          <Skeleton className="h-9 w-full sm:w-44" />
         </div>
       </div>
       {showMetrics ? (
