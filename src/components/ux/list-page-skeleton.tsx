@@ -41,11 +41,28 @@ export function ListPageSkeleton({
           ))}
         </div>
       </div>
-      <div className="overflow-hidden rounded-[0.7rem] border border-[var(--tr1-line)] bg-white/70">
+      <div className="divide-y divide-[var(--tr1-line)] overflow-hidden rounded-[0.7rem] border border-[var(--tr1-line)] bg-white/70 md:hidden">
+        {Array.from({ length: 5 }).map((_, row) => (
+          <div key={row} className="space-y-3 px-4 py-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1 space-y-2">
+                <Skeleton className="h-4 w-2/3 max-w-48" />
+                <Skeleton className="h-3 w-1/2 max-w-32" />
+              </div>
+              <Skeleton className="h-5 w-16 shrink-0" />
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <Skeleton className="h-5 w-20" />
+              <Skeleton className="h-4 w-24" />
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="hidden overflow-hidden rounded-[0.7rem] border border-[var(--tr1-line)] bg-white/70 md:block">
         <div className="grid grid-cols-6 gap-px border-b border-[var(--tr1-line)] bg-[var(--tr1-line)]">
           {Array.from({ length: 6 }).map((_, index) => (
-            <div key={index} className="bg-[var(--tr1-navy)] px-3 py-3">
-              <Skeleton className="h-3 w-16 bg-white/20" />
+            <div key={index} className="min-w-0 bg-[var(--tr1-navy)] px-3 py-3">
+              <Skeleton className="h-3 w-16 max-w-full bg-white/20" />
             </div>
           ))}
         </div>
@@ -53,7 +70,7 @@ export function ListPageSkeleton({
           {Array.from({ length: 7 }).map((_, row) => (
             <div key={row} className="grid grid-cols-6 gap-3 px-3 py-3">
               {Array.from({ length: 6 }).map((_, cell) => (
-                <Skeleton key={cell} className="h-4 w-full" />
+                <Skeleton key={cell} className="h-4 w-full min-w-0" />
               ))}
             </div>
           ))}
