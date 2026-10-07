@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { Check, Minus, PackagePlus, Plus, RotateCcw, Search, Trash2, X } from "lucide-react";
 import {
   createOrderAction,
@@ -783,18 +784,18 @@ export function MobileQuickOrderForm({
         </div>
       </form>
 
-      {pickerOpen ? (
+      {pickerOpen ? createPortal(
         <div
           role="dialog"
           aria-modal="true"
           aria-label="Choisir les références"
-          className="fixed inset-0 z-[100] h-[100dvh] touch-pan-y overflow-y-auto overscroll-y-contain bg-background"
+          className="fixed inset-0 z-[100] h-[100dvh] w-[100dvw] max-w-[100dvw] touch-pan-y overflow-x-hidden overflow-y-auto overscroll-y-contain bg-background"
           style={{ WebkitOverflowScrolling: "touch" }}
         >
-          <div className="min-h-[100dvh]">
-            <div className="sticky top-0 z-20 border-b bg-background/95 px-4 pb-3 pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur">
-              <div className="flex items-start justify-between gap-3">
-                <div>
+          <div className="min-h-[100dvh] w-full min-w-0 max-w-full overflow-x-hidden">
+            <div className="sticky top-0 z-20 w-full min-w-0 max-w-full border-b bg-background/95 px-4 pb-3 pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur">
+              <div className="flex min-w-0 items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
                   <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--tr1-orange)]">
                     Catalogue
                   </p>
@@ -828,12 +829,12 @@ export function MobileQuickOrderForm({
                   className="h-12 rounded-xl bg-background pl-9 text-base"
                 />
               </div>
-              <div className="mt-2 flex items-center justify-between gap-2">
+              <div className="mt-2 flex min-w-0 items-center justify-between gap-2">
                 <span className="text-xs font-semibold text-muted-foreground">
                   {pickerSelection.length} sélectionnée
                   {pickerSelection.length > 1 ? "s" : ""}
                 </span>
-                <div className="flex gap-1">
+                <div className="flex shrink-0 gap-1">
                   <Button
                     type="button"
                     size="sm"
@@ -856,7 +857,7 @@ export function MobileQuickOrderForm({
               </div>
             </div>
 
-            <div className="p-3 pb-3">
+            <div className="w-full min-w-0 max-w-full p-3 pb-3">
               <div className="grid gap-2 sm:grid-cols-2">
                 {filteredProducts.map((product) => {
                   const selected = pickerSelection.includes(product.id);
@@ -924,7 +925,7 @@ export function MobileQuickOrderForm({
               ) : null}
             </div>
 
-            <div className="sticky bottom-0 z-20 border-t bg-background/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur">
+            <div className="sticky bottom-0 z-20 w-full min-w-0 max-w-full border-t bg-background/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur">
               <Button
                 type="button"
                 className="h-12 w-full rounded-xl bg-[var(--tr1-orange)] text-white hover:bg-[var(--tr1-orange)]/90"
@@ -935,7 +936,8 @@ export function MobileQuickOrderForm({
               </Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       ) : null}
     </>
   );
