@@ -501,6 +501,11 @@ export default async function PharmacyDetailPage({
               Relever un prix
             </Link>
           </Button>
+          <Button asChild size="sm" variant="outline">
+            <Link href={`/dashboard/pharmacies/${id}/stocks${activeVisit ? `?visit=${activeVisit.id}` : ""}`}>
+              Relever stocks / facings
+            </Link>
+          </Button>
         </div>
       ) : null}
       {canManageAccount ? (

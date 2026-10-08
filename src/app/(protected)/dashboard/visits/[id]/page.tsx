@@ -235,14 +235,20 @@ export default async function FieldVisitPage({ params }: { params: Promise<{ id:
             const currentAudit = relationAudits.find((audit) => audit.visit_id === visit.id) ?? null;
             const previousAudit = relationAudits.find((audit) => audit.visit_id !== visit.id) ?? null;
             return (
-              <VisitAuditPanel
-                key={row.brand_pharmacy_id}
-                visitId={visit.id}
-                brandPharmacyId={row.brand_pharmacy_id}
-                brandName={brand?.name || "Marque"}
-                currentAudit={currentAudit}
-                previousAudit={previousAudit}
-              />
+              <div key={row.brand_pharmacy_id} className="space-y-2">
+                <Button asChild variant="outline" size="sm">
+                  <Link href={`/dashboard/pharmacies/${row.brand_pharmacy_id}/stocks?visit=${visit.id}`}>
+                    Relever stocks et facings · {brand?.name || "Marque"}
+                  </Link>
+                </Button>
+                <VisitAuditPanel
+                  visitId={visit.id}
+                  brandPharmacyId={row.brand_pharmacy_id}
+                  brandName={brand?.name || "Marque"}
+                  currentAudit={currentAudit}
+                  previousAudit={previousAudit}
+                />
+              </div>
             );
           })}
         </section>
