@@ -94,7 +94,7 @@ export default async function PharmacyStockPage({
             <CardTitle className="flex items-center gap-2"><Camera className="size-5" /> Nouveau relevé</CardTitle>
             <CardDescription>
               Photographiez une étiquette, vérifiez les propositions et validez les stocks distincts du facing.
-              La saisie manuelle fonctionne même si l'IA est indisponible.
+              La saisie manuelle fonctionne même si l&apos;IA est indisponible.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -110,7 +110,7 @@ export default async function PharmacyStockPage({
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><History className="size-5" /> Historique par référence</CardTitle>
           <CardDescription>
-            Ces relevés ne sont pas des ventes constatées. Le stock total n'est calculé que si les deux stocks sont connus.
+            Ces relevés ne sont pas des ventes constatées. Le stock total n&apos;est calculé que si les deux stocks sont connus.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
