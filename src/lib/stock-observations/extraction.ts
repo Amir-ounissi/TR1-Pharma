@@ -81,14 +81,14 @@ export async function extractStockPhoto(photo: File, fetcher: typeof fetch = fet
     upload.set("purpose", "vision");
     upload.set("file", photo);
     const uploaded = await fetcher("https://api.openai.com/v1/files", {
-      method: "POST", headers: { Authorization: \`Bearer \${apiKey}\` }, body: upload,
+      method: "POST", headers: { Authorization: `Bearer ${apiKey}` }, body: upload,
     });
     if (!uploaded.ok) throw new StockPhotoError("unavailable", "La photo n'a pas pu être envoyée pour analyse.");
     fileId = (await uploaded.json() as { id?: string }).id ?? null;
     if (!fileId) throw new StockPhotoError("failed", "Fichier non reconnu par l'analyse IA.");
     const response = await fetcher("https://api.openai.com/v1/responses", {
       method: "POST",
-      headers: { Authorization: \`Bearer \${apiKey}\`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: process.env.OPENAI_STOCK_PHOTO_MODEL ?? process.env.OPENAI_PRICE_PHOTO_MODEL ?? "gpt-5",
         store: false,
@@ -120,8 +120,8 @@ export async function extractStockPhoto(photo: File, fetcher: typeof fetch = fet
     if (error instanceof StockPhotoError) throw error;
     throw new StockPhotoError("failed", "La lecture de l'étiquette n'a pas pu être validée.");
   } finally {
-    if (fileId) await fetcher(\`https://api.openai.com/v1/files/\${fileId}\`, {
-      method: "DELETE", headers: { Authorization: \`Bearer \${apiKey}\` },
+    if (fileId) await fetcher(`https://api.openai.com/v1/files/${fileId}`, {
+      method: "DELETE", headers: { Authorization: `Bearer ${apiKey}` },
     }).catch(() => undefined);
   }
 }
