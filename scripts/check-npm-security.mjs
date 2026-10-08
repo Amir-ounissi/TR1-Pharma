@@ -7,7 +7,7 @@ import { spawnSync } from "node:child_process";
 const EXEMPT_ADVISORY = "GHSA-vfj7-8cjw-p6xm";
 const EXCEPTION_EXPIRES_AT = Date.parse("2026-11-15T00:00:00Z");
 
-const npm = spawnSync("npm", ["audit", "--json"], {
+const npm = spawnSync("npm", ["audit", "--json", "--audit-level=high"], {
   encoding: "utf8",
   maxBuffer: 24 * 1024 * 1024,
 });
