@@ -1,0 +1,42 @@
+name: Security lockfile refresh (one-off)
+on:
+  push:
+    branches:
+      - fix/security-audit-staging-20261008
+    paths:
+      - .github/workflows/security-lock-refresh.yml
+permissions:
+  contents: write
+jobs:
+  refresh:
+    name: Regenerate lockfile and verify npm advisories
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: fix/security-audit-staging-20261008
+          persist-credentials: true
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+      - name: Regenerate locked transitive dependency versions
+        run: npm install --package-lock-only --ignore-scripts --no-audit
+      - name: Validate reproducible npm install
+        run: npm ci
+      - name: Validate high/critical dependency advisories
+        run: node scripts/check-npm-security.mjs
+      - name: Validate production dependency advisories without exceptions
+        run: npm audit --omit=dev --audit-level=high
+      - name: Commit audited lockfile only on the fix branch
+        run: |
+          set -eu
+          if git diff --quiet -- package-lock.json; then
+            echo "::error::No lockfile change was generated."
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git commit -m "fix(security): refresh lockfile to patched dependencies"
+          git push origin HEAD:fix/security-audit-staging-20261008
