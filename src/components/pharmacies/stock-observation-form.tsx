@@ -51,8 +51,10 @@ export function StockObservationForm({
   const [notes, setNotes] = useState("");
 
   useEffect(() => {
-    if (!state.success) return;
-    router.refresh();
+    if (state.success) router.refresh();
+  }, [state.success, router]);
+
+  function startAnother() {
     setPhoto(null);
     setPhotoKey((value) => value + 1);
     setProductId("");
@@ -63,7 +65,8 @@ export function StockObservationForm({
     setAnalysisLabel(null);
     setWarnings([]);
     setNotes("");
-  }, [state.success, router]);
+    setAnalysisError(null);
+  }
 
   async function analyze() {
     if (!photo) {
@@ -113,6 +116,11 @@ export function StockObservationForm({
       {state.warning ? <p role="alert" className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">{state.warning}</p> : null}
 
       <div className="rounded-xl border border-dashed p-4">
+        {state.success ? (
+          <Button type="button" variant="outline" className="mb-3" onClick={startAnother}>
+            Nouveau relevé
+          </Button>
+        ) : null}
         <Label htmlFor="stock-photo" className="flex items-center gap-2 font-semibold">
           <Camera className="size-4" /> Photographier l'étiquette
         </Label>
