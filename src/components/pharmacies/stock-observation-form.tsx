@@ -122,13 +122,12 @@ export function StockObservationForm({
           </Button>
         ) : null}
         <Label htmlFor="stock-photo" className="flex items-center gap-2 font-semibold">
-          <Camera className="size-4" /> Photographier l'étiquette
+          <Camera className="size-4" /> Photographier l&apos;étiquette
         </Label>
         <LocalizedFileInput
           key={photoKey}
           id="stock-photo"
           name="photo"
-          type="file"
           accept="image/jpeg,image/png,image/webp"
           capture="environment"
           className="mt-2"
@@ -141,7 +140,7 @@ export function StockObservationForm({
           }}
         />
         <p className="mt-2 text-xs text-muted-foreground">
-          Recadrez l'étiquette : aucune donnée patient ou personnelle. Photo de 5 Mo maximum.
+          Recadrez l&apos;étiquette : aucune donnée patient ou personnelle. Photo de 5 Mo maximum.
         </p>
         <Button type="button" variant="outline" className="mt-3 min-h-11" disabled={analyzing || pending || !photo} onClick={analyze}>
           <Sparkles className="size-4" /> {analyzing ? "Analyse en cours…" : "Lire avec TR1 AI"}
@@ -193,13 +192,13 @@ export function StockObservationForm({
       </p>
 
       <div>
-        <Label htmlFor="stock-notes">Précision sur l'étiquette (facultatif)</Label>
+        <Label htmlFor="stock-notes">Précision sur l&apos;étiquette (facultatif)</Label>
         <Input id="stock-notes" name="notes" value={notes}
           onChange={(event) => setNotes(event.target.value)} maxLength={2000}
           placeholder="Ex. convention de l'officine confirmée avec le titulaire" className="mt-1.5" />
       </div>
       <p className="text-xs text-muted-foreground">
-        Vous validez les chiffres avant enregistrement. Chaque relevé constitue un nouveau point d'historique, sans écraser les précédents.
+        Vous validez les chiffres avant enregistrement. Chaque relevé constitue un nouveau point d&apos;historique, sans écraser les précédents.
       </p>
       <Button type="submit" disabled={pending || analyzing || !productId || (shelf === "" && backroom === "" && facings === "")} className="min-h-11">
         <Save className="size-4" /> {pending ? "Enregistrement…" : "Valider et enregistrer"}
