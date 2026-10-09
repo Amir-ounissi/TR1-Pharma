@@ -17,6 +17,26 @@ const argsSchema = z.object({
   brand_id: z.string().uuid(),
 }).strict();
 
+const summaryArgsSchema = z.object({
+  brand_pharmacy_id: z.string().uuid(),
+}).strict();
+
+const summaryTool = {
+  name: "get_tr1_pharmacy_summary",
+  title: "Résumé commercial d'une pharmacie TR1",
+  description: "Affiche uniquement les données commerciales essentielles d'une pharmacie TR1 accessible. Ne retourne ni contact personnel ni note confidentielle.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      brand_pharmacy_id: { type: "string", format: "uuid", description: "Identifiant de relation marque-pharmacie trouvé via search_tr1_pharmacies" },
+    },
+    required: ["brand_pharmacy_id"],
+    additionalProperties: false,
+  },
+  annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  securitySchemes: [{ type: "oauth2", scopes: ["email"] }],
+};
+
 const searchTool = {
   name: "search_tr1_pharmacies",
   title: "Rechercher les pharmacies TR1",
@@ -149,11 +169,11 @@ export async function POST(request: Request) {
     return rpcError(id, -32600, "Unsupported MCP protocol version", 400);
   }
   if (method === "ping") return rpcResult(id, {});
-  if (method === "tools/list") return rpcResult(id, { tools: [brandsTool, searchTool] });
+  if (method === "tools/list") return rpcResult(id, { tools: [brandsTool, searchTool, summaryTool] });
   if (method !== "tools/call") return rpcError(id, -32601, "Unknown MCP method");
 
   const params = z.object({
-    name: z.enum([brandsTool.name, searchTool.name]),
+    name: z.enum([brandsTool.name, searchTool.name, summaryTool.name]),
     arguments: z.unknown().optional(),
   }).strict().safeParse(parsed.data.params);
   if (!params.success) return rpcError(id, -32602, "Invalid tool parameters");
@@ -167,6 +187,12 @@ export async function POST(request: Request) {
       params.data.arguments !== undefined &&
       !z.object({}).strict().safeParse(params.data.arguments).success) {
     return rpcError(id, -32602, "Invalid brand listing parameters");
+  }
+  const summaryArgs = params.data.name === summaryTool.name
+    ? summaryArgsSchema.safeParse(params.data.arguments)
+    : null;
+  if (params.data.name === summaryTool.name && !summaryArgs?.success) {
+    return rpcError(id, -32602, "Invalid summary parameters");
   }
 
   const token = /^Bearer (\S+)$/i.exec(request.headers.get("authorization") ?? "")?.[1];
@@ -200,6 +226,21 @@ export async function POST(request: Request) {
       brand_slug: ctx.brand_slug,
     }));
     const response = { brands };
+    return rpcResult(id, {
+      content: [{ type: "text", text: JSON.stringify(response) }],
+      structuredContent: response,
+      isError: false,
+    });
+  }
+
+  if (summaryArgs?.success) {
+    const { data, error } = await supabase.rpc("tr1_chatgpt_pharmacy_summary", {
+      target_brand_pharmacy_id: summaryArgs.data.brand_pharmacy_id,
+    });
+    if (error?.code === "42501") return rpcError(id, -32003, "Pharmacy access denied", 403);
+    if (error) return rpcError(id, -32004, "Pharmacy summary unavailable", 503);
+    if (!data) return rpcError(id, -32004, "Pharmacy not found", 404);
+    const response = { pharmacy: data };
     return rpcResult(id, {
       content: [{ type: "text", text: JSON.stringify(response) }],
       structuredContent: response,
