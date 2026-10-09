@@ -34,6 +34,15 @@ const searchTool = {
   securitySchemes: [{ type: "oauth2", scopes: ["email"] }],
 };
 
+const brandsTool = {
+  name: "list_tr1_brands",
+  title: "Lister mes marques TR1",
+  description: "Retourne uniquement les marques TR1 accessibles à l'utilisateur connecté, avec leurs identifiants pour les recherches de pharmacies.",
+  inputSchema: { type: "object", properties: {}, additionalProperties: false },
+  annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  securitySchemes: [{ type: "oauth2", scopes: ["email"] }],
+};
+
 const messageSchema = z.object({
   jsonrpc: z.literal("2.0"),
   id: z.union([z.string(), z.number()]).optional(),
@@ -140,14 +149,25 @@ export async function POST(request: Request) {
     return rpcError(id, -32600, "Unsupported MCP protocol version", 400);
   }
   if (method === "ping") return rpcResult(id, {});
-  if (method === "tools/list") return rpcResult(id, { tools: [searchTool] });
+  if (method === "tools/list") return rpcResult(id, { tools: [brandsTool, searchTool] });
   if (method !== "tools/call") return rpcError(id, -32601, "Unknown MCP method");
 
   const params = z.object({
-    name: z.literal(searchTool.name),
-    arguments: argsSchema,
+    name: z.enum([brandsTool.name, searchTool.name]),
+    arguments: z.unknown().optional(),
   }).strict().safeParse(parsed.data.params);
-  if (!params.success) return rpcError(id, -32602, "Invalid search parameters");
+  if (!params.success) return rpcError(id, -32602, "Invalid tool parameters");
+  const searchArgs = params.data.name === searchTool.name
+    ? argsSchema.safeParse(params.data.arguments)
+    : null;
+  if (params.data.name === searchTool.name && !searchArgs?.success) {
+    return rpcError(id, -32602, "Invalid search parameters");
+  }
+  if (params.data.name === brandsTool.name &&
+      params.data.arguments !== undefined &&
+      !z.object({}).strict().safeParse(params.data.arguments).success) {
+    return rpcError(id, -32602, "Invalid brand listing parameters");
+  }
 
   const token = /^Bearer (\S+)$/i.exec(request.headers.get("authorization") ?? "")?.[1];
   if (!token) return authChallenge(config);
@@ -168,16 +188,34 @@ export async function POST(request: Request) {
     return authChallenge(config);
   }
 
-  const brandId = params.data.arguments.brand_id;
   const { data: contexts, error: contextError } = await supabase.rpc("get_my_brand_contexts");
   if (contextError) return rpcError(id, -32003, "Authorization temporarily unavailable", 503);
+
+  if (params.data.name === brandsTool.name) {
+    const brands = (contexts ?? []).map((ctx: {
+      brand_id: string; brand_name: string; brand_slug: string;
+    }) => ({
+      brand_id: ctx.brand_id,
+      brand_name: ctx.brand_name,
+      brand_slug: ctx.brand_slug,
+    }));
+    const response = { brands };
+    return rpcResult(id, {
+      content: [{ type: "text", text: JSON.stringify(response) }],
+      structuredContent: response,
+      isError: false,
+    });
+  }
+
+  if (!searchArgs?.success) return rpcError(id, -32602, "Invalid search parameters");
+  const brandId = searchArgs.data.brand_id;
   if (!(contexts ?? []).some((ctx: { brand_id: string }) => ctx.brand_id === brandId)) {
     return rpcError(id, -32003, "Brand access denied", 403);
   }
 
   const { data, error } = await supabase.rpc("search_authorized_pharmacies", {
     target_brand_id: brandId,
-    search_text: params.data.arguments.q,
+    search_text: searchArgs.data.q,
     result_limit: 10,
   });
   if (error) return rpcError(id, -32004, "Search temporarily unavailable", 503);
