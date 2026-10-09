@@ -2,7 +2,7 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET LOCAL search_path = public, extensions;
 
-SELECT plan(21);
+SELECT plan(22);
 
 SELECT ok(EXISTS(SELECT 1 FROM pg_roles WHERE rolname = 'tr1_chatgpt_reader'),
   'ChatGPT has an isolated PostgreSQL role');
@@ -85,6 +85,7 @@ DECLARE
   summary jsonb;
   foreign_brand_blocked boolean := false;
   direct_read_blocked boolean := false;
+  foreign_summary_blocked boolean := false;
 BEGIN
   brands := public.tr1_chatgpt_list_brands();
   IF jsonb_typeof(brands) <> 'array' OR jsonb_array_length(brands) < 1 THEN
@@ -115,6 +116,14 @@ BEGIN
   IF NOT foreign_brand_blocked THEN RAISE EXCEPTION 'Cross-brand search succeeded'; END IF;
 
   BEGIN
+    PERFORM public.tr1_chatgpt_pharmacy_summary(
+      '00000000-0000-0000-0000-000000000413'::uuid);
+  EXCEPTION WHEN insufficient_privilege THEN
+    foreign_summary_blocked := true;
+  END;
+  IF NOT foreign_summary_blocked THEN RAISE EXCEPTION 'Cross-brand summary succeeded'; END IF;
+
+  BEGIN
     PERFORM 1 FROM public.pharmacies LIMIT 1;
   EXCEPTION WHEN insufficient_privilege THEN
     direct_read_blocked := true;
@@ -128,6 +137,7 @@ SELECT ok(true, 'Reader can call authorized-brand discovery with no table grant'
 SELECT ok(true, 'Reader can search own brand without raw table access');
 SELECT ok(true, 'Reader is rejected for other brands and direct table access');
 SELECT ok(true, 'Pharmacy summary hides personal contacts under the read-only role');
+SELECT ok(true, 'Pharmacy summary blocks an unauthorized relation');
 
 SELECT * FROM finish();
 ROLLBACK;
