@@ -53,12 +53,13 @@ describe("TR1 MCP configuration", () => {
       sub: "valid-subject",
       aud: resource,
       client_id: "approved-client",
-      role: "authenticated",
+      role: "tr1_chatgpt_reader",
     };
     expect(validChatGptMcpClaims(claims, config)).toBe(true);
     expect(validChatGptMcpClaims({ ...claims, aud: "authenticated" }, config)).toBe(false);
     expect(validChatGptMcpClaims({ ...claims, client_id: "not-approved" }, config)).toBe(false);
     expect(validChatGptMcpClaims({ ...claims, iss: "https://evil.test/auth/v1" }, config)).toBe(false);
     expect(validChatGptMcpClaims({ ...claims, role: "service_role" }, config)).toBe(false);
+    expect(validChatGptMcpClaims({ ...claims, role: "authenticated" }, config)).toBe(false);
   });
 });
