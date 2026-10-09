@@ -142,6 +142,31 @@ describe("TR1 authenticated MCP endpoint", () => {
     });
   });
 
+  it("lists only authorized brands without querying all brands", async () => {
+    fake.rpc.mockResolvedValueOnce({
+      data: [{
+        brand_id: brandId,
+        brand_name: "VK Swiss",
+        brand_slug: "vk-swiss",
+        role_key: "brand_user",
+      }],
+      error: null,
+    });
+    const response = await POST(request("tools/call", {
+      name: "list_tr1_brands",
+      arguments: {},
+    }, "oauth-token"));
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.result.structuredContent.brands).toEqual([{
+      brand_id: brandId,
+      brand_name: "VK Swiss",
+      brand_slug: "vk-swiss",
+    }]);
+    expect(fake.rpc).toHaveBeenCalledTimes(1);
+    expect(fake.rpc).toHaveBeenCalledWith("get_my_brand_contexts");
+  });
+
   it("rejects an untrusted origin", async () => {
     expect((await POST(request("tools/list", {}, "", { origin: "https://attacker.test" }))).status).toBe(403);
   });
