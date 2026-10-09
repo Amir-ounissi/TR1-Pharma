@@ -194,14 +194,7 @@ password_requirements = "lower_upper_letters_digits"
 # rp_id = "localhost"
 # rp_origins = ["http://127.0.0.1:3000"]
 
-# Staging/local OAuth server: production OAuth remains OFF until approved.
-# Clients are registered explicitly; third-party access tokens receive the isolated
-# tr1_chatgpt_reader database role through the auth hook below.
-[auth.oauth_server]
-enabled = true
-authorization_url_path = "/oauth/consent"
-allow_dynamic_registration = false
-
+# Isolated OAuth role is applied only to explicitly registered MCP clients.
 [auth.hook.custom_access_token]
 enabled = true
 uri = "pg-functions://postgres/private/tr1_chatgpt_oauth_token_hook"
@@ -374,10 +367,10 @@ enabled = false
 # Obtain from https://clerk.com/setup/supabase
 # domain = "example.clerk.accounts.dev"
 
-# OAuth server configuration
+# OAuth server configuration (local/testing only; cloud configured independently)
 [auth.oauth_server]
 # Enable OAuth server functionality
-enabled = false
+enabled = true
 # Path for OAuth consent flow UI
 authorization_url_path = "/oauth/consent"
 # Allow dynamic client registration
