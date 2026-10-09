@@ -78,7 +78,7 @@ describe("TR1 authenticated MCP endpoint", () => {
     const response = await POST(request("tools/list"));
     const body = await response.json();
     expect(response.status).toBe(200);
-    expect(body.result.tools).toHaveLength(2);
+    expect(body.result.tools).toHaveLength(3);
     expect(body.result.tools.every((tool: { annotations: { readOnlyHint: boolean } }) => tool.annotations.readOnlyHint)).toBe(true);
     expect(body.result.tools[0].securitySchemes[0].type).toBe("oauth2");
   });
@@ -165,6 +165,32 @@ describe("TR1 authenticated MCP endpoint", () => {
     }]);
     expect(fake.rpc).toHaveBeenCalledTimes(1);
     expect(fake.rpc).toHaveBeenCalledWith("tr1_chatgpt_list_brands");
+  });
+
+  it("returns a minimized commercial summary from its dedicated read RPC", async () => {
+    fake.rpc.mockImplementation(async (name: string) => name === "tr1_chatgpt_list_brands"
+      ? { data: [{ brand_id: brandId }], error: null }
+      : { data: { name: "Valentine", last_order_at: null }, error: null });
+    const id = "22222222-2222-4222-8222-222222222222";
+    const response = await POST(request("tools/call", {
+      name: "get_tr1_pharmacy_summary", arguments: { brand_pharmacy_id: id },
+    }, "oauth-token"));
+    expect(response.status).toBe(200);
+    expect((await response.json()).result.structuredContent.pharmacy.name).toBe("Valentine");
+    expect(fake.rpc).toHaveBeenCalledWith("tr1_chatgpt_pharmacy_summary", {
+      target_brand_pharmacy_id: id,
+    });
+  });
+
+  it("denies unauthorized pharmacy summaries", async () => {
+    fake.rpc.mockImplementation(async (name: string) => name === "tr1_chatgpt_list_brands"
+      ? { data: [{ brand_id: brandId }], error: null }
+      : { data: null, error: { code: "42501" } });
+    const response = await POST(request("tools/call", {
+      name: "get_tr1_pharmacy_summary",
+      arguments: { brand_pharmacy_id: "22222222-2222-4222-8222-222222222222" },
+    }, "oauth-token"));
+    expect(response.status).toBe(403);
   });
 
   it("rejects an untrusted origin", async () => {
