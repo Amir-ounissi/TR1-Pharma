@@ -9,7 +9,7 @@ ChatGPT's custom connector expects MCP tools and OAuth for user authorization.
 The earlier REST route and OpenAPI specification have been removed.
 Current MCP endpoint: `POST /api/connectors/chatgpt/mcp`.
 OAuth resource metadata: `GET /.well-known/oauth-protected-resource`.
-The only exposed tool is `search_tr1_pharmacies` (up to 10 brand-scoped results).
+The two read-only tools are `list_tr1_brands` (authorized brands only) and `search_tr1_pharmacies` (up to 10 results per authorized brand).
 Existing database RPCs remain the source of truth for visibility:
 `get_my_brand_contexts()` and `search_authorized_pharmacies(...)`.
 
@@ -21,7 +21,7 @@ Existing database RPCs remain the source of truth for visibility:
 - **Scope caution**: OAuth `email` controls OAuth identity information, **NOT PostgreSQL table permissions**.
 - **Defense in depth**: check the current user's brand via `get_my_brand_contexts`, then use the existing SECURITY INVOKER pharmacy RPC and RLS. Never trust a supplied brand ID alone.
 - **Consent**: the user sees an explicit consent screen limited to registered OAuth clients. TR1 login may return to this page only through a validated internal path.
-- **No writes**: the MCP code currently exposes no order, visit, task, messaging, or file modifications.
+- **No writes**: the MCP code currently exposes only brand discovery and pharmacy search, with no order, visit, task, messaging, or file modifications.
 
 ### BLOCKER A: OAuth audience / resource indicators
 
