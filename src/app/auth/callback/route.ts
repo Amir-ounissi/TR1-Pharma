@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { resolveLoginDestination } from "@/lib/auth/resolve-login-destination";
 import { createClient } from "@/lib/supabase/server";
+import { oauthConsentReturn } from "@/lib/connectors/chatgpt-oauth-return";
 
 function loginErrorRedirect(request: NextRequest, reason: string) {
   const loginUrl = new URL("/login", request.url);
@@ -26,5 +27,11 @@ export async function GET(request: NextRequest) {
   if (userError || !user) return loginErrorRedirect(request, "session_failed");
 
   const destination = await resolveLoginDestination(supabase, user.id);
-  return NextResponse.redirect(new URL(destination, request.url));
+  const returnTo = oauthConsentReturn(request.cookies.get("tr1_oauth_consent_return")?.value);
+  const response = NextResponse.redirect(new URL(returnTo ?? destination, request.url));
+  response.cookies.set("tr1_oauth_consent_return", "", {
+    httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax",
+    maxAge: 0, path: "/auth/callback",
+  });
+  return response;
 }
