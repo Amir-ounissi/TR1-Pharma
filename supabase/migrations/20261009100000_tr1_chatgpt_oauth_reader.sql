@@ -125,6 +125,36 @@ BEGIN
   RETURN answer;
 END $fn$;
 
+-- Summary intentionally omits contact names, phone numbers and detailed notes.
+CREATE OR REPLACE FUNCTION public.tr1_chatgpt_pharmacy_summary(
+  target_brand_pharmacy_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = ''
+AS $fn$
+DECLARE
+  source jsonb;
+BEGIN
+  IF NOT private.tr1_chatgpt_authorized() THEN
+    RAISE EXCEPTION 'ChatGPT OAuth authorization required' USING ERRCODE = '42501';
+  END IF;
+  -- Existing core RPC checks the active user's pharmacy assignment and brand.
+  source := public.get_field_pharmacy_summary(target_brand_pharmacy_id);
+  IF source IS NULL THEN RETURN NULL; END IF;
+  RETURN jsonb_build_object(
+    'brand_pharmacy_id', source ->> 'brand_pharmacy_id',
+    'name', source ->> 'name',
+    'address', source ->> 'address',
+    'status', source ->> 'status',
+    'priority', source ->> 'priority',
+    'potential', source ->> 'potential',
+    'last_order_at', source ->> 'last_order_at',
+    'last_interaction_at', source ->> 'last_interaction_at',
+    'next_action_type', source ->> 'next_action_type',
+    'next_action_at', source ->> 'next_action_at'
+  );
+END $fn$;
+
 REVOKE ALL ON FUNCTION public.tr1_chatgpt_list_brands()
   FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.tr1_chatgpt_search_pharmacies(uuid, text)
@@ -133,4 +163,9 @@ GRANT USAGE ON SCHEMA public TO tr1_chatgpt_reader;
 GRANT EXECUTE ON FUNCTION public.tr1_chatgpt_list_brands()
   TO tr1_chatgpt_reader;
 GRANT EXECUTE ON FUNCTION public.tr1_chatgpt_search_pharmacies(uuid, text)
+  TO tr1_chatgpt_reader;
+
+REVOKE ALL ON FUNCTION public.tr1_chatgpt_pharmacy_summary(uuid)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.tr1_chatgpt_pharmacy_summary(uuid)
   TO tr1_chatgpt_reader;
