@@ -72,18 +72,47 @@ SELECT set_config('request.jwt.claims',
     "aud":"https://tr1.test/api/connectors/chatgpt/mcp",
     "client_id":"11111111-1111-4111-8111-111111111111"}',true);
 
-SELECT lives_ok(
-  $$SELECT public.tr1_chatgpt_list_brands()$$,
-  'Reader can call brand discovery without raw table privileges');
-SELECT lives_ok(
-  $$SELECT public.tr1_chatgpt_search_pharmacies(
-    '00000000-0000-0000-0000-000000000101','Pharmacie')$$,
-  'Reader can search its own brand without raw table privileges');
-SELECT throws_ok(
-  $$SELECT public.tr1_chatgpt_search_pharmacies(
-    '00000000-0000-0000-0000-000000000102','Pharmacie')$$,
-  '42501', 'Brand forbidden',
-  'Reader cannot search a different brand');
+-- The MCP database role intentionally cannot USAGE the extensions schema,
+-- so pgTAP assertions are performed after reverting the role.
+DO $verify$
+DECLARE
+  brands jsonb;
+  pharmacies jsonb;
+  foreign_brand_blocked boolean := false;
+  direct_read_blocked boolean := false;
+BEGIN
+  brands := public.tr1_chatgpt_list_brands();
+  IF jsonb_typeof(brands) <> 'array' OR jsonb_array_length(brands) < 1 THEN
+    RAISE EXCEPTION 'Authorized brand discovery failed';
+  END IF;
+
+  pharmacies := public.tr1_chatgpt_search_pharmacies(
+    '00000000-0000-0000-0000-000000000101','Pharmacie');
+  IF jsonb_typeof(pharmacies) <> 'array' THEN
+    RAISE EXCEPTION 'Authorized pharmacy lookup failed';
+  END IF;
+
+  BEGIN
+    PERFORM public.tr1_chatgpt_search_pharmacies(
+      '00000000-0000-0000-0000-000000000102','Pharmacie');
+  EXCEPTION WHEN insufficient_privilege THEN
+    foreign_brand_blocked := true;
+  END;
+  IF NOT foreign_brand_blocked THEN RAISE EXCEPTION 'Cross-brand search succeeded'; END IF;
+
+  BEGIN
+    PERFORM 1 FROM public.pharmacies LIMIT 1;
+  EXCEPTION WHEN insufficient_privilege THEN
+    direct_read_blocked := true;
+  END;
+  IF NOT direct_read_blocked THEN RAISE EXCEPTION 'Direct table read succeeded'; END IF;
+END
+$verify$;
+RESET ROLE;
+
+SELECT ok(true, 'Reader can call authorized-brand discovery with no table grant');
+SELECT ok(true, 'Reader can search own brand without raw table access');
+SELECT ok(true, 'Reader is rejected for other brands and direct table access');
 
 SELECT * FROM finish();
 ROLLBACK;
