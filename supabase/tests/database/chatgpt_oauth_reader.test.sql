@@ -82,6 +82,7 @@ DO $verify$
 DECLARE
   brands jsonb;
   pharmacies jsonb;
+  summary jsonb;
   foreign_brand_blocked boolean := false;
   direct_read_blocked boolean := false;
 BEGIN
@@ -96,8 +97,12 @@ BEGIN
     RAISE EXCEPTION 'Authorized pharmacy lookup failed';
   END IF;
   -- The existing scoped summary RPC checks this user's active assignment.
-  IF public.tr1_chatgpt_pharmacy_summary(
-    '00000000-0000-0000-0000-000000000411'::uuid) ? 'primary_contact' THEN
+  summary := public.tr1_chatgpt_pharmacy_summary(
+    '00000000-0000-0000-0000-000000000411'::uuid);
+  IF summary IS NULL OR jsonb_typeof(summary) <> 'object' THEN
+    RAISE EXCEPTION 'Authorized summary not available';
+  END IF;
+  IF summary ? 'primary_contact' OR summary ? 'phone' THEN
     RAISE EXCEPTION 'Privacy breach: personal contact leaked';
   END IF;
 
