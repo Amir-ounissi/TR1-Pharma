@@ -184,7 +184,7 @@ export async function POST(request: Request) {
     return authChallenge(config);
   }
   const { data: identity, error: identityError } = await supabase.auth.getUser(token);
-  if (identityError || !identity.user || identity.user.id !== claimResult.claims.sub) {
+  if (identityError || !identity.user || identity.user.id !== claimResult?.claims?.sub) {
     return authChallenge(config);
   }
 
