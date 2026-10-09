@@ -188,7 +188,7 @@ export async function POST(request: Request) {
     return authChallenge(config);
   }
 
-  const { data: contexts, error: contextError } = await supabase.rpc("get_my_brand_contexts");
+  const { data: contexts, error: contextError } = await supabase.rpc("tr1_chatgpt_list_brands");
   if (contextError) return rpcError(id, -32003, "Authorization temporarily unavailable", 503);
 
   if (params.data.name === brandsTool.name) {
@@ -213,10 +213,9 @@ export async function POST(request: Request) {
     return rpcError(id, -32003, "Brand access denied", 403);
   }
 
-  const { data, error } = await supabase.rpc("search_authorized_pharmacies", {
+  const { data, error } = await supabase.rpc("tr1_chatgpt_search_pharmacies", {
     target_brand_id: brandId,
     search_text: searchArgs.data.q,
-    result_limit: 10,
   });
   if (error) return rpcError(id, -32004, "Search temporarily unavailable", 503);
 
