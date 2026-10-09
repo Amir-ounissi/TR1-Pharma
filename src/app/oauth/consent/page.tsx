@@ -36,7 +36,7 @@ export default async function OAuthConsentPage({ searchParams }: { searchParams:
   if (typeof clientId !== "string" || !config?.allowedClientIds.includes(clientId)) {
     return <main className="mx-auto max-w-lg px-5 py-20">
       <h1 className="text-2xl font-bold">Client non autorisé</h1>
-      <p className="mt-3">Cette application n'est pas autorisée à se connecter à TR1.</p>
+      <p className="mt-3">Cette application n&apos;est pas autorisée à se connecter à TR1.</p>
     </main>;
   }
 
@@ -44,7 +44,7 @@ export default async function OAuthConsentPage({ searchParams }: { searchParams:
     <main className="mx-auto max-w-xl px-5 py-16 text-[#0b1e32]">
       <section className="rounded-2xl border border-[#d8d0c2] bg-white p-7 shadow-sm">
         <p className="text-xs font-bold uppercase tracking-wider text-[#c84f24]">TR1 PHARMA · Connexion sécurisée</p>
-        <h1 className="mt-4 text-2xl font-bold">Autoriser l'accès à TR1 ?</h1>
+        <h1 className="mt-4 text-2xl font-bold">Autoriser l&apos;accès à TR1 ?</h1>
         <p className="mt-4">
           <strong>{details.client.name}</strong> souhaite accéder à vos données TR1 pour rechercher
           des pharmacies dans les marques auxquelles vous avez accès.
