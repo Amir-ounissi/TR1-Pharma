@@ -15,12 +15,13 @@
    It may execute **only**:
    - `public.tr1_chatgpt_list_brands()`
    - `public.tr1_chatgpt_search_pharmacies(uuid,text)`
+   - `public.tr1_chatgpt_pharmacy_summary(uuid)` (minimal commercial data, no contact identity)
    These SECURITY DEFINER functions check the exact enabled OAuth client and audience
    **again**, then call TR1's already-scoped existing membership / pharmacy functions.
 4. `POST /api/connectors/chatgpt/mcp` validates JWT signature, issuer, audience,
    client ID, role, live user identity, brand membership, and queries through
    the restricted RPCs. Its only advertised MCP tools are
-   `list_tr1_brands` and `search_tr1_pharmacies`.
+   `list_tr1_brands`, `search_tr1_pharmacies`, and `get_tr1_pharmacy_summary`.
 5. `/.well-known/oauth-protected-resource` and the path-scoped variant describe
    the protected resource; `/oauth/consent` presents a controlled approval UI.
 6. Connection defaults **OFF**, regardless of deployment:
@@ -49,6 +50,7 @@ Checked on **TR1 Pharma Staging Clean** `ehptapmuzckazyxmnmnm`, not production:
 - reader cannot SELECT pharmacies, INSERT orders, UPDATE tasks or write storage.objects;
 - no callable mutating SECURITY DEFINER RPC in the exposed public schema;
 - temporary mock OAuth JWT successfully listed an authorized brand and searched it;
+- summary RPC returns only essential commercial data, never personal contact identities;
 - mock token could not search a foreign brand or directly read a table;
 - private OAuth client registry is EMPTY after test transaction rollback.
 Actual OAuth authorization, refresh, and revocation with a real ChatGPT client
