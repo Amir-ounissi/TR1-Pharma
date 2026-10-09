@@ -2,7 +2,7 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET LOCAL search_path = public, extensions;
 
-SELECT plan(19);
+SELECT plan(21);
 
 SELECT ok(EXISTS(SELECT 1 FROM pg_roles WHERE rolname = 'tr1_chatgpt_reader'),
   'ChatGPT has an isolated PostgreSQL role');
@@ -39,8 +39,12 @@ SELECT ok(has_function_privilege('tr1_chatgpt_reader',
   'public.tr1_chatgpt_search_pharmacies(uuid,text)','EXECUTE'),
   'Reader is allowed to search its authorized pharmacies');
 
+SELECT ok(has_function_privilege('tr1_chatgpt_reader',
+  'public.tr1_chatgpt_pharmacy_summary(uuid)','EXECUTE'),
+  'Reader can retrieve only guarded, privacy-minimized commercial summaries');
+
 SELECT throws_ok(
-  $$SELECT private.tr1_chatgpt_oauth_token_hook(
+  $SELECT private.tr1_chatgpt_oauth_token_hook(
     '{"client_id":"22222222-2222-4222-8222-222222222222",
       "claims":{"role":"authenticated","aud":"authenticated"}}'::jsonb)$$,
   '42501', 'OAuth client not enabled for TR1',
@@ -91,6 +95,11 @@ BEGIN
   IF jsonb_typeof(pharmacies) <> 'array' THEN
     RAISE EXCEPTION 'Authorized pharmacy lookup failed';
   END IF;
+  -- The existing scoped summary RPC checks this user's active assignment.
+  IF public.tr1_chatgpt_pharmacy_summary(
+    '00000000-0000-0000-0000-000000000411'::uuid) ? 'primary_contact' THEN
+    RAISE EXCEPTION 'Privacy breach: personal contact leaked';
+  END IF;
 
   BEGIN
     PERFORM public.tr1_chatgpt_search_pharmacies(
@@ -113,6 +122,7 @@ RESET ROLE;
 SELECT ok(true, 'Reader can call authorized-brand discovery with no table grant');
 SELECT ok(true, 'Reader can search own brand without raw table access');
 SELECT ok(true, 'Reader is rejected for other brands and direct table access');
+SELECT ok(true, 'Pharmacy summary hides personal contacts under the read-only role');
 
 SELECT * FROM finish();
 ROLLBACK;
