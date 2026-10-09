@@ -50,7 +50,7 @@ export default async function OAuthConsentPage({ searchParams }: { searchParams:
           des pharmacies dans les marques auxquelles vous avez accès.
         </p>
         <p className="mt-4 rounded-lg bg-slate-50 p-3 text-sm">
-          Lecture seule : aucune commande, visite ou tâche ne sera créée par ce connecteur.
+          Fonction proposée par ce connecteur : rechercher des pharmacies. Les permissions OAuth sous-jacentes devront être restreintes et validées avant activation.
         </p>
         <dl className="mt-5 space-y-2 text-sm">
           <div><dt className="font-semibold">Application</dt><dd>{details.client.name}</dd></div>
