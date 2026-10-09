@@ -98,7 +98,7 @@ describe("TR1 authenticated MCP endpoint", () => {
 
   it("rejects a normal Supabase session without OAuth client binding", async () => {
     fake.getClaims.mockResolvedValueOnce({ data: { claims: {
-      sub: "user-1", role: "tr1_chatgpt_reader",
+      sub: "user-1", role: "authenticated",
       iss: "https://example.supabase.co/auth/v1", aud: "authenticated",
     } }, error: null });
     expect((await POST(request("tools/call", toolParams, "session-token"))).status).toBe(401);
@@ -136,10 +136,9 @@ describe("TR1 authenticated MCP endpoint", () => {
     const body = await response.json();
     expect(response.status).toBe(200);
     expect(body.result.structuredContent.pharmacies).toHaveLength(1);
-    expect(fake.rpc).toHaveBeenCalledWith("search_authorized_pharmacies", {
+    expect(fake.rpc).toHaveBeenCalledWith("tr1_chatgpt_search_pharmacies", {
       target_brand_id: brandId,
       search_text: "Valentine",
-      result_limit: 10,
     });
   });
 
