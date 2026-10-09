@@ -54,13 +54,13 @@ describe("TR1 authenticated MCP endpoint", () => {
         sub: "user-1",
         iss: "https://example.supabase.co/auth/v1",
         aud: resource,
-        role: "authenticated",
+        role: "tr1_chatgpt_reader",
         client_id: "trusted-chatgpt-client",
       } },
       error: null,
     });
     fake.getUser.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
-    fake.rpc.mockImplementation(async (name: string) => name === "get_my_brand_contexts"
+    fake.rpc.mockImplementation(async (name: string) => name === "tr1_chatgpt_list_brands"
       ? { data: [{ brand_id: brandId }], error: null }
       : { data: [{ pharmacy_name: "Valentine" }], error: null });
   });
@@ -78,7 +78,8 @@ describe("TR1 authenticated MCP endpoint", () => {
     const response = await POST(request("tools/list"));
     const body = await response.json();
     expect(response.status).toBe(200);
-    expect(body.result.tools[0].annotations.readOnlyHint).toBe(true);
+    expect(body.result.tools).toHaveLength(2);
+    expect(body.result.tools.every((tool: { annotations: { readOnlyHint: boolean } }) => tool.annotations.readOnlyHint)).toBe(true);
     expect(body.result.tools[0].securitySchemes[0].type).toBe("oauth2");
   });
 
@@ -97,7 +98,7 @@ describe("TR1 authenticated MCP endpoint", () => {
 
   it("rejects a normal Supabase session without OAuth client binding", async () => {
     fake.getClaims.mockResolvedValueOnce({ data: { claims: {
-      sub: "user-1", role: "authenticated",
+      sub: "user-1", role: "tr1_chatgpt_reader",
       iss: "https://example.supabase.co/auth/v1", aud: "authenticated",
     } }, error: null });
     expect((await POST(request("tools/call", toolParams, "session-token"))).status).toBe(401);
@@ -106,7 +107,7 @@ describe("TR1 authenticated MCP endpoint", () => {
 
   it("rejects a foreign OAuth client even with an otherwise valid token", async () => {
     fake.getClaims.mockResolvedValueOnce({ data: { claims: {
-      sub: "user-1", role: "authenticated",
+      sub: "user-1", role: "tr1_chatgpt_reader",
       iss: "https://example.supabase.co/auth/v1", aud: resource,
       client_id: "foreign-client",
     } }, error: null });
@@ -116,7 +117,7 @@ describe("TR1 authenticated MCP endpoint", () => {
 
   it("rejects a client token not bound to the MCP resource", async () => {
     fake.getClaims.mockResolvedValueOnce({ data: { claims: {
-      sub: "user-1", role: "authenticated",
+      sub: "user-1", role: "tr1_chatgpt_reader",
       iss: "https://example.supabase.co/auth/v1", aud: "authenticated",
       client_id: "trusted-chatgpt-client",
     } }, error: null });
@@ -164,7 +165,7 @@ describe("TR1 authenticated MCP endpoint", () => {
       brand_slug: "vk-swiss",
     }]);
     expect(fake.rpc).toHaveBeenCalledTimes(1);
-    expect(fake.rpc).toHaveBeenCalledWith("get_my_brand_contexts");
+    expect(fake.rpc).toHaveBeenCalledWith("tr1_chatgpt_list_brands");
   });
 
   it("rejects an untrusted origin", async () => {
