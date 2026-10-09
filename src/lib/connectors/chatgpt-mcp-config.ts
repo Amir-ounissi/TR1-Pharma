@@ -60,7 +60,7 @@ export function validChatGptMcpClaims(claims: unknown, config: ChatGptMcpConfig)
     (Array.isArray(aud) && aud.includes(config.resourceUrl));
   return c.iss === config.issuer &&
     typeof c.sub === "string" && c.sub.length > 0 &&
-    c.role === "authenticated" &&
+    c.role === "tr1_chatgpt_reader" &&
     typeof c.client_id === "string" &&
     config.allowedClientIds.includes(c.client_id) &&
     audienceMatches;
