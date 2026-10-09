@@ -44,7 +44,7 @@ SELECT ok(has_function_privilege('tr1_chatgpt_reader',
   'Reader can retrieve only guarded, privacy-minimized commercial summaries');
 
 SELECT throws_ok(
-  $SELECT private.tr1_chatgpt_oauth_token_hook(
+  $$SELECT private.tr1_chatgpt_oauth_token_hook(
     '{"client_id":"22222222-2222-4222-8222-222222222222",
       "claims":{"role":"authenticated","aud":"authenticated"}}'::jsonb)$$,
   '42501', 'OAuth client not enabled for TR1',
