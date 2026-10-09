@@ -129,7 +129,7 @@ BEGIN
     direct_read_blocked := true;
   END;
   IF NOT direct_read_blocked THEN RAISE EXCEPTION 'Direct table read succeeded'; END IF;
-END
+END;
 $verify$;
 RESET ROLE;
 
