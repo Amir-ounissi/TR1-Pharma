@@ -1,15 +1,15 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, Minus, PackagePlus, Plus, RotateCcw, Search, Trash2, X } from "lucide-react";
 import {
   createOrderAction,
-  searchOrderPharmaciesAction,
   type OrderPharmacySearchResult,
 } from "@/app/(protected)/dashboard/orders/actions";
 import { getOrderPharmacyPricingAction } from "@/app/(protected)/dashboard/orders/pricing-actions";
 import { ActionFeedback } from "@/components/reference/action-feedback";
+import { OrderPharmacyAutocomplete } from "@/components/orders/order-pharmacy-autocomplete";
 import { useLocalOrderDraft } from "@/components/orders/use-local-order-draft";
 import { OrderSubmittingStatus } from "@/components/orders/order-submitting-status";
 import { Badge } from "@/components/ui/badge";
@@ -80,106 +80,6 @@ function freeQuantityFor(quantity: number, rule: FreeUnitsRule | null) {
   return Math.floor(quantity / rule.paidQuantity) * rule.freeQuantity;
 }
 
-function PharmacyAutocomplete({
-  initialPharmacy,
-  onSelectionChange,
-}: {
-  initialPharmacy?: OrderPharmacySearchResult;
-  onSelectionChange: (
-    changedFromInitial: boolean,
-    pharmacy?: OrderPharmacySearchResult,
-  ) => void;
-}) {
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<OrderPharmacySearchResult[]>([]);
-  const [selected, setSelected] = useState<OrderPharmacySearchResult | undefined>(
-    initialPharmacy,
-  );
-  const [loading, setLoading] = useState(false);
-
-  async function search(value: string) {
-    setQuery(value);
-    if (value.trim().length < 2) {
-      setResults([]);
-      return;
-    }
-    setLoading(true);
-    try {
-      setResults(await searchOrderPharmaciesAction(value));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <div className="space-y-2">
-      <Label htmlFor="mobile-order-pharmacy">Pharmacie</Label>
-      <Input
-        id="mobile-order-pharmacy"
-        value={selected ? selected.name : query}
-        placeholder="Nom, ville, CIP ou SIRET…"
-        autoComplete="off"
-        className="h-12 rounded-xl bg-background text-base"
-        onChange={(event) => {
-          if (selected) onSelectionChange(Boolean(initialPharmacy), undefined);
-          setSelected(undefined);
-          void search(event.target.value);
-        }}
-      />
-      <input
-        type="hidden"
-        name="brandPharmacyId"
-        value={selected?.brandPharmacyId ?? ""}
-      />
-      <input
-        type="hidden"
-        name="pharmacyId"
-        value={selected?.brandPharmacyId ? "" : selected?.pharmacyId ?? ""}
-      />
-      {selected ? (
-        <div className="rounded-xl border bg-background px-3 py-2.5">
-          <p className="font-semibold text-[var(--tr1-navy)]">{selected.name}</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            {selected.detail}
-            {selected.relationStatus === "existing_brand_relation"
-              ? " · Déjà cliente"
-              : " · Nouvelle pour la marque"}
-          </p>
-        </div>
-      ) : null}
-      {!selected && results.length ? (
-        <div className="max-h-60 overflow-auto rounded-xl border bg-popover p-1 shadow-lg">
-          {results.map((result) => (
-            <button
-              key={result.pharmacyId}
-              type="button"
-              className="block min-h-14 w-full rounded-lg px-3 py-2.5 text-left active:bg-muted"
-              onClick={() => {
-                setSelected(result);
-                setQuery("");
-                setResults([]);
-                onSelectionChange(
-                  Boolean(
-                    initialPharmacy &&
-                      result.brandPharmacyId !== initialPharmacy.brandPharmacyId,
-                  ),
-                  result,
-                );
-              }}
-            >
-              <span className="font-semibold">{result.name}</span>
-              <span className="block text-xs text-muted-foreground">
-                {result.detail}
-              </span>
-            </button>
-          ))}
-        </div>
-      ) : null}
-      {loading ? <p className="text-xs text-muted-foreground">Recherche…</p> : null}
-    </div>
-  );
-}
-
 export function MobileQuickOrderForm({
   products,
   initialPharmacy,
@@ -213,6 +113,8 @@ export function MobileQuickOrderForm({
     initialFreeUnitsRule,
   );
   const [pricingLoading, setPricingLoading] = useState(false);
+  const [pricingError, setPricingError] = useState(false);
+  const pricingRequest = useRef(0);
   const [orderType, setOrderType] = useState(initialOrderType);
   const [initialContextChanged, setInitialContextChanged] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -352,9 +254,12 @@ export function MobileQuickOrderForm({
   }
 
   async function loadPharmacyPricing(pharmacy: OrderPharmacySearchResult) {
+    const requestId = ++pricingRequest.current;
     setPricingLoading(true);
+    setPricingError(false);
     try {
       const pricing = await getOrderPharmacyPricingAction(pharmacy.pharmacyId);
+      if (pricingRequest.current !== requestId) return;
       setDefaultDiscountRate(pricing.discountRate);
       setPotential(pricing.potential);
       setFreeUnitsRule(pricing.freeUnitsRule);
@@ -366,8 +271,11 @@ export function MobileQuickOrderForm({
           freeQuantity: freeQuantityFor(line.quantity, pricing.freeUnitsRule),
         })),
       );
+    } catch {
+      if (pricingRequest.current !== requestId) return;
+      setPricingError(true);
     } finally {
-      setPricingLoading(false);
+      if (pricingRequest.current === requestId) setPricingLoading(false);
     }
   }
 
@@ -382,9 +290,18 @@ export function MobileQuickOrderForm({
         ) : null}
 
         <div className="rounded-2xl border bg-muted/20 p-3.5">
-          <PharmacyAutocomplete
+          <OrderPharmacyAutocomplete
+            mobile
             initialPharmacy={initialPharmacy}
             onSelectionChange={(changed, pharmacy) => {
+              pricingRequest.current += 1;
+              setPricingLoading(false);
+              setPricingError(false);
+              if (!pharmacy || changed) {
+                setDefaultDiscountRate(null);
+                setPotential(null);
+                setFreeUnitsRule(null);
+              }
               setDraftPharmacyId(pharmacy?.brandPharmacyId ?? pharmacy?.pharmacyId ?? "unselected");
               setInitialContextChanged(changed);
               if (!pharmacy) {
@@ -431,6 +348,7 @@ export function MobileQuickOrderForm({
               </>
             )}
           </div>
+          {pricingError ? <p role="alert" className="mt-2 text-xs text-destructive">Conditions client indisponibles : vérifiez les remises et unités gratuites avant de valider.</p> : null}
         </div>
 
         <section className="space-y-3">
