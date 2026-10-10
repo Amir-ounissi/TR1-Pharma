@@ -1,6 +1,8 @@
-# TR1 Pharma Platform
+# TR1 Pharma — cockpit de l'Agent Commercial +++
 
-TR1 Pharma est une plateforme SaaS de pilotage commercial et d’exécution terrain dédiée aux marques qui se développent en pharmacie. Chaque marque cliente dispose de son environnement strictement séparé ; un même agent ou intervenant peut travailler pour plusieurs marques uniquement dans les périmètres qui lui sont autorisés.
+**Phase 1 : outil de travail personnel du fondateur**, agent commercial multimarque en pharmacie. TR1 centralise les officines, visites, commandes, missions d'animation/formation, échanges avec les marques et intervenants et suivi opérationnel. Les indicateurs de rentabilité par marque et l'assistant IA complet restent des chantiers, pas des fonctionnalités déclarées livrées.
+
+Le socle existant de permissions, RLS et séparation intermarques est conservé. Les modules historiques de commercialisation SaaS restent dans le code sans guider les priorités de cette phase. [Décisions produit, parcours et priorités Agent Commercial +++](docs/product/agent-commercial-plus-plus.md).
 
 ## Prérequis
 

@@ -5,10 +5,13 @@ import {
   type AgentMultibrandVisitSummary,
 } from "@/components/agent/agent-multibrand-overview";
 import { AgentTodayCockpit } from "@/components/agent/agent-today-cockpit";
+import { AgentBrandPortfolio } from "@/components/agent/agent-brand-portfolio";
 import { DashboardTracker } from "@/components/agent/dashboard-tracker";
 import { OfflineDayPreloader } from "@/components/pwa/offline-day-preloader";
 import { addCalendarDays } from "@/lib/agenda";
-import { requireActiveBrand } from "@/lib/auth";
+import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
+import { summarizeAgentBrandSales } from "@/lib/agent-brand-portfolio";
+import { authorizedAgentVisit } from "@/lib/agent-authorized-visits";
 import { nextIsoDate, parisBusinessDate } from "@/lib/business-date";
 import { requireActiveBrandCapability } from "@/lib/saas/server";
 import { loadStockAlerts } from "@/lib/stock-alerts-server";
@@ -93,11 +96,19 @@ function cleanVisitObjective(value: string | null | undefined, pharmacyName: str
 }
 
 export default async function AgentPage() {
-  const [saas, session] = await Promise.all([
+  const [saas, session, contexts] = await Promise.all([
     requireActiveBrandCapability("agent_day"),
     requireActiveBrand(),
+    getBrandContexts(),
   ]);
   const { supabase, brand, profile, userId } = session;
+  const agentBrands = contexts
+    .filter((context) => context.role === "agent")
+    .map((context) => ({ id: context.id, name: context.name }));
+  if (!agentBrands.some((item) => item.id === brand.id)) {
+    agentBrands.push({ id: brand.id, name: brand.name });
+  }
+  const authorizedBrandIds = new Set(agentBrands.map((item) => item.id));
 
   const today = parisBusinessDate();
   const monthStart = `${today.slice(0, 7)}-01`;
@@ -119,12 +130,12 @@ export default async function AgentPage() {
     timedQuery("get_my_field_agenda_today", supabase.rpc("get_my_field_agenda", {
       start_date: today,
       end_date: today,
-      brand_filter: brand.id,
+      brand_filter: null,
     })),
     timedQuery("get_my_field_agenda_14d", supabase.rpc("get_my_field_agenda", {
       start_date: today,
       end_date: planningHorizon,
-      brand_filter: brand.id,
+      brand_filter: null,
     })),
     saas.capabilities.has("sell_out")
       ? loadStockAlerts(supabase, brand.id, userId).catch((error) => {
@@ -136,12 +147,12 @@ export default async function AgentPage() {
       : Promise.resolve([]),
     timedQuery("get_agent_today_multibrand", supabase.rpc("get_agent_today_multibrand", {
       target_date: today,
-      brand_filter: brand.id,
+      brand_filter: null,
     })),
     timedQuery("performance_booked_order_facts", supabase
       .from("performance_booked_order_facts")
-      .select("net_amount_ht")
-      .eq("brand_id", brand.id)
+      .select("order_id,brand_id,net_amount_ht")
+      .in("brand_id", agentBrands.map((item) => item.id))
       .eq("agent_user_id_at_order", userId)
       .gte("order_date", `${monthStart}T00:00:00.000Z`)
       .lt("order_date", `${nextIsoDate(today)}T00:00:00.000Z`)),
@@ -236,7 +247,7 @@ export default async function AgentPage() {
   }).format(now);
 
   const multibrandFieldVisits = ((multibrandFieldAgendaResult.data ?? []) as FieldAgendaEvent[]).filter(
-    (event) => event.ownership === "mine" && event.source_kind === "field_visit" && Boolean(event.pharmacy_id),
+    (event) => event.ownership === "mine" && authorizedAgentVisit(event, authorizedBrandIds) && Boolean(event.pharmacy_id),
   );
   const overviewVisits: AgentMultibrandVisitSummary[] = multibrandFieldVisits.map((event) => ({
     id: event.source_id,
@@ -292,7 +303,7 @@ export default async function AgentPage() {
       : null;
 
   const upcomingFieldVisits = ((upcomingFieldAgendaResult.data ?? []) as FieldAgendaEvent[]).filter(
-    (event) => event.ownership === "mine" && event.source_kind === "field_visit" && Boolean(event.pharmacy_id),
+    (event) => event.ownership === "mine" && authorizedAgentVisit(event, authorizedBrandIds) && Boolean(event.pharmacy_id),
   );
   const plannedVisits: AgentMultibrandVisitSummary[] = upcomingFieldVisits.map((event) => ({
     id: event.source_id,
@@ -307,16 +318,14 @@ export default async function AgentPage() {
   }));
 
   const activeFieldVisits = ((multibrandFieldAgendaResult.data ?? []) as FieldAgendaEvent[]).filter(
-    (event) => event.ownership === "mine" && event.source_kind === "field_visit" && Boolean(event.pharmacy_id),
+    (event) => event.ownership === "mine" && authorizedAgentVisit(event, authorizedBrandIds) && Boolean(event.pharmacy_id),
   );
   const pendingVisitCount = activeFieldVisits.filter(
     (event) => visitNeedsCloseout(event, now.getTime()),
   ).length;
 
-  const monthBookedRevenue = (monthBookedOrdersResult.data ?? []).reduce(
-    (total, order) => total + Number(order.net_amount_ht ?? 0),
-    0,
-  );
+  const brandSales = summarizeAgentBrandSales(agentBrands, monthBookedOrdersResult.data ?? []);
+  const monthBookedRevenue = brandSales.find((item) => item.id === brand.id)?.bookedRevenueHt ?? 0;
   const revenueObjective = ((monthObjectivesResult.data ?? []) as ObjectiveProgressRow[]).find(
     (objective) => objective.metric_key === "revenue_ht",
   );
@@ -392,9 +401,21 @@ export default async function AgentPage() {
         targetSource={monthTargetSource}
         pendingVisitCount={pendingVisitCount}
         plannedVisitCount={overviewVisits.length}
+        priorityCount={multibrandDay.tasks.length + multibrandDay.follow_ups.length}
+        missionCount={multibrandDay.missions.length}
+        reportCount={multibrandDay.reports.length}
         firstName={firstName}
         dayLabel={dayLabel}
         nextVisit={cockpitNextVisit}
+        canCreateOrders={saas.capabilities.has("orders")}
+        canCoordinateMissions={saas.capabilities.has("missions")}
+        canUseAssistant={saas.capabilities.has("assistant_terrain")}
+      />
+
+      <AgentBrandPortfolio
+        brands={brandSales}
+        activeBrandId={brand.id}
+        unavailable={Boolean(monthBookedOrdersResult.error)}
       />
 
       <AgentMultibrandOverview
@@ -402,6 +423,7 @@ export default async function AgentPage() {
         visits={overviewVisits}
         plannedVisits={plannedVisits}
         canPlanVisit={saas.capabilities.has("core_crm")}
+        activeBrandId={brand.id}
       />
 
       <style>{`
