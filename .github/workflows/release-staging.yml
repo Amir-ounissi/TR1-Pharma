@@ -78,6 +78,7 @@ jobs:
     environment: staging
     env:
       STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+      STAGING_SUPABASE_SECRET_KEY: ${{ secrets.STAGING_SUPABASE_SECRET_KEY }}
       STAGING_SUPABASE_PROJECT_REF: ehptapmuzckazyxmnmnm
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
@@ -99,7 +100,7 @@ jobs:
       - name: Vérifier la configuration staging
         run: |
           set -eu
-          for name in STAGING_DATABASE_URL STAGING_SUPABASE_PROJECT_REF VERCEL_TOKEN VERCEL_AUTOMATION_BYPASS_SECRET VERCEL_ORG_ID VERCEL_PROJECT_ID STAGING_SUPABASE_URL STAGING_SUPABASE_PUBLISHABLE_KEY; do
+          for name in STAGING_DATABASE_URL STAGING_SUPABASE_SECRET_KEY STAGING_SUPABASE_PROJECT_REF VERCEL_TOKEN VERCEL_AUTOMATION_BYPASS_SECRET VERCEL_ORG_ID VERCEL_PROJECT_ID STAGING_SUPABASE_URL STAGING_SUPABASE_PUBLISHABLE_KEY; do
             eval "value=\${$name:-}"
             test -n "$value" || {
               echo "::error::$name n'est pas configuré pour l'environnement staging."
@@ -157,6 +158,22 @@ jobs:
               ;;
           esac
 
+      - name: Vérifier que la clé serveur appartient au Supabase staging
+        run: |
+          set -eu
+          node --input-type=module <<'NODE'
+          import { createClient } from "@supabase/supabase-js";
+          const url = process.env.STAGING_SUPABASE_URL;
+          const key = process.env.STAGING_SUPABASE_SECRET_KEY;
+          const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+          const { error } = await client.auth.admin.listUsers({ page: 1, perPage: 1 });
+          if (error) {
+            console.error("::error::La clé serveur Supabase staging est invalide ou ne donne pas accès au projet staging.");
+            process.exit(1);
+          }
+          console.log("La clé serveur du staging est validée sur son propre projet Supabase.");
+          NODE
+
       - name: Préparer la connexion session Supabase
         run: |
           set -eu
@@ -179,10 +196,12 @@ jobs:
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
           deployment_url="$(npx --yes "vercel@${VERCEL_CLI_VERSION}" deploy --yes --token "$VERCEL_TOKEN" \
             --build-env "APP_ENV=staging" \
+            --build-env "SUPABASE_SECRET_KEY=$STAGING_SUPABASE_SECRET_KEY" \
             --build-env "RELEASE_SHA=$RELEASE_SHA" \
             --build-env "NEXT_PUBLIC_SUPABASE_URL=$STAGING_SUPABASE_URL" \
             --build-env "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$STAGING_SUPABASE_PUBLISHABLE_KEY" \
             --env "APP_ENV=staging" \
+            --env "SUPABASE_SECRET_KEY=$STAGING_SUPABASE_SECRET_KEY" \
             --env "RELEASE_SHA=$RELEASE_SHA" \
             --env "NEXT_PUBLIC_SUPABASE_URL=$STAGING_SUPABASE_URL" \
             --env "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$STAGING_SUPABASE_PUBLISHABLE_KEY" | tail -n 1)"
