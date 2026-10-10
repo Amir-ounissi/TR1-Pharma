@@ -86,13 +86,31 @@ export default async function PharmacyDetailPage({
     "super_admin",
   ].includes(role);
 
-  const { data: settings } = await supabase
-    .from("brand_settings")
-    .select(
-      "allow_agents_to_change_status,allow_agents_to_create_contacts,allow_agents_to_edit_potential",
-    )
-    .eq("brand_id", brand.id)
-    .maybeSingle();
+  // These reads are independent: avoid three sequential database round trips
+  // on every tab change. Authorization still comes from the existing RLS rules.
+  const [
+    { data: settings },
+    { data: relation, error: relationError },
+    { data: activeVisitLinks, error: activeVisitError },
+  ] = await Promise.all([
+    supabase
+      .from("brand_settings")
+      .select("allow_agents_to_change_status,allow_agents_to_create_contacts,allow_agents_to_edit_potential")
+      .eq("brand_id", brand.id)
+      .maybeSingle(),
+    supabase
+      .from("brand_pharmacies")
+      .select("*,pharmacies(*,pharmacy_groups(name)),territories(name)")
+      .eq("id", id)
+      .eq("brand_id", brand.id)
+      .maybeSingle(),
+    supabase
+      .from("field_visit_brands")
+      .select("visit_id,field_visits!inner(id,status,scheduled_start_at,owner_user_id,pharmacy_id,archived_at)")
+      .eq("brand_pharmacy_id", id)
+      .eq("field_visits.owner_user_id", userId)
+      .is("field_visits.archived_at", null),
+  ]);
 
   const canCreateContacts =
     canManageAccount ||
@@ -113,12 +131,7 @@ export default async function PharmacyDetailPage({
     "super_admin",
   ].includes(role);
 
-  const { data: relation, error: relationError } = await supabase
-    .from("brand_pharmacies")
-    .select("*,pharmacies(*,pharmacy_groups(name)),territories(name)")
-    .eq("id", id)
-    .eq("brand_id", brand.id)
-    .maybeSingle();
+
   if (relationError) {
     console.error("Impossible de charger la pharmacie.", {
       code: relationError.code,
@@ -142,13 +155,7 @@ export default async function PharmacyDetailPage({
     : relation.pharmacies;
   if (!pharmacy) notFound();
 
-  const { data: activeVisitLinks, error: activeVisitError } = await supabase
-    .from("field_visit_brands")
-    .select("visit_id,field_visits!inner(id,status,scheduled_start_at,owner_user_id,pharmacy_id,archived_at)")
-    .eq("brand_pharmacy_id", id)
-    .eq("field_visits.owner_user_id", userId)
-    .eq("field_visits.pharmacy_id", pharmacy.id)
-    .is("field_visits.archived_at", null);
+
   if (activeVisitError) {
     console.error("Impossible de charger la visite active de la pharmacie.", {
       code: activeVisitError.code,
@@ -158,6 +165,7 @@ export default async function PharmacyDetailPage({
   const activeVisit = (activeVisitLinks ?? [])
     .map((link) => Array.isArray(link.field_visits) ? link.field_visits[0] : link.field_visits)
     .filter(Boolean)
+    .filter((visit) => visit.pharmacy_id === pharmacy.id)
     .filter((visit) => ["planned", "confirmed", "in_progress"].includes(String(visit.status)))
     .sort((left, right) => {
       if (left.status === "in_progress" && right.status !== "in_progress") return -1;
