@@ -76,7 +76,7 @@ export function OnboardingForm({
         className="mt-2 h-12 w-full rounded-xl bg-[#c84f24] text-sm font-bold text-white shadow-[0_10px_22px_rgb(200_79_36/0.18)] transition-colors hover:bg-[#a63f19]"
         disabled={pending}
       >
-        {pending ? "Enregistrement…" : "Accéder à mon espace"}
+        {pending ? "Enregistrement…" : "Continuer"}
         {!pending ? <ArrowRight className="ml-2 size-4" aria-hidden="true" /> : null}
       </Button>
     </form>
