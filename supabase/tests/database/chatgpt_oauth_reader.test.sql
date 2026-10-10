@@ -2,7 +2,7 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET LOCAL search_path = public, extensions;
 
-SELECT plan(26);
+SELECT plan(28);
 
 SELECT ok(EXISTS(SELECT 1 FROM pg_roles WHERE rolname = 'tr1_chatgpt_reader'),
   'ChatGPT has an isolated PostgreSQL role');
@@ -18,6 +18,23 @@ SELECT ok(NOT has_table_privilege('tr1_chatgpt_reader','public.pharmacies','SELE
   'MCP OAuth token cannot read pharmacy tables directly');
 SELECT ok(NOT has_table_privilege('tr1_chatgpt_reader','public.tasks','UPDATE'),
   'MCP OAuth token cannot change tasks');
+SELECT is((
+  SELECT count(*)
+  FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+  WHERE n.nspname='public' AND p.proname NOT LIKE 'tr1_chatgpt_%'
+    AND has_function_privilege('tr1_chatgpt_reader',p.oid,'EXECUTE')
+),0::bigint,'Reader cannot execute any unrelated public RPC');
+SELECT is((
+  SELECT count(*)
+  FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+  WHERE n.nspname='public'
+    AND p.proname IN (
+      'archive_performance_objective','get_objective_progress',
+      'get_performance_network','get_performance_overview','get_performance_team',
+      'get_product_distribution','save_performance_objective')
+    AND has_function_privilege('authenticated',p.oid,'EXECUTE')
+),7::bigint,'Normal authenticated users retain their seven performance RPC privileges');
+
 SELECT ok(NOT has_table_privilege('tr1_chatgpt_reader','storage.objects','INSERT'),
   'MCP OAuth token cannot upload storage objects');
 SELECT ok(NOT has_function_privilege('tr1_chatgpt_reader',
