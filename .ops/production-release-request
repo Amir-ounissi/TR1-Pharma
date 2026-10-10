@@ -1,5 +1,6 @@
-release=tr1-v2-agent-commercial
-source_merge=b02e80e6ffd677075f9b0440001cf3827e663b5f
+release=tr1-chatgpt-mcp-activate-runtime
+source_merge=532d2a44c81c6111b9d0b7f7fad9a336a8035b86
 target=production
 requested_by=user
-purpose=release_only_after_ci_and_staging_gates
+purpose=redeploy_official_guarded_pipeline_with_tr1_chatgpt_connector_enabled
+security=oauth_client_registry_disabled_until_e2e_checks
