@@ -521,7 +521,7 @@ export default async function PharmacyDetailPage({
           <ArchiveButton id={id} />
         </div>
       ) : null}
-      <PharmacySectionNav pharmacyId={id} activeTab={tab} />
+      <PharmacySectionNav pharmacyId={id} activeTab={tab} activeVisitId={activeVisit ? String(activeVisit.id) : null} />
       {tabLoadError ? (
         <InlineError
           title="Impossible de charger cette section."
