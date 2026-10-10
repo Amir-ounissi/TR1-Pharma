@@ -119,12 +119,12 @@ export default async function AgentPage() {
     timedQuery("get_my_field_agenda_today", supabase.rpc("get_my_field_agenda", {
       start_date: today,
       end_date: today,
-      brand_filter: brand.id,
+      brand_filter: null,
     })),
     timedQuery("get_my_field_agenda_14d", supabase.rpc("get_my_field_agenda", {
       start_date: today,
       end_date: planningHorizon,
-      brand_filter: brand.id,
+      brand_filter: null,
     })),
     saas.capabilities.has("sell_out")
       ? loadStockAlerts(supabase, brand.id, userId).catch((error) => {
@@ -136,7 +136,7 @@ export default async function AgentPage() {
       : Promise.resolve([]),
     timedQuery("get_agent_today_multibrand", supabase.rpc("get_agent_today_multibrand", {
       target_date: today,
-      brand_filter: brand.id,
+      brand_filter: null,
     })),
     timedQuery("performance_booked_order_facts", supabase
       .from("performance_booked_order_facts")
@@ -392,6 +392,9 @@ export default async function AgentPage() {
         targetSource={monthTargetSource}
         pendingVisitCount={pendingVisitCount}
         plannedVisitCount={overviewVisits.length}
+        priorityCount={multibrandDay.tasks.length + multibrandDay.follow_ups.length}
+        missionCount={multibrandDay.missions.length}
+        reportCount={multibrandDay.reports.length}
         firstName={firstName}
         dayLabel={dayLabel}
         nextVisit={cockpitNextVisit}
@@ -405,6 +408,7 @@ export default async function AgentPage() {
         visits={overviewVisits}
         plannedVisits={plannedVisits}
         canPlanVisit={saas.capabilities.has("core_crm")}
+        activeBrandId={brand.id}
       />
 
       <style>{`
