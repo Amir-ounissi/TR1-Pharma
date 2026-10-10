@@ -117,7 +117,6 @@ export default async function AgentPage() {
 
   const [
     { data: nextVisit },
-    multibrandFieldAgendaResult,
     upcomingFieldAgendaResult,
     stockAlerts,
     multibrandDayResult,
@@ -127,11 +126,6 @@ export default async function AgentPage() {
     personalTargetResult,
   ] = await Promise.all([
     timedQuery("get_next_agent_visit", supabase.rpc("get_next_agent_visit", { target_brand_id: brand.id })),
-    timedQuery("get_my_field_agenda_today", supabase.rpc("get_my_field_agenda", {
-      start_date: today,
-      end_date: today,
-      brand_filter: null,
-    })),
     timedQuery("get_my_field_agenda_14d", supabase.rpc("get_my_field_agenda", {
       start_date: today,
       end_date: planningHorizon,
@@ -181,7 +175,6 @@ export default async function AgentPage() {
   ]);
 
   const optionalQueryErrors = [
-    ["agenda du jour", multibrandFieldAgendaResult.error],
     ["agenda à venir", upcomingFieldAgendaResult.error],
     ["cockpit multimarque", multibrandDayResult.error],
     ["CA mensuel réservé", monthBookedOrdersResult.error],
@@ -246,8 +239,11 @@ export default async function AgentPage() {
     timeZone: "Europe/Paris",
   }).format(now);
 
-  const multibrandFieldVisits = ((multibrandFieldAgendaResult.data ?? []) as FieldAgendaEvent[]).filter(
-    (event) => event.ownership === "mine" && authorizedAgentVisit(event, authorizedBrandIds) && Boolean(event.pharmacy_id),
+  const parisDay = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" });
+  const businessDayOf = (value: string) => parisDay.format(new Date(value));
+  const multibrandFieldVisits = ((upcomingFieldAgendaResult.data ?? []) as FieldAgendaEvent[]).filter(
+    (event) => event.ownership === "mine" && authorizedAgentVisit(event, authorizedBrandIds) && Boolean(event.pharmacy_id)
+      && (businessDayOf(event.start_at) === today || (Boolean(event.end_at) && businessDayOf(event.start_at) < today && businessDayOf(event.end_at) >= today)),
   );
   const overviewVisits: AgentMultibrandVisitSummary[] = multibrandFieldVisits.map((event) => ({
     id: event.source_id,
@@ -317,9 +313,7 @@ export default async function AgentPage() {
     href: `/dashboard/visits/${event.source_id}`,
   }));
 
-  const activeFieldVisits = ((multibrandFieldAgendaResult.data ?? []) as FieldAgendaEvent[]).filter(
-    (event) => event.ownership === "mine" && authorizedAgentVisit(event, authorizedBrandIds) && Boolean(event.pharmacy_id),
-  );
+  const activeFieldVisits = multibrandFieldVisits;
   const pendingVisitCount = activeFieldVisits.filter(
     (event) => visitNeedsCloseout(event, now.getTime()),
   ).length;
