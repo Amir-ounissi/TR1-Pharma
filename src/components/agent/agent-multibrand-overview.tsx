@@ -171,16 +171,21 @@ export function AgentMultibrandOverview({
   visits,
   plannedVisits,
   canPlanVisit,
+  activeBrandId,
 }: {
   day: AgentMultibrandDay;
   visits: AgentMultibrandVisitSummary[];
   plannedVisits: AgentMultibrandVisitSummary[];
   canPlanVisit: boolean;
+  activeBrandId: string;
 }) {
+  const destinationForBrand = (brandId: string, targetPath: string) => brandId === activeBrandId
+    ? targetPath
+    : `/auth/activate-brand?brandId=${encodeURIComponent(brandId)}&next=${encodeURIComponent(targetPath)}`;
   const priorityActions: PriorityAction[] = [
     ...day.tasks.map((task) => ({
       key: `task:${task.id}`,
-      href: `/dashboard/pharmacies/${task.brand_pharmacy_id}?tab=activity`,
+      href: `/dashboard/pharmacies/open-pharmacy/${task.pharmacy_id}?brand=${encodeURIComponent(task.brand_id)}`,
       score: task.action_score,
       title: taskActionLabel(task),
       brandId: task.brand_id,
@@ -194,7 +199,7 @@ export function AgentMultibrandOverview({
     })),
     ...day.follow_ups.map((followUp) => ({
       key: `follow-up:${followUp.brand_pharmacy_id}`,
-      href: `/dashboard/pharmacies/${followUp.brand_pharmacy_id}?tab=activity`,
+      href: `/dashboard/pharmacies/open-pharmacy/${followUp.pharmacy_id}?brand=${encodeURIComponent(followUp.brand_id)}`,
       score: followUp.action_score,
       title: followUpActionLabel(followUp),
       brandId: followUp.brand_id,
@@ -221,7 +226,7 @@ export function AgentMultibrandOverview({
       brand: action.brandId,
       objective: action.title,
     });
-    const planningHref = `/dashboard/agenda/new?${params.toString()}`;
+    const planningHref = destinationForBrand(action.brandId, `/dashboard/agenda/new?${params.toString()}`);
 
     return (
       <article key={action.key} className="relative overflow-hidden rounded-xl border bg-white/60 p-4 transition active:scale-[0.995] hover:border-[var(--tr1-orange)] hover:bg-white">
@@ -338,7 +343,7 @@ export function AgentMultibrandOverview({
           <h2 id="day-reports-title" className="text-lg font-semibold">Comptes rendus à terminer</h2>
           <div className="grid gap-3 sm:grid-cols-2">
             {day.reports.map((report) => (
-              <Link key={report.id} href={`/dashboard/missions/${report.mission_id}`} className="block touch-manipulation rounded-xl border bg-white/60 p-4 transition active:scale-[0.995] hover:bg-white focus-visible:ring-2">
+              <Link key={report.id} href={destinationForBrand(report.brand_id, `/dashboard/missions/${report.mission_id}`)} className="block touch-manipulation rounded-xl border bg-white/60 p-4 transition active:scale-[0.995] hover:bg-white focus-visible:ring-2">
                 <BrandBadge name={report.brand_name} />
                 <p className="mt-2 text-base font-semibold">{report.pharmacy_name}</p>
                 <p className="mt-1 text-sm text-muted-foreground">{presentationText(report.title)} · {presentationLabel(report.report_status)}</p>
@@ -354,7 +359,7 @@ export function AgentMultibrandOverview({
           <h2 id="day-missions-title" className="text-lg font-semibold">Missions du jour</h2>
           <div className="grid gap-3 sm:grid-cols-2">
             {day.missions.map((mission) => (
-              <Link key={mission.id} href={`/dashboard/missions/${mission.id}`} className="touch-manipulation rounded-xl border bg-white/60 p-4 transition active:scale-[0.995] hover:bg-white focus-visible:ring-2">
+              <Link key={mission.id} href={destinationForBrand(mission.brand_id, `/dashboard/missions/${mission.id}`)} className="touch-manipulation rounded-xl border bg-white/60 p-4 transition active:scale-[0.995] hover:bg-white focus-visible:ring-2">
                 <BrandBadge name={mission.brand_name} />
                 <p className="mt-2 text-base font-semibold">{presentationText(mission.title)}</p>
                 <p className="mt-1 text-sm text-muted-foreground">{formatTime(mission.scheduled_start_at)} · {mission.pharmacy_name}</p>
