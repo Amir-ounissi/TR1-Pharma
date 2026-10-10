@@ -103,6 +103,8 @@ export function useLocalOrderDraft<T extends OrderLine>({
   const [restored, setRestored] = useState(false);
 
   useEffect(() => {
+    // Defer restored state until after hydration; avoid synchronous cascading renders.
+    const timer = window.setTimeout(() => {
     let recovered = false;
     try {
       const raw = window.sessionStorage.getItem(key);
@@ -118,7 +120,7 @@ export function useLocalOrderDraft<T extends OrderLine>({
               .map((line) => normalizeLine(line, validProducts, mode))
               .filter((line): line is PersistedLine => line !== null);
             if (normalized.length) {
-              setLines(normalized as T[]);
+              setLines(normalized as unknown as T[]);
               if (typeof draft.orderType === "string" && ORDER_TYPES.has(draft.orderType)) {
                 setOrderType(draft.orderType);
               }
@@ -132,6 +134,8 @@ export function useLocalOrderDraft<T extends OrderLine>({
     }
     setRestored(recovered);
     setActiveKey(key);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [key, idsKey, mode, setLines, setOrderType]);
 
   useEffect(() => {
@@ -144,7 +148,7 @@ export function useLocalOrderDraft<T extends OrderLine>({
           version: 1,
           savedAt: Date.now(),
           orderType,
-          lines: lines.slice(0, 100) as PersistedLine[],
+          lines: lines.slice(0, 100) as unknown as PersistedLine[],
         };
         window.sessionStorage.setItem(key, JSON.stringify(draft));
       }
