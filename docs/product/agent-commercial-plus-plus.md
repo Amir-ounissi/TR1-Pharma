@@ -25,7 +25,7 @@ Trois liens à coordonner :
 
 **Accueil : Mon cockpit** est l'entrée principale de l'agent terrain, sur mobile et desktop.
 
-- **Aujourd'hui** : visites, relances urgentes, commandes à terminer, missions en attente de réponse/rapport, alertes de réassort ; consolidation multimarque explicite.
+- **Aujourd'hui** : visites et relances de toutes les marques autorisées, commandes à terminer, missions en attente de réponse/rapport, alertes de réassort ; consolidation multimarque explicite. Les liens vers une autre marque activent son contexte après vérification d'accès.
 - **Commercial** : pharmacies, agenda, commandes, produits et conditions, performances **avec filtre de marque**.
 - **Interventions** : animations/formation, intervenants, documents, calendrier, preuves, sell-out, coûts et statut de facturation.
 - **Mes revenus** (à construire) : contrats marques (forfait + commission, implantation/réassort, prestations), commissions dues, coût des intervenants, facturation et rentabilité par marque.
@@ -56,7 +56,7 @@ Pour les premières itérations, conserver les routes et permissions existantes 
 
 ### P1 — Flux de travail personnel
 
-1. **Cockpit** : actions fréquentes immédiatement visibles et navigation terrain prioritaire, sans nouvel écran inutile. *Premier changement dans cette branche.*
+1. **Cockpit** : actions fréquentes immédiatement visibles, navigation terrain prioritaire, résumé des visites/priorités sur toutes les marques autorisées et CA commandé HT séparé par marque. *Première version dans cette branche.*
 2. **Missions** : demande d'animation ou formation, affectation, acceptation, rapport, preuve, sell-out, facture prestataire.
 3. **Prestations de l'agent** : référentiel marque/contrat/territoire/conditions. Examiner la PR #308 sans la merger telle quelle.
 4. **Revenus** : séparer CA des marques, commissions TR1, montants facturables et coûts externes. Conserver des taux historisés pour éviter de recalculer le passé avec les nouveaux tarifs.
@@ -88,4 +88,4 @@ Pour les premières itérations, conserver les routes et permissions existantes 
 
 ## Limites de ce premier changement
 
-Cette branche ne touche **ni à la base Supabase ni aux workflows Vercel**, aux droits, au tarifage ou au connecteur ChatGPT. Elle recentre l'entrée terrain et sa navigation. L'intégration en production reste soumise aux tests GitHub CI, aux contrôles P0 et à une release explicitement autorisée.
+Cette branche ne touche **ni à la base Supabase ni aux workflows Vercel**, aux droits, au tarifage ou au connecteur ChatGPT. Elle recentre l'entrée terrain, affiche les activités de toutes les marques dont l'agent a le rôle approprié, et présente le CA commandé HT mensuel par marque avec un filtrage serveur explicite. Les changements de contexte utilisent les routes existantes avec vérification de l'appartenance ; aucune commission n'est extrapolée à partir du CA. L'intégration en production reste soumise aux tests GitHub CI, aux contrôles P0 et à une release explicitement autorisée.
