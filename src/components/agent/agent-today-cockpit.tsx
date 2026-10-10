@@ -42,6 +42,9 @@ export function AgentTodayCockpit({
   targetSource,
   pendingVisitCount,
   plannedVisitCount,
+  priorityCount,
+  missionCount,
+  reportCount,
   firstName,
   dayLabel,
   nextVisit,
@@ -59,6 +62,9 @@ export function AgentTodayCockpit({
   targetSource: "official" | "personal" | null;
   pendingVisitCount: number;
   plannedVisitCount: number;
+  priorityCount: number;
+  missionCount: number;
+  reportCount: number;
   firstName: string;
   dayLabel: string;
   nextVisit: NextVisitFocus;
@@ -86,6 +92,20 @@ export function AgentTodayCockpit({
           </Link>
         ) : null}
       </header>
+
+      <section aria-label="Ma journée multimarque" className="grid grid-cols-2 gap-2 md:grid-cols-4">
+        {[
+          { label: "Visites aujourd'hui", value: plannedVisitCount, href: "/dashboard/agenda" },
+          { label: "Priorités terrain", value: priorityCount, href: "#day-priorities-title" },
+          { label: "Missions du jour", value: missionCount, href: "/dashboard/missions" },
+          { label: "Rapports à terminer", value: reportCount, href: "/dashboard/reports" },
+        ].map((item) => (
+          <div key={item.label} className="rounded-[0.75rem] border border-[var(--tr1-line)] bg-white p-3 sm:p-4">
+            <p className="text-[0.69rem] leading-5 text-muted-foreground">{item.label}</p>
+            <p className="mt-1 text-2xl font-bold tabular-nums text-[var(--tr1-navy)]">{item.value}</p>
+          </div>
+        ))}
+      </section>
 
       {(canCreateOrders || canCoordinateMissions || canUseAssistant) ? (
         <nav aria-label="Actions rapides du cockpit" className="rounded-[0.9rem] border border-[var(--tr1-line)] bg-white px-4 py-4 sm:px-5">
