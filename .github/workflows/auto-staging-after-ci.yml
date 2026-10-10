@@ -32,6 +32,15 @@ jobs:
         run: |
           set -eu
 
+          # workflow_run also fires for retried/older CI runs on main.
+          # Never dispatch staging or production for a SHA that is no longer
+          # the current main tip: its migration set may be obsolete.
+          current_main_sha="$(gh api "/repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
+          if [ "$RELEASE_SHA" != "$current_main_sha" ]; then
+            echo "CI historique $RELEASE_SHA ignorée : main pointe vers $current_main_sha."
+            exit 0
+          fi
+
           dispatch_started="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           gh workflow run release-staging.yml \
             --repo "$GITHUB_REPOSITORY" \
