@@ -395,6 +395,9 @@ export default async function AgentPage() {
         firstName={firstName}
         dayLabel={dayLabel}
         nextVisit={cockpitNextVisit}
+        canCreateOrders={saas.capabilities.has("orders")}
+        canCoordinateMissions={saas.capabilities.has("missions")}
+        canUseAssistant={saas.capabilities.has("assistant_terrain")}
       />
 
       <AgentMultibrandOverview
