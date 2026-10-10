@@ -38,7 +38,7 @@ export function PharmacyListWithPanel({ rows, loadSummaryAction, showOwnershipCo
   const [summaryById, setSummaryById] = useState<Record<string, PharmacySummary | null>>({});
   const [errorById, setErrorById] = useState<Record<string, string | null>>({});
   const inFlight = useRef(new Set<string>());
-  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hoverTimer = useRef<number | null>(null);
 
   useEffect(() => () => {
     if (hoverTimer.current !== null) window.clearTimeout(hoverTimer.current);
