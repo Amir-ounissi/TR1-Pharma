@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
 import { buildPageHref } from "@/lib/pagination";
+import { timedServerRead } from "@/lib/performance/server-read";
 import { formatCurrency } from "@/lib/reference-data";
 import { orderStatusLabel, uiLabel } from "@/lib/ui-copy";
 
@@ -56,8 +57,8 @@ export default async function OrdersPage({ searchParams }: { searchParams: Searc
   if (params.classification === "reorder") query = query.eq("is_reorder", true);
 
   const [workflowSummaryResult, ordersResult] = await Promise.all([
-    workflowSummaryPromise,
-    query.range((page - 1) * pageSize, page * pageSize - 1),
+    timedServerRead("orders", "workflow_summary", workflowSummaryPromise),
+    timedServerRead("orders", "paged_order_list", query.range((page - 1) * pageSize, page * pageSize - 1)),
   ]);
   const workflow = (workflowSummaryResult.data ?? {}) as Record<string, number>;
   const { data: orders, count, error } = ordersResult;
