@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ChevronRight, MapPin } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -37,22 +37,51 @@ export function PharmacyListWithPanel({ rows, loadSummaryAction, showOwnershipCo
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [summaryById, setSummaryById] = useState<Record<string, PharmacySummary | null>>({});
   const [errorById, setErrorById] = useState<Record<string, string | null>>({});
-  const [isPending, startTransition] = useTransition();
+  const inFlight = useRef(new Set<string>());
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (hoverTimer.current !== null) window.clearTimeout(hoverTimer.current);
+  }, []);
 
   const currentSummary = selectedId ? (summaryById[selectedId] ?? null) : null;
   const currentError = selectedId ? (errorById[selectedId] ?? null) : null;
 
+  function requestSummary(brandPharmacyId: string) {
+    if (inFlight.current.has(brandPharmacyId)
+      || Object.prototype.hasOwnProperty.call(summaryById, brandPharmacyId)
+      || Object.prototype.hasOwnProperty.call(errorById, brandPharmacyId)) return;
+
+    inFlight.current.add(brandPharmacyId);
+    void loadSummaryAction(brandPharmacyId)
+      .then((result) => {
+        setSummaryById((current) => ({ ...current, [brandPharmacyId]: result.summary }));
+        setErrorById((current) => ({ ...current, [brandPharmacyId]: result.error }));
+      })
+      .catch(() => {
+        setErrorById((current) => ({ ...current, [brandPharmacyId]: "Résumé temporairement indisponible." }));
+      })
+      .finally(() => { inFlight.current.delete(brandPharmacyId); });
+  }
+
+  function cancelWarmup() {
+    if (hoverTimer.current !== null) window.clearTimeout(hoverTimer.current);
+    hoverTimer.current = null;
+  }
+
+  function warmupSummary(brandPharmacyId: string) {
+    cancelWarmup();
+    hoverTimer.current = window.setTimeout(() => {
+      hoverTimer.current = null;
+      requestSummary(brandPharmacyId);
+    }, 250);
+  }
+
   function openPanel(brandPharmacyId: string) {
+    cancelWarmup();
     setSelectedId(brandPharmacyId);
     setOpen(true);
-    if (Object.prototype.hasOwnProperty.call(summaryById, brandPharmacyId) || Object.prototype.hasOwnProperty.call(errorById, brandPharmacyId)) {
-      return;
-    }
-    startTransition(async () => {
-      const result = await loadSummaryAction(brandPharmacyId);
-      setSummaryById((current) => ({ ...current, [brandPharmacyId]: result.summary }));
-      setErrorById((current) => ({ ...current, [brandPharmacyId]: result.error }));
-    });
+    requestSummary(brandPharmacyId);
   }
 
   return (
@@ -144,6 +173,10 @@ export function PharmacyListWithPanel({ rows, loadSummaryAction, showOwnershipCo
                         <button
                           type="button"
                           onClick={() => openPanel(row.id)}
+                          onPointerEnter={() => warmupSummary(row.id)}
+                          onPointerLeave={cancelWarmup}
+                          onFocus={() => warmupSummary(row.id)}
+                          onBlur={cancelWarmup}
                           className="text-left text-[0.82rem] font-semibold text-[var(--tr1-navy)] underline-offset-4 hover:text-[var(--tr1-orange)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-orange)] focus-visible:ring-offset-2"
                           aria-label={`Ouvrir le résumé rapide de ${pharmacyName}`}
                         >
@@ -171,21 +204,21 @@ export function PharmacyListWithPanel({ rows, loadSummaryAction, showOwnershipCo
                   <TableCell className="px-3 py-2.5 text-[0.72rem] text-[var(--tr1-navy)]">
                     {labels.potentialLevel[row.potential_level as keyof typeof labels.potentialLevel]}
                   </TableCell>
-                  <TableCell className="px-3 py-2.5">
+                  {showOwnershipColumns ? <TableCell className="px-3 py-2.5">
                     {row.agent_name ? (
                       <span className="text-[0.72rem] text-[var(--tr1-navy)]">{row.agent_name}</span>
                     ) : (
                       <span className="text-[0.72rem] text-[var(--tr1-orange)]">Non affecté</span>
                     )}
-                  </TableCell>
-                  <TableCell className="px-3 py-2.5 text-[0.72rem] text-[var(--tr1-navy)]">
+                  </TableCell> : null}
+                  {showOwnershipColumns ? <TableCell className="px-3 py-2.5 text-[0.72rem] text-[var(--tr1-navy)]">
                     <div className="flex items-center justify-between gap-3">
                       <span>{row.territory_name || "—"}</span>
-                      <Button type="button" variant="ghost" size="sm" className="h-7 rounded-md px-2 text-[0.68rem] text-[var(--tr1-navy)] hover:text-[var(--tr1-orange)]" onClick={() => openPanel(row.id)}>
+                      <Button type="button" variant="ghost" size="sm" className="h-7 rounded-md px-2 text-[0.68rem] text-[var(--tr1-navy)] hover:text-[var(--tr1-orange)]" onClick={() => openPanel(row.id)} onPointerEnter={() => warmupSummary(row.id)} onPointerLeave={cancelWarmup} onFocus={() => warmupSummary(row.id)} onBlur={cancelWarmup}>
                         Voir le résumé
                       </Button>
                     </div>
-                  </TableCell>
+                  </TableCell> : null}
                 </TableRow>
               );
             })}
@@ -197,7 +230,7 @@ export function PharmacyListWithPanel({ rows, loadSummaryAction, showOwnershipCo
         open={open}
         onOpenChange={setOpen}
         summary={currentSummary}
-        loading={Boolean(open && selectedId && !currentSummary && !currentError && isPending)}
+        loading={Boolean(open && selectedId && !Object.prototype.hasOwnProperty.call(summaryById, selectedId) && !Object.prototype.hasOwnProperty.call(errorById, selectedId))}
         error={currentError ?? null}
       />
     </>
