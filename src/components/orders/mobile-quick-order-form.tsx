@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, Minus, PackagePlus, Plus, RotateCcw, Search, Trash2, X } from "lucide-react";
 import {
@@ -113,6 +113,8 @@ export function MobileQuickOrderForm({
     initialFreeUnitsRule,
   );
   const [pricingLoading, setPricingLoading] = useState(false);
+  const [pricingError, setPricingError] = useState(false);
+  const pricingRequest = useRef(0);
   const [orderType, setOrderType] = useState(initialOrderType);
   const [initialContextChanged, setInitialContextChanged] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -252,9 +254,12 @@ export function MobileQuickOrderForm({
   }
 
   async function loadPharmacyPricing(pharmacy: OrderPharmacySearchResult) {
+    const requestId = ++pricingRequest.current;
     setPricingLoading(true);
+    setPricingError(false);
     try {
       const pricing = await getOrderPharmacyPricingAction(pharmacy.pharmacyId);
+      if (pricingRequest.current !== requestId) return;
       setDefaultDiscountRate(pricing.discountRate);
       setPotential(pricing.potential);
       setFreeUnitsRule(pricing.freeUnitsRule);
@@ -266,8 +271,11 @@ export function MobileQuickOrderForm({
           freeQuantity: freeQuantityFor(line.quantity, pricing.freeUnitsRule),
         })),
       );
+    } catch {
+      if (pricingRequest.current !== requestId) return;
+      setPricingError(true);
     } finally {
-      setPricingLoading(false);
+      if (pricingRequest.current === requestId) setPricingLoading(false);
     }
   }
 
@@ -286,6 +294,14 @@ export function MobileQuickOrderForm({
             mobile
             initialPharmacy={initialPharmacy}
             onSelectionChange={(changed, pharmacy) => {
+              pricingRequest.current += 1;
+              setPricingLoading(false);
+              setPricingError(false);
+              if (!pharmacy || changed) {
+                setDefaultDiscountRate(null);
+                setPotential(null);
+                setFreeUnitsRule(null);
+              }
               setDraftPharmacyId(pharmacy?.brandPharmacyId ?? pharmacy?.pharmacyId ?? "unselected");
               setInitialContextChanged(changed);
               if (!pharmacy) {
@@ -332,6 +348,7 @@ export function MobileQuickOrderForm({
               </>
             )}
           </div>
+          {pricingError ? <p role="alert" className="mt-2 text-xs text-destructive">Conditions client indisponibles : vérifiez les remises et unités gratuites avant de valider.</p> : null}
         </div>
 
         <section className="space-y-3">
