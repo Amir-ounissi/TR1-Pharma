@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { oauthConsentReturn } from "@/lib/connectors/chatgpt-oauth-return";
 import { z } from "zod";
 import { shouldBlockLocalFixtureAccount } from "@/lib/auth/local-fixture-guard";
 import { resolveLoginDestination } from "@/lib/auth/resolve-login-destination";
@@ -33,5 +34,5 @@ export async function loginAction(
   if (error || !signInData.user) return { error: "Connexion impossible. Vérifiez vos identifiants." };
 
   const destination = await resolveLoginDestination(supabase, signInData.user.id);
-  redirect(destination);
+  redirect(oauthConsentReturn(formData.get("returnTo")) ?? destination);
 }

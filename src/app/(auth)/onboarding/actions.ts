@@ -87,15 +87,36 @@ export async function completeOnboardingAction(
     }
   }
 
-  const { error } = await supabase
+  // An authenticated user may exist before a profile row is provisioned (notably
+  // in isolated staging). An UPDATE with zero affected rows is not an error in
+  // PostgREST, so checking the returned row prevents an endless onboarding loop.
+  const completedAt = new Date().toISOString();
+  const profileValues = {
+    full_name: profile.data.fullName,
+    onboarding_completed_at: completedAt,
+  };
+  const { data: updatedProfile, error: updateError } = await supabase
     .from("user_profiles")
-    .update({
-      full_name: profile.data.fullName,
-      onboarding_completed_at: new Date().toISOString(),
-    })
-    .eq("user_id", userId);
+    .update(profileValues)
+    .eq("user_id", userId)
+    .select("user_id")
+    .maybeSingle();
 
-  if (error) return { error: "Le profil n’a pas pu être enregistré." };
+  if (updateError) {
+    return { error: "Le profil n’a pas pu être enregistré. Réessayez." };
+  }
+
+  if (!updatedProfile) {
+    // Only the verified owner of this session may complete its missing profile.
+    // INSERT is deliberately not exposed to the normal authenticated role by RLS.
+    const admin = createAdminClient();
+    const { error: createError } = await admin
+      .from("user_profiles")
+      .upsert({ user_id: userId, ...profileValues }, { onConflict: "user_id" });
+    if (createError) {
+      return { error: "Impossible de créer votre profil. Réessayez." };
+    }
+  }
 
   if (!user.invited_at && user.user_metadata?.requested_profile_type === "brand") {
     redirect("/setup");

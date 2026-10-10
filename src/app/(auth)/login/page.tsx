@@ -1,9 +1,10 @@
 import Link from "next/link";
+import { oauthConsentReturn } from "@/lib/connectors/chatgpt-oauth-return";
 import { ArrowRight, LockKeyhole } from "lucide-react";
 import { LoginForm } from "@/components/auth/login-form";
 import { Card, CardContent } from "@/components/ui/card";
 
-type SearchParams = Promise<{ oauth?: string; password?: string }>;
+type SearchParams = Promise<{ oauth?: string; password?: string; returnTo?: string }>;
 
 const oauthMessages: Record<string, string> = {
   google_unavailable: "La connexion Google n’est pas encore disponible sur cet environnement.",
@@ -14,7 +15,7 @@ const oauthMessages: Record<string, string> = {
 };
 
 export default async function LoginPage({ searchParams }: { searchParams: SearchParams }) {
-  const { oauth, password } = await searchParams;
+  const { oauth, password, returnTo } = await searchParams;
   const oauthError = oauth ? oauthMessages[oauth] ?? "La connexion Google a échoué." : null;
   const passwordUpdated = password === "updated";
 
@@ -50,7 +51,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
             <h2 className="mt-3 text-2xl font-black tracking-[-.05em]">Accédez à votre espace.</h2>
           </div>
           <div className="bg-[#fffefa] px-6 py-7 sm:px-8">
-            <LoginForm oauthError={oauthError} passwordUpdated={passwordUpdated} />
+            <LoginForm oauthError={oauthError} passwordUpdated={passwordUpdated} returnTo={oauthConsentReturn(returnTo)} />
           </div>
         </CardContent>
       </Card>

@@ -11,9 +11,11 @@ import { Label } from "@/components/ui/label";
 export function LoginForm({
   oauthError,
   passwordUpdated = false,
+  returnTo = null,
 }: {
   oauthError?: string | null;
   passwordUpdated?: boolean;
+  returnTo?: string | null;
 }) {
   const [state, action, pending] = useActionState(loginAction, {});
 
@@ -36,7 +38,7 @@ export function LoginForm({
         variant="outline"
         className="h-12 w-full rounded-xl border-[#d8d0c2] bg-white text-sm font-black text-[#0b1e32] shadow-none hover:border-[#0b1e32]/25 hover:bg-[#f9f6ef]"
       >
-        <Link href="/api/auth/google">
+        <Link href={returnTo ? "/api/auth/google?returnTo=" + encodeURIComponent(returnTo) : "/api/auth/google"}>
           <span className="grid size-6 place-items-center rounded-full border border-[#0b1e32]/10 bg-white text-xs font-black">G</span>
           Continuer avec Google
         </Link>
@@ -49,6 +51,7 @@ export function LoginForm({
       </div>
 
       <form action={action} className="space-y-5">
+        {returnTo ? <input type="hidden" name="returnTo" value={returnTo} /> : null}
         {state.error ? (
           <Alert variant="destructive" className="border-[#d95034]/35 bg-[#fff1ec] text-[#8f2e19]">
             <AlertDescription>{state.error}</AlertDescription>
