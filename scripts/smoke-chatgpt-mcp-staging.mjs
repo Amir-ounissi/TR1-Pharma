@@ -71,4 +71,25 @@ console.log("PASS no read-data over GET");
 
 await get(new URL("/.well-known/oauth-protected-resource/api/connectors/chatgpt/mcp", resource), 200);
 console.log("PASS path-scoped OAuth metadata");
+// OAuth Server is a separately administered Supabase Cloud feature.
+// Its absence is a staging setup blocker, not a failure of the isolated MCP transport.
+const issuerDiscovery = "https://ehptapmuzckazyxmnmnm.supabase.co/.well-known/oauth-authorization-server/auth/v1";
+try {
+  const authResponse = await fetch(issuerDiscovery, { signal: AbortSignal.timeout(12000), redirect: "manual" });
+  if (authResponse.ok) {
+    const authMetadata = await authResponse.json();
+    const methods = authMetadata.code_challenge_methods_supported ?? [];
+    if (authMetadata.issuer === "https://ehptapmuzckazyxmnmnm.supabase.co/auth/v1" &&
+        authMetadata.authorization_endpoint && authMetadata.token_endpoint &&
+        methods.includes("S256")) {
+      console.log("SUPABASE_OAUTH_DISCOVERY=READY (Authorization Code + PKCE S256 advertised)");
+    } else {
+      console.log("SUPABASE_OAUTH_DISCOVERY=INCOMPLETE (inspect issuer and PKCE metadata)");
+    }
+  } else {
+    console.log(`SUPABASE_OAUTH_DISCOVERY=NOT_READY (HTTP ${authResponse.status}; enable Cloud OAuth 2.1 Server on staging)`);
+  }
+} catch (error) {
+  console.log(`SUPABASE_OAUTH_DISCOVERY=UNVERIFIED (${error instanceof Error ? error.name : "network error"})`);
+}
 console.log("TR1 MCP staging smoke complete — NO business user token and NO customer data accessed.");
