@@ -172,10 +172,14 @@ export async function POST(request: Request) {
   if (method === "tools/list") return rpcResult(id, { tools: [brandsTool, searchTool, summaryTool] });
   if (method !== "tools/call") return rpcError(id, -32601, "Unknown MCP method");
 
+  // MCP clients may include protocol metadata (_meta) alongside the tool name
+  // and arguments. Ignore such transport metadata instead of rejecting valid
+  // tools/call requests. Tool arguments remain strictly validated below.
   const params = z.object({
     name: z.enum([brandsTool.name, searchTool.name, summaryTool.name]),
     arguments: z.unknown().optional(),
-  }).strict().safeParse(parsed.data.params);
+    _meta: z.record(z.string(), z.unknown()).optional(),
+  }).strip().safeParse(parsed.data.params);
   if (!params.success) return rpcError(id, -32602, "Invalid tool parameters");
   const searchArgs = params.data.name === searchTool.name
     ? argsSchema.safeParse(params.data.arguments)
