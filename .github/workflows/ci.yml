@@ -56,6 +56,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run release:check:local
+      - name: Contrat HTTP MCP sur staging isolé
+        if: github.event_name == 'pull_request' && github.head_ref == 'feat/chatgpt-connector-readonly'
+        run: node scripts/smoke-chatgpt-mcp-staging.mjs
       - name: Audit complet (exception temporaire braces non corrigé)
         run: node scripts/check-npm-security.mjs
       - name: Audit runtime
