@@ -26,8 +26,15 @@ export function NetworkMap({ dataset }: { dataset: NetworkMapDataset }) {
     [dataset.pharmacies, selectedPharmacyId],
   );
   const hasPharmacies = dataset.pharmacies.length > 0;
-  const activePharmacies = dataset.pharmacies.filter((pharmacy) => pharmacy.commercialStatus === "active" || pharmacy.commercialStatus === "implanted").length;
-  const activeAnimations = dataset.pharmacies.filter((pharmacy) => pharmacy.signals.animationsInPeriod > 0).length;
+  const { activePharmacies, activeAnimations } = useMemo(() => {
+    let activePharmacies = 0;
+    let activeAnimations = 0;
+    for (const pharmacy of dataset.pharmacies) {
+      if (pharmacy.commercialStatus === "active" || pharmacy.commercialStatus === "implanted") activePharmacies++;
+      if (pharmacy.signals.animationsInPeriod > 0) activeAnimations++;
+    }
+    return { activePharmacies, activeAnimations };
+  }, [dataset.pharmacies]);
   const coverageLabel = dataset.summary.activeActors > 0 ? `${dataset.summary.activeActors} acteurs` : "—";
 
   return (
