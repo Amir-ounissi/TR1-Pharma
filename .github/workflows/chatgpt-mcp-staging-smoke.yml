@@ -1,0 +1,25 @@
+name: TR1 ChatGPT MCP staging smoke
+
+on:
+  push:
+    branches:
+      - feat/chatgpt-connector-readonly
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mcp-smoke:
+    name: MCP HTTPS discovery and authorization boundary
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+      - name: Verify public MCP transport and reject unauthorized access
+        env:
+          TR1_MCP_SMOKE_URL: https://tr1-chatgpt-mcp-staging.vercel.app/api/connectors/chatgpt/mcp
+        run: node scripts/smoke-chatgpt-mcp-staging.mjs
