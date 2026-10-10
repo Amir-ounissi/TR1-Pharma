@@ -96,6 +96,31 @@ describe("TR1 authenticated MCP endpoint", () => {
     expect(fake.createClient).not.toHaveBeenCalled();
   });
 
+  it("accepts standard MCP tools/call transport metadata", async () => {
+    fake.rpc.mockResolvedValueOnce({
+      data: [{ brand_id: brandId, brand_name: "Naali Démo", brand_slug: "naali-demo" }],
+      error: null,
+    });
+    const response = await POST(request("tools/call", {
+      name: "list_tr1_brands",
+      arguments: {},
+      _meta: { progressToken: 3, "com.openai/request_id": "test-trace" },
+    }, "oauth-token"));
+    expect(response.status).toBe(200);
+    expect((await response.json()).result.structuredContent.brands[0].brand_name).toBe("Naali Démo");
+  });
+
+  it("keeps tool argument schemas strict even if MCP transport carries metadata", async () => {
+    const response = await POST(request("tools/call", {
+      name: "search_tr1_pharmacies",
+      arguments: { ...toolParams.arguments, unexpected: "not-allowed" },
+      _meta: { progressToken: 3 },
+    }, "oauth-token"));
+    expect(response.status).toBe(200);
+    expect((await response.json()).error.message).toBe("Invalid search parameters");
+    expect(fake.rpc).not.toHaveBeenCalled();
+  });
+
   it("rejects a normal Supabase session without OAuth client binding", async () => {
     fake.getClaims.mockResolvedValueOnce({ data: { claims: {
       sub: "user-1", role: "authenticated",
