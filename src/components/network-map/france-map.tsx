@@ -50,7 +50,16 @@ export function FranceMap({
   onSelectActor: (actorKey: string | null) => void;
   onSelectPharmacy: (pharmacyId: string) => void;
 }) {
-  const geoCoded = pharmacies.filter((pharmacy) => pharmacy.latitude != null && pharmacy.longitude != null);
+  // Keep derived coordinates stable across marker selection and layer toggles.
+  // Otherwise every render reprojects all department outlines and pharmacies.
+  const geoCoded = useMemo(
+    () => pharmacies.filter((pharmacy) => pharmacy.latitude != null && pharmacy.longitude != null),
+    [pharmacies],
+  );
+  const hasApproximateLocations = useMemo(
+    () => pharmacies.some((pharmacy) => pharmacy.locationPrecision !== "exact"),
+    [pharmacies],
+  );
   const viewport = useMemo(
     () => buildProjectionViewport(
       geoCoded.map((pharmacy) => ({ latitude: pharmacy.latitude!, longitude: pharmacy.longitude! })),
@@ -128,7 +137,7 @@ export function FranceMap({
 
   return (
     <div className="relative flex h-[calc(100dvh-17.5rem)] min-h-[28rem] flex-1 items-center justify-center overflow-hidden rounded-2xl border border-[var(--tr1-line-strong)] bg-[#fdf8f1] p-1.5 md:h-auto md:min-h-[34rem] md:p-2">
-      {pharmacies.some((pharmacy) => pharmacy.locationPrecision !== "exact") ? (
+      {hasApproximateLocations ? (
         <div className="pointer-events-none absolute left-3 top-3 z-20 max-w-[calc(100%-1.5rem)] rounded-full border border-amber-200 bg-amber-50/95 px-2.5 py-1 text-[0.6rem] font-semibold text-amber-800 shadow-sm">
           Certaines positions restent approximatives
         </div>
