@@ -26,8 +26,17 @@ function formData(password = "InviteTR1!2026", confirmPassword = password) {
   return data;
 }
 
-function profileTable() {
-  const query = { eq: vi.fn(async () => ({ error: null })) };
+function profileTable(missing = false) {
+  const query = {
+    eq: vi.fn(),
+    select: vi.fn(),
+    maybeSingle: vi.fn(async () => ({
+      data: missing ? null : { user_id: "profile-owner" },
+      error: null,
+    })),
+  };
+  query.eq.mockReturnValue(query);
+  query.select.mockReturnValue(query);
   return { update: vi.fn(() => query), query };
 }
 
@@ -63,11 +72,13 @@ function adminMembershipTable() {
 function makeSupabase({
   user,
   memberships = [],
+  missingProfile = false,
 }: {
   user: typeof invitedUser | { id: string; invited_at: null; user_metadata?: Record<string, string> };
   memberships?: Array<{ id: string; status: "invited" | "active" }>;
+  missingProfile?: boolean;
 }) {
-  const profile = profileTable();
+  const profile = profileTable(missingProfile);
   const membership = membershipTable(memberships);
   const updateUser = vi.fn(async () => ({ error: null }));
   const from = vi.fn((table: string) => {
@@ -92,14 +103,19 @@ function makeSupabase({
 
 function makeAdmin() {
   const membership = adminMembershipTable();
+  const profile = {
+    upsert: vi.fn(async () => ({ error: null })),
+  };
   return {
     client: {
       from: vi.fn((table: string) => {
         if (table === "memberships") return membership;
+        if (table === "user_profiles") return profile;
         throw new Error(`unexpected admin table ${table}`);
       }),
     },
     membership,
+    profile,
   };
 }
 
@@ -174,6 +190,54 @@ describe("completeOnboardingAction", () => {
     expect(mocks.createAdminClient).not.toHaveBeenCalled();
     expect(ctx.profile.update).toHaveBeenCalledOnce();
     expect(mocks.redirect).toHaveBeenCalledWith("/select-brand");
+  });
+
+  it("creates a missing profile rather than looping back to onboarding", async () => {
+    const newUser = {
+      id: "00000000-0000-4000-8000-000000000009",
+      invited_at: null,
+    };
+    const ctx = makeSupabase({ user: newUser, missingProfile: true });
+    const admin = makeAdmin();
+    mocks.createAdminClient.mockReturnValue(admin.client);
+    mocks.requireUser.mockResolvedValue({
+      userId: newUser.id,
+      supabase: ctx.supabase,
+    });
+
+    await expect(completeOnboardingAction({}, formData())).rejects.toThrow("redirect");
+
+    expect(ctx.profile.query.maybeSingle).toHaveBeenCalledOnce();
+    expect(admin.client.from).toHaveBeenCalledWith("user_profiles");
+    expect(admin.profile.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        user_id: newUser.id,
+        full_name: "Marie Invitée",
+        onboarding_completed_at: expect.any(String),
+      }),
+      { onConflict: "user_id" },
+    );
+    expect(mocks.redirect).toHaveBeenCalledWith("/select-brand");
+  });
+
+  it("shows an error instead of redirecting when a missing profile cannot be created", async () => {
+    const newUser = {
+      id: "00000000-0000-4000-8000-000000000009",
+      invited_at: null,
+    };
+    const ctx = makeSupabase({ user: newUser, missingProfile: true });
+    const admin = makeAdmin();
+    admin.profile.upsert.mockResolvedValue({ error: { message: "database unavailable" } });
+    mocks.createAdminClient.mockReturnValue(admin.client);
+    mocks.requireUser.mockResolvedValue({
+      userId: newUser.id,
+      supabase: ctx.supabase,
+    });
+
+    await expect(completeOnboardingAction({}, formData())).resolves.toEqual({
+      error: "Impossible de créer votre profil. Réessayez.",
+    });
+    expect(mocks.redirect).not.toHaveBeenCalled();
   });
 
   it("does not complete the profile when no tenant invitation exists", async () => {
