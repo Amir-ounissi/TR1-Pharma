@@ -197,7 +197,7 @@ password_requirements = "lower_upper_letters_digits"
 # Isolated OAuth role is applied only to explicitly registered MCP clients.
 [auth.hook.custom_access_token]
 enabled = true
-uri = "pg-functions://postgres/private/tr1_chatgpt_oauth_token_hook"
+uri = "pg-functions://postgres/public/tr1_chatgpt_oauth_hook"
 
 [auth.rate_limit]
 # Number of emails that can be sent per hour. Requires auth.email.smtp to be enabled.
