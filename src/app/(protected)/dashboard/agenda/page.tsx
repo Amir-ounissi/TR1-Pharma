@@ -6,7 +6,7 @@ import {
 import { getBrandContexts, requireCompletedOnboarding } from "@/lib/auth";
 import { addCalendarDays, mondayOfWeek, parseCalendarDate, todayInParis } from "@/lib/agenda";
 
-export default async function AgendaPage({ searchParams }:{ searchParams:Promise<{date?:string;view?:string}> }) {
+export default async function AgendaPage({ searchParams }:{ searchParams:Promise<{date?:string;view?:string;create?:string}> }) {
   const [params, { supabase }, contexts] = await Promise.all([
     searchParams,
     requireCompletedOnboarding(),
@@ -58,6 +58,7 @@ export default async function AgendaPage({ searchParams }:{ searchParams:Promise
       backlog={(backlog ?? []) as BacklogItem[]}
       brands={contexts.map(({ id, name }) => ({ id, name }))}
       canCreateVisit={contexts.some((context) => context.role === "agent")}
+      initialCreateVisit={params.create === "visit" && contexts.some((context) => context.role === "agent")}
     />
   );
 }

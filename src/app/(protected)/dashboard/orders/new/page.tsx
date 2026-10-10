@@ -18,7 +18,7 @@ export default async function NewOrderPage({
   searchParams: SearchParams;
 }) {
   const { pharmacy, product } = await searchParams;
-  const { supabase, brand } = await requireActiveBrand();
+  const { supabase, brand, userId } = await requireActiveBrand();
   const contexts = await getBrandContexts();
   const role =
     contexts.find((context) => context.id === brand.id)?.role ??
@@ -141,6 +141,7 @@ export default async function NewOrderPage({
     : undefined;
 
   const sharedOrderProps = {
+    draftScope: `${userId}:${brand.id}`,
     products: productOptions,
     initialPharmacy,
     lastOrderItems,

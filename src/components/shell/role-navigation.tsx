@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { NavigationIcon } from "@/components/shell/navigation-icons";
 import type { SaasCapability } from "@/lib/saas/capabilities";
@@ -62,15 +62,12 @@ export function RoleNavigation({
                   )}
                   href={item.href}
                   key={item.href}
-                  prefetch={false}
                   onPointerEnter={warmRoute}
                   onPointerDown={warmRoute}
                   onFocus={warmRoute}
                   onClick={onNavigate}
                 >
-                  {active ? <span aria-hidden="true" className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-[var(--tr1-orange)]" /> : null}
-                  <NavigationIcon className={cn("size-[1.05rem] shrink-0", active ? "text-[var(--tr1-orange)]" : "text-sidebar-foreground/48 group-hover:text-sidebar-foreground/82")} name={item.icon} />
-                  <span className="truncate">{item.label}</span>
+                  <DesktopNavLinkContent active={active} icon={item.icon} label={item.label} />
                 </Link>
               );
             })}
@@ -78,5 +75,18 @@ export function RoleNavigation({
         </section>
       ))}
     </nav>
+  );
+}
+
+function DesktopNavLinkContent({ active, icon, label }: { active: boolean; icon: string; label: string }) {
+  const { pending } = useLinkStatus();
+
+  return (
+    <>
+      {(active || pending) ? <span aria-hidden="true" className={cn("absolute inset-y-2 left-0 w-0.5 rounded-full bg-[var(--tr1-orange)]", pending && "animate-pulse")} /> : null}
+      <NavigationIcon className={cn("size-[1.05rem] shrink-0", active ? "text-[var(--tr1-orange)]" : "text-sidebar-foreground/48 group-hover:text-sidebar-foreground/82", pending && "animate-pulse text-[var(--tr1-orange)]")} name={icon} />
+      <span className={cn("truncate", pending && "text-white")}>{label}</span>
+      {pending ? <span role="status" className="sr-only">Chargement de la page</span> : null}
+    </>
   );
 }

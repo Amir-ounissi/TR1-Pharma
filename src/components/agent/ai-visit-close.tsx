@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
@@ -13,7 +13,6 @@ import {
 import {
   analyzeVisitCloseAction,
   completeVisitWithAssistantAction,
-  getVisitCloseAvailabilityAction,
 } from "@/app/(protected)/dashboard/pharmacies/visit-close-ai-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -83,10 +82,11 @@ function nextVisitLabel(value: NextVisit, customNext: string) {
   return NEXT_VISITS.find(([item]) => item === value)?.[1] ?? "Pas de prochain passage";
 }
 
-export function AiVisitClose({ brandPharmacyId }: { brandPharmacyId: string }) {
+export function AiVisitClose({ brandPharmacyId, activeVisitId }: { brandPharmacyId: string; activeVisitId?: string | null }) {
   const router = useRouter();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [visitId, setVisitId] = useState<string | null>(null);
+  const [completedVisitId, setCompletedVisitId] = useState<string | null>(null);
+  const visitId = activeVisitId && activeVisitId !== completedVisitId ? activeVisitId : null;
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState("");
   const [outcome, setOutcome] = useState<Outcome>("no_order");
@@ -95,7 +95,6 @@ export function AiVisitClose({ brandPharmacyId }: { brandPharmacyId: string }) {
   const [summary, setSummary] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [lastAnalyzedNote, setLastAnalyzedNote] = useState("");
-  const [checking, setChecking] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [dictating, setDictating] = useState(false);
@@ -103,19 +102,7 @@ export function AiVisitClose({ brandPharmacyId }: { brandPharmacyId: string }) {
   const [showDetails, setShowDetails] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    void getVisitCloseAvailabilityAction(brandPharmacyId).then((result) => {
-      if (cancelled) return;
-      setVisitId(result.active ? result.visitId ?? null : null);
-      setChecking(false);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [brandPharmacyId]);
-
-  if (checking || !visitId) return null;
+  if (!visitId) return null;
 
   const normalizedNote = note.trim();
   const aiDraftCurrent = Boolean(summary && normalizedNote && normalizedNote === lastAnalyzedNote);
@@ -212,7 +199,7 @@ export function AiVisitClose({ brandPharmacyId }: { brandPharmacyId: string }) {
       return;
     }
 
-    setVisitId(null);
+    setCompletedVisitId(visitId);
     setOpen(false);
     router.refresh();
   }

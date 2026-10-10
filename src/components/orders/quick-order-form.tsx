@@ -1,14 +1,16 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useMemo, useRef, useState } from "react";
 import { Check, Minus, PackagePlus, Plus, RotateCcw, Search, X } from "lucide-react";
 import {
   createOrderAction,
-  searchOrderPharmaciesAction,
   type OrderPharmacySearchResult,
 } from "@/app/(protected)/dashboard/orders/actions";
 import { getOrderPharmacyPricingAction } from "@/app/(protected)/dashboard/orders/pricing-actions";
 import { ActionFeedback } from "@/components/reference/action-feedback";
+import { OrderPharmacyAutocomplete } from "@/components/orders/order-pharmacy-autocomplete";
+import { useLocalOrderDraft } from "@/components/orders/use-local-order-draft";
+import { OrderSubmittingStatus } from "@/components/orders/order-submitting-status";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -91,104 +93,6 @@ function freeQuantityFor(quantity: number, rule: FreeUnitsRule | null) {
   return Math.floor(quantity / rule.paidQuantity) * rule.freeQuantity;
 }
 
-function PharmacyAutocomplete({
-  initialPharmacy,
-  onSelectionChange,
-}: {
-  initialPharmacy?: OrderPharmacySearchResult;
-  onSelectionChange: (
-    changedFromInitial: boolean,
-    pharmacy?: OrderPharmacySearchResult,
-  ) => void;
-}) {
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<OrderPharmacySearchResult[]>([]);
-  const [selected, setSelected] = useState<OrderPharmacySearchResult | undefined>(
-    initialPharmacy,
-  );
-  const [loading, setLoading] = useState(false);
-
-  async function search(value: string) {
-    setQuery(value);
-    if (value.trim().length < 2) {
-      setResults([]);
-      return;
-    }
-    setLoading(true);
-    try {
-      setResults(await searchOrderPharmaciesAction(value));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <div className="space-y-2">
-      <Label htmlFor="quick-order-pharmacy">Pharmacie</Label>
-      <Input
-        id="quick-order-pharmacy"
-        value={selected ? selected.name : query}
-        placeholder="Nom, ville, CIP ou SIRET…"
-        autoComplete="off"
-        onChange={(event) => {
-          if (selected) onSelectionChange(Boolean(initialPharmacy), undefined);
-          setSelected(undefined);
-          void search(event.target.value);
-        }}
-      />
-      <input
-        type="hidden"
-        name="brandPharmacyId"
-        value={selected?.brandPharmacyId ?? ""}
-      />
-      <input
-        type="hidden"
-        name="pharmacyId"
-        value={selected?.brandPharmacyId ? "" : selected?.pharmacyId ?? ""}
-      />
-      {selected ? (
-        <p className="text-xs text-muted-foreground">
-          {selected.detail}
-          {selected.relationStatus === "existing_brand_relation"
-            ? " · Déjà cliente"
-            : " · Nouvelle pour la marque"}
-        </p>
-      ) : null}
-      {!selected && results.length ? (
-        <div className="max-h-56 overflow-auto rounded-xl border bg-popover p-1 shadow-sm">
-          {results.map((result) => (
-            <button
-              key={result.pharmacyId}
-              type="button"
-              className="block w-full rounded-lg px-3 py-2.5 text-left text-sm hover:bg-muted"
-              onClick={() => {
-                setSelected(result);
-                setQuery("");
-                setResults([]);
-                onSelectionChange(
-                  Boolean(
-                    initialPharmacy &&
-                      result.brandPharmacyId !== initialPharmacy.brandPharmacyId,
-                  ),
-                  result,
-                );
-              }}
-            >
-              <span className="font-semibold">{result.name}</span>
-              <span className="block text-xs text-muted-foreground">
-                {result.detail}
-              </span>
-            </button>
-          ))}
-        </div>
-      ) : null}
-      {loading ? (
-        <p className="text-xs text-muted-foreground">Recherche…</p>
-      ) : null}
-    </div>
-  );
-}
-
 export function QuickOrderForm({
   products,
   initialPharmacy,
@@ -199,6 +103,7 @@ export function QuickOrderForm({
   initialPotential = null,
   initialFreeUnitsRule = null,
   isAgent = false,
+  draftScope,
 }: {
   products: ProductOption[];
   initialPharmacy?: OrderPharmacySearchResult;
@@ -209,6 +114,7 @@ export function QuickOrderForm({
   initialPotential?: string | null;
   initialFreeUnitsRule?: FreeUnitsRule | null;
   isAgent?: boolean;
+  draftScope: string;
 }) {
   const [state, action, pending] = useActionState(createOrderAction, {});
   const initialProduct = products.find((product) => product.id === initialProductId);
@@ -221,6 +127,8 @@ export function QuickOrderForm({
     initialFreeUnitsRule,
   );
   const [pricingLoading, setPricingLoading] = useState(false);
+  const [pricingError, setPricingError] = useState(false);
+  const pricingRequest = useRef(0);
   const [lines, setLines] = useState<DraftLine[]>(() => [
     {
       key: "line-1",
@@ -245,6 +153,20 @@ export function QuickOrderForm({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerQuery, setPickerQuery] = useState("");
   const [pickerSelection, setPickerSelection] = useState<string[]>([]);
+  const [draftPharmacyId, setDraftPharmacyId] = useState(
+    initialPharmacy?.brandPharmacyId ?? initialPharmacy?.pharmacyId ?? "unselected",
+  );
+  const { restored } = useLocalOrderDraft({
+    scope: `${draftScope}:${draftPharmacyId}`,
+    mode: "desktop",
+    productIds: products.map((item) => item.id),
+    lines,
+    setLines,
+    orderType,
+    setOrderType,
+    completed: Boolean(state.success && state.orderId),
+  });
+
 
   function defaultDiscountValue() {
     return defaultDiscountRate == null ? "" : String(defaultDiscountRate);
@@ -366,9 +288,12 @@ export function QuickOrderForm({
   }
 
   async function loadPharmacyPricing(pharmacy: OrderPharmacySearchResult) {
+    const requestId = ++pricingRequest.current;
     setPricingLoading(true);
+    setPricingError(false);
     try {
       const pricing = await getOrderPharmacyPricingAction(pharmacy.pharmacyId);
+      if (pricingRequest.current !== requestId) return;
       setDefaultDiscountRate(pricing.discountRate);
       setPotential(pricing.potential);
       setFreeUnitsRule(pricing.freeUnitsRule);
@@ -381,8 +306,11 @@ export function QuickOrderForm({
           freeQuantity: freeQuantityFor(line.quantity, pricing.freeUnitsRule) + line.manualFreeQuantity,
         })),
       );
+    } catch {
+      if (pricingRequest.current !== requestId) return;
+      setPricingError(true);
     } finally {
-      setPricingLoading(false);
+      if (pricingRequest.current === requestId) setPricingLoading(false);
     }
   }
 
@@ -419,12 +347,23 @@ export function QuickOrderForm({
     <>
       <form action={action} className="space-y-5">
       <ActionFeedback {...state} />
+      <OrderSubmittingStatus />
+      {restored ? <p role="status" className="rounded-lg border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">Brouillon local récupéré. Vérifiez les prix et les conditions commerciales avant validation.</p> : null}
       {isAgent ? <input type="hidden" name="orderStatus" value="pending" /> : null}
 
       <div className="rounded-2xl border bg-muted/20 p-4">
-        <PharmacyAutocomplete
+        <OrderPharmacyAutocomplete
           initialPharmacy={initialPharmacy}
           onSelectionChange={(changed, pharmacy) => {
+              pricingRequest.current += 1;
+              setPricingLoading(false);
+              setPricingError(false);
+              if (!pharmacy || changed) {
+                setDefaultDiscountRate(null);
+                setPotential(null);
+                setFreeUnitsRule(null);
+              }
+              setDraftPharmacyId(pharmacy?.brandPharmacyId ?? pharmacy?.pharmacyId ?? "unselected");
             setInitialContextChanged(changed);
             if (!pharmacy) {
               setDefaultDiscountRate(null);
@@ -465,6 +404,7 @@ export function QuickOrderForm({
             </>
           )}
         </div>
+        {pricingError ? <p role="alert" className="mt-2 text-xs text-destructive">Conditions client indisponibles : vérifiez les remises et unités gratuites avant de valider.</p> : null}
       </div>
 
       <section className="space-y-3">

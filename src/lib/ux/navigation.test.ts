@@ -5,8 +5,10 @@ describe("role navigation", () => {
   it("keeps agent navigation focused on field work", () => {
     const links = getNavigationItems("agent").map((item) => item.href);
     expect(links).toContain("/dashboard/agent");
-    expect(links).toEqual(["/dashboard/agent", "/dashboard/agenda", "/dashboard/pharmacies", "/dashboard/orders", "/dashboard/agent/performance", "/dashboard/agent/more"]);
-    expect(links).not.toContain("/dashboard/missions");
+    expect(getNavigationSections("agent")[0]?.items[0]?.label).toBe("Mon cockpit");
+    expect(links).toEqual(["/dashboard/agent", "/dashboard/agenda", "/dashboard/pharmacies", "/dashboard/orders", "/dashboard/missions", "/dashboard/agent/assistant", "/dashboard/agent/performance", "/dashboard/agent/more"]);
+    expect(links).toContain("/dashboard/missions");
+    expect(links).toContain("/dashboard/agent/assistant");
     expect(getAgentMoreItems().map((item) => item.href)).toEqual(["/dashboard/agent/performance", "/dashboard/products", "/dashboard/missions", "/dashboard/tasks", "/dashboard/sell-out", "/dashboard/reports", "/dashboard/agent/assistant", "/dashboard/agent/settings"]);
     expect(links).not.toContain("/dashboard/users");
     expect(links).not.toContain("/dashboard/subscription");
@@ -106,6 +108,8 @@ describe("role navigation", () => {
     expect(adminLinks).not.toContain("/dashboard/connectors");
     expect(adminLinks).toContain("/dashboard/subscription");
     expect(agentLinks).toContain("/dashboard/agent/performance");
+    expect(agentLinks).toContain("/dashboard/missions");
+    expect(agentLinks).not.toContain("/dashboard/agent/assistant");
     expect(agentMoreLinks).toContain("/dashboard/missions");
     expect(agentMoreLinks).toContain("/dashboard/agent/performance");
     expect(agentMoreLinks).toContain("/dashboard/agent/settings");
@@ -124,6 +128,7 @@ describe("role navigation", () => {
   it("lets an explicit capability immediately expose its module", () => {
     const capabilities = ["core_crm", "orders", "agent_day", "missions", "performance", "assistant_terrain", "next_best_action", "sell_out", "forecast", "pharma_360", "connectors", "multi_provider"] as const;
     expect(getAgentMoreItems(capabilities).map((item) => item.href)).toContain("/dashboard/agent/assistant");
+    expect(getNavigationItems("agent", "tenant", capabilities).map((item) => item.href)).toContain("/dashboard/agent/assistant");
     expect(getAgentMoreItems(capabilities).map((item) => item.href)).toContain("/dashboard/sell-out");
     const managerLinks = getNavigationItems("tr1_manager", "tenant", capabilities).map((item) => item.href);
     const adminLinks = getNavigationItems("brand_admin", "tenant", capabilities).map((item) => item.href);

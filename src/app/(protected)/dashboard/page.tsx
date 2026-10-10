@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/ux/page-header";
 import { SectionHeader } from "@/components/ux/section-header";
-import { getOptionalActiveBrand, isPlatformAdmin } from "@/lib/auth";
+import { getBrandContexts, getOptionalActiveBrand, isPlatformAdmin } from "@/lib/auth";
 import { mapRecentPlatformOnboardings, summarizePlatformDashboard } from "@/lib/platform-admin";
 import type { CommercialHealthRow } from "@/lib/commercial-health";
 import { formatCompactCurrency, formatCompactNumber, formatCompactPercent, formatPerformanceMetric, formatPerformanceValue } from "@/lib/performance";
@@ -22,6 +22,7 @@ export default async function DashboardPage() {
   if (!session.brand) {
     if (!platformAdmin) redirect("/select-brand");
 
+    const agentContext = (await getBrandContexts()).find((context) => context.role === "agent");
     const { supabase, profile } = session;
     const [{ data: brands }, { data: brandPharmacies }, { data: activeMemberships }, { count: leadCount }, { count: pendingAccessCount }, { data: onboardingSessions }] = await Promise.all([
       supabase.from("brands").select("id,is_active,status"),
@@ -65,6 +66,15 @@ export default async function DashboardPage() {
     return (
       <main className="space-y-6">
         <PageHeader eyebrow="Plateforme TR1" title="Administration TR1" description={`Bonjour ${profile.full_name}. Commencez par les dossiers qui demandent une action, puis entrez dans une marque si nécessaire.`} tone="dark" />
+        {agentContext ? (
+          <Link
+            href={`/auth/activate-brand?brandId=${encodeURIComponent(agentContext.id)}&next=${encodeURIComponent("/dashboard/agent")}`}
+            className="flex min-h-14 flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--tr1-orange)]/30 bg-white px-4 py-3 text-sm font-semibold text-[var(--tr1-navy)] hover:border-[var(--tr1-orange)]"
+          >
+            <span>Ouvrir mon cockpit commercial multimarque</span>
+            <span className="flex items-center gap-1 text-[var(--tr1-orange)]">Accéder au terrain <ArrowRight className="size-4" /></span>
+          </Link>
+        ) : null}
 
         <section className="space-y-3" aria-labelledby="platform-today">
           <SectionHeader id="platform-today" title="À traiter aujourd’hui" description="Uniquement les files existantes et réellement disponibles dans la plateforme." />

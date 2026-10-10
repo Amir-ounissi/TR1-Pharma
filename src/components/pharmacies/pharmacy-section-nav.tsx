@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { useRouter } from "next/navigation";
-import { BookOpenCheck, MoreHorizontal } from "lucide-react";
+import { BookOpenCheck, LoaderCircle, MoreHorizontal } from "lucide-react";
 import { AiVisitClose } from "@/components/agent/ai-visit-close";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,6 +34,7 @@ const ALL_TABS = [...PRIMARY_TABS, ...MORE_TABS] as const;
 type PharmacySectionNavProps = {
   pharmacyId: string;
   activeTab: string;
+  activeVisitId?: string | null;
 };
 
 function href(pharmacyId: string, tab: string) {
@@ -48,7 +49,17 @@ function briefHref(pharmacyId: string) {
   return `/dashboard/pharmacies/${pharmacyId}/brief`;
 }
 
-export function PharmacySectionNav({ pharmacyId, activeTab }: PharmacySectionNavProps) {
+function TabLabel({ children }: { children: React.ReactNode }) {
+  const { pending } = useLinkStatus();
+  return (
+    <span className="inline-flex min-w-0 items-center justify-center gap-1.5" aria-busy={pending || undefined}>
+      <span>{children}</span>
+      {pending ? <LoaderCircle aria-hidden="true" className="size-3.5 shrink-0 animate-spin text-[var(--tr1-orange)]" /> : null}
+    </span>
+  );
+}
+
+export function PharmacySectionNav({ pharmacyId, activeTab, activeVisitId }: PharmacySectionNavProps) {
   const router = useRouter();
   const commercialTermsActive = activeTab === "commercial_terms";
   const moreActive =
@@ -57,7 +68,7 @@ export function PharmacySectionNav({ pharmacyId, activeTab }: PharmacySectionNav
 
   return (
     <>
-      <AiVisitClose brandPharmacyId={pharmacyId} />
+      <AiVisitClose brandPharmacyId={pharmacyId} activeVisitId={activeVisitId} />
 
       <Button asChild className="w-full sm:w-auto" size="lg">
         <Link
@@ -68,7 +79,7 @@ export function PharmacySectionNav({ pharmacyId, activeTab }: PharmacySectionNav
           onFocus={warmRoute(briefHref(pharmacyId))}
         >
           <BookOpenCheck className="size-5" />
-          Préparer ma visite
+          <TabLabel>Préparer ma visite</TabLabel>
         </Link>
       </Button>
 
@@ -98,7 +109,7 @@ export function PharmacySectionNav({ pharmacyId, activeTab }: PharmacySectionNav
                 onPointerDown={warmRoute(target)}
                 onFocus={warmRoute(target)}
               >
-                {label}
+                <TabLabel>{label}</TabLabel>
               </Link>
             </Button>
           );
@@ -121,7 +132,7 @@ export function PharmacySectionNav({ pharmacyId, activeTab }: PharmacySectionNav
             onPointerDown={warmRoute(commercialTermsHref(pharmacyId))}
             onFocus={warmRoute(commercialTermsHref(pharmacyId))}
           >
-            Conditions commerciales
+            <TabLabel>Conditions commerciales</TabLabel>
           </Link>
         </Button>
       </nav>
@@ -148,7 +159,7 @@ export function PharmacySectionNav({ pharmacyId, activeTab }: PharmacySectionNav
                   : "text-muted-foreground active:bg-[var(--tr1-navy)]/6",
               )}
             >
-              {label}
+              <TabLabel>{label}</TabLabel>
             </Link>
           );
         })}
@@ -195,7 +206,7 @@ export function PharmacySectionNav({ pharmacyId, activeTab }: PharmacySectionNav
                           : "border-[var(--tr1-line-strong)] bg-white text-[var(--tr1-navy)] active:bg-muted",
                       )}
                     >
-                      {label}
+                      <TabLabel>{label}</TabLabel>
                       <span aria-hidden="true">›</span>
                     </Link>
                   </SheetClose>

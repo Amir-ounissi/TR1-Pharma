@@ -21,9 +21,11 @@ import { activityStatuses, commercialStatuses, labels, potentialLevels, priority
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 export default async function PharmaciesPage({ searchParams }: { searchParams: SearchParams }) {
-  const params = await searchParams;
-  const { supabase, brand } = await requireActiveBrand();
-  const contexts = await getBrandContexts();
+  const [params, { supabase, brand }, contexts] = await Promise.all([
+    searchParams,
+    requireActiveBrand(),
+    getBrandContexts(),
+  ]);
   const role = contexts.find((context) => context.id === brand.id)?.role ?? "brand_user";
   const roleScope: NetworkMapRoleScope = role === "agent" ? "agent" : "manager";
   const view: NetworkMapView = params.view === "map" ? "map" : "list";
