@@ -172,6 +172,13 @@ export function AgendaPlanner({
   const [filter, setFilter] = useState<(typeof planningFilters)[number]["key"]>("all");
   const [visitOpen, setVisitOpen] = useState(initialCreateVisit && canCreateVisit);
   const [visitStart, setVisitStart] = useState(`${date}T09:00`);
+  // Also support the quick-create button while already viewing the agenda.
+  useEffect(() => {
+    if (!canCreateVisit) return;
+    const openPlanner = () => setVisitOpen(true);
+    window.addEventListener("tr1:open-visit-planner", openPlanner);
+    return () => window.removeEventListener("tr1:open-visit-planner", openPlanner);
+  }, [canCreateVisit]);
   const [moveFeedback, setMoveFeedback] = useState<{
     visitId: string;
     previousLocal: string;
