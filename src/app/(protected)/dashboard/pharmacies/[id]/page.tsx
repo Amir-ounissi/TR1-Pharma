@@ -53,6 +53,7 @@ import { orderStatusLabel, uiLabel } from "@/lib/ui-copy";
 import { formatCurrency, labels } from "@/lib/reference-data";
 import type { CommercialHealthRow } from "@/lib/commercial-health";
 import { getPharmacyCockpit } from "@/lib/pharmacy-cockpit";
+import { timedServerRead } from "@/lib/performance/server-read";
 
 type Params = Promise<{ id: string }>;
 type SearchParams = Promise<{ tab?: string; event?: string }>;
@@ -98,18 +99,18 @@ export default async function PharmacyDetailPage({
       .select("allow_agents_to_change_status,allow_agents_to_create_contacts,allow_agents_to_edit_potential")
       .eq("brand_id", brand.id)
       .maybeSingle(),
-    supabase
+    timedServerRead("pharmacy_detail", "relation", supabase
       .from("brand_pharmacies")
       .select("*,pharmacies(*,pharmacy_groups(name)),territories(name)")
       .eq("id", id)
       .eq("brand_id", brand.id)
-      .maybeSingle(),
-    supabase
+      .maybeSingle()),
+    timedServerRead("pharmacy_detail", "active_visits", supabase
       .from("field_visit_brands")
       .select("visit_id,field_visits!inner(id,status,scheduled_start_at,owner_user_id,pharmacy_id,archived_at)")
       .eq("brand_pharmacy_id", id)
       .eq("field_visits.owner_user_id", userId)
-      .is("field_visits.archived_at", null),
+      .is("field_visits.archived_at", null)),
   ]);
 
   const canCreateContacts =
@@ -263,17 +264,17 @@ export default async function PharmacyDetailPage({
           .order("created_at", { ascending: false })
       : Promise.resolve({ data: null, error: null }),
     dataNeeds.performance
-      ? supabase
+      ? timedServerRead("pharmacy_detail", "order_performance", supabase
           .from("brand_pharmacy_order_performance")
           .select("*")
           .eq("brand_pharmacy_id", id)
-          .maybeSingle()
+          .maybeSingle())
       : Promise.resolve({ data: null, error: null }),
     dataNeeds.bookedOrders
-      ? supabase
+      ? timedServerRead("pharmacy_detail", "booked_order_facts", supabase
           .from("performance_booked_order_facts")
           .select("net_amount_ht")
-          .eq("brand_pharmacy_id", id)
+          .eq("brand_pharmacy_id", id))
       : Promise.resolve({ data: null, error: null }),
     dataNeeds.orders
       ? supabase
@@ -302,7 +303,7 @@ export default async function PharmacyDetailPage({
           .limit(10)
       : Promise.resolve({ data: null, error: null }),
     dataNeeds.commercialHealth
-      ? supabase.rpc("get_commercial_health", { target_brand_pharmacy_id: id })
+      ? timedServerRead("pharmacy_detail", "commercial_health", supabase.rpc("get_commercial_health", { target_brand_pharmacy_id: id }))
       : Promise.resolve({ data: null, error: null }),
     dataNeeds.missions
       ? supabase
@@ -316,12 +317,12 @@ export default async function PharmacyDetailPage({
           .limit(20)
       : Promise.resolve({ data: null, error: null }),
     dataNeeds.missionImpacts
-      ? supabase
+      ? timedServerRead("pharmacy_detail", "mission_impacts", supabase
           .from("mission_impact")
           .select("*")
           .eq("brand_pharmacy_id", id)
           .order("mission_date", { ascending: false })
-          .limit(8)
+          .limit(8))
       : Promise.resolve({ data: null, error: null }),
     tab === "overview"
       ? supabase
