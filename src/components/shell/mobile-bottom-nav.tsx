@@ -42,7 +42,6 @@ function MobileLink({ item, pathname }: { item: NavigationItem; pathname: string
       aria-current={active ? "page" : undefined}
       className="flex min-h-14 touch-manipulation select-none items-stretch rounded-[0.7rem] px-0.5 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-orange)] focus-visible:ring-inset"
       href={item.href}
-      prefetch={false}
       onPointerDown={warmRoute}
       onPointerEnter={warmRoute}
       onFocus={warmRoute}
