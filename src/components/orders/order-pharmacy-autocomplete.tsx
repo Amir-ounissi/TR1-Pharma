@@ -27,6 +27,7 @@ export function OrderPharmacyAutocomplete({ initialPharmacy, onSelectionChange, 
   const [searchError, setSearchError] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const requestSequence = useRef(0);
+  const previousPharmacy = useRef(initialPharmacy);
 
   useEffect(() => {
     if (selected || query.trim().length < 2) return;
@@ -70,10 +71,11 @@ export function OrderPharmacyAutocomplete({ initialPharmacy, onSelectionChange, 
     setActiveIndex(-1);
     setLoading(false);
     setSearchError(false);
-    onSelectionChange(
-      Boolean(initialPharmacy && pharmacy.brandPharmacyId !== initialPharmacy.brandPharmacyId),
-      pharmacy,
-    );
+    const previous = previousPharmacy.current;
+    const previousId = previous?.brandPharmacyId ?? previous?.pharmacyId;
+    const nextId = pharmacy.brandPharmacyId ?? pharmacy.pharmacyId;
+    previousPharmacy.current = pharmacy;
+    onSelectionChange(Boolean(previousId && previousId !== nextId), pharmacy);
   }
 
   const showOptions = !selected && results.length > 0;
