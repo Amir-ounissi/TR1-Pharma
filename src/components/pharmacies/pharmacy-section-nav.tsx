@@ -34,6 +34,7 @@ const ALL_TABS = [...PRIMARY_TABS, ...MORE_TABS] as const;
 type PharmacySectionNavProps = {
   pharmacyId: string;
   activeTab: string;
+  activeVisitId?: string | null;
 };
 
 function href(pharmacyId: string, tab: string) {
@@ -58,7 +59,7 @@ function TabLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function PharmacySectionNav({ pharmacyId, activeTab }: PharmacySectionNavProps) {
+export function PharmacySectionNav({ pharmacyId, activeTab, activeVisitId }: PharmacySectionNavProps) {
   const router = useRouter();
   const commercialTermsActive = activeTab === "commercial_terms";
   const moreActive =
@@ -67,7 +68,7 @@ export function PharmacySectionNav({ pharmacyId, activeTab }: PharmacySectionNav
 
   return (
     <>
-      <AiVisitClose brandPharmacyId={pharmacyId} />
+      <AiVisitClose brandPharmacyId={pharmacyId} activeVisitId={activeVisitId} />
 
       <Button asChild className="w-full sm:w-auto" size="lg">
         <Link
