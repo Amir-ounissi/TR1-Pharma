@@ -27,7 +27,7 @@
 6. Connection defaults **OFF**, regardless of deployment:
    `TR1_CHATGPT_CONNECTOR_ENABLED` must equal `true` to enable the endpoints.
 
-DB migration: `supabase/migrations/20261009100000_tr1_chatgpt_oauth_reader.sql`.
+DB migration: `supabase/migrations/20261010181500_tr1_chatgpt_oauth_reader.sql`.
 SQL tests: `supabase/tests/database/chatgpt_oauth_reader.test.sql`.
 MCP/JWT tests: `src/app/api/connectors/chatgpt/mcp/route.test.ts`,
 `src/lib/connectors/chatgpt-mcp-config.test.ts`.
