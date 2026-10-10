@@ -13,6 +13,8 @@ test("scénario 1 — Agent desktop", async ({ page }) => {
   await expect(sidebar.getByText("Mon cockpit", { exact: true })).toBeVisible();
   await expect(sidebar.getByText("Priorités", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Mon programme", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Mes marques", exact: true })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Actions rapides du cockpit" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Démarrer", exact: true })).toHaveCount(0);
   await expect(page.getByTestId("next-visit-card")).toHaveCount(0);
   await expect(page.getByTestId("active-visit-card")).toHaveCount(0);
