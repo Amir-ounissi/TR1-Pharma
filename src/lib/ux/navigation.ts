@@ -86,6 +86,7 @@ const facilitatorMobileItems: NavigationItem[] = [
 
 const platformAdminItems: NavigationItem[] = [
   { href: "/dashboard", label: "Vue globale", shortLabel: "Accueil", icon: "layout" },
+  { href: "/dashboard/admin/prestations", label: "Prestations commerciales", shortLabel: "Prestations", icon: "target" },
   { href: "/dashboard/admin/access-requests", label: "Demandes d’accès", icon: "users" },
   { href: "/dashboard/admin/onboarding", label: "Marques & déploiements", icon: "badge" },
   { href: "/dashboard/admin/users", label: "Utilisateurs & accès", icon: "users" },
@@ -131,9 +132,9 @@ export function getNavigationSections(
 
   if (scope === "platform") {
     return compactSections([
-      { label: "Pilotage plateforme", items: platformAdminItems.slice(0, 3) },
-      { label: "Administration", items: platformAdminItems.slice(3, 4) },
-      { label: "Offre & revenus", items: platformAdminItems.slice(4) },
+      { label: "Pilotage plateforme", items: platformAdminItems.slice(0, 4) },
+      { label: "Administration", items: platformAdminItems.slice(4, 5) },
+      { label: "Offre & revenus", items: platformAdminItems.slice(5) },
     ], enabledCapabilities);
   }
 
