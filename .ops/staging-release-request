@@ -1,5 +1,6 @@
-release=tr1-v2-agent-commercial
-source_merge=b02e80e6ffd677075f9b0440001cf3827e663b5f
+release=tr1-desktop-mobile-performance
+base_sha=09419d28ddadc4070ffe6abbd21fe308009cb780
 target=staging
+reason=reconcile_migration_history_by_deploying_git_sha_containing_20261010181421
 requested_by=user
-purpose=run_isolated_staging_gate_on_the_same_release_commit
+production=not_triggered_by_this_marker
