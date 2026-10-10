@@ -10,7 +10,7 @@ test("scénario 1 — Agent desktop", async ({ page }) => {
   await signIn(page, "agent@dermavita.local", /Dermavita/i);
   await page.goto("/dashboard/agent");
   const sidebar = page.getByRole("navigation", { name: "Navigation principale" }).first();
-  await expect(sidebar.getByText("Ma journée", { exact: true })).toBeVisible();
+  await expect(sidebar.getByText("Mon cockpit", { exact: true })).toBeVisible();
   await expect(sidebar.getByText("Priorités", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Mon programme", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Démarrer", exact: true })).toHaveCount(0);
