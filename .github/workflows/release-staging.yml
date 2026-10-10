@@ -7,6 +7,11 @@ on:
         description: "SHA Git exact à valider et déployer uniquement en staging"
         required: true
         type: string
+  push:
+    branches:
+      - main
+    paths:
+      - ".ops/staging-release-request"
 
 permissions:
   contents: read
@@ -17,7 +22,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  RELEASE_SHA: ${{ inputs.release_sha }}
+  RELEASE_SHA: ${{ github.event_name == 'workflow_dispatch' && inputs.release_sha || github.sha }}
   VERCEL_CLI_VERSION: 59.19.1
   CURRENT_PRODUCTION_SUPABASE_PROJECT_REF: zhifmehctuflwfexlvkz
   CURRENT_STAGING_SUPABASE_PROJECT_REF: ehptapmuzckazyxmnmnm
@@ -29,7 +34,7 @@ jobs:
   gate:
     name: Gate du SHA
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
         with:
@@ -54,12 +59,29 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -eu
-          count="$(gh api \
-            -H "Accept: application/vnd.github+json" \
-            "/repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${RELEASE_SHA}&per_page=20" \
-            --jq '[.workflow_runs[] | select(.status == "completed" and .conclusion == "success")] | length')"
-          test "$count" -gt 0 || {
-            echo "::error::Aucune CI complète et verte n'est attachée au SHA $RELEASE_SHA."
+          result=""
+          for attempt in $(seq 1 35); do
+            result="$(gh api \
+              -H "Accept: application/vnd.github+json" \
+              "/repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${RELEASE_SHA}&per_page=20" \
+              --jq '(.workflow_runs | sort_by(.run_started_at) | reverse | .[0]) as $run | if $run == null then "missing" elif $run.status == "completed" then ($run.conclusion // "unknown") else $run.status end')"
+            case "$result" in
+              success)
+                echo "CI verte du SHA $RELEASE_SHA."
+                break
+                ;;
+              failure|cancelled|timed_out|action_required|startup_failure)
+                echo "::error::La CI du SHA $RELEASE_SHA a échoué: $result."
+                exit 1
+                ;;
+              *)
+                echo "CI: $result, nouvelle vérification."
+                sleep 20
+                ;;
+            esac
+          done
+          test "$result" = "success" || {
+            echo "::error::Aucune CI verte confirmée sur $RELEASE_SHA."
             exit 1
           }
 
