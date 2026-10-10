@@ -10,6 +10,8 @@ import {
 } from "@/app/(protected)/dashboard/orders/actions";
 import { getOrderPharmacyPricingAction } from "@/app/(protected)/dashboard/orders/pricing-actions";
 import { ActionFeedback } from "@/components/reference/action-feedback";
+import { useLocalOrderDraft } from "@/components/orders/use-local-order-draft";
+import { OrderSubmittingStatus } from "@/components/orders/order-submitting-status";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -188,6 +190,7 @@ export function MobileQuickOrderForm({
   initialPotential = null,
   initialFreeUnitsRule = null,
   isAgent = false,
+  draftScope,
 }: {
   products: ProductOption[];
   initialPharmacy?: OrderPharmacySearchResult;
@@ -198,6 +201,7 @@ export function MobileQuickOrderForm({
   initialPotential?: string | null;
   initialFreeUnitsRule?: FreeUnitsRule | null;
   isAgent?: boolean;
+  draftScope: string;
 }) {
   const [state, action, pending] = useActionState(createOrderAction, {});
   const initialProduct = products.find((product) => product.id === initialProductId);
@@ -228,6 +232,21 @@ export function MobileQuickOrderForm({
           initialDiscountRate == null ? "" : String(initialDiscountRate),
       },
     ];
+  });
+
+
+  const [draftPharmacyId, setDraftPharmacyId] = useState(
+    initialPharmacy?.brandPharmacyId ?? initialPharmacy?.pharmacyId ?? "unselected",
+  );
+  const { restored } = useLocalOrderDraft({
+    scope: `${draftScope}:${draftPharmacyId}`,
+    mode: "mobile",
+    productIds: products.map((item) => item.id),
+    lines,
+    setLines,
+    orderType,
+    setOrderType,
+    completed: Boolean(state.success && state.orderId),
   });
 
   const filteredProducts = useMemo(() => {
@@ -356,6 +375,8 @@ export function MobileQuickOrderForm({
     <>
       <form action={action} className="space-y-4">
         <ActionFeedback {...state} />
+        <OrderSubmittingStatus />
+        {restored ? <p role="status" className="rounded-lg border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">Brouillon local récupéré. Vérifiez les prix et les conditions commerciales avant validation.</p> : null}
         {isAgent ? (
           <input type="hidden" name="orderStatus" value="pending" />
         ) : null}
@@ -364,6 +385,7 @@ export function MobileQuickOrderForm({
           <PharmacyAutocomplete
             initialPharmacy={initialPharmacy}
             onSelectionChange={(changed, pharmacy) => {
+              setDraftPharmacyId(pharmacy?.brandPharmacyId ?? pharmacy?.pharmacyId ?? "unselected");
               setInitialContextChanged(changed);
               if (!pharmacy) {
                 setDefaultDiscountRate(null);
