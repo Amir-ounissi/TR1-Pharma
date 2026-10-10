@@ -1,5 +1,5 @@
 release=tr1-v2-agent-commercial
 source_merge=b02e80e6ffd677075f9b0440001cf3827e663b5f
-target=production
+target=staging
 requested_by=user
-purpose=release_only_after_ci_and_staging_gates
+purpose=run_isolated_staging_gate_on_the_same_release_commit
