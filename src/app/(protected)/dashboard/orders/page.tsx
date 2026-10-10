@@ -37,7 +37,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Searc
 
   let query = supabase
     .from("orders")
-    .select("*,pharmacies(legal_name,trade_name,city)", { count: "exact" })
+    .select("id,order_number,external_order_id,order_date,order_status,order_type,is_initial_order,is_reorder,net_amount_ht,payment_status,pharmacies(legal_name,trade_name,city)", { count: "exact" })
     .eq("brand_id", brand.id)
     .is("archived_at", null)
     .order("order_date", { ascending: false });
