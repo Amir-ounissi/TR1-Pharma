@@ -79,6 +79,14 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    // Refresh the real inbound data using the existing full replay logic when stale.
+    // The strict 24-hour freshness gate below remains mandatory: a failed
+    // catch-up cannot make an outdated synchronization acceptable.
+    const catchup = await reconcileHubSpotOrdersIfStale(String(brand.id), 60 * 60_000);
+    if (catchup && Number(catchup.failed ?? 0) !== 0) {
+      return NextResponse.json({ error: "reconcile_failed" }, { status: 500 });
+    }
+
     const orders = await reconcileHubSpotOrdersNow(
       String(brand.id),
       String(connection.id),
