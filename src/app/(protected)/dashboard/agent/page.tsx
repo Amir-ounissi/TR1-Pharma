@@ -5,10 +5,12 @@ import {
   type AgentMultibrandVisitSummary,
 } from "@/components/agent/agent-multibrand-overview";
 import { AgentTodayCockpit } from "@/components/agent/agent-today-cockpit";
+import { AgentBrandPortfolio } from "@/components/agent/agent-brand-portfolio";
 import { DashboardTracker } from "@/components/agent/dashboard-tracker";
 import { OfflineDayPreloader } from "@/components/pwa/offline-day-preloader";
 import { addCalendarDays } from "@/lib/agenda";
-import { requireActiveBrand } from "@/lib/auth";
+import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
+import { summarizeAgentBrandSales } from "@/lib/agent-brand-portfolio";
 import { nextIsoDate, parisBusinessDate } from "@/lib/business-date";
 import { requireActiveBrandCapability } from "@/lib/saas/server";
 import { loadStockAlerts } from "@/lib/stock-alerts-server";
@@ -93,11 +95,18 @@ function cleanVisitObjective(value: string | null | undefined, pharmacyName: str
 }
 
 export default async function AgentPage() {
-  const [saas, session] = await Promise.all([
+  const [saas, session, contexts] = await Promise.all([
     requireActiveBrandCapability("agent_day"),
     requireActiveBrand(),
+    getBrandContexts(),
   ]);
   const { supabase, brand, profile, userId } = session;
+  const agentBrands = contexts
+    .filter((context) => context.role === "agent")
+    .map((context) => ({ id: context.id, name: context.name }));
+  if (!agentBrands.some((item) => item.id === brand.id)) {
+    agentBrands.push({ id: brand.id, name: brand.name });
+  }
 
   const today = parisBusinessDate();
   const monthStart = `${today.slice(0, 7)}-01`;
@@ -140,8 +149,8 @@ export default async function AgentPage() {
     })),
     timedQuery("performance_booked_order_facts", supabase
       .from("performance_booked_order_facts")
-      .select("net_amount_ht")
-      .eq("brand_id", brand.id)
+      .select("order_id,brand_id,net_amount_ht")
+      .in("brand_id", agentBrands.map((item) => item.id))
       .eq("agent_user_id_at_order", userId)
       .gte("order_date", `${monthStart}T00:00:00.000Z`)
       .lt("order_date", `${nextIsoDate(today)}T00:00:00.000Z`)),
@@ -313,10 +322,8 @@ export default async function AgentPage() {
     (event) => visitNeedsCloseout(event, now.getTime()),
   ).length;
 
-  const monthBookedRevenue = (monthBookedOrdersResult.data ?? []).reduce(
-    (total, order) => total + Number(order.net_amount_ht ?? 0),
-    0,
-  );
+  const brandSales = summarizeAgentBrandSales(agentBrands, monthBookedOrdersResult.data ?? []);
+  const monthBookedRevenue = brandSales.find((item) => item.id === brand.id)?.bookedRevenueHt ?? 0;
   const revenueObjective = ((monthObjectivesResult.data ?? []) as ObjectiveProgressRow[]).find(
     (objective) => objective.metric_key === "revenue_ht",
   );
@@ -401,6 +408,12 @@ export default async function AgentPage() {
         canCreateOrders={saas.capabilities.has("orders")}
         canCoordinateMissions={saas.capabilities.has("missions")}
         canUseAssistant={saas.capabilities.has("assistant_terrain")}
+      />
+
+      <AgentBrandPortfolio
+        brands={brandSales}
+        activeBrandId={brand.id}
+        unavailable={Boolean(monthBookedOrdersResult.error)}
       />
 
       <AgentMultibrandOverview
