@@ -155,6 +155,11 @@ DECLARE
   qty integer;
   item_id uuid;
   existing_order_id uuid;
+  existing_relation_id uuid;
+  existing_order_status public.order_status;
+  existing_order_type public.order_type;
+  existing_lines jsonb;
+  requested_lines jsonb;
   created_order_id uuid;
   external_key text;
 BEGIN
@@ -186,14 +191,6 @@ BEGIN
   PERFORM pg_catalog.pg_advisory_xact_lock(
     pg_catalog.hashtextextended('chatgpt-draft|' || rel.brand_id::text || '|' || external_key,0)
   );
-  SELECT id INTO existing_order_id FROM public.orders
-  WHERE brand_id = rel.brand_id AND external_order_id = external_key
-    AND created_by = auth.uid() AND archived_at IS NULL;
-  IF existing_order_id IS NOT NULL THEN
-    RETURN jsonb_build_object('order_id', existing_order_id, 'status', 'draft',
-      'created', false, 'transmitted', false, 'review_required', true);
-  END IF;
-
   FOR item IN SELECT value FROM jsonb_array_elements(draft_items)
   LOOP
     IF jsonb_typeof(item) <> 'object' OR
@@ -227,6 +224,39 @@ BEGIN
       'tax_rate', product.tax_rate
     ));
   END LOOP;
+
+  -- Idempotence must not falsely report a subsequently submitted order as a draft,
+  -- or silently accept the same request UUID for a different pharmacy/line basket.
+  SELECT o.id, o.brand_pharmacy_id, o.order_status, o.order_type
+    INTO existing_order_id, existing_relation_id, existing_order_status, existing_order_type
+  FROM public.orders o
+  WHERE o.brand_id = rel.brand_id AND o.external_order_id = external_key
+    AND o.created_by = auth.uid() AND o.archived_at IS NULL;
+  IF existing_order_id IS NOT NULL THEN
+    SELECT COALESCE(jsonb_agg(
+      jsonb_build_object('product_id', oi.product_id, 'quantity', oi.quantity)
+      ORDER BY oi.product_id
+    ), '[]'::jsonb)
+    INTO existing_lines
+    FROM public.order_items oi WHERE oi.order_id = existing_order_id;
+
+    SELECT COALESCE(jsonb_agg(
+      jsonb_build_object('product_id', (line->>'product_id')::uuid, 'quantity', (line->>'quantity')::integer)
+      ORDER BY (line->>'product_id')::uuid
+    ), '[]'::jsonb)
+    INTO requested_lines FROM jsonb_array_elements(items) line;
+
+    IF existing_relation_id IS DISTINCT FROM rel.id
+       OR existing_order_type::text IS DISTINCT FROM order_type
+       OR existing_order_status::text IS DISTINCT FROM 'draft'
+       OR existing_lines IS DISTINCT FROM requested_lines THEN
+      RAISE EXCEPTION 'Request ID belongs to a changed or non-draft order; use a new request ID'
+        USING ERRCODE = '23505';
+    END IF;
+
+    RETURN jsonb_build_object('order_id', existing_order_id, 'status', 'draft',
+      'created', false, 'transmitted', false, 'review_required', true);
+  END IF;
 
   SELECT order_id INTO created_order_id FROM public.create_order_with_pharmacy_resolution(
     rel.brand_id, rel.id, NULL, NULL,
