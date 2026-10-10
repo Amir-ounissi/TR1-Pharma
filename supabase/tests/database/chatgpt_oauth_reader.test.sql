@@ -2,7 +2,7 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET LOCAL search_path = public, extensions;
 
-SELECT plan(22);
+SELECT plan(26);
 
 SELECT ok(EXISTS(SELECT 1 FROM pg_roles WHERE rolname = 'tr1_chatgpt_reader'),
   'ChatGPT has an isolated PostgreSQL role');
@@ -32,6 +32,18 @@ SELECT is((
 SELECT ok(NOT has_function_privilege('authenticated',
   'private.tr1_chatgpt_oauth_token_hook(jsonb)','EXECUTE'),
   'Browser sessions cannot invoke the OAuth signing hook');
+SELECT ok(to_regprocedure('public.tr1_chatgpt_oauth_hook(jsonb)') IS NOT NULL,
+  'Supabase Auth Hooks dashboard can discover the restricted public hook');
+SELECT ok(has_function_privilege('supabase_auth_admin',
+  'public.tr1_chatgpt_oauth_hook(jsonb)','EXECUTE'),
+  'Only Supabase Auth admin can execute the hook');
+SELECT ok(NOT has_function_privilege('authenticated',
+  'public.tr1_chatgpt_oauth_hook(jsonb)','EXECUTE'),
+  'Regular authenticated browser sessions cannot execute the public hook');
+SELECT ok(NOT has_function_privilege('tr1_chatgpt_reader',
+  'public.tr1_chatgpt_oauth_hook(jsonb)','EXECUTE'),
+  'ChatGPT data reader cannot execute the OAuth signing hook');
+
 SELECT ok(has_function_privilege('tr1_chatgpt_reader',
   'public.tr1_chatgpt_list_brands()','EXECUTE'),
   'Reader is allowed to list its authorized brands');
