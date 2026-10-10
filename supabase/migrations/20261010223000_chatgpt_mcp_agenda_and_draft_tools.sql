@@ -10,7 +10,7 @@ LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = ''
 AS $fn$
 DECLARE answer jsonb;
 BEGIN
-  IF NOT private.tr1_chatgpt_authorized() THEN
+  IF private.tr1_chatgpt_authorized() IS DISTINCT FROM true THEN
     RAISE EXCEPTION 'ChatGPT OAuth authorization required' USING ERRCODE = '42501';
   END IF;
   IF target_brand_id IS NULL OR NOT EXISTS (
@@ -46,7 +46,7 @@ LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = ''
 AS $fn$
 DECLARE answer jsonb;
 BEGIN
-  IF NOT private.tr1_chatgpt_authorized() THEN
+  IF private.tr1_chatgpt_authorized() IS DISTINCT FROM true THEN
     RAISE EXCEPTION 'ChatGPT OAuth authorization required' USING ERRCODE = '42501';
   END IF;
   IF start_date IS NULL OR end_date IS NULL OR end_date < start_date OR
@@ -81,17 +81,18 @@ AS $fn$
 DECLARE
   existing_id uuid;
 BEGIN
-  IF NOT private.tr1_chatgpt_authorized() THEN
+  IF private.tr1_chatgpt_authorized() IS DISTINCT FROM true THEN
     RAISE EXCEPTION 'ChatGPT OAuth authorization required' USING ERRCODE = '42501';
   END IF;
   IF confirmed IS DISTINCT FROM true THEN
     RAISE EXCEPTION 'Explicit confirmation required' USING ERRCODE = '42501';
   END IF;
-  IF target_pharmacy_id IS NULL OR cardinality(target_brand_pharmacy_ids) NOT BETWEEN 1 AND 5
+  IF target_pharmacy_id IS NULL OR target_brand_pharmacy_ids IS NULL
+     OR cardinality(target_brand_pharmacy_ids) NOT BETWEEN 1 AND 5
      OR array_position(target_brand_pharmacy_ids,NULL) IS NOT NULL
      OR (SELECT count(DISTINCT x) FROM unnest(target_brand_pharmacy_ids) x) <> cardinality(target_brand_pharmacy_ids)
-     OR visit_kind NOT IN ('client_visit','prospecting','relationship','training','other')
-     OR length(btrim(visit_title)) NOT BETWEEN 2 AND 160
+     OR visit_kind IS NULL OR visit_kind NOT IN ('client_visit','prospecting','relationship','training','other')
+     OR visit_title IS NULL OR length(btrim(visit_title)) NOT BETWEEN 2 AND 160
      OR length(coalesce(visit_objective,'')) > 1000
      OR start_at IS NULL OR end_at IS NULL
      OR start_at <= now() OR start_at > now() + interval '180 days'
@@ -157,16 +158,16 @@ DECLARE
   created_order_id uuid;
   external_key text;
 BEGIN
-  IF NOT private.tr1_chatgpt_authorized() THEN
+  IF private.tr1_chatgpt_authorized() IS DISTINCT FROM true THEN
     RAISE EXCEPTION 'ChatGPT OAuth authorization required' USING ERRCODE = '42501';
   END IF;
   IF confirmed IS DISTINCT FROM true THEN
     RAISE EXCEPTION 'Explicit confirmation required' USING ERRCODE = '42501';
   END IF;
   IF target_brand_pharmacy_id IS NULL OR request_id IS NULL
-     OR jsonb_typeof(draft_items) IS DISTINCT FROM 'array'
-     OR jsonb_array_length(draft_items) NOT BETWEEN 1 AND 30
-     OR order_type NOT IN ('initial','reorder','complementary','replacement','sample','return','credit_note','other')
+     OR (CASE WHEN jsonb_typeof(draft_items) = 'array'
+       THEN jsonb_array_length(draft_items) ELSE 0 END) NOT BETWEEN 1 AND 30
+     OR order_type IS NULL OR order_type NOT IN ('initial','reorder','complementary','replacement','sample','return','credit_note','other')
      OR length(coalesce(note,'')) > 1000 THEN
     RAISE EXCEPTION 'Invalid draft request' USING ERRCODE = '22023';
   END IF;
@@ -176,8 +177,8 @@ BEGIN
 
   -- A ChatGPT caller may only draft orders for assigned agent accounts.
   IF rel.id IS NULL
-     OR NOT private.has_brand_role(rel.brand_id, ARRAY['agent'])
-     OR NOT private.user_is_assigned_to_relation(auth.uid(), rel.id) THEN
+     OR private.has_brand_role(rel.brand_id, ARRAY['agent']) IS DISTINCT FROM true
+     OR private.user_is_assigned_to_relation(auth.uid(), rel.id) IS DISTINCT FROM true THEN
     RAISE EXCEPTION 'Brand pharmacy forbidden' USING ERRCODE = '42501';
   END IF;
   external_key := 'chatgpt:' || request_id::text;
