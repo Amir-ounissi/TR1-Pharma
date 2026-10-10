@@ -3,6 +3,7 @@
 import Link, { useLinkStatus } from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { NavigationIcon } from "@/components/shell/navigation-icons";
+import { MobileCreateMenu } from "@/components/shell/mobile-create-menu";
 import type { SaasCapability } from "@/lib/saas/capabilities";
 import { cn } from "@/lib/utils";
 import { getMobileAgentNavigationItems, getMobileFacilitatorNavigationItems, getRoleFamily, isNavigationItemActive, type NavigationItem } from "@/lib/ux/navigation";
@@ -18,6 +19,7 @@ export function MobileBottomNav({ role, capabilities }: { role: string; capabili
   if (!destinations.length) return null;
 
   return (
+    <>
     <nav
       aria-label="Navigation mobile"
       className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--tr1-line)] bg-white/97 px-1.5 pb-[env(safe-area-inset-bottom)] shadow-[0_-10px_30px_rgb(14_29_49/0.055)] backdrop-blur-xl md:hidden"
@@ -29,6 +31,13 @@ export function MobileBottomNav({ role, capabilities }: { role: string; capabili
         {destinations.map((item) => <MobileLink item={item} pathname={pathname} key={item.href} />)}
       </div>
     </nav>
+    {family === "agent" ? (
+      <MobileCreateMenu
+        canPlanVisit={Boolean(capabilities?.includes("core_crm"))}
+        canCreateOrder={Boolean(capabilities?.includes("orders"))}
+      />
+    ) : null}
+    </>
   );
 }
 

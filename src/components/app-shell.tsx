@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Building2, ChevronsUpDown, Menu, ShieldCheck } from "lucide-react";
 import { changeBrandAction, returnToPlatformAdministrationAction, signOutAction } from "@/app/(protected)/dashboard/actions";
 import { OfflineAwareSignOut } from "@/components/pwa/offline-aware-sign-out";
+import { NetworkStatusBanner } from "@/components/pwa/network-status-banner";
 import { MobileBottomNav } from "@/components/shell/mobile-bottom-nav";
 import { RoleNavigation } from "@/components/shell/role-navigation";
 import { RouteAwareCommandPalette } from "@/components/shell/route-aware-command-palette";
@@ -80,6 +81,7 @@ export function AppShell({ children, brandName, brandHint = "Marque active", rol
           <div className="ml-auto flex min-w-0 flex-1 justify-end md:ml-3 md:justify-center"><RouteAwareCommandPalette items={searchItems} loadItemsAction={searchAction} /></div>
           <Link className="hidden size-9 shrink-0 place-items-center rounded-md border border-[var(--tr1-line-strong)] bg-transparent text-[0.65rem] font-semibold text-[var(--tr1-navy)] hover:bg-muted lg:grid" href="/dashboard/account" title="Mon compte">{initials(userName)}</Link>
         </header>
+        <NetworkStatusBanner canUseOfflineDay={role === "agent"} />
         <main className="mx-auto w-full max-w-[100rem] p-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:p-6 md:pb-8 lg:p-8">{children}</main>
       </div>
       <MobileBottomNav role={role} capabilities={capabilities} />
