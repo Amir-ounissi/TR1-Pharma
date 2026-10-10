@@ -153,40 +153,6 @@ export function AgendaPlanner({
   const navigationSequence = useRef(0);
   const prefetchEpoch = useRef(0);
 
-  // Warm the previous and next period after the agenda becomes interactive.
-  // Do not preload over a disconnected or data-saver connection.
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
-      if (!navigator.onLine || connection?.saveData) return;
-      const epoch = prefetchEpoch.current;
-      const offset = view === "week" ? 7 : 1;
-      for (const direction of [-1, 1]) {
-        const adjacent = addCalendarDays(date, direction * offset);
-        const adjacentDate = view === "week" ? mondayOfWeek(adjacent) : adjacent;
-        const cacheKey = `${view}:${adjacentDate}`;
-        const cached = windowCache.current.get(cacheKey);
-        if (cached && Date.now() - cached.storedAt < 60_000) continue;
-        void loadAgendaWindowAction(adjacentDate, view).then((result) => {
-          if (prefetchEpoch.current !== epoch) return;
-          const resultKey = `${result.view}:${result.date}`;
-          windowCache.current.set(resultKey, { events: result.events as AgendaEvent[], storedAt: Date.now() });
-          if (windowCache.current.size > 12) {
-            const oldest = windowCache.current.keys().next().value;
-            if (oldest) windowCache.current.delete(oldest);
-          }
-        }).catch(() => {
-          // Prefetch is opportunistic; foreground navigation handles errors.
-        });
-      }
-    }, 900);
-    return () => window.clearTimeout(timer);
-  }, [date, view]);
-
-  const invalidateCachedPeriods = () => {
-    prefetchEpoch.current += 1;
-    windowCache.current.clear();
-  };
   const [windowState, setWindowState] = useState(() => ({
     date: initialDate,
     view: initialView,
@@ -221,6 +187,40 @@ export function AgendaPlanner({
     [date, view],
   );
 
+  // Warm the previous and next period after the agenda becomes interactive.
+  // Do not preload over a disconnected or data-saver connection.
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+      if (!navigator.onLine || connection?.saveData) return;
+      const epoch = prefetchEpoch.current;
+      const offset = view === "week" ? 7 : 1;
+      for (const direction of [-1, 1]) {
+        const adjacent = addCalendarDays(date, direction * offset);
+        const adjacentDate = view === "week" ? mondayOfWeek(adjacent) : adjacent;
+        const cacheKey = `${view}:${adjacentDate}`;
+        const cached = windowCache.current.get(cacheKey);
+        if (cached && Date.now() - cached.storedAt < 60_000) continue;
+        void loadAgendaWindowAction(adjacentDate, view).then((result) => {
+          if (prefetchEpoch.current !== epoch) return;
+          const resultKey = `${result.view}:${result.date}`;
+          windowCache.current.set(resultKey, { events: result.events as AgendaEvent[], storedAt: Date.now() });
+          if (windowCache.current.size > 12) {
+            const oldest = windowCache.current.keys().next().value;
+            if (oldest) windowCache.current.delete(oldest);
+          }
+        }).catch(() => {
+          // Prefetch is opportunistic; foreground navigation handles errors.
+        });
+      }
+    }, 900);
+    return () => window.clearTimeout(timer);
+  }, [date, view]);
+
+  const invalidateCachedPeriods = () => {
+    prefetchEpoch.current += 1;
+    windowCache.current.clear();
+  };
   const timedEvents = useMemo(
     () =>
       localEvents.filter(
