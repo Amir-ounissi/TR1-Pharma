@@ -17,6 +17,7 @@ import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
 import { loadPharmacySummaryAction } from "@/app/(protected)/dashboard/pharmacies/actions";
 import { loadNetworkMapData, type NetworkMapRoleScope, type NetworkMapView } from "@/lib/network-map";
 import { activityStatuses, commercialStatuses, labels, potentialLevels, priorityLevels } from "@/lib/reference-data";
+import { timedServerRead } from "@/lib/performance/server-read";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -50,7 +51,7 @@ export default async function PharmaciesPage({ searchParams }: { searchParams: S
   const sort = sortableColumns.includes(requestedSort as typeof sortableColumns[number]) ? requestedSort : "trade_name";
   const descending = params.direction === "desc";
   const listResult = view === "list"
-    ? await query.order(sort, { ascending: !descending }).range((page - 1) * pageSize, page * pageSize)
+    ? await timedServerRead("pharmacies", "paged_pharmacy_list", query.order(sort, { ascending: !descending }).range((page - 1) * pageSize, page * pageSize))
     : { data: [], error: null };
   const pageRows = listResult.data ?? [];
   const hasNextPage = pageRows.length > pageSize;
