@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Building2, CalendarPlus, Plus, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -12,6 +13,7 @@ export function MobileCreateMenu({
   canPlanVisit: boolean;
   canCreateOrder: boolean;
 }) {
+  const pathname = usePathname();
   if (!canPlanVisit && !canCreateOrder) return null;
 
   const actions = [
@@ -44,6 +46,11 @@ export function MobileCreateMenu({
             <SheetClose asChild key={action.href}>
               <Link
                 href={action.href}
+                onClick={() => {
+                  if (pathname === "/dashboard/agenda" && action.href.includes("create=visit")) {
+                    window.dispatchEvent(new Event("tr1:open-visit-planner"));
+                  }
+                }}
                 className="flex min-h-16 items-center gap-3 rounded-xl border border-[var(--tr1-line)] bg-background p-3 transition-colors active:bg-muted"
               >
                 <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-muted text-[var(--tr1-navy)]">
