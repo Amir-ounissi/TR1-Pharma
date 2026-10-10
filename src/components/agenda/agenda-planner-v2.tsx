@@ -147,7 +147,7 @@ export function AgendaPlanner({
 }) {
   const windowCache = useRef(
     new Map<string, { events: AgendaEvent[]; storedAt: number }>([
-      [`${initialView}:${initialDate}`, { events: initialEvents, storedAt: Date.now() }],
+      [`${initialView}:${initialDate}`, { events: initialEvents, storedAt: 0 }],
     ]),
   );
   const navigationSequence = useRef(0);
@@ -190,6 +190,11 @@ export function AgendaPlanner({
   // Warm the previous and next period after the agenda becomes interactive.
   // Do not preload over a disconnected or data-saver connection.
   useEffect(() => {
+    // Hydration-safe timestamp: the first rendered cache entry is initialized
+    // only after mount, not by calling Date.now() during React render.
+    const currentKey = `${view}:${date}`;
+    const current = windowCache.current.get(currentKey);
+    if (current && current.storedAt === 0) current.storedAt = Date.now();
     const timer = window.setTimeout(() => {
       const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
       if (!navigator.onLine || connection?.saveData) return;
