@@ -104,7 +104,7 @@ function makeSupabase({
 function makeAdmin() {
   const membership = adminMembershipTable();
   const profile = {
-    upsert: vi.fn(async () => ({ error: null })),
+    upsert: vi.fn(async (): Promise<{ error: { message: string } | null }> => ({ error: null })),
   };
   return {
     client: {
