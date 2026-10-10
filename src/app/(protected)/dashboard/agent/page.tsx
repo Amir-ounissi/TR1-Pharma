@@ -239,8 +239,9 @@ export default async function AgentPage() {
     timeZone: "Europe/Paris",
   }).format(now);
 
-  const parisDay = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" });
-  const businessDayOf = (value: string) => parisDay.format(new Date(value));
+  // Use the tested Paris calendar-day helper so filtering is independent of
+  // Intl locale formatting differences between Node and browser runtimes.
+  const businessDayOf = (value: string) => parisBusinessDate(new Date(value));
   const multibrandFieldVisits = ((upcomingFieldAgendaResult.data ?? []) as FieldAgendaEvent[]).filter(
     (event) => event.ownership === "mine" && authorizedAgentVisit(event, authorizedBrandIds) && Boolean(event.pharmacy_id)
       && (businessDayOf(event.start_at) === today || (Boolean(event.end_at) && businessDayOf(event.start_at) < today && businessDayOf(event.end_at) >= today)),
@@ -349,9 +350,12 @@ export default async function AgentPage() {
         .is("archived_at", null)
     : { data: [] as RelationRow[] };
 
+  const relationByPharmacyId = new Map(
+    (relations ?? []).map((relation) => [relation.pharmacy_id, relation] as const),
+  );
   const offlineVisits = activeFieldVisits.flatMap((event) => {
     if (!event.pharmacy_id) return [];
-    const relation = (relations ?? []).find((item) => item.pharmacy_id === event.pharmacy_id);
+    const relation = relationByPharmacyId.get(event.pharmacy_id);
     if (!relation) return [];
     return [{
       id: event.source_id,
