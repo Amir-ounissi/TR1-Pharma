@@ -63,7 +63,12 @@ migration must still be applied by the normal staging release pipeline.
 2. In the **staging** Supabase dashboard, enable OAuth 2.1 Server, configure
    authorization path `/oauth/consent` and the correct staging Site URL.
    Set the Custom Access Token Hook to
-   `pg-functions://postgres/private/tr1_chatgpt_oauth_token_hook`.
+   `pg-functions://postgres/public/tr1_chatgpt_oauth_hook`.
+   The public function is a restricted SECURITY INVOKER wrapper around the
+   existing private hook. Only `supabase_auth_admin` may execute it;
+   `anon`, `authenticated`, and `tr1_chatgpt_reader` have no EXECUTE grant.
+   The public entrypoint is needed if the dashboard function selector excludes
+   the private schema. Never select a different unrelated function.
    Do this only after reviewing the staging deployment and its auth settings.
 3. Obtain the actual ChatGPT custom-plugin OAuth callback URI/client type from
    the ChatGPT UI. Do **not** invent a callback URL or client ID. Pre-register
