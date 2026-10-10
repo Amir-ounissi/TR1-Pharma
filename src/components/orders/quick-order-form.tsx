@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useMemo, useRef, useState } from "react";
 import { Check, Minus, PackagePlus, Plus, RotateCcw, Search, X } from "lucide-react";
 import {
   createOrderAction,
@@ -127,6 +127,8 @@ export function QuickOrderForm({
     initialFreeUnitsRule,
   );
   const [pricingLoading, setPricingLoading] = useState(false);
+  const [pricingError, setPricingError] = useState(false);
+  const pricingRequest = useRef(0);
   const [lines, setLines] = useState<DraftLine[]>(() => [
     {
       key: "line-1",
@@ -286,9 +288,12 @@ export function QuickOrderForm({
   }
 
   async function loadPharmacyPricing(pharmacy: OrderPharmacySearchResult) {
+    const requestId = ++pricingRequest.current;
     setPricingLoading(true);
+    setPricingError(false);
     try {
       const pricing = await getOrderPharmacyPricingAction(pharmacy.pharmacyId);
+      if (pricingRequest.current !== requestId) return;
       setDefaultDiscountRate(pricing.discountRate);
       setPotential(pricing.potential);
       setFreeUnitsRule(pricing.freeUnitsRule);
@@ -301,8 +306,11 @@ export function QuickOrderForm({
           freeQuantity: freeQuantityFor(line.quantity, pricing.freeUnitsRule) + line.manualFreeQuantity,
         })),
       );
+    } catch {
+      if (pricingRequest.current !== requestId) return;
+      setPricingError(true);
     } finally {
-      setPricingLoading(false);
+      if (pricingRequest.current === requestId) setPricingLoading(false);
     }
   }
 
@@ -347,6 +355,14 @@ export function QuickOrderForm({
         <OrderPharmacyAutocomplete
           initialPharmacy={initialPharmacy}
           onSelectionChange={(changed, pharmacy) => {
+              pricingRequest.current += 1;
+              setPricingLoading(false);
+              setPricingError(false);
+              if (!pharmacy || changed) {
+                setDefaultDiscountRate(null);
+                setPotential(null);
+                setFreeUnitsRule(null);
+              }
               setDraftPharmacyId(pharmacy?.brandPharmacyId ?? pharmacy?.pharmacyId ?? "unselected");
             setInitialContextChanged(changed);
             if (!pharmacy) {
@@ -388,6 +404,7 @@ export function QuickOrderForm({
             </>
           )}
         </div>
+        {pricingError ? <p role="alert" className="mt-2 text-xs text-destructive">Conditions client indisponibles : vérifiez les remises et unités gratuites avant de valider.</p> : null}
       </div>
 
       <section className="space-y-3">
