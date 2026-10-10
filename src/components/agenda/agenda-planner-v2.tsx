@@ -134,6 +134,7 @@ export function AgendaPlanner({
   backlog,
   brands,
   canCreateVisit,
+  initialCreateVisit = false,
 }: {
   date: string;
   today: string;
@@ -142,10 +143,50 @@ export function AgendaPlanner({
   backlog: BacklogItem[];
   brands: Array<{ id: string; name: string }>;
   canCreateVisit: boolean;
+  initialCreateVisit?: boolean;
 }) {
   const windowCache = useRef(
-    new Map<string, AgendaEvent[]>([[`${initialView}:${initialDate}`, initialEvents]]),
+    new Map<string, { events: AgendaEvent[]; storedAt: number }>([
+      [`${initialView}:${initialDate}`, { events: initialEvents, storedAt: Date.now() }],
+    ]),
   );
+  const navigationSequence = useRef(0);
+  const prefetchEpoch = useRef(0);
+
+  // Warm the previous and next period after the agenda becomes interactive.
+  // Do not preload over a disconnected or data-saver connection.
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+      if (!navigator.onLine || connection?.saveData) return;
+      const epoch = prefetchEpoch.current;
+      const offset = view === "week" ? 7 : 1;
+      for (const direction of [-1, 1]) {
+        const adjacent = addCalendarDays(date, direction * offset);
+        const adjacentDate = view === "week" ? mondayOfWeek(adjacent) : adjacent;
+        const cacheKey = `${view}:${adjacentDate}`;
+        const cached = windowCache.current.get(cacheKey);
+        if (cached && Date.now() - cached.storedAt < 60_000) continue;
+        void loadAgendaWindowAction(adjacentDate, view).then((result) => {
+          if (prefetchEpoch.current !== epoch) return;
+          const resultKey = `${result.view}:${result.date}`;
+          windowCache.current.set(resultKey, { events: result.events as AgendaEvent[], storedAt: Date.now() });
+          if (windowCache.current.size > 12) {
+            const oldest = windowCache.current.keys().next().value;
+            if (oldest) windowCache.current.delete(oldest);
+          }
+        }).catch(() => {
+          // Prefetch is opportunistic; foreground navigation handles errors.
+        });
+      }
+    }, 900);
+    return () => window.clearTimeout(timer);
+  }, [date, view]);
+
+  const invalidateCachedPeriods = () => {
+    prefetchEpoch.current += 1;
+    windowCache.current.clear();
+  };
   const [windowState, setWindowState] = useState(() => ({
     date: initialDate,
     view: initialView,
@@ -163,7 +204,7 @@ export function AgendaPlanner({
     });
   };
   const [filter, setFilter] = useState<(typeof planningFilters)[number]["key"]>("all");
-  const [visitOpen, setVisitOpen] = useState(false);
+  const [visitOpen, setVisitOpen] = useState(initialCreateVisit && canCreateVisit);
   const [visitStart, setVisitStart] = useState(`${date}T09:00`);
   const [moveFeedback, setMoveFeedback] = useState<{
     visitId: string;
@@ -207,11 +248,12 @@ export function AgendaPlanner({
   const dayContext = contextEvents.filter((event) => localDay(event.start_at) === date);
 
   const loadWindow = (requestedDate: string, nextView: "day" | "week") => {
+    const requestId = ++navigationSequence.current;
     const nextDate = nextView === "week" ? mondayOfWeek(requestedDate) : requestedDate;
     const cacheKey = `${nextView}:${nextDate}`;
 
     const applyWindow = (loadedEvents: AgendaEvent[]) => {
-      windowCache.current.set(cacheKey, loadedEvents);
+      windowCache.current.set(cacheKey, { events: loadedEvents, storedAt: Date.now() });
       setWindowState({ date: nextDate, view: nextView, events: loadedEvents });
       setNavigationError(null);
       window.history.replaceState(
@@ -222,17 +264,18 @@ export function AgendaPlanner({
     };
 
     const cached = windowCache.current.get(cacheKey);
-    if (cached) {
-      applyWindow(cached);
+    if (cached && Date.now() - cached.storedAt < 60_000) {
+      applyWindow(cached.events);
       return;
     }
 
     startWindowTransition(async () => {
       try {
         const result = await loadAgendaWindowAction(nextDate, nextView);
+        if (navigationSequence.current !== requestId) return;
         const loadedEvents = result.events as AgendaEvent[];
         const resolvedKey = `${result.view}:${result.date}`;
-        windowCache.current.set(resolvedKey, loadedEvents);
+        windowCache.current.set(resolvedKey, { events: loadedEvents, storedAt: Date.now() });
         setWindowState({ date: result.date, view: result.view, events: loadedEvents });
         setNavigationError(null);
         window.history.replaceState(
@@ -241,7 +284,9 @@ export function AgendaPlanner({
           `/dashboard/agenda?date=${encodeURIComponent(result.date)}&view=${result.view}`,
         );
       } catch {
-        setNavigationError("Impossible d’actualiser cette période. Réessayez dans un instant.");
+        if (navigationSequence.current === requestId) {
+          setNavigationError("Impossible d’actualiser cette période. Réessayez dans un instant.");
+        }
       }
     });
   };
@@ -268,6 +313,7 @@ export function AgendaPlanner({
     const previousLocal = previousLocalOverride || isoToParisLocal(currentVisit.start_at);
     if (previousLocal === nextLocal) return;
 
+    invalidateCachedPeriods();
     setLocalEvents((current) => moveVisitInEvents(current, visitId, nextLocal));
     setMoveFeedback({
       visitId,
@@ -313,6 +359,7 @@ export function AgendaPlanner({
     if (!moveFeedback?.visitId || !moveFeedback.previousLocal) return;
     const { visitId, previousLocal, nextLocal } = moveFeedback;
 
+    invalidateCachedPeriods();
     setLocalEvents((current) => moveVisitInEvents(current, visitId, previousLocal));
     setMoveFeedback(null);
 
@@ -517,7 +564,10 @@ export function AgendaPlanner({
         open={visitOpen}
         onOpenChange={setVisitOpen}
         defaultStart={visitStart}
-        onVisitCreated={(event) => setLocalEvents((current) => [...current, event])}
+        onVisitCreated={(event) => {
+          invalidateCachedPeriods();
+          setLocalEvents((current) => [...current, event]);
+        }}
       />
 
       {moveFeedback ? (
