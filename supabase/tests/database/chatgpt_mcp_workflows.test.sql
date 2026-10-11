@@ -69,15 +69,22 @@ BEGIN
     'client_visit','RDV ChatGPT QA','suivi',
     now()+interval '7 days', now()+interval '7 days 45 minutes',true
   );
-  replay_visit := public.tr1_chatgpt_create_planned_visit(
-    '00000000-0000-0000-0000-000000000401',
-    ARRAY['00000000-0000-0000-0000-000000000411']::uuid[],
-    'client_visit','RDV ChatGPT QA','suivi',
-    now()+interval '7 days', now()+interval '7 days 45 minutes',true
-  );
-  IF replay_visit IS DISTINCT FROM first_visit THEN
-    RAISE EXCEPTION 'Visit replay created a duplicate';
+  IF first_visit IS NULL THEN
+    RAISE EXCEPTION 'Confirmed visit was not created';
   END IF;
+  -- The revised security policy deliberately rejects even exact time-slot
+  -- retries because it cannot establish the original request's identity.
+  denied := false;
+  BEGIN
+    replay_visit := public.tr1_chatgpt_create_planned_visit(
+      '00000000-0000-0000-0000-000000000401',
+      ARRAY['00000000-0000-0000-0000-000000000411']::uuid[],
+      'client_visit','RDV ChatGPT QA','suivi',
+      now()+interval '7 days', now()+interval '7 days 45 minutes',true
+    );
+  EXCEPTION WHEN check_violation THEN denied := true;
+  END;
+  IF NOT denied THEN RAISE EXCEPTION 'Duplicate visit replay was not blocked'; END IF;
 
   denied := false;
   BEGIN
@@ -118,7 +125,7 @@ SELECT is((SELECT count(*) FROM public.order_items oi
     AND oi.quantity=2 AND oi.unit_price_ht=18.50), 1::bigint,
   'Draft line uses trusted catalog price and requested quantity');
 SELECT is((SELECT count(*) FROM public.field_visits
-  WHERE title='RDV ChatGPT QA'), 1::bigint, 'Visit replay is idempotent');
+  WHERE title='RDV ChatGPT QA'), 1::bigint, 'Rejected visit retry did not duplicate the initial visit');
 SELECT is((SELECT count(*) FROM public.orders
   WHERE external_order_id='chatgpt:00000000-0000-0000-0000-00000000ca02'), 0::bigint,
   'Foreign pharmacy order was not saved');
