@@ -106,21 +106,20 @@ BEGIN
     pg_catalog.hashtextextended('chatgpt-visit|' || auth.uid()::text,0)
   );
 
-  -- Reusing the exact existing visit is safe and preserves multibrand identity.
-  SELECT id INTO existing_id
-  FROM public.field_visits
-  WHERE owner_user_id = auth.uid()
-    AND pharmacy_id = target_pharmacy_id
-    AND scheduled_start_at = start_at
-    AND scheduled_end_at = end_at
-    AND archived_at IS NULL AND status <> 'cancelled'
-  ORDER BY created_at LIMIT 1;
-  IF existing_id IS NULL AND EXISTS (
+  -- Fail closed on any overlapping visit, including an exact match.
+  -- A matching time slot alone is not an idempotency key: the existing visit
+  -- may have a different origin, status, purpose, or brand association.
+  -- Until a dedicated request key is persisted, never reuse that record.
+  IF EXISTS (
     SELECT 1 FROM public.field_visits
-    WHERE owner_user_id = auth.uid() AND archived_at IS NULL AND status <> 'cancelled'
-      AND scheduled_start_at < end_at AND scheduled_end_at > start_at
+    WHERE owner_user_id = auth.uid()
+      AND archived_at IS NULL
+      AND status <> 'cancelled'
+      AND scheduled_start_at < end_at
+      AND scheduled_end_at > start_at
   ) THEN
-    RAISE EXCEPTION 'Overlapping existing visit; review the agenda' USING ERRCODE = '23514';
+    RAISE EXCEPTION 'Existing visit overlaps; review the agenda before creating another'
+      USING ERRCODE = '23514';
   END IF;
 
   RETURN public.create_field_visit(
