@@ -74,13 +74,17 @@ describe("TR1 authenticated MCP endpoint", () => {
     expect(fake.createClient).not.toHaveBeenCalled();
   });
 
-  it("exposes a read-only OAuth-protected tool", async () => {
+  it("advertises five read tools and two explicitly labeled writes", async () => {
     const response = await POST(request("tools/list"));
     const body = await response.json();
     expect(response.status).toBe(200);
-    expect(body.result.tools).toHaveLength(3);
-    expect(body.result.tools.every((tool: { annotations: { readOnlyHint: boolean } }) => tool.annotations.readOnlyHint)).toBe(true);
-    expect(body.result.tools[0].securitySchemes[0].type).toBe("oauth2");
+    expect(body.result.tools).toHaveLength(7);
+    expect(body.result.tools.slice(0, 5).every((tool: { annotations: { readOnlyHint: boolean } }) =>
+      tool.annotations.readOnlyHint)).toBe(true);
+    expect(body.result.tools.slice(5).every((tool: { annotations: { readOnlyHint: boolean } }) =>
+      tool.annotations.readOnlyHint)).toBe(false);
+    expect(body.result.tools.every((tool: { securitySchemes: Array<{type:string}> }) =>
+      tool.securitySchemes[0].type === "oauth2")).toBe(true);
   });
 
   it("initializes using the supported MCP protocol", async () => {
@@ -214,6 +218,58 @@ describe("TR1 authenticated MCP endpoint", () => {
     const response = await POST(request("tools/call", {
       name: "get_tr1_pharmacy_summary",
       arguments: { brand_pharmacy_id: "22222222-2222-4222-8222-222222222222" },
+    }, "oauth-token"));
+    expect(response.status).toBe(403);
+  });
+
+  it("never contacts TR1 database for an unconfirmed order write", async () => {
+    const response = await POST(request("tools/call", {
+      name: "create_tr1_order_draft",
+      arguments: {
+        brand_pharmacy_id: "22222222-2222-4222-8222-222222222222",
+        items: [{ product_id: "33333333-3333-4333-8333-333333333333", quantity: 24 }],
+        order_type: "reorder",
+        request_id: "44444444-4444-4444-8444-444444444444",
+      },
+    }, "oauth-token"));
+    expect(response.status).toBe(200);
+    expect((await response.json()).error.message).toContain("unconfirmed");
+    expect(fake.rpc).not.toHaveBeenCalled();
+  });
+
+  it("routes a confirmed draft only through its protected dedicated RPC", async () => {
+    fake.rpc.mockImplementation(async (name: string) => name === "tr1_chatgpt_list_brands"
+      ? { data: [{ brand_id: brandId }], error: null }
+      : { data: { order_id: "55555555-5555-4555-8555-555555555555", status: "draft", transmitted: false }, error: null });
+    const response = await POST(request("tools/call", {
+      name: "create_tr1_order_draft",
+      arguments: {
+        brand_pharmacy_id: "22222222-2222-4222-8222-222222222222",
+        items: [{ product_id: "33333333-3333-4333-8333-333333333333", quantity: 24 }],
+        order_type: "reorder",
+        request_id: "44444444-4444-4444-8444-444444444444",
+        confirmed: true,
+      },
+    }, "oauth-token"));
+    expect(response.status).toBe(200);
+    expect((await response.json()).result.structuredContent.draft.transmitted).toBe(false);
+    expect(fake.rpc).toHaveBeenCalledWith("tr1_chatgpt_create_order_draft",
+      expect.objectContaining({ confirmed: true }));
+  });
+
+  it("returns 403 when the dedicated database write authorization fails", async () => {
+    fake.rpc.mockImplementation(async (name: string) => name === "tr1_chatgpt_list_brands"
+      ? { data: [{ brand_id: brandId }], error: null }
+      : { data: null, error: { code: "42501" } });
+    const response = await POST(request("tools/call", {
+      name: "create_tr1_planned_visit",
+      arguments: {
+        pharmacy_id: "22222222-2222-4222-8222-222222222222",
+        brand_pharmacy_ids: ["33333333-3333-4333-8333-333333333333"],
+        visit_kind: "client_visit", title: "RDV planifié",
+        start_at: "2026-10-15T10:00:00+02:00", end_at: "2026-10-15T11:00:00+02:00",
+        confirmed: true,
+      },
     }, "oauth-token"));
     expect(response.status).toBe(403);
   });

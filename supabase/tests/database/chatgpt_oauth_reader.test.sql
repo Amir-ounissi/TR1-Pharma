@@ -2,7 +2,7 @@ BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap WITH SCHEMA extensions;
 SET LOCAL search_path = public, extensions;
 
-SELECT plan(28);
+SELECT plan(29);
 
 SELECT ok(EXISTS(SELECT 1 FROM pg_roles WHERE rolname = 'tr1_chatgpt_reader'),
   'ChatGPT has an isolated PostgreSQL role');
@@ -45,7 +45,21 @@ SELECT is((
   FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
   WHERE n.nspname IN ('public','storage') AND p.prosecdef AND p.provolatile='v'
     AND has_function_privilege('tr1_chatgpt_reader',p.oid,'EXECUTE')
-),0::bigint,'MCP OAuth token cannot call any existing mutating SECURITY DEFINER RPC');
+    AND p.oid NOT IN (
+      'public.tr1_chatgpt_create_planned_visit(uuid,uuid[],text,text,text,timestamptz,timestamptz,boolean)'::regprocedure,
+      'public.tr1_chatgpt_create_order_draft(uuid,jsonb,text,text,uuid,boolean)'::regprocedure
+    )
+),0::bigint,'MCP OAuth token cannot call unrelated mutating SECURITY DEFINER RPCs');
+SELECT is((
+  SELECT count(*)
+  FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+  WHERE n.nspname='public' AND p.prosecdef AND p.provolatile='v'
+    AND has_function_privilege('tr1_chatgpt_reader',p.oid,'EXECUTE')
+    AND p.oid IN (
+      'public.tr1_chatgpt_create_planned_visit(uuid,uuid[],text,text,text,timestamptz,timestamptz,boolean)'::regprocedure,
+      'public.tr1_chatgpt_create_order_draft(uuid,jsonb,text,text,uuid,boolean)'::regprocedure
+    )
+),2::bigint,'Only the two explicitly scoped MCP writes may be executed');
 SELECT ok(NOT has_function_privilege('authenticated',
   'private.tr1_chatgpt_oauth_token_hook(jsonb)','EXECUTE'),
   'Browser sessions cannot invoke the OAuth signing hook');

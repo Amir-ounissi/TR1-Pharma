@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { expandedTools, parseExpandedToolCall } from "@/lib/connectors/chatgpt-mcp-expanded-tools";
 import { getPublicSupabaseEnv } from "@/lib/supabase/env";
 import {
   CHATGPT_MCP_MAX_BODY_BYTES,
@@ -169,18 +170,28 @@ export async function POST(request: Request) {
     return rpcError(id, -32600, "Unsupported MCP protocol version", 400);
   }
   if (method === "ping") return rpcResult(id, {});
-  if (method === "tools/list") return rpcResult(id, { tools: [brandsTool, searchTool, summaryTool] });
+  if (method === "tools/list") return rpcResult(id, { tools: [brandsTool, searchTool, summaryTool, ...expandedTools] });
   if (method !== "tools/call") return rpcError(id, -32601, "Unknown MCP method");
 
   // MCP clients may include protocol metadata (_meta) alongside the tool name
   // and arguments. Ignore such transport metadata instead of rejecting valid
   // tools/call requests. Tool arguments remain strictly validated below.
   const params = z.object({
-    name: z.enum([brandsTool.name, searchTool.name, summaryTool.name]),
+    name: z.string().min(1),
     arguments: z.unknown().optional(),
     _meta: z.record(z.string(), z.unknown()).optional(),
   }).strip().safeParse(parsed.data.params);
   if (!params.success) return rpcError(id, -32602, "Invalid tool parameters");
+  const expandedName = expandedTools.some((tool) => tool.name === params.data.name);
+  if (!expandedName &&
+      ![brandsTool.name, searchTool.name, summaryTool.name].includes(params.data.name)) {
+    return rpcError(id, -32601, "Unknown TR1 tool");
+  }
+  // Fail closed before touching the database, including for confirmed write tools.
+  const expandedCall = expandedName
+    ? parseExpandedToolCall(params.data.name, params.data.arguments)
+    : null;
+  if (expandedName && !expandedCall) return rpcError(id, -32602, "Invalid or unconfirmed TR1 action");
   const searchArgs = params.data.name === searchTool.name
     ? argsSchema.safeParse(params.data.arguments)
     : null;
@@ -220,6 +231,23 @@ export async function POST(request: Request) {
 
   const { data: contexts, error: contextError } = await supabase.rpc("tr1_chatgpt_list_brands");
   if (contextError) return rpcError(id, -32003, "Authorization temporarily unavailable", 503);
+
+  if (expandedCall) {
+    // All scoped RPCs independently recheck the OAuth client, user's brand
+    // membership, and (for writes) assigned pharmacy. No elevated API key.
+    const { data, error } = await supabase.rpc(expandedCall.rpc, expandedCall.args);
+    if (error?.code === "42501") return rpcError(id, -32003, "TR1 access denied", 403);
+    if (error?.code === "22023" || error?.code === "23514" || error?.code === "23505") {
+      return rpcError(id, -32602, "TR1 rejected invalid, duplicate, or conflicting action", 400);
+    }
+    if (error) return rpcError(id, -32004, "TR1 operation temporarily unavailable", 503);
+    const response = { [expandedCall.responseKey]: data };
+    return rpcResult(id, {
+      content: [{ type: "text", text: JSON.stringify(response) }],
+      structuredContent: response,
+      isError: false,
+    });
+  }
 
   if (params.data.name === brandsTool.name) {
     const brands = (contexts ?? []).map((ctx: {
