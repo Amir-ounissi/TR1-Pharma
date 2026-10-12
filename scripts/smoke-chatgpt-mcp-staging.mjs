@@ -80,8 +80,29 @@ console.log("PASS unauthenticated business access denied (401 + OAuth challenge)
 
 // No business user token is provided. Both writes must fail before reaching
 // commercial data. The verification never creates an order or a visit.
-for (const name of expectedWrite) {
-  const denied = await rpc("tools/call", { name, arguments: { confirmed: true } }, 401);
+const untrustedVisit = {
+  pharmacy_id: "11111111-1111-4111-8111-111111111111",
+  brand_pharmacy_ids: ["22222222-2222-4222-8222-222222222222"],
+  visit_kind: "client_visit",
+  title: "Unauthorized smoke test (must not be created)",
+  start_at: "2027-01-15T10:00:00+01:00",
+  end_at: "2027-01-15T10:30:00+01:00",
+  confirmed: true,
+};
+const untrustedDraft = {
+  brand_pharmacy_id: "22222222-2222-4222-8222-222222222222",
+  items: [{ product_id: "33333333-3333-4333-8333-333333333333", quantity: 2 }],
+  order_type: "reorder",
+  request_id: "44444444-4444-4444-8444-444444444444",
+  confirmed: true,
+};
+for (const [name, args] of [
+  ["create_tr1_planned_visit", untrustedVisit],
+  ["create_tr1_order_draft", untrustedDraft],
+]) {
+  // Valid-looking inputs confirm access is denied due to OAuth, not simply
+  // because the payload is incomplete. No token is ever supplied.
+  const denied = await rpc("tools/call", { name, arguments: args }, 401);
   if (denied.body?.error?.code !== -32001) {
     throw new Error(`Unauthenticated write tool unexpectedly succeeded: ${name}`);
   }
