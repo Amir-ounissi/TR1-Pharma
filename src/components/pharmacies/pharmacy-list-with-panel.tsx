@@ -47,11 +47,26 @@ export function PharmacyListWithPanel({ rows, loadSummaryAction, showOwnershipCo
   const currentSummary = selectedId ? (summaryById[selectedId] ?? null) : null;
   const currentError = selectedId ? (errorById[selectedId] ?? null) : null;
 
-  function requestSummary(brandPharmacyId: string) {
-    if (inFlight.current.has(brandPharmacyId)
-      || Object.prototype.hasOwnProperty.call(summaryById, brandPharmacyId)
-      || Object.prototype.hasOwnProperty.call(errorById, brandPharmacyId)) return;
+  function requestSummary(brandPharmacyId: string, retry = false) {
+    if (inFlight.current.has(brandPharmacyId)) return;
+    if (!retry && (
+      Object.prototype.hasOwnProperty.call(summaryById, brandPharmacyId)
+      || Object.prototype.hasOwnProperty.call(errorById, brandPharmacyId)
+    )) return;
 
+    if (retry) {
+      // Drop the failed entry before requesting so the panel shows a loading state.
+      setSummaryById((current) => {
+        const updated = { ...current };
+        delete updated[brandPharmacyId];
+        return updated;
+      });
+      setErrorById((current) => {
+        const updated = { ...current };
+        delete updated[brandPharmacyId];
+        return updated;
+      });
+    }
     inFlight.current.add(brandPharmacyId);
     void loadSummaryAction(brandPharmacyId)
       .then((result) => {
@@ -232,6 +247,8 @@ export function PharmacyListWithPanel({ rows, loadSummaryAction, showOwnershipCo
         summary={currentSummary}
         loading={Boolean(open && selectedId && !Object.prototype.hasOwnProperty.call(summaryById, selectedId) && !Object.prototype.hasOwnProperty.call(errorById, selectedId))}
         error={currentError ?? null}
+        onRetry={selectedId ? () => requestSummary(selectedId, true) : undefined}
+        fallbackHref={selectedId ? `/dashboard/pharmacies/${selectedId}` : null}
       />
     </>
   );
