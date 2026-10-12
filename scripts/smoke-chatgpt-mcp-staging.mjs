@@ -44,15 +44,27 @@ if (initialize.body?.result?.serverInfo?.name !== "tr1-pharma") {
 console.log("PASS MCP initialize");
 
 const listed = await rpc("tools/list", {});
-const expected = ["list_tr1_brands", "search_tr1_pharmacies", "get_tr1_pharmacy_summary"];
-const advertised = listed.body?.result?.tools?.map((tool) => tool.name) ?? [];
-for (const name of expected) {
-  if (!advertised.includes(name)) throw new Error(`Missing read-only MCP tool ${name}`);
+const expectedRead = ["list_tr1_brands", "search_tr1_pharmacies", "get_tr1_pharmacy_summary",
+  "list_tr1_catalog", "get_tr1_agenda"];
+const expectedWrite = ["create_tr1_planned_visit", "create_tr1_order_draft"];
+const tools = listed.body?.result?.tools ?? [];
+const advertised = tools.map((tool) => tool.name);
+const expected = [...expectedRead, ...expectedWrite];
+if (advertised.length !== expected.length ||
+    new Set(advertised).size !== expected.length ||
+    expected.some((name) => !advertised.includes(name))) {
+  throw new Error(`Expected exactly seven MCP tools, received ${JSON.stringify(advertised)}`);
 }
-if (listed.body.result.tools.some((tool) => tool.annotations?.readOnlyHint !== true)) {
-  throw new Error("Non-read-only tool exposed in staging");
+for (const tool of tools) {
+  const readOnly = expectedRead.includes(tool.name);
+  if (tool.annotations?.readOnlyHint !== readOnly ||
+      tool.annotations?.destructiveHint !== false ||
+      !tool.securitySchemes?.some((scheme) => scheme.type === "oauth2") ||
+      tool.inputSchema?.additionalProperties !== false) {
+    throw new Error(`Tool metadata or authorization not safe: ${tool.name}`);
+  }
 }
-console.log("PASS three read-only tools exposed");
+console.log("PASS five OAuth read tools and two OAuth write tools with correct annotations");
 
 const forbidden = await rpc("tools/call", {
   name: "list_tr1_brands",
@@ -65,6 +77,16 @@ if (forbidden.body?.error?.code !== -32001) {
   throw new Error("Unauthenticated MCP call failed without an auth error");
 }
 console.log("PASS unauthenticated business access denied (401 + OAuth challenge)");
+
+// No business user token is provided. Both writes must fail before reaching
+// commercial data. The verification never creates an order or a visit.
+for (const name of expectedWrite) {
+  const denied = await rpc("tools/call", { name, arguments: { confirmed: true } }, 401);
+  if (denied.body?.error?.code !== -32001) {
+    throw new Error(`Unauthenticated write tool unexpectedly succeeded: ${name}`);
+  }
+}
+console.log("PASS both unauthenticated write tools rejected (401)");
 
 await get(resource, 405);
 console.log("PASS no read-data over GET");
