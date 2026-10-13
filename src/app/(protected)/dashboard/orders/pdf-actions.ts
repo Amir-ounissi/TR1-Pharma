@@ -123,7 +123,11 @@ export async function analyzePdfOrderAction(_state: PdfOrderActionState, formDat
     const products = (productRows ?? []).map((row) => readProduct(row as unknown as Record<string, unknown>));
     const pharmacyMatch = matchPdfPharmacy(extraction.pharmacy, pharmacies);
     const isNaali = brand.slug.trim().toLowerCase() === "naali";
-    const pharmacyId = pharmacyMatch.status === "matched" ? pharmacyMatch.match?.pharmacyId : null;
+    // Suggestions may be priced for review, but the user must explicitly select them.
+    // Confirmation stays tied to this exact candidate and revalidates terms server-side.
+    const pharmacyId = (pharmacyMatch.status === "matched" || pharmacyMatch.status === "suggested")
+      ? pharmacyMatch.match?.pharmacyId
+      : null;
     const terms = isNaali && pharmacyId
       ? await getNaaliHubSpotPharmacyPricing(brand.id, pharmacyId)
       : null;
@@ -163,7 +167,7 @@ export async function analyzePdfOrderAction(_state: PdfOrderActionState, formDat
     return {
       preview: {
         extraction, isNaali, commercialTermsReady, commercialTermsLabel, commercialFreeRule: terms?.freeUnitsRule ?? null,
-        pharmacy: { status: pharmacyMatch.status, method: pharmacyMatch.method, selectedPharmacyId: pharmacyMatch.status === "matched" ? pharmacyMatch.match?.pharmacyId || null : null, selectedBrandPharmacyId: pharmacyMatch.status === "matched" ? pharmacyMatch.match?.brandPharmacyId || null : null, candidates: pharmacyMatch.status === "matched" || pharmacyMatch.status === "suggested" ? pharmacyMatch.candidates : pharmacies },
+        pharmacy: { status: pharmacyMatch.status, method: pharmacyMatch.method, selectedPharmacyId: pharmacyMatch.status === "matched" ? pharmacyMatch.match?.pharmacyId || null : null, selectedBrandPharmacyId: pharmacyMatch.status === "matched" ? pharmacyMatch.match?.brandPharmacyId || null : null, pricedPharmacyId: pharmacyId ?? null, candidates: pharmacyMatch.status === "matched" || pharmacyMatch.status === "suggested" ? pharmacyMatch.candidates : pharmacies },
         lines,
         totalTr1Ht,
         totalDifferenceWarning: hasMeaningfulTotalDifference(extraction.totalHt, totalTr1Ht),
