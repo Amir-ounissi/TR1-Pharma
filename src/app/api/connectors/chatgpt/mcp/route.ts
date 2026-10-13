@@ -245,10 +245,11 @@ export async function POST(request: Request) {
     const { data: accessible, error: accessError } = await supabase.rpc(
       "tr1_chatgpt_pharmacy_summary", { target_brand_pharmacy_id: relationId },
     );
-    if (accessError?.code === "42501" || !accessible) {
+    if (accessError?.code === "42501") {
       return rpcError(id, -32003, "Pharmacy access denied", 403);
     }
     if (accessError) return rpcError(id, -32004, "Pharmacy scope unavailable", 503);
+    if (!accessible) return rpcError(id, -32003, "Pharmacy access denied", 403);
 
     const admin = createAdminClient();
     const { data: relation, error: relationError } = await admin
