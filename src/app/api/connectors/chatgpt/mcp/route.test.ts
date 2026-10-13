@@ -5,8 +5,15 @@ const fake = vi.hoisted(() => ({
   getUser: vi.fn(),
   rpc: vi.fn(),
   createClient: vi.fn(),
+  createAdminClient: vi.fn(),
+  adminFrom: vi.fn(),
+  refreshPricing: vi.fn(),
 }));
 
+vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: fake.createAdminClient }));
+vi.mock("@/lib/integrations/hubspot/naali-pricing", () => ({
+  getNaaliHubSpotPharmacyPricing: fake.refreshPricing,
+}));
 vi.mock("@supabase/supabase-js", () => ({
   createClient: fake.createClient,
 }));
@@ -45,6 +52,8 @@ describe("TR1 authenticated MCP endpoint", () => {
     vi.stubEnv("TR1_CHATGPT_MCP_RESOURCE_URL", resource);
     vi.stubEnv("TR1_CHATGPT_OAUTH_CLIENT_IDS", "trusted-chatgpt-client");
     vi.clearAllMocks();
+    fake.createAdminClient.mockReturnValue({ from: fake.adminFrom });
+    fake.refreshPricing.mockResolvedValue({ discountRate: 35 });
     fake.createClient.mockReturnValue({
       auth: { getClaims: fake.getClaims, getUser: fake.getUser },
       rpc: fake.rpc,
@@ -272,6 +281,81 @@ describe("TR1 authenticated MCP endpoint", () => {
       },
     }, "oauth-token"));
     expect(response.status).toBe(403);
+  });
+
+
+  it("refreshes stale Naali conditions before preview only after scoped authorization", async () => {
+    const relation = "22222222-2222-4222-8222-222222222222";
+    const pharmacy = "33333333-3333-4333-8333-333333333333";
+    const product = "44444444-4444-4444-8444-444444444444";
+    fake.rpc.mockImplementation(async (name: string) => {
+      if (name === "tr1_chatgpt_list_brands") return {
+        data: [{ brand_id: brandId, brand_slug: "naali" }], error: null,
+      };
+      if (name === "tr1_chatgpt_pharmacy_summary") {
+        return { data: { brand_pharmacy_id: relation }, error: null };
+      }
+      if (name === "tr1_chatgpt_priced_order_preview") {
+        return { data: { items: [{ discount_rate: 35, free_quantity: 2 }], total_ht: 221.05 }, error: null };
+      }
+      throw new Error("Unexpected RPC " + name);
+    });
+    fake.adminFrom.mockImplementation((table: string) => ({
+      select() { return this; },
+      eq() { return this; },
+      is() { return this; },
+      async maybeSingle() {
+        return { data: table === "brand_pharmacies"
+          ? { brand_id: brandId, pharmacy_id: pharmacy }
+          : { hubspot_synced_at: "2026-01-01T00:00:00Z" }, error: null };
+      },
+    }));
+    const response = await POST(request("tools/call", {
+      name: "preview_tr1_priced_order",
+      arguments: { brand_pharmacy_id: relation, items: [{ product_id: product, quantity: 12 }] },
+    }, "oauth-token"));
+    expect(response.status).toBe(200);
+    expect((await response.json()).result.structuredContent.preview.total_ht).toBe(221.05);
+    expect(fake.refreshPricing).toHaveBeenCalledWith(brandId, pharmacy);
+    expect(fake.rpc).toHaveBeenCalledWith("tr1_chatgpt_priced_order_preview", expect.anything());
+  });
+
+  it("denies unauthorized priced previews before reading HubSpot or admin tables", async () => {
+    fake.rpc.mockImplementation(async (name: string) => name === "tr1_chatgpt_list_brands"
+      ? { data: [{ brand_id: brandId, brand_slug: "naali" }], error: null }
+      : { data: null, error: { code: "42501" } });
+    const response = await POST(request("tools/call", {
+      name: "preview_tr1_priced_order",
+      arguments: {
+        brand_pharmacy_id: "22222222-2222-4222-8222-222222222222",
+        items: [{ product_id: "44444444-4444-4444-8444-444444444444", quantity: 12 }],
+      },
+    }, "oauth-token"));
+    expect(response.status).toBe(403);
+    expect(fake.createAdminClient).not.toHaveBeenCalled();
+    expect(fake.refreshPricing).not.toHaveBeenCalled();
+  });
+
+  it("uses a recent trusted snapshot instead of reading HubSpot on every preview", async () => {
+    const relation = "22222222-2222-4222-8222-222222222222";
+    fake.rpc.mockImplementation(async (name: string) => name === "tr1_chatgpt_list_brands"
+      ? { data: [{ brand_id: brandId, brand_slug: "naali" }], error: null }
+      : { data: { brand_pharmacy_id: relation }, error: null });
+    fake.adminFrom.mockImplementation((table: string) => ({
+      select() { return this; }, eq() { return this; }, is() { return this; },
+      async maybeSingle() {
+        return { data: table === "brand_pharmacies"
+          ? { brand_id: brandId, pharmacy_id: "33333333-3333-4333-8333-333333333333" }
+          : { hubspot_synced_at: new Date().toISOString() }, error: null };
+      },
+    }));
+    const response = await POST(request("tools/call", {
+      name: "preview_tr1_priced_order",
+      arguments: { brand_pharmacy_id: relation,
+        items: [{ product_id: "44444444-4444-4444-8444-444444444444", quantity: 12 }] },
+    }, "oauth-token"));
+    expect(response.status).toBe(200);
+    expect(fake.refreshPricing).not.toHaveBeenCalled();
   });
 
   it("rejects an untrusted origin", async () => {
