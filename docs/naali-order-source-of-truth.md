@@ -17,8 +17,8 @@
 
 ## Intégration réalisée dans cette PR
 
-- Prévisualisation PDF/photo sur le site et dans l'API mobile : consultation des conditions HubSpot / TR1 de la pharmacie Naali identifiée, remise et UG calculées par référence, avertissement sur les écarts avec le document.
-- Confirmation serveur web et mobile : contrôle des EAN, prix catalogue relus, conditions commerciales relues, blocage si la remise est inconnue ou si les UG/remises ne correspondent plus à la prévisualisation.
+- Prévisualisation PDF/photo sur le site : consultation des conditions HubSpot / TR1 de la pharmacie Naali identifiée, remise et UG calculées par référence, avertissement sur les écarts avec le document.
+- Confirmation serveur web : contrôle des EAN, prix catalogue relus, conditions commerciales relues, blocage si la remise est inconnue ou si les UG/remises ne correspondent plus à la prévisualisation.
 - La sélection d'une autre pharmacie dans la prévisualisation web Naali demande une nouvelle analyse pour recharger ses conditions.
 - Le calcul ne suppose pas que toute pharmacie est ambassadrice ; la règle 12+2 s'applique seulement si HubSpot ou une dérogation TR1 indique cette règle.
 
