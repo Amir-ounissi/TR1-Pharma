@@ -125,6 +125,16 @@ describe("PDF order deterministic matching", () => {
     });
   });
 
+  it("does not attach free units based on a matching label when EANs disagree", () => {
+    const rows = consolidatePdfOrderLines([
+      { label: "Anti-Stress", sku: null, ean: "3770010539650", quantity: 12, freeQuantity: 0, unitPriceHt: 28.34, discountRate: 35 },
+      { label: "Anti-Stress", sku: null, ean: "3770010539445", quantity: null, freeQuantity: 2, unitPriceHt: 28.34, discountRate: 100 },
+    ]);
+    expect(rows).toHaveLength(2);
+    expect(rows[0].freeQuantity).toBe(0);
+    expect(rows[1].freeQuantity).toBe(2);
+  });
+
   it("uses EAN (including registered reference EAN), never SKU or product name", () => {
     expect(matchPdfProduct({ label: "Wrong label", sku: null, ean: "3760000000001", quantity: 1, unitPriceHt: 10, discountRate: null }, products))
       .toMatchObject({ status: "matched", method: "ean", match: { id: "product-1" } });
