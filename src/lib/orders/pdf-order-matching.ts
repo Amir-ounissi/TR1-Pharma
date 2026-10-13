@@ -79,23 +79,10 @@ export function resolvePdfOrderDate(extraction: Pick<PdfOrderExtraction, "orderD
 }
 
 function pdfLineIdentity(line: PdfOrderExtraction["lines"][number]) {
-  const ean = normalizeNumericIdentifier(line.ean) || normalizeIdentifier(line.ean);
-  if (ean) return `ean:${ean}`;
-
-  const sku = normalizeIdentifier(line.sku);
-  if (sku) return `sku:${sku}`;
-
-  const label = normalizeText(line.label);
-  return label ? `label:${label}` : "";
-}
-
-function samePdfProductLabel(
-  left: PdfOrderExtraction["lines"][number],
-  right: PdfOrderExtraction["lines"][number],
-) {
-  const leftLabel = normalizeText(left.label);
-  const rightLabel = normalizeText(right.label);
-  return Boolean(leftLabel && rightLabel && leftLabel === rightLabel);
+  const explicitEan = normalizeIdentifier(line.ean);
+  const skuBarcode = normalizeNumericIdentifier(line.sku);
+  const barcode = explicitEan || ([8, 12, 13, 14].includes(skuBarcode.length) ? skuBarcode : "");
+  return barcode ? `ean:${barcode}` : "";
 }
 
 function attachFreeUnits(
@@ -126,15 +113,13 @@ export function consolidatePdfOrderLines(lines: PdfOrderExtraction["lines"]) {
     const identity = pdfLineIdentity(normalizedLine);
     const previous = result[result.length - 1];
 
-    // Pharmacy ERPs usually print UG directly under the paid line. Prefer that
-    // adjacency when the product identity or exact label agrees, even if OCR/LLM
-    // shifted an EAN to the free row.
+    // Free-unit rows are associated only when the EAN matches exactly.
+    // An adjacent row or similar label is never sufficient to establish identity.
     if (
       previous &&
       (previous.quantity ?? 0) > 0 &&
       (
-        (identity && pdfLineIdentity(previous) === identity) ||
-        samePdfProductLabel(previous, normalizedLine)
+        identity && pdfLineIdentity(previous) === identity
       )
     ) {
       attachFreeUnits(previous, normalizedLine);
@@ -145,8 +130,7 @@ export function consolidatePdfOrderLines(lines: PdfOrderExtraction["lines"]) {
       (candidate) =>
         (candidate.quantity ?? 0) > 0 &&
         (
-          (identity && pdfLineIdentity(candidate) === identity) ||
-          samePdfProductLabel(candidate, normalizedLine)
+          identity && pdfLineIdentity(candidate) === identity
         ),
     );
 
@@ -393,10 +377,40 @@ export function matchPdfProduct(line: PdfOrderExtraction["lines"][number], candi
   return { status: "unmatched", method: null, match: null, candidates: [] };
 }
 
+
+// Order documents provide identifiers and quantities, never product identity by label.
+// A barcode misclassified by extraction as SKU is accepted only if it is a numeric
+// GTIN (8, 12, 13 or 14 digits). When an EAN is present, it is authoritative.
+export function matchPdfOrderProduct(line: PdfOrderExtraction["lines"][number], candidates: ProductCandidate[]): MatchResult<ProductCandidate> {
+  const explicitEan = normalizeIdentifier(line.ean);
+  const skuBarcode = normalizeNumericIdentifier(line.sku);
+  const barcode = explicitEan || ([8, 12, 13, 14].includes(skuBarcode.length) ? skuBarcode : "");
+  if (!barcode) return { status: "unmatched", method: "ean_required", match: null, candidates: [] };
+
+  const direct = resolve(
+    candidates.filter((candidate) => normalizeIdentifier(candidate.ean) === barcode),
+    explicitEan ? "ean" : "barcode",
+  );
+  if (direct.status !== "unmatched") return direct;
+
+  const reference = resolve(
+    candidates.filter((candidate) => candidate.references.some((ref) => normalizeIdentifier(ref.ean) === barcode)),
+    explicitEan ? "reference_ean" : "reference_barcode",
+  );
+  if (reference.status !== "unmatched") return reference;
+
+  // No fallback to SKU or label, even if they resemble an existing product.
+  return { status: "unmatched", method: "ean_unknown", match: null, candidates: [] };
+}
+
 export function resolvedLinePrice(line: PdfOrderExtraction["lines"][number], product: ProductCandidate | null) {
-  if (line.unitPriceHt != null) return { price: line.unitPriceHt, warning: null };
-  if (product?.wholesalePriceHt != null) return { price: product.wholesalePriceHt, warning: "Prix PDF absent : prix catalogue proposé." };
-  return { price: null, warning: "Prix PDF et prix catalogue absents." };
+  if (product?.wholesalePriceHt == null) {
+    return { price: null, warning: "Prix catalogue TR1 indisponible : prix du document ignoré." };
+  }
+  if (line.unitPriceHt != null && Math.abs(line.unitPriceHt - product.wholesalePriceHt) > 0.005) {
+    return { price: product.wholesalePriceHt, warning: "Prix du document différent : prix catalogue TR1 appliqué." };
+  }
+  return { price: product.wholesalePriceHt, warning: null };
 }
 
 export function calculateOrderTotal(lines: Array<{ quantity: number | null; unitPriceHt: number | null; discountRate: number | null }>) {
