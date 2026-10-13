@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getNaaliHubSpotPharmacyPricing } from "@/lib/integrations/hubspot/naali-pricing";
 import { expandedTools, parseExpandedToolCall } from "@/lib/connectors/chatgpt-mcp-expanded-tools";
 import { getPublicSupabaseEnv } from "@/lib/supabase/env";
 import {
@@ -231,6 +233,59 @@ export async function POST(request: Request) {
 
   const { data: contexts, error: contextError } = await supabase.rpc("tr1_chatgpt_list_brands");
   if (contextError) return rpcError(id, -32003, "Authorization temporarily unavailable", 503);
+
+  // Only refresh the trusted commercial snapshot after the caller has passed
+  // OAuth authentication AND the existing pharmacy-assignment authorization.
+  // Never trust a brand ID or discount submitted as a tool argument.
+  if (expandedCall && (
+    params.data.name === "preview_tr1_priced_order" ||
+    params.data.name === "create_tr1_priced_order_draft"
+  )) {
+    const relationId = String(expandedCall.args.target_brand_pharmacy_id ?? "");
+    const { data: accessible, error: accessError } = await supabase.rpc(
+      "tr1_chatgpt_pharmacy_summary", { target_brand_pharmacy_id: relationId },
+    );
+    if (accessError?.code === "42501") {
+      return rpcError(id, -32003, "Pharmacy access denied", 403);
+    }
+    if (accessError) return rpcError(id, -32004, "Pharmacy scope unavailable", 503);
+    if (!accessible) return rpcError(id, -32003, "Pharmacy access denied", 403);
+
+    const admin = createAdminClient();
+    const { data: relation, error: relationError } = await admin
+      .from("brand_pharmacies")
+      .select("brand_id,pharmacy_id")
+      .eq("id", relationId)
+      .is("archived_at", null)
+      .maybeSingle();
+    if (relationError || !relation) return rpcError(id, -32004, "Pharmacy relation unavailable", 503);
+
+    const brandContext = (contexts ?? []).find((ctx: { brand_id: string }) =>
+      ctx.brand_id === relation.brand_id,
+    ) as { brand_id: string; brand_slug?: string } | undefined;
+    if (!brandContext) return rpcError(id, -32003, "Brand access denied", 403);
+
+    if (brandContext.brand_slug === "naali") {
+      const { data: cached, error: cacheError } = await admin
+        .from("brand_pharmacy_commercial_terms")
+        .select("hubspot_synced_at")
+        .eq("brand_pharmacy_id", relationId)
+        .maybeSingle();
+      if (cacheError) return rpcError(id, -32004, "Commercial terms unavailable", 503);
+      const syncedMs = cached?.hubspot_synced_at
+        ? Date.parse(String(cached.hubspot_synced_at)) : NaN;
+      // A short cache TTL avoids HubSpot rate-limit bursts. Old snapshots are
+      // refreshed through the existing service that persists HubSpot fields
+      // without overwriting pharmacy-specific TR1 overrides.
+      if (!Number.isFinite(syncedMs) || Date.now() - syncedMs > 10 * 60_000) {
+        try {
+          await getNaaliHubSpotPharmacyPricing(String(relation.brand_id), String(relation.pharmacy_id));
+        } catch {
+          return rpcError(id, -32004, "Commercial terms refresh unavailable", 503);
+        }
+      }
+    }
+  }
 
   if (expandedCall) {
     // All scoped RPCs independently recheck the OAuth client, user's brand
