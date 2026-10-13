@@ -1,7 +1,5 @@
 import { z } from "zod";
 import { syncHubSpotOrderAfterPersistence } from "@/lib/integrations/hubspot/runtime";
-import { getNaaliHubSpotPharmacyPricing } from "@/lib/integrations/hubspot/naali-pricing";
-import { resolveCommercialOrderLine } from "@/lib/orders/pdf-order-commercial";
 import { mobileApiError, requireMobileBrand, requireMobileCapability } from "@/lib/mobile-api";
 import { automaticOrderType, COUNTED_ORDER_STATUSES } from "@/lib/orders/order-type";
 
@@ -27,7 +25,6 @@ const confirmationSchema = z.object({
   orderDate: z.string().min(1),
   items: z.array(z.object({
     productId: uuid,
-    sourceEan: z.string().trim().max(32).nullable(),
     quantity: z.number().int().positive(),
     freeQuantity: z.number().int().nonnegative(),
     unitPriceHt: z.number().finite().nonnegative(),
@@ -54,7 +51,7 @@ export async function POST(request: Request) {
     const [{ data: products, error: productsError }, { data: externalDuplicate }, { data: numberDuplicate }] = await Promise.all([
       supabase
         .from("products")
-        .select("id,tax_rate,wholesale_price_ht,ean,product_references!product_references_product_brand_fk(ean)")
+        .select("id,tax_rate")
         .eq("brand_id", brand.id)
         .eq("is_active", true)
         .is("discontinued_at", null)
@@ -71,22 +68,11 @@ export async function POST(request: Request) {
     }
 
     const productById = new Map(products.map((product) => [product.id, product]));
-    for (const item of input.items) {
-      const ean = item.sourceEan?.replace(/\\s/g, "") ?? "";
-      const product = productById.get(item.productId);
-      const acceptedEans = [product?.ean, ...(product?.product_references ?? []).map((ref) => ref.ean)].filter(Boolean);
-      if (!ean || !acceptedEans.includes(ean)) {
-        return Response.json({ error: "EAN absent ou différent du produit TR1 sélectionné." }, { status: 409 });
-      }
-    }
-    if (products.some((product) => product.wholesale_price_ht == null || !Number.isFinite(Number(product.wholesale_price_ht)) || Number(product.wholesale_price_ht) < 0)) {
-      return Response.json({ error: "Prix catalogue TR1 absent ou invalide." }, { status: 409 });
-    }
     const trustedItems = input.items.map((item) => ({
       product_id: item.productId,
       quantity: item.quantity,
       free_quantity: item.freeQuantity,
-      unit_price_ht: Number(productById.get(item.productId)!.wholesale_price_ht),
+      unit_price_ht: item.unitPriceHt,
       discount_rate: item.discountRate,
       tax_rate: Number(productById.get(item.productId)?.tax_rate ?? 0),
     }));
@@ -104,22 +90,6 @@ export async function POST(request: Request) {
         return Response.json({ error: "Impossible de déterminer l’historique de cette pharmacie." }, { status: 409 });
       }
       resolvedPharmacyId = String(relation.pharmacy_id);
-    }
-
-    if (brand.slug.trim().toLowerCase() === "naali") {
-      if (!resolvedPharmacyId) return Response.json({ error: "Rattachez la pharmacie Naali avant l'import." }, { status: 409 });
-      const terms = await getNaaliHubSpotPharmacyPricing(brand.id, resolvedPharmacyId);
-      if (terms.discountRate == null) {
-        return Response.json({ error: "Remise Naali absente de HubSpot et TR1 : import bloqué." }, { status: 409 });
-      }
-      for (const [index, item] of input.items.entries()) {
-        const resolved = resolveCommercialOrderLine(item.quantity, terms);
-        if (item.discountRate !== resolved.discountRate || item.freeQuantity !== resolved.freeQuantity) {
-          return Response.json({ error: "Conditions commerciales modifiées : réanalysez le document." }, { status: 409 });
-        }
-        trustedItems[index].discount_rate = resolved.discountRate;
-        trustedItems[index].free_quantity = resolved.freeQuantity;
-      }
     }
 
     let hasPriorOrder = false;
