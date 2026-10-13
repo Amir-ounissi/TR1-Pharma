@@ -4,7 +4,7 @@ import {
   consolidatePdfOrderLines,
   hasMeaningfulTotalDifference,
   matchPdfPharmacy,
-  matchPdfProduct,
+  matchPdfOrderProduct,
   resolvePdfOrderDate,
   resolvedLinePrice,
   type PharmacyCandidate,
@@ -103,7 +103,7 @@ export async function POST(request: Request) {
     const pharmacyMatch = matchPdfPharmacy(extraction.pharmacy, pharmacies);
 
     const lines = extraction.lines.map((line, index) => {
-      const productMatch = matchPdfProduct(line, products);
+      const productMatch = matchPdfOrderProduct(line, products);
       const price = resolvedLinePrice(line, productMatch.match);
       return {
         index,
