@@ -23,6 +23,7 @@ export type PdfOrderPreview = {
   isNaali: boolean;
   commercialTermsReady: boolean;
   commercialTermsLabel: string | null;
+  commercialFreeRule: { paidQuantity: number; freeQuantity: number } | null;
   pharmacy: { status: "matched" | "suggested" | "unmatched" | "ambiguous"; method: string | null; selectedPharmacyId: string | null; selectedBrandPharmacyId: string | null; candidates: PreviewPharmacy[] };
   lines: Array<{
     index: number;
@@ -161,7 +162,7 @@ export async function analyzePdfOrderAction(_state: PdfOrderActionState, formDat
     }
     return {
       preview: {
-        extraction, isNaali, commercialTermsReady, commercialTermsLabel,
+        extraction, isNaali, commercialTermsReady, commercialTermsLabel, commercialFreeRule: terms?.freeUnitsRule ?? null,
         pharmacy: { status: pharmacyMatch.status, method: pharmacyMatch.method, selectedPharmacyId: pharmacyMatch.status === "matched" ? pharmacyMatch.match?.pharmacyId || null : null, selectedBrandPharmacyId: pharmacyMatch.status === "matched" ? pharmacyMatch.match?.brandPharmacyId || null : null, candidates: pharmacyMatch.status === "matched" || pharmacyMatch.status === "suggested" ? pharmacyMatch.candidates : pharmacies },
         lines,
         totalTr1Ht,
