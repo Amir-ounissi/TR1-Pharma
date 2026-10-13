@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
+import { getNaaliHubSpotPharmacyPricing } from "@/lib/integrations/hubspot/naali-pricing";
 import { syncHubSpotOrderAfterPersistence } from "@/lib/integrations/hubspot/runtime";
+import { resolveCommercialOrderLine } from "@/lib/orders/pdf-order-commercial";
 import { extractPdfOrder, PdfOrderImportError } from "@/lib/orders/pdf-order-extraction";
 import { calculateOrderTotal, consolidatePdfOrderLines, hasMeaningfulTotalDifference, matchPdfPharmacy, matchPdfProduct, resolvedLinePrice, type PharmacyCandidate, type ProductCandidate } from "@/lib/orders/pdf-order-matching";
 import type { PdfOrderExtraction } from "@/lib/orders/pdf-order-schema";
@@ -18,6 +20,9 @@ type PreviewProduct = Omit<ProductCandidate, "references">;
 
 export type PdfOrderPreview = {
   extraction: PdfOrderExtraction;
+  isNaali: boolean;
+  commercialTermsReady: boolean;
+  commercialTermsLabel: string | null;
   pharmacy: { status: "matched" | "suggested" | "unmatched" | "ambiguous"; method: string | null; selectedPharmacyId: string | null; selectedBrandPharmacyId: string | null; candidates: PreviewPharmacy[] };
   lines: Array<{
     index: number;
@@ -116,20 +121,47 @@ export async function analyzePdfOrderAction(_state: PdfOrderActionState, formDat
       .filter((row): row is PharmacyCandidate => row !== null);
     const products = (productRows ?? []).map((row) => readProduct(row as unknown as Record<string, unknown>));
     const pharmacyMatch = matchPdfPharmacy(extraction.pharmacy, pharmacies);
+    const isNaali = brand.slug.trim().toLowerCase() === "naali";
+    const pharmacyId = pharmacyMatch.status === "matched" ? pharmacyMatch.match?.pharmacyId : null;
+    const terms = isNaali && pharmacyId
+      ? await getNaaliHubSpotPharmacyPricing(brand.id, pharmacyId)
+      : null;
+    const commercialTermsReady = !isNaali || terms?.discountRate != null;
+    const commercialTermsLabel = terms
+      ? `Remise ${terms.discountRate == null ? "inconnue" : `${terms.discountRate} %`} · UG ${terms.freeUnitsRule?.label ?? "aucune"}`
+      : null;
     const lines = extraction.lines.map((line, index) => {
       const productMatch = matchPdfProduct(line, products);
       const price = resolvedLinePrice(line, productMatch.match);
+      const resolvedTerms = isNaali && commercialTermsReady && terms && line.quantity != null && line.quantity > 0
+        ? resolveCommercialOrderLine(line.quantity, terms)
+        : null;
       return {
-        index, label: line.label, sku: line.sku, ean: line.ean, quantity: line.quantity, freeQuantity: line.freeQuantity ?? 0, unitPriceHt: line.unitPriceHt, discountRate: line.discountRate,
+        index, label: line.label, sku: line.sku, ean: line.ean, quantity: line.quantity,
+        freeQuantity: isNaali ? (resolvedTerms?.freeQuantity ?? 0) : (line.freeQuantity ?? 0),
+        unitPriceHt: line.unitPriceHt,
+        discountRate: isNaali ? (resolvedTerms?.discountRate ?? null) : line.discountRate,
         product: { status: productMatch.status, method: productMatch.method, selectedId: productMatch.match?.id || null, candidates: (productMatch.status === "matched" ? productMatch.candidates : products).map((product) => ({ id: product.id, name: product.name, sku: product.sku, ean: product.ean, wholesalePriceHt: product.wholesalePriceHt, taxRate: product.taxRate })) },
         suggestedPriceHt: price.price, priceWarning: price.warning,
       };
     });
     const totalTr1Ht = calculateOrderTotal(lines.map((line) => ({ quantity: line.quantity, unitPriceHt: line.suggestedPriceHt, discountRate: line.discountRate })));
     const warnings = [...extraction.warnings, ...lines.flatMap((line) => line.priceWarning ? [line.priceWarning] : [])];
+    if (isNaali && !commercialTermsReady) warnings.push("Conditions commerciales Naali indisponibles : vérifiez le rattachement de la pharmacie et sa remise dans HubSpot ou TR1.");
+    if (isNaali && commercialTermsReady) {
+      for (const [index, line] of lines.entries()) {
+        const source = extraction.lines[index];
+        if (source.discountRate != null && source.discountRate !== line.discountRate) {
+          warnings.push(`Ligne ${index + 1} : remise imprimée ${source.discountRate} % différente des conditions commerciales ${line.discountRate} %.`);
+        }
+        if ((source.freeQuantity ?? 0) !== line.freeQuantity) {
+          warnings.push(`Ligne ${index + 1} : UG imprimées ${source.freeQuantity ?? 0}, conditions commerciales ${line.freeQuantity}.`);
+        }
+      }
+    }
     return {
       preview: {
-        extraction,
+        extraction, isNaali, commercialTermsReady, commercialTermsLabel,
         pharmacy: { status: pharmacyMatch.status, method: pharmacyMatch.method, selectedPharmacyId: pharmacyMatch.status === "matched" ? pharmacyMatch.match?.pharmacyId || null : null, selectedBrandPharmacyId: pharmacyMatch.status === "matched" ? pharmacyMatch.match?.brandPharmacyId || null : null, candidates: pharmacyMatch.status === "matched" || pharmacyMatch.status === "suggested" ? pharmacyMatch.candidates : pharmacies },
         lines,
         totalTr1Ht,
@@ -147,7 +179,7 @@ const confirmationSchema = z.object({
   pharmacyId: uuid.optional(),
   newPharmacy: z.object({ legalName: z.string().trim().min(1).max(200), tradeName: z.string().trim().max(200).optional(), siret: z.string().trim().max(32).optional(), cip: z.string().trim().max(32).optional(), finess: z.string().trim().max(32).optional(), postalCode: z.string().trim().max(16).optional(), city: z.string().trim().max(120).optional(), address: z.string().trim().max(300).optional() }).optional(),
   orderNumber: z.string().trim().min(1).max(120),
-  items: z.array(z.object({ productId: uuid, quantity: z.number().int().positive(), freeQuantity: z.number().int().nonnegative(), unitPriceHt: z.number().finite().nonnegative(), discountRate: z.number().finite().min(0).max(100).nullable() })).min(1),
+  items: z.array(z.object({ productId: uuid, sourceEan: z.string().trim().max(32).nullable(), quantity: z.number().int().positive(), freeQuantity: z.number().int().nonnegative(), unitPriceHt: z.number().finite().nonnegative(), discountRate: z.number().finite().min(0).max(100).nullable() })).min(1),
 });
 
 export async function confirmPdfOrderAction(_state: PdfOrderActionState, formData: FormData): Promise<PdfOrderActionState> {
@@ -172,13 +204,22 @@ export async function confirmPdfOrderAction(_state: PdfOrderActionState, formDat
   const contexts = await getBrandContexts();
   const isAgent = contexts.find((context) => context.id === brand.id)?.role === "agent";
   const [{ data: products, error: productsError }, { data: externalDuplicate }, { data: numberDuplicate }] = await Promise.all([
-    supabase.from("products").select("id,tax_rate,wholesale_price_ht").eq("brand_id", brand.id).eq("is_active", true).is("discontinued_at", null).in("id", [...new Set(parsed.data.items.map((item) => item.productId))]),
+    supabase.from("products").select("id,tax_rate,wholesale_price_ht,ean,product_references!product_references_product_brand_fk(ean)").eq("brand_id", brand.id).eq("is_active", true).is("discontinued_at", null).in("id", [...new Set(parsed.data.items.map((item) => item.productId))]),
     supabase.from("orders").select("id").eq("brand_id", brand.id).eq("external_order_id", parsed.data.orderNumber).maybeSingle(),
     supabase.from("orders").select("id").eq("brand_id", brand.id).eq("order_number", parsed.data.orderNumber).maybeSingle(),
   ]);
   if (productsError || products?.length !== new Set(parsed.data.items.map((item) => item.productId)).size) return { error: "Un produit sélectionné n’est plus disponible." };
   if (externalDuplicate || numberDuplicate) return { error: "Une commande avec ce numéro existe déjà pour cette marque." };
   const productById = new Map(products.map((product) => [product.id, product]));
+  for (const item of parsed.data.items) {
+    const ean = item.sourceEan?.replace(/\\s/g, "") ?? "";
+    const product = productById.get(item.productId);
+    const productReferences = product?.product_references ?? [];
+    const acceptedEans = [product?.ean, ...productReferences.map((reference) => reference.ean)].filter(Boolean);
+    if (!ean || !acceptedEans.includes(ean)) {
+      return { error: "EAN absent ou différent du produit TR1 sélectionné : corrigez le document avant confirmation." };
+    }
+  }
   if (products.some((product) => product.wholesale_price_ht == null || !Number.isFinite(Number(product.wholesale_price_ht)) || Number(product.wholesale_price_ht) < 0)) {
     return { error: "Prix catalogue TR1 manquant ou invalide : impossible de confirmer la commande." };
   }
@@ -206,6 +247,22 @@ export async function confirmPdfOrderAction(_state: PdfOrderActionState, formDat
       return { error: "Impossible de déterminer l’historique de cette pharmacie." };
     }
     resolvedPharmacyId = String(relation.pharmacy_id);
+  }
+
+  if (brand.slug.trim().toLowerCase() === "naali") {
+    if (!resolvedPharmacyId) return { error: "Rattachez la pharmacie Naali avant d'importer la commande." };
+    const terms = await getNaaliHubSpotPharmacyPricing(brand.id, resolvedPharmacyId);
+    if (terms.discountRate == null) {
+      return { error: "Remise commerciale Naali absente de HubSpot et TR1 : import bloqué." };
+    }
+    for (const [index, item] of parsed.data.items.entries()) {
+      const resolved = resolveCommercialOrderLine(item.quantity, terms);
+      if (item.discountRate !== resolved.discountRate || item.freeQuantity !== resolved.freeQuantity) {
+        return { error: `Les conditions commerciales ont changé pour la ligne ${index + 1}. Réanalysez le document avant validation.` };
+      }
+      trustedItems[index].discount_rate = resolved.discountRate;
+      trustedItems[index].free_quantity = resolved.freeQuantity;
+    }
   }
 
   let hasPriorOrder = false;
