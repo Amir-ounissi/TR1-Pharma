@@ -1,12 +1,10 @@
 import { extractOrderDocuments, PdfOrderImportError } from "@/lib/orders/pdf-order-extraction";
-import { getNaaliHubSpotPharmacyPricing } from "@/lib/integrations/hubspot/naali-pricing";
-import { resolveCommercialOrderLine } from "@/lib/orders/pdf-order-commercial";
 import {
   calculateOrderTotal,
   consolidatePdfOrderLines,
   hasMeaningfulTotalDifference,
   matchPdfPharmacy,
-  matchPdfOrderProduct,
+  matchPdfProduct,
   resolvePdfOrderDate,
   resolvedLinePrice,
   type PharmacyCandidate,
@@ -103,26 +101,19 @@ export async function POST(request: Request) {
       .filter((row): row is PharmacyCandidate => row !== null);
     const products = (productRows ?? []).map((row) => readProduct(row as unknown as Record<string, unknown>));
     const pharmacyMatch = matchPdfPharmacy(extraction.pharmacy, pharmacies);
-    const isNaali = brand.slug.trim().toLowerCase() === "naali";
-    const matchedPharmacyId = pharmacyMatch.status === "matched" ? pharmacyMatch.match?.pharmacyId : null;
-    const terms = isNaali && matchedPharmacyId ? await getNaaliHubSpotPharmacyPricing(brand.id, matchedPharmacyId) : null;
-    const commercialTermsReady = !isNaali || terms?.discountRate != null;
 
     const lines = extraction.lines.map((line, index) => {
-      const productMatch = matchPdfOrderProduct(line, products);
+      const productMatch = matchPdfProduct(line, products);
       const price = resolvedLinePrice(line, productMatch.match);
-      const resolvedTerms = isNaali && commercialTermsReady && terms && line.quantity != null && line.quantity > 0
-        ? resolveCommercialOrderLine(line.quantity, terms)
-        : null;
       return {
         index,
         label: line.label,
         sku: line.sku,
         ean: line.ean,
         quantity: line.quantity,
-        freeQuantity: isNaali ? (resolvedTerms?.freeQuantity ?? 0) : (line.freeQuantity ?? 0),
+        freeQuantity: line.freeQuantity ?? 0,
         unitPriceHt: line.unitPriceHt,
-        discountRate: isNaali ? (resolvedTerms?.discountRate ?? null) : line.discountRate,
+        discountRate: line.discountRate,
         suggestedPriceHt: price.price,
         priceWarning: price.warning,
         product: {
@@ -150,23 +141,11 @@ export async function POST(request: Request) {
       ...extraction.warnings,
       ...(dateWarning ? [dateWarning] : []),
       ...lines.flatMap((line) => (line.priceWarning ? [line.priceWarning] : [])),
-      ...(isNaali && !commercialTermsReady ? ["Conditions commerciales Naali indisponibles : confirmation impossible."] : []),
-      ...lines.flatMap((line, index) => {
-        if (!isNaali || !commercialTermsReady) return [];
-        const source = extraction.lines[index];
-        const issues: string[] = [];
-        if (source.discountRate != null && source.discountRate !== line.discountRate) issues.push(`Ligne ${index + 1} : remise imprimée différente des conditions HubSpot / TR1.`);
-        if ((source.freeQuantity ?? 0) !== line.freeQuantity) issues.push(`Ligne ${index + 1} : UG imprimées différentes des conditions HubSpot / TR1.`);
-        return issues;
-      }),
     ];
 
     return Response.json({
       preview: {
         extraction,
-        isNaali,
-        commercialTermsReady,
-        commercialTermsLabel: terms ? `Remise ${terms.discountRate ?? "inconnue"} % · UG ${terms.freeUnitsRule?.label ?? "aucune"}` : null,
         pharmacy: {
           status: pharmacyMatch.status,
           method: pharmacyMatch.method,
