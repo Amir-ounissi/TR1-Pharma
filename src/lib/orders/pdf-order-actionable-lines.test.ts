@@ -52,7 +52,7 @@ describe("pharmacy order table with paid and UG rows", () => {
         line("NAALI GUMMIES ANTI-STRESS 20 GOMMES", null, 6, 10.33, 100, "3770010539391"),
         line("NAALI GUMMIES DREAM SAFRAN MELAT 60", 24, 0, 24.55, 35, "3770010539490"),
         line("NAALI GUMMIES DREAM SAFRAN MELAT 60", null, 4, 24.55, 100, "3770010539490"),
-        // Some pharmacy ERP exports omit the barcode on both rows: label identity must still merge UG.
+        // Some ERP exports omit both barcodes: do not attribute UG by label alone.
         line("NAALI GUMMIES DREAM VOYAGE X20", 24, 0, 9.38, 35),
         line("NAALI GUMMIES DREAM VOYAGE X20", null, 4, 9.38, 100),
         line("NAALI GUMMIES MAGNESIUM SAFRAN", null, 0, 28.34, 35, "3770010539483"),
@@ -70,9 +70,9 @@ describe("pharmacy order table with paid and UG rows", () => {
     expect(extraction.lines).toHaveLength(12);
     expect(extraction.lines.every((item) => (item.quantity ?? 0) > 0 || (item.freeQuantity ?? 0) > 0)).toBe(true);
 
-    // Paid + 100%-discount UG rows are one commercial product line in TR1.
+    // Known-EAN UG rows merge. The barcode-less UG row stays unresolved for manual correction.
     const consolidated = consolidatePdfOrderLines(extraction.lines);
-    expect(consolidated).toHaveLength(6);
+    expect(consolidated).toHaveLength(7);
 
     const paidUnits = consolidated.reduce((sum, item) => sum + (item.quantity ?? 0), 0);
     const freeUnits = consolidated.reduce((sum, item) => sum + (item.freeQuantity ?? 0), 0);
@@ -82,10 +82,10 @@ describe("pharmacy order table with paid and UG rows", () => {
       totalUnits: 168,
     });
 
-    expect(consolidated.find((item) => item.label === "NAALI GUMMIES DREAM VOYAGE X20")).toMatchObject({
-      quantity: 24,
-      freeQuantity: 4,
-    });
+    expect(consolidated.filter((item) => item.label === "NAALI GUMMIES DREAM VOYAGE X20")).toEqual([
+      expect.objectContaining({ quantity: 24, freeQuantity: 0 }),
+      expect.objectContaining({ quantity: null, freeQuantity: 4 }),
+    ]);
 
     expect(calculateOrderTotal(consolidated.map((item) => ({
       quantity: item.quantity,

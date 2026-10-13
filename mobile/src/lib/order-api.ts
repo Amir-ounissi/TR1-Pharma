@@ -55,6 +55,9 @@ export type MobileOrderPreview = {
     selectedName: string | null;
     candidates: Array<{ pharmacyId: string; brandPharmacyId: string | null; name: string; postalCode: string | null }>;
   };
+  isNaali?: boolean;
+  commercialTermsReady?: boolean;
+  commercialTermsLabel?: string | null;
   lines: OrderPreviewLine[];
   totalTr1Ht: number;
   totalDifferenceWarning: boolean;
@@ -214,18 +217,22 @@ export async function confirmOrderPreview(input: {
   products: Record<number, OrderProductSelection>;
 }) {
   if (!input.pharmacy) throw new Error("La pharmacie doit être identifiée avant validation.");
+  if (input.preview.isNaali && !input.preview.commercialTermsReady) {
+    throw new Error("Conditions commerciales Naali introuvables. Réanalysez le document après vérification dans HubSpot / TR1.");
+  }
 
   const items = input.preview.lines.map((line) => {
     const selectedProduct = input.products[line.index];
     if (selectedProduct === undefined || line.quantity == null || line.quantity <= 0) {
       throw new Error("Toutes les lignes doivent être identifiées avant validation.");
     }
-    const unitPriceHt = line.unitPriceHt ?? selectedProduct.unitPriceHt;
+    const unitPriceHt = selectedProduct.unitPriceHt;
     if (unitPriceHt == null) {
       throw new Error("Toutes les lignes doivent avoir un prix avant validation.");
     }
     return {
       productId: selectedProduct.productId,
+      sourceEan: line.ean || line.sku || null,
       quantity: line.quantity,
       freeQuantity: line.freeQuantity,
       unitPriceHt,
