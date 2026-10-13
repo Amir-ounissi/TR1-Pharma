@@ -269,134 +269,39 @@ export function matchPdfPharmacy(pharmacy: PdfOrderExtraction["pharmacy"], candi
   return { status: "unmatched", method: null, match: null, candidates: [] };
 }
 
-const PRODUCT_GENERIC_TOKENS = new Set([
-  "naali", "gummies", "gummy", "gommes", "gomme", "gelu", "gelule", "gelules",
-  "sachet", "decouverte", "bte", "boite", "capsule", "capsules", "complement",
-  "alimentaire", "fr", "x",
-]);
-
-function productNameTokens(value: string | null | undefined) {
-  return normalizeText(value)
-    .split(" ")
-    .map((token) => /^x\d+$/.test(token) ? token.slice(1) : token)
-    .filter((token) => token && !PRODUCT_GENERIC_TOKENS.has(token));
-}
-
-function meaningfulProductNameTokens(value: string | null | undefined) {
-  return productNameTokens(value).filter((token) => !/^\d+(?:g|mg|ml)?$/.test(token));
-}
-
-function candidateLabelTokens(candidate: ProductCandidate) {
-  return [...new Set([
-    ...meaningfulProductNameTokens(candidate.name),
-    ...candidate.references.flatMap((reference) => meaningfulProductNameTokens(reference.label)),
-  ])];
-}
-
-function productIdentifierConflictsWithLabel(
-  line: PdfOrderExtraction["lines"][number],
-  candidate: ProductCandidate,
-) {
-  const lineTokens = meaningfulProductNameTokens(line.label);
-  const productTokens = candidateLabelTokens(candidate);
-  if (lineTokens.length === 0 || productTokens.length === 0) return false;
-
-  const lineSet = new Set(lineTokens);
-  return productTokens.every((token) => !lineSet.has(token));
-}
-
-function matchProductByLabelTokens(line: PdfOrderExtraction["lines"][number], candidates: ProductCandidate[]): MatchResult<ProductCandidate> {
-  const lineTokens = productNameTokens(line.label);
-  if (lineTokens.length === 0) return { status: "unmatched", method: null, match: null, candidates: [] };
-  const lineSet = new Set(lineTokens);
-
-  const scored = candidates.flatMap((candidate) => {
-    const candidateTokens = productNameTokens(candidate.name);
-    if (candidateTokens.length === 0) return [];
-    const candidateSet = new Set(candidateTokens);
-    const overlap = [...candidateSet].filter((token) => lineSet.has(token)).length;
-    if (overlap === 0) return [];
-    const candidateCoverage = overlap / candidateSet.size;
-    const lineCoverage = overlap / lineSet.size;
-    const candidateContained = candidateCoverage === 1 && (candidateSet.size >= 2 || candidateTokens[0].length >= 5);
-    const lineContained = lineCoverage === 1 && lineSet.size >= 2;
-    const score = candidateCoverage * 0.75 + lineCoverage * 0.25;
-    if (!candidateContained && !lineContained && !(overlap >= 2 && score >= 0.82)) return [];
-    return [{ candidate, score, overlap, specificity: candidateSet.size }];
-  }).sort((left, right) => right.score - left.score || right.overlap - left.overlap || right.specificity - left.specificity);
-
-  if (scored.length === 0) return { status: "unmatched", method: null, match: null, candidates: [] };
-  const best = scored[0];
-  const tied = scored.filter((item) => Math.abs(item.score - best.score) < 0.05 && item.overlap === best.overlap && item.specificity === best.specificity);
-  if (tied.length > 1) return { status: "ambiguous", method: "label_tokens", match: null, candidates: tied.map((item) => item.candidate) };
-  return { status: "matched", method: "label_tokens", match: best.candidate, candidates: [best.candidate] };
-}
-
-function guardIdentifierMatch(
-  line: PdfOrderExtraction["lines"][number],
-  result: MatchResult<ProductCandidate>,
-  method: string,
-  candidates: ProductCandidate[],
-): MatchResult<ProductCandidate> {
-  if (result.status !== "matched" || !result.match) return result;
-  if (!productIdentifierConflictsWithLabel(line, result.match)) return result;
-
-  const labelResult = matchProductByLabelTokens(line, candidates);
-  const conflictCandidates = [
-    result.match,
-    ...labelResult.candidates.filter((candidate) => candidate.id !== result.match?.id),
-  ];
-
-  return {
-    status: "ambiguous",
-    method: `${method}_label_conflict`,
-    match: null,
-    candidates: conflictCandidates,
-  };
-}
-
+// Order documents provide identifiers and quantities, never product identity by label.
+// A barcode misclassified by extraction as SKU is accepted only if it is a numeric
+// GTIN (8, 12, 13 or 14 digits). When an EAN is present, it is authoritative.
 export function matchPdfProduct(line: PdfOrderExtraction["lines"][number], candidates: ProductCandidate[]): MatchResult<ProductCandidate> {
-  const ean = normalizeIdentifier(line.ean);
-  if (ean) {
-    const direct = resolve(candidates.filter((candidate) => normalizeIdentifier(candidate.ean) === ean), "ean");
-    if (direct.status !== "unmatched") return guardIdentifierMatch(line, direct, "ean", candidates);
-  }
+  const explicitEan = normalizeIdentifier(line.ean);
+  const skuBarcode = normalizeNumericIdentifier(line.sku);
+  const barcode = explicitEan || ([8, 12, 13, 14].includes(skuBarcode.length) ? skuBarcode : "");
+  if (!barcode) return { status: "unmatched", method: "ean_required", match: null, candidates: [] };
 
-  const numericCodes = [...new Set([normalizeNumericIdentifier(line.ean), normalizeNumericIdentifier(line.sku)].filter(Boolean))];
-  for (const code of numericCodes) {
-    const direct = resolve(candidates.filter((candidate) => normalizeNumericIdentifier(candidate.ean) === code), "barcode");
-    if (direct.status !== "unmatched") return guardIdentifierMatch(line, direct, "barcode", candidates);
-    const references = resolve(candidates.filter((candidate) => candidate.references.some((reference) => normalizeNumericIdentifier(reference.ean) === code)), "reference_barcode");
-    if (references.status !== "unmatched") return guardIdentifierMatch(line, references, "reference_barcode", candidates);
-  }
+  const direct = resolve(
+    candidates.filter((candidate) => normalizeIdentifier(candidate.ean) === barcode),
+    explicitEan ? "ean" : "barcode",
+  );
+  if (direct.status !== "unmatched") return direct;
 
-  const sku = normalizeIdentifier(line.sku);
-  if (sku) {
-    const direct = resolve(candidates.filter((candidate) => normalizeIdentifier(candidate.sku) === sku), "sku");
-    if (direct.status !== "unmatched") return direct;
-  }
-  if (ean) {
-    const references = resolve(candidates.filter((candidate) => candidate.references.some((reference) => normalizeIdentifier(reference.ean) === ean)), "reference_ean");
-    if (references.status !== "unmatched") return guardIdentifierMatch(line, references, "reference_ean", candidates);
-  }
-  if (sku) {
-    const references = resolve(candidates.filter((candidate) => candidate.references.some((reference) => normalizeIdentifier(reference.sku) === sku)), "reference_sku");
-    if (references.status !== "unmatched") return references;
-  }
+  const reference = resolve(
+    candidates.filter((candidate) => candidate.references.some((ref) => normalizeIdentifier(ref.ean) === barcode)),
+    explicitEan ? "reference_ean" : "reference_barcode",
+  );
+  if (reference.status !== "unmatched") return reference;
 
-  const label = normalizeText(line.label);
-  if (label) {
-    const exact = resolve(candidates.filter((candidate) => normalizeText(candidate.name) === label), "exact_name");
-    if (exact.status !== "unmatched") return exact;
-    return matchProductByLabelTokens(line, candidates);
-  }
-  return { status: "unmatched", method: null, match: null, candidates: [] };
+  // No fallback to SKU or label, even if they resemble an existing product.
+  return { status: "unmatched", method: "ean_unknown", match: null, candidates: [] };
 }
 
 export function resolvedLinePrice(line: PdfOrderExtraction["lines"][number], product: ProductCandidate | null) {
-  if (line.unitPriceHt != null) return { price: line.unitPriceHt, warning: null };
-  if (product?.wholesalePriceHt != null) return { price: product.wholesalePriceHt, warning: "Prix PDF absent : prix catalogue proposé." };
-  return { price: null, warning: "Prix PDF et prix catalogue absents." };
+  if (product?.wholesalePriceHt == null) {
+    return { price: null, warning: "Prix catalogue TR1 indisponible : prix du document ignoré." };
+  }
+  if (line.unitPriceHt != null && Math.abs(line.unitPriceHt - product.wholesalePriceHt) > 0.005) {
+    return { price: product.wholesalePriceHt, warning: "Prix du document différent : prix catalogue TR1 appliqué." };
+  }
+  return { price: product.wholesalePriceHt, warning: null };
 }
 
 export function calculateOrderTotal(lines: Array<{ quantity: number | null; unitPriceHt: number | null; discountRate: number | null }>) {
