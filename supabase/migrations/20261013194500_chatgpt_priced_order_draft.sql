@@ -51,10 +51,6 @@ BEGIN
   discount := coalesce(terms.discount_rate, terms.hubspot_discount_rate);
   paid := coalesce(terms.ug_paid_quantity, terms.hubspot_ug_paid_quantity);
   free := coalesce(terms.ug_free_quantity, terms.hubspot_ug_free_quantity);
-  IF discount IS NULL OR discount < 0 OR discount > 100
-     OR paid IS NULL OR paid <= 0 OR free IS NULL OR free < 0 THEN
-    RAISE EXCEPTION 'Commercial discount or free-unit rule unverified' USING ERRCODE = '22023';
-  END IF;
   -- Naali ambassador lead status overrides generic HubSpot UG snapshot, as on web.
   -- Explicit TR1 manual UG terms take precedence.
   IF rel.slug = 'naali' AND terms.ug_paid_quantity IS NULL AND
@@ -63,6 +59,10 @@ BEGIN
   ELSIF rel.slug = 'naali' AND terms.ug_paid_quantity IS NULL AND
      lower(btrim(coalesce(terms.hubspot_lead_status,''))) = 'client partenaire' THEN
     paid := 12; free := 1;
+  END IF;
+  IF discount IS NULL OR discount < 0 OR discount > 100
+     OR paid IS NULL OR paid <= 0 OR free IS NULL OR free < 0 THEN
+    RAISE EXCEPTION 'Commercial discount or free-unit rule unverified' USING ERRCODE = '22023';
   END IF;
   FOR line IN SELECT value FROM jsonb_array_elements(draft_items) LOOP
     IF jsonb_typeof(line) <> 'object' OR
