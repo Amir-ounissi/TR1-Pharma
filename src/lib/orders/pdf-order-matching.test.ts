@@ -125,10 +125,15 @@ describe("PDF order deterministic matching", () => {
     });
   });
 
-  it("matches products by EAN, SKU, and a reference", () => {
-    expect(matchPdfProduct({ label: null, sku: null, ean: "3760000000001", quantity: 1, unitPriceHt: 10, discountRate: null }, products)).toMatchObject({ status: "matched", method: "ean", match: { id: "product-1" } });
-    expect(matchPdfProduct({ label: null, sku: "VK-C", ean: null, quantity: 1, unitPriceHt: 10, discountRate: null }, products)).toMatchObject({ status: "matched", method: "sku", match: { id: "product-1" } });
-    expect(matchPdfProduct({ label: null, sku: "LEGACY-C", ean: null, quantity: 1, unitPriceHt: 10, discountRate: null }, products)).toMatchObject({ status: "matched", method: "reference_sku", match: { id: "product-1" } });
+  it("uses EAN (including registered reference EAN), never SKU or product name", () => {
+    expect(matchPdfProduct({ label: "Wrong label", sku: null, ean: "3760000000001", quantity: 1, unitPriceHt: 10, discountRate: null }, products))
+      .toMatchObject({ status: "matched", method: "ean", match: { id: "product-1" } });
+    expect(matchPdfProduct({ label: null, sku: null, ean: "3760000000002", quantity: 1, unitPriceHt: 10, discountRate: null }, products))
+      .toMatchObject({ status: "matched", method: "reference_ean", match: { id: "product-1" } });
+    expect(matchPdfProduct({ label: "Vitamine C", sku: "VK-C", ean: null, quantity: 1, unitPriceHt: 10, discountRate: null }, products))
+      .toMatchObject({ status: "unmatched", method: "ean_required", match: null });
+    expect(matchPdfProduct({ label: "Vitamine C", sku: "LEGACY-C", ean: null, quantity: 1, unitPriceHt: 10, discountRate: null }, products))
+      .toMatchObject({ status: "unmatched", method: "ean_required", match: null });
   });
 
   it("keeps an EAN match when the product label is consistent", () => {
@@ -146,31 +151,40 @@ describe("PDF order deterministic matching", () => {
     });
   });
 
-  it("blocks an EAN shifted from the next ERP row when it conflicts with the product label", () => {
+  it("keeps the EAN authoritative even when the printed name conflicts", () => {
     expect(matchPdfProduct({
       label: "NAALI GUMMIES DREAM VOYAGE X20",
-      sku: null,
-      ean: "3770010539483",
-      quantity: 24,
-      unitPriceHt: 9.38,
-      discountRate: 35,
+      sku: null, ean: "3770010539483", quantity: 24,
+      unitPriceHt: 9.38, discountRate: 35,
     }, naaliProducts)).toMatchObject({
-      status: "ambiguous",
-      method: "ean_label_conflict",
-      match: null,
-      candidates: expect.arrayContaining([
-        expect.objectContaining({ id: "magnesium" }),
-        expect.objectContaining({ id: "dream-voyage" }),
-      ]),
+      status: "matched", method: "ean", match: { id: "magnesium" },
     });
   });
 
-  it("requires manual selection for an ambiguous product name", () => {
-    expect(matchPdfProduct({ label: "Vitamine C", sku: null, ean: null, quantity: 1, unitPriceHt: 10, discountRate: null }, products)).toMatchObject({ status: "ambiguous", match: null });
+  it("never substitutes a label or SKU when an explicit EAN is unknown", () => {
+    expect(matchPdfProduct({
+      label: "Dream", sku: "1dream", ean: "9999999999999",
+      quantity: 12, unitPriceHt: 24.55, discountRate: 35,
+    }, naaliProducts)).toMatchObject({
+      status: "unmatched", method: "ean_unknown", match: null,
+    });
+    expect(matchPdfProduct({
+      label: "Dream", sku: null, ean: null, quantity: 12,
+      unitPriceHt: 24.55, discountRate: 35,
+    }, naaliProducts)).toMatchObject({
+      status: "unmatched", method: "ean_required", match: null,
+    });
   });
 
-  it("uses the catalogue price only when the PDF price is absent", () => {
-    expect(resolvedLinePrice({ label: null, sku: null, ean: null, quantity: 1, unitPriceHt: null, discountRate: null }, products[0])).toEqual({ price: 12.5, warning: "Prix PDF absent : prix catalogue proposé." });
+  it("uses catalog price exclusively and flags differences with document prices", () => {
+    const line = { label: null, sku: null, ean: "3760000000001", quantity: 1, unitPriceHt: 10, discountRate: null };
+    expect(resolvedLinePrice(line, products[0])).toEqual({
+      price: 12.5, warning: "Prix du document différent : prix catalogue TR1 appliqué.",
+    });
+    expect(resolvedLinePrice({ ...line, unitPriceHt: null }, products[0])).toEqual({ price: 12.5, warning: null });
+    expect(resolvedLinePrice(line, null)).toEqual({
+      price: null, warning: "Prix catalogue TR1 indisponible : prix du document ignoré.",
+    });
   });
 
   it("flags material total differences", () => {
