@@ -24,7 +24,7 @@ export type PdfOrderPreview = {
   commercialTermsReady: boolean;
   commercialTermsLabel: string | null;
   commercialFreeRule: { paidQuantity: number; freeQuantity: number } | null;
-  pharmacy: { status: "matched" | "suggested" | "unmatched" | "ambiguous"; method: string | null; selectedPharmacyId: string | null; selectedBrandPharmacyId: string | null; candidates: PreviewPharmacy[] };
+  pharmacy: { status: "matched" | "suggested" | "unmatched" | "ambiguous"; method: string | null; selectedPharmacyId: string | null; selectedBrandPharmacyId: string | null; pricedPharmacyId: string | null; candidates: PreviewPharmacy[] };
   lines: Array<{
     index: number;
     label: string | null;
