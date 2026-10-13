@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateOrderTotal, consolidatePdfOrderLines, hasMeaningfulTotalDifference, matchPdfPharmacy, matchPdfProduct, normalizePdfOrderDate, resolvedLinePrice } from "./pdf-order-matching";
+import { calculateOrderTotal, consolidatePdfOrderLines, hasMeaningfulTotalDifference, matchPdfPharmacy, matchPdfOrderProduct, normalizePdfOrderDate, resolvedLinePrice } from "./pdf-order-matching";
 
 const pharmacies = [
   { pharmacyId: "pharmacy-1", brandPharmacyId: "brand-pharmacy-1", relationStatus: "existing_brand_relation" as const, name: "Pharmacie du Centre", siret: "12345678901234", cip: "CIP-1", finess: "FIN-1", postalCode: "75001" },
@@ -136,18 +136,18 @@ describe("PDF order deterministic matching", () => {
   });
 
   it("uses EAN (including registered reference EAN), never SKU or product name", () => {
-    expect(matchPdfProduct({ label: "Wrong label", sku: null, ean: "3760000000001", quantity: 1, unitPriceHt: 10, discountRate: null }, products))
+    expect(matchPdfOrderProduct({ label: "Wrong label", sku: null, ean: "3760000000001", quantity: 1, unitPriceHt: 10, discountRate: null }, products))
       .toMatchObject({ status: "matched", method: "ean", match: { id: "product-1" } });
-    expect(matchPdfProduct({ label: null, sku: null, ean: "3760000000002", quantity: 1, unitPriceHt: 10, discountRate: null }, products))
+    expect(matchPdfOrderProduct({ label: null, sku: null, ean: "3760000000002", quantity: 1, unitPriceHt: 10, discountRate: null }, products))
       .toMatchObject({ status: "matched", method: "reference_ean", match: { id: "product-1" } });
-    expect(matchPdfProduct({ label: "Vitamine C", sku: "VK-C", ean: null, quantity: 1, unitPriceHt: 10, discountRate: null }, products))
+    expect(matchPdfOrderProduct({ label: "Vitamine C", sku: "VK-C", ean: null, quantity: 1, unitPriceHt: 10, discountRate: null }, products))
       .toMatchObject({ status: "unmatched", method: "ean_required", match: null });
-    expect(matchPdfProduct({ label: "Vitamine C", sku: "LEGACY-C", ean: null, quantity: 1, unitPriceHt: 10, discountRate: null }, products))
+    expect(matchPdfOrderProduct({ label: "Vitamine C", sku: "LEGACY-C", ean: null, quantity: 1, unitPriceHt: 10, discountRate: null }, products))
       .toMatchObject({ status: "unmatched", method: "ean_required", match: null });
   });
 
   it("keeps an EAN match when the product label is consistent", () => {
-    expect(matchPdfProduct({
+    expect(matchPdfOrderProduct({
       label: "NAALI GUMMIES ANTI STRESS FR ROUGES",
       sku: null,
       ean: "3770010539650",
@@ -162,7 +162,7 @@ describe("PDF order deterministic matching", () => {
   });
 
   it("keeps the EAN authoritative even when the printed name conflicts", () => {
-    expect(matchPdfProduct({
+    expect(matchPdfOrderProduct({
       label: "NAALI GUMMIES DREAM VOYAGE X20",
       sku: null, ean: "3770010539483", quantity: 24,
       unitPriceHt: 9.38, discountRate: 35,
@@ -172,13 +172,13 @@ describe("PDF order deterministic matching", () => {
   });
 
   it("never substitutes a label or SKU when an explicit EAN is unknown", () => {
-    expect(matchPdfProduct({
+    expect(matchPdfOrderProduct({
       label: "Dream", sku: "1dream", ean: "9999999999999",
       quantity: 12, unitPriceHt: 24.55, discountRate: 35,
     }, naaliProducts)).toMatchObject({
       status: "unmatched", method: "ean_unknown", match: null,
     });
-    expect(matchPdfProduct({
+    expect(matchPdfOrderProduct({
       label: "Dream", sku: null, ean: null, quantity: 12,
       unitPriceHt: 24.55, discountRate: 35,
     }, naaliProducts)).toMatchObject({
