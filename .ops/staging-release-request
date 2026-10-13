@@ -1,6 +1,5 @@
-release=naali-web-order-ean-catalog-pr353
-base_sha=ffbe0f4de751f38639df72c73e5d56a7c542f10f
-target=staging
-reason=validate_merged_order_import_with_ci_migrations_and_smoke
+release=naali-web-order-ean-catalog-pr353-production-candidate
+target=staging_then_guarded_production
+reason=promote_only_after_ci_staging_migrations_and_authenticated_smoke
 requested_by=user
-production=not_triggered_by_this_marker
+production=only_after_all_release_gates_pass
