@@ -60,6 +60,47 @@ export const expandedTools = [
     securitySchemes: [{ type: "oauth2", scopes: ["email"] }],
   },
   {
+    name: "preview_tr1_priced_order",
+    title: "Prévisualiser une commande avec remises et UG vérifiées",
+    description: "Lecture seule. Calcule les prix HT catalogue, remises et unités gratuites par référence depuis les conditions TR1/HubSpot vérifiées. Refuse les conditions manquantes ou périmées. Ne crée ni ne transmet aucune commande.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        brand_pharmacy_id: { type: "string", format: "uuid" },
+        items: { type: "array", minItems: 1, maxItems: 30, items: {
+          type: "object", properties: {
+            product_id: { type: "string", format: "uuid" },
+            quantity: { type: "integer", minimum: 1, maximum: 9999 },
+          }, required: ["product_id","quantity"], additionalProperties: false,
+        } },
+      }, required: ["brand_pharmacy_id","items"], additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    securitySchemes: [{ type: "oauth2", scopes: ["email"] }],
+  },
+  {
+    name: "create_tr1_priced_order_draft",
+    title: "Créer un brouillon avec prix, remises et UG vérifiés",
+    description: "Crée uniquement un BROUILLON NON ENVOYÉ avec remises et unités gratuites calculées depuis les conditions TR1/HubSpot. Exige la prévisualisation et une confirmation explicite. Ne synchronise pas HubSpot et ne transmet pas la commande.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        brand_pharmacy_id: { type: "string", format: "uuid" },
+        items: { type: "array", minItems: 1, maxItems: 30, items: {
+          type: "object", properties: {
+            product_id: { type: "string", format: "uuid" },
+            quantity: { type: "integer", minimum: 1, maximum: 9999 },
+          }, required: ["product_id","quantity"], additionalProperties: false,
+        } },
+        order_type: { type: "string", enum: ["initial","reorder","complementary","replacement","sample","return","credit_note","other"] },
+        request_id: { type: "string", format: "uuid" },
+        confirmed: { type: "boolean", const: true },
+      }, required: ["brand_pharmacy_id","items","order_type","request_id","confirmed"], additionalProperties: false,
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+    securitySchemes: [{ type: "oauth2", scopes: ["email"] }],
+  },
+  {
     name: "create_tr1_order_draft",
     title: "Créer un brouillon de commande TR1",
     description: "MODIFICATION TR1 : créer uniquement un BROUILLON NON ENVOYÉ. Toujours consulter le catalogue, afficher les lignes, quantités et prix HT catalogue à l'utilisateur puis demander sa confirmation EXPLICITE. Ne calcule PAS automatiquement les remises ni UG : vérification obligatoire dans TR1 avant transmission. Ne jamais annoncer qu'une commande a été envoyée.",
@@ -108,6 +149,17 @@ const orderArgs = z.object({
   confirmed: z.literal(true),
 }).strict();
 
+const pricedPreviewArgs = z.object({
+  brand_pharmacy_id: uuid,
+  items: z.array(z.object({ product_id: uuid, quantity: z.number().int().min(1).max(9999) }).strict())
+    .min(1).max(30).refine(items => new Set(items.map(i => i.product_id)).size === items.length),
+}).strict();
+const pricedDraftArgs = pricedPreviewArgs.extend({
+  order_type: z.enum(["initial","reorder","complementary","replacement","sample","return","credit_note","other"]),
+  request_id: uuid,
+  confirmed: z.literal(true),
+});
+
 export function parseExpandedToolCall(name: string, args: unknown):
   | { rpc: string; args: Record<string, unknown>; responseKey: string; write: boolean }
   | null {
@@ -139,6 +191,22 @@ export function parseExpandedToolCall(name: string, args: unknown):
         end_at: parsed.data.end_at,
         confirmed: true,
       }, responseKey: "visit_id", write: true };
+  }
+  if (name === "preview_tr1_priced_order") {
+    const parsed = pricedPreviewArgs.safeParse(args);
+    if (!parsed.success) return null;
+    return { rpc: "tr1_chatgpt_priced_order_preview",
+      args: { target_brand_pharmacy_id: parsed.data.brand_pharmacy_id,
+        draft_items: parsed.data.items }, responseKey: "preview", write: false };
+  }
+  if (name === "create_tr1_priced_order_draft") {
+    const parsed = pricedDraftArgs.safeParse(args);
+    if (!parsed.success) return null;
+    return { rpc: "tr1_chatgpt_create_priced_order_draft",
+      args: { target_brand_pharmacy_id: parsed.data.brand_pharmacy_id,
+        draft_items: parsed.data.items, order_type: parsed.data.order_type,
+        request_id: parsed.data.request_id, confirmed: true },
+      responseKey: "draft", write: true };
   }
   if (name === "create_tr1_order_draft") {
     const parsed = orderArgs.safeParse(args);
