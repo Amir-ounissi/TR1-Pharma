@@ -79,6 +79,6 @@ describe("order photo regression rules", () => {
 
   it("matches the photographed Naali rows by barcode even if vision puts the code in the wrong identifier field", () => {
     expect(matchPdfProduct({ label: "NAALI CHEVEUX POUSSE ET FORCE 60", sku: "3770010539421", ean: null, quantity: 12, freeQuantity: 2, unitPriceHt: 33.08, discountRate: 35, taxRate: 5.5 }, naaliProducts)).toMatchObject({ status: "matched", method: "barcode", match: { id: "cheveux", taxRate: 5.5 } });
-    expect(matchPdfProduct({ label: "NAALI GUMMIES DREAM VOYAGE X20", sku: null, ean: null, quantity: 24, freeQuantity: 4, unitPriceHt: 9.38, discountRate: 35, taxRate: 5.5 }, naaliProducts)).toMatchObject({ status: "matched", method: "label_tokens", match: { id: "dream20", taxRate: 5.5 } });
+    expect(matchPdfProduct({ label: "NAALI GUMMIES DREAM VOYAGE X20", sku: null, ean: null, quantity: 24, freeQuantity: 4, unitPriceHt: 9.38, discountRate: 35, taxRate: 5.5 }, naaliProducts)).toMatchObject({ status: "unmatched", method: "ean_required", match: null });
   });
 });
