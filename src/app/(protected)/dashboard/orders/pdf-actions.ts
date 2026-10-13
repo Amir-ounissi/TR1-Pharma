@@ -172,14 +172,26 @@ export async function confirmPdfOrderAction(_state: PdfOrderActionState, formDat
   const contexts = await getBrandContexts();
   const isAgent = contexts.find((context) => context.id === brand.id)?.role === "agent";
   const [{ data: products, error: productsError }, { data: externalDuplicate }, { data: numberDuplicate }] = await Promise.all([
-    supabase.from("products").select("id,tax_rate").eq("brand_id", brand.id).eq("is_active", true).is("discontinued_at", null).in("id", [...new Set(parsed.data.items.map((item) => item.productId))]),
+    supabase.from("products").select("id,tax_rate,wholesale_price_ht").eq("brand_id", brand.id).eq("is_active", true).is("discontinued_at", null).in("id", [...new Set(parsed.data.items.map((item) => item.productId))]),
     supabase.from("orders").select("id").eq("brand_id", brand.id).eq("external_order_id", parsed.data.orderNumber).maybeSingle(),
     supabase.from("orders").select("id").eq("brand_id", brand.id).eq("order_number", parsed.data.orderNumber).maybeSingle(),
   ]);
   if (productsError || products?.length !== new Set(parsed.data.items.map((item) => item.productId)).size) return { error: "Un produit sélectionné n’est plus disponible." };
   if (externalDuplicate || numberDuplicate) return { error: "Une commande avec ce numéro existe déjà pour cette marque." };
   const productById = new Map(products.map((product) => [product.id, product]));
-  const trustedItems = parsed.data.items.map((item) => ({ product_id: item.productId, quantity: item.quantity, free_quantity: item.freeQuantity, unit_price_ht: item.unitPriceHt, discount_rate: item.discountRate, tax_rate: Number(productById.get(item.productId)?.tax_rate ?? 0) }));
+  if (products.some((product) => product.wholesale_price_ht == null || !Number.isFinite(Number(product.wholesale_price_ht)) || Number(product.wholesale_price_ht) < 0)) {
+    return { error: "Prix catalogue TR1 manquant ou invalide : impossible de confirmer la commande." };
+  }
+  // Never persist purchase prices supplied by the document or the browser.
+  // Catalog price and VAT are authoritative and re-read on the server.
+  const trustedItems = parsed.data.items.map((item) => ({
+    product_id: item.productId,
+    quantity: item.quantity,
+    free_quantity: item.freeQuantity,
+    unit_price_ht: Number(productById.get(item.productId)!.wholesale_price_ht),
+    discount_rate: item.discountRate,
+    tax_rate: Number(productById.get(item.productId)?.tax_rate ?? 0),
+  }));
 
   let resolvedPharmacyId = parsed.data.pharmacyId ?? null;
   if (!resolvedPharmacyId && parsed.data.brandPharmacyId) {
