@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Building2, CalendarClock, History, MessageSquareText, PanelRightClose } from "lucide-react";
+import { ArrowRight, Building2, CalendarClock, History, MessageSquareText, PanelRightClose, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,9 +15,19 @@ type PharmacyQuickPanelProps = {
   summary: PharmacySummary | null;
   loading?: boolean;
   error?: string | null;
+  onRetry?: () => void;
+  fallbackHref?: string | null;
 };
 
-export function PharmacyQuickPanel({ open, onOpenChange, summary, loading = false, error = null }: PharmacyQuickPanelProps) {
+export function PharmacyQuickPanel({
+  open,
+  onOpenChange,
+  summary,
+  loading = false,
+  error = null,
+  onRetry,
+  fallbackHref,
+}: PharmacyQuickPanelProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -62,6 +72,19 @@ export function PharmacyQuickPanel({ open, onOpenChange, summary, loading = fals
             <section className="rounded-[0.95rem] border border-[var(--tr1-line)] bg-white/80 px-4 py-4">
               <p className="font-mono text-[0.64rem] font-black uppercase tracking-[0.12em] text-[var(--tr1-orange)]">Détail indisponible</p>
               <p className="mt-2 text-sm text-muted-foreground">{translateUiMessage(error)}</p>
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                {onRetry ? (
+                  <Button type="button" size="sm" variant="outline" className="gap-2" onClick={onRetry}>
+                    <RefreshCw className="size-3.5" />
+                    Réessayer
+                  </Button>
+                ) : null}
+                {fallbackHref ? (
+                  <Button asChild size="sm" variant="ghost">
+                    <Link href={fallbackHref}>Ouvrir la fiche complète <ArrowRight className="size-3.5" /></Link>
+                  </Button>
+                ) : null}
+              </div>
             </section>
           ) : null}
 
