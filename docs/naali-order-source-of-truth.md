@@ -24,8 +24,10 @@
 
 ## Reste à faire
 
+- Le parcours mobile est traité séparément dans la PR #354, en attente de résolution des vulnérabilités des dépendances Expo.
+
 - Étendre le brouillon MCP ChatGPT pour accepter des remises et UG **résolues côté serveur** ; maintenir l'absence d'envoi, l'idempotence et la confirmation utilisateur.
-- Tests E2E complets de l'import web/mobile avec conditions HubSpot de test, y compris la confirmation et la synchronisation.
+- Tests E2E complets de l'import web avec conditions HubSpot de test, y compris la confirmation et la synchronisation.
 - Vérifier l'absence de doublon sur le numéro externe de commande avant synchronisation HubSpot, et vérifier le statut réel de la synchronisation.
 - Tester sur le bon Plein Sud n°156589 **après lecture des conditions réelles** : 5 lignes de 12 achetées ; si la pharmacie est ambassadrice avec remise 35 %, 2 UG par ligne, 60 facturées, 10 UG, 70 livrées. Les écarts de centimes liés à l'arrondi du document doivent être signalés, pas compensés par un prix importé.
 
