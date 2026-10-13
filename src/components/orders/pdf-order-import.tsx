@@ -288,10 +288,10 @@ function PdfOrderPreviewForm({ preview, isAgent }: { preview: PdfOrderPreview; i
 
   const canConfirm = Boolean(
     (brandPharmacyId || pharmacyId || (createMissing && newPharmacy.legalName))
-    && (!preview.isNaali || (preview.commercialTermsReady && pharmacyId === preview.pharmacy.selectedPharmacyId))
+    && (!preview.isNaali || (preview.commercialTermsReady && pharmacyId === preview.pharmacy.pricedPharmacyId))
     && orderNumber.trim()
     && lines.length > 0
-    && lines.every((line) => line.productId && Number(line.quantity) > 0 && Number(line.freeQuantity) >= 0 && Number(line.unitPriceHt) >= 0),
+    && lines.every((line) => line.productId && line.quantity.trim() !== "" && Number.isInteger(Number(line.quantity)) && Number(line.quantity) > 0 && Number(line.freeQuantity) >= 0 && line.unitPriceHt.trim() !== "" && Number.isFinite(Number(line.unitPriceHt)) && Number(line.unitPriceHt) >= 0),
   );
 
   return (
