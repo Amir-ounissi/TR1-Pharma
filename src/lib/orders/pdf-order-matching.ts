@@ -79,23 +79,10 @@ export function resolvePdfOrderDate(extraction: Pick<PdfOrderExtraction, "orderD
 }
 
 function pdfLineIdentity(line: PdfOrderExtraction["lines"][number]) {
-  const ean = normalizeNumericIdentifier(line.ean) || normalizeIdentifier(line.ean);
-  if (ean) return `ean:${ean}`;
-
-  const sku = normalizeIdentifier(line.sku);
-  if (sku) return `sku:${sku}`;
-
-  const label = normalizeText(line.label);
-  return label ? `label:${label}` : "";
-}
-
-function samePdfProductLabel(
-  left: PdfOrderExtraction["lines"][number],
-  right: PdfOrderExtraction["lines"][number],
-) {
-  const leftLabel = normalizeText(left.label);
-  const rightLabel = normalizeText(right.label);
-  return Boolean(leftLabel && rightLabel && leftLabel === rightLabel);
+  const explicitEan = normalizeIdentifier(line.ean);
+  const skuBarcode = normalizeNumericIdentifier(line.sku);
+  const barcode = explicitEan || ([8, 12, 13, 14].includes(skuBarcode.length) ? skuBarcode : "");
+  return barcode ? `ean:${barcode}` : "";
 }
 
 function attachFreeUnits(
@@ -133,8 +120,7 @@ export function consolidatePdfOrderLines(lines: PdfOrderExtraction["lines"]) {
       previous &&
       (previous.quantity ?? 0) > 0 &&
       (
-        (identity && pdfLineIdentity(previous) === identity) ||
-        samePdfProductLabel(previous, normalizedLine)
+        identity && pdfLineIdentity(previous) === identity
       )
     ) {
       attachFreeUnits(previous, normalizedLine);
@@ -145,8 +131,7 @@ export function consolidatePdfOrderLines(lines: PdfOrderExtraction["lines"]) {
       (candidate) =>
         (candidate.quantity ?? 0) > 0 &&
         (
-          (identity && pdfLineIdentity(candidate) === identity) ||
-          samePdfProductLabel(candidate, normalizedLine)
+          identity && pdfLineIdentity(candidate) === identity
         ),
     );
 
