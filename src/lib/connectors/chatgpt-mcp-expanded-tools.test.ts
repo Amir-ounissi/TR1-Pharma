@@ -8,13 +8,14 @@ const product = "11111111-1111-4111-8111-111111111111";
 const request = "22222222-2222-4222-8222-222222222222";
 
 describe("TR1 ChatGPT advanced MCP tools", () => {
-  it("declares four distinct operations and marks writes as writes", () => {
+  it("declares pricing preview and priced draft operations with correct write flags", () => {
     expect(expandedTools.map((tool) => tool.name)).toEqual([
       "list_tr1_catalog", "get_tr1_agenda",
-      "create_tr1_planned_visit", "create_tr1_order_draft",
+      "create_tr1_planned_visit", "preview_tr1_priced_order",
+      "create_tr1_priced_order_draft", "create_tr1_order_draft",
     ]);
     expect(expandedTools.map((tool) => tool.annotations.readOnlyHint)).toEqual([
-      true, true, false, false,
+      true, true, false, true, false, false,
     ]);
   });
 
@@ -79,4 +80,32 @@ describe("TR1 ChatGPT advanced MCP tools", () => {
         confirmed: true, request_id: request },
     });
   });
+  it("routes commercial preview without accepting client prices, discounts or UG", () => {
+    const input = { brand_pharmacy_id: pharmacy, items: [{ product_id: product, quantity: 12 }] };
+    expect(parseExpandedToolCall("preview_tr1_priced_order", input)).toMatchObject({
+      rpc: "tr1_chatgpt_priced_order_preview", write: false,
+      args: { target_brand_pharmacy_id: pharmacy, draft_items: input.items },
+    });
+    expect(parseExpandedToolCall("preview_tr1_priced_order", {
+      ...input, discount_rate: 35,
+    })).toBeNull();
+    expect(parseExpandedToolCall("preview_tr1_priced_order", {
+      ...input, items: [{ ...input.items[0], free_quantity: 2 }],
+    })).toBeNull();
+  });
+
+  it("requires confirmation for commercially priced draft and refuses injected terms", () => {
+    const input = { brand_pharmacy_id: pharmacy, items: [{ product_id: product, quantity: 12 }],
+      order_type: "reorder", request_id: request };
+    expect(parseExpandedToolCall("create_tr1_priced_order_draft", input)).toBeNull();
+    expect(parseExpandedToolCall("create_tr1_priced_order_draft", { ...input, confirmed: false })).toBeNull();
+    expect(parseExpandedToolCall("create_tr1_priced_order_draft", {
+      ...input, confirmed: true,
+    })).toMatchObject({ rpc: "tr1_chatgpt_create_priced_order_draft", write: true,
+      args: { draft_items: input.items, confirmed: true } });
+    expect(parseExpandedToolCall("create_tr1_priced_order_draft", {
+      ...input, confirmed: true, note: "override 35%",
+    })).toBeNull();
+  });
+
 });
