@@ -74,15 +74,15 @@ describe("TR1 authenticated MCP endpoint", () => {
     expect(fake.createClient).not.toHaveBeenCalled();
   });
 
-  it("advertises six read tools and three explicitly labeled writes", async () => {
+  it("advertises six read tools and four explicitly labeled writes", async () => {
     const response = await POST(request("tools/list"));
     const body = await response.json();
     expect(response.status).toBe(200);
-    expect(body.result.tools).toHaveLength(9);
+    expect(body.result.tools).toHaveLength(10);
     expect(body.result.tools.filter((tool: { annotations: { readOnlyHint: boolean } }) =>
       tool.annotations.readOnlyHint)).toHaveLength(6);
     expect(body.result.tools.filter((tool: { annotations: { readOnlyHint: boolean } }) =>
-      !tool.annotations.readOnlyHint)).toHaveLength(3);
+      !tool.annotations.readOnlyHint)).toHaveLength(4);
     expect(body.result.tools.every((tool: { securitySchemes: Array<{type:string}> }) =>
       tool.securitySchemes[0].type === "oauth2")).toBe(true);
   });
