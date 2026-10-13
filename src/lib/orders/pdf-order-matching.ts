@@ -113,9 +113,8 @@ export function consolidatePdfOrderLines(lines: PdfOrderExtraction["lines"]) {
     const identity = pdfLineIdentity(normalizedLine);
     const previous = result[result.length - 1];
 
-    // Pharmacy ERPs usually print UG directly under the paid line. Prefer that
-    // adjacency when the product identity or exact label agrees, even if OCR/LLM
-    // shifted an EAN to the free row.
+    // Free-unit rows are associated only when the EAN matches exactly.
+    // An adjacent row or similar label is never sufficient to establish identity.
     if (
       previous &&
       (previous.quantity ?? 0) > 0 &&
