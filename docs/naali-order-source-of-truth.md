@@ -15,12 +15,18 @@
 - Association des lignes UG par EAN uniquement.
 - Prix catalogue prioritaire dans la prévisualisation **et relu côté serveur lors de la confirmation**. Les prix fournis par le document ou le navigateur sont ignorés.
 
-## Reste à faire avant un import automatisé de bout en bout
+## Intégration réalisée dans cette PR
 
-- Dans le flux PDF/photo, récupérer et appliquer les conditions commerciales HubSpot **à la prévisualisation et à la confirmation serveur**, sans utiliser la remise ni les UG imprimées comme source de vérité. La récupération HubSpot et la règle `Client ambassadeur` 12+2 existent déjà dans `src/lib/integrations/hubspot/naali-pricing.ts`, mais ce flux d'import ne les consomme pas encore.
-- Verrouiller les EAN à la confirmation serveur, y compris après modification manuelle de la prévisualisation.
+- Prévisualisation PDF/photo sur le site et dans l'API mobile : consultation des conditions HubSpot / TR1 de la pharmacie Naali identifiée, remise et UG calculées par référence, avertissement sur les écarts avec le document.
+- Confirmation serveur web et mobile : contrôle des EAN, prix catalogue relus, conditions commerciales relues, blocage si la remise est inconnue ou si les UG/remises ne correspondent plus à la prévisualisation.
+- La sélection d'une autre pharmacie dans la prévisualisation web Naali demande une nouvelle analyse pour recharger ses conditions.
+- Le calcul ne suppose pas que toute pharmacie est ambassadrice ; la règle 12+2 s'applique seulement si HubSpot ou une dérogation TR1 indique cette règle.
+
+## Reste à faire
+
 - Étendre le brouillon MCP ChatGPT pour accepter des remises et UG **résolues côté serveur** ; maintenir l'absence d'envoi, l'idempotence et la confirmation utilisateur.
-- Vérifier l'absence de doublon sur le numéro externe de commande avant synchronisation HubSpot.
-- Tester sur le bon Plein Sud n°156589 : 5 lignes de 12 achetées, 2 UG par ligne, remise de 35 %, 60 facturées, 10 UG, 70 livrées. Les écarts de centimes liés à l'arrondi du document doivent être signalés, pas compensés par un prix importé.
+- Tests E2E complets de l'import web/mobile avec conditions HubSpot de test, y compris la confirmation et la synchronisation.
+- Vérifier l'absence de doublon sur le numéro externe de commande avant synchronisation HubSpot, et vérifier le statut réel de la synchronisation.
+- Tester sur le bon Plein Sud n°156589 **après lecture des conditions réelles** : 5 lignes de 12 achetées ; si la pharmacie est ambassadrice avec remise 35 %, 2 UG par ligne, 60 facturées, 10 UG, 70 livrées. Les écarts de centimes liés à l'arrondi du document doivent être signalés, pas compensés par un prix importé.
 
 **Aucune modification des commandes réelles ni de HubSpot dans cette PR.**
