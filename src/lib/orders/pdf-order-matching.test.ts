@@ -161,6 +161,16 @@ describe("PDF order deterministic matching", () => {
     });
   });
 
+  it("keeps Plein Sud's printed EAN 3770010539650 on Fruits des Bois despite generic Anti-Stress label", () => {
+    expect(matchPdfOrderProduct({
+      label: "NAALI ANTI-STRESS 60GUMMIES",
+      sku: null, ean: "3770010539650", quantity: 12,
+      unitPriceHt: 28.34, discountRate: 35,
+    }, naaliProducts)).toMatchObject({
+      status: "matched", method: "ean", match: { id: "anti-stress-fdb" },
+    });
+  });
+
   it("keeps the EAN authoritative even when the printed name conflicts", () => {
     expect(matchPdfOrderProduct({
       label: "NAALI GUMMIES DREAM VOYAGE X20",
