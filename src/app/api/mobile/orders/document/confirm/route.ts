@@ -72,7 +72,7 @@ export async function POST(request: Request) {
 
     const productById = new Map(products.map((product) => [product.id, product]));
     for (const item of input.items) {
-      const ean = item.sourceEan?.replace(/\\s/g, "") ?? "";
+      const ean = item.sourceEan?.replace(/\s/g, "") ?? "";
       const product = productById.get(item.productId);
       const acceptedEans = [product?.ean, ...(product?.product_references ?? []).map((ref) => ref.ean)].filter(Boolean);
       if (!ean || !acceptedEans.includes(ean)) {
