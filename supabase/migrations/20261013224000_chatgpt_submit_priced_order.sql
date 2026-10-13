@@ -106,14 +106,14 @@ BEGIN
        OR prior.net_amount_ht IS DISTINCT FROM expected_total_ht
        OR (SELECT count(*) FROM public.order_items oi WHERE oi.order_id=prior.id) <> jsonb_array_length(checked_items)
        OR EXISTS (
-         SELECT 1 FROM jsonb_array_elements(preview->'items') line
+         SELECT 1 FROM jsonb_array_elements(preview->'items') AS checked_line(value)
          WHERE NOT EXISTS (
            SELECT 1 FROM public.order_items oi WHERE oi.order_id=prior.id
-             AND oi.product_id=(line->>'product_id')::uuid
-             AND oi.quantity=(line->>'quantity')::integer
-             AND oi.free_quantity=(line->>'free_quantity')::integer
-             AND oi.unit_price_ht=(line->>'unit_price_ht')::numeric
-             AND oi.discount_rate=(line->>'discount_rate')::numeric))
+             AND oi.product_id=(checked_line.value->>'product_id')::uuid
+             AND oi.quantity=(checked_line.value->>'quantity')::integer
+             AND oi.free_quantity=(checked_line.value->>'free_quantity')::integer
+             AND oi.unit_price_ht=(checked_line.value->>'unit_price_ht')::numeric
+             AND oi.discount_rate=(checked_line.value->>'discount_rate')::numeric))
     THEN
       RAISE EXCEPTION 'Request ID belongs to a changed order' USING ERRCODE='23505';
     END IF;
