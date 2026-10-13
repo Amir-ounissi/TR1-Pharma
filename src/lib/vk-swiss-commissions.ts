@@ -90,6 +90,8 @@ export function calculateVkSwissCommissions(
 
   // Ajustement rétroactif lié aux implantations réalisées les mois précédents.
   const retroactiveAdjustment = historicalImplantations.size * (rate - previousRate);
+  const lifetimeBoxes = approved.reduce((sum, order) => sum + Math.max(0, Math.trunc(order.paidQuantity)), 0);
+  const lifetimeTotal = implantations.size * rate + lifetimeBoxes * VK_SWISS_TERMS.boxesCommission;
   const totalLines = lines.reduce((sum, line) => sum + line.total, 0);
   const facturedLines = lines.filter((line) => line.isInvoiced);
   const pendingQualification = chronological.filter((order) =>
@@ -104,6 +106,8 @@ export function calculateVkSwissCommissions(
     rate,
     previousRate,
     implantationsTotal: implantations.size,
+    lifetimeBoxes,
+    lifetimeTotal,
     implantationsThisMonth: lines.filter((line) => line.implantationCommission > 0).length,
     boxesThisMonth: lines.reduce((sum, line) => sum + Math.max(0, Math.trunc(line.paidQuantity)), 0),
     retroactiveAdjustment,
