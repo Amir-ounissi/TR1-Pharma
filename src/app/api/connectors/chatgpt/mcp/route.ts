@@ -241,6 +241,33 @@ export async function POST(request: Request) {
       return rpcError(id, -32602, "TR1 rejected invalid, duplicate, or conflicting action", 400);
     }
     if (error) return rpcError(id, -32004, "TR1 operation temporarily unavailable", 503);
+    if (params.data.name === "submit_tr1_priced_order") {
+      const saved = data as { order_id?: unknown; brand_id?: unknown; status?: unknown } | null;
+      const brandId = typeof saved?.brand_id === "string" ? saved.brand_id : "";
+      const orderId = typeof saved?.order_id === "string" ? saved.order_id : "";
+      if (!z.string().uuid().safeParse(brandId).success ||
+          !z.string().uuid().safeParse(orderId).success ||
+          saved?.status !== "pending" ||
+          !(contexts ?? []).some((context: { brand_id: string }) => context.brand_id === brandId)) {
+        return rpcError(id, -32004, "Submitted order needs reconciliation in TR1", 503);
+      }
+      // Exactly the same post-persistence sync pathway as the web PDF import.
+      // This helper is best-effort and journals failures; never claim HubSpot
+      // confirmed receipt solely because the call returned.
+      try {
+        const { syncHubSpotOrderAfterPersistence } = await import("@/lib/integrations/hubspot/runtime");
+        await syncHubSpotOrderAfterPersistence(brandId, orderId);
+      } catch {
+        return rpcError(id, -32004,
+          "Order saved in TR1; HubSpot synchronization needs verification", 503);
+      }
+      const response = { order: { ...saved, hubspot_sync_triggered: true,
+        hubspot_sync_confirmed: false } };
+      return rpcResult(id, {
+        content: [{ type: "text", text: JSON.stringify(response) }],
+        structuredContent: response, isError: false,
+      });
+    }
     const response = { [expandedCall.responseKey]: data };
     return rpcResult(id, {
       content: [{ type: "text", text: JSON.stringify(response) }],
