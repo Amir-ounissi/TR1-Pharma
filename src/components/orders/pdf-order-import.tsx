@@ -249,7 +249,14 @@ function PdfOrderPreviewForm({ preview, isAgent }: { preview: PdfOrderPreview; i
   const [lines, setLines] = useState(() => toDraftLines(preview));
 
   function updateLine(index: number, field: keyof DraftLine, value: string) {
-    setLines((current) => current.map((line, lineIndex) => lineIndex === index ? { ...line, [field]: value } : line));
+    setLines((current) => current.map((line, lineIndex) => {
+      if (lineIndex !== index) return line;
+      if (field === "productId") {
+        const product = preview.lines[index]?.product.candidates.find((candidate) => candidate.id === value);
+        return { ...line, productId: value, unitPriceHt: product?.wholesalePriceHt == null ? "" : String(product.wholesalePriceHt) };
+      }
+      return { ...line, [field]: value };
+    }));
   }
 
   const totalTr1 = useMemo(() => {
@@ -365,7 +372,7 @@ function PdfOrderPreviewForm({ preview, isAgent }: { preview: PdfOrderPreview; i
               <div className="grid grid-cols-3 gap-2">
                 <MobileNumberField label="Qté" ariaLabel={`Quantité ${index + 1}`} min="1" value={lines[index]?.quantity ?? ""} onChange={(value) => updateLine(index, "quantity", value)} />
                 <MobileNumberField label="UG" ariaLabel={`UG ${index + 1}`} min="0" value={lines[index]?.freeQuantity ?? "0"} onChange={(value) => updateLine(index, "freeQuantity", value)} />
-                <MobileNumberField label="Prix HT" ariaLabel={`Prix HT ${index + 1}`} min="0" step="0.01" value={lines[index]?.unitPriceHt ?? ""} onChange={(value) => updateLine(index, "unitPriceHt", value)} />
+                <div className="space-y-1"><Label className="text-xs">Prix catalogue HT</Label><div className="flex h-10 items-center rounded-xl border bg-muted/25 px-3 text-sm">{lines[index]?.unitPriceHt || "—"} €</div></div>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <MobileNumberField label="Remise %" ariaLabel={`Remise ${index + 1}`} min="0" max="100" step="0.01" value={lines[index]?.discountRate ?? ""} onChange={(value) => updateLine(index, "discountRate", value)} />
@@ -394,7 +401,7 @@ function PdfOrderPreviewForm({ preview, isAgent }: { preview: PdfOrderPreview; i
                   <td className="min-w-56 p-2"><ProductSelect line={line} value={lines[index]?.productId ?? ""} onChange={(value) => updateLine(index, "productId", value)} /><p className="mt-1 text-xs text-muted-foreground">{line.product.status === "matched" ? `Correspondance ${translateMatchMethod(line.product.method)}` : "Sélection requise."}</p></td>
                   <td className="p-2"><Input aria-label={`Quantité ${index + 1}`} type="number" min="1" value={lines[index]?.quantity ?? ""} onChange={(event) => updateLine(index, "quantity", event.target.value)} /></td>
                   <td className="p-2"><Input aria-label={`UG ${index + 1}`} type="number" min="0" value={lines[index]?.freeQuantity ?? "0"} onChange={(event) => updateLine(index, "freeQuantity", event.target.value)} /></td>
-                  <td className="p-2"><Input aria-label={`Prix HT ${index + 1}`} type="number" min="0" step="0.01" value={lines[index]?.unitPriceHt ?? ""} onChange={(event) => updateLine(index, "unitPriceHt", event.target.value)} />{line.priceWarning ? <p className="mt-1 text-xs text-amber-700">{line.priceWarning}</p> : null}</td>
+                  <td className="p-2"><div aria-label={`Prix catalogue HT ${index + 1}`} className="rounded-lg border bg-muted/25 px-3 py-2 text-sm">{lines[index]?.unitPriceHt || "—"} €</div>{line.priceWarning ? <p className="mt-1 text-xs text-amber-700">{line.priceWarning}</p> : null}</td>
                   <td className="p-2"><Input aria-label={`Remise ${index + 1}`} type="number" min="0" max="100" step="0.01" value={lines[index]?.discountRate ?? ""} onChange={(event) => updateLine(index, "discountRate", event.target.value)} /></td>
                   <td className="p-2">{displayedTaxRate == null ? "—" : `${displayedTaxRate}%`}</td>
                 </tr>
