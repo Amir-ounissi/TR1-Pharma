@@ -8,14 +8,14 @@ const product = "11111111-1111-4111-8111-111111111111";
 const request = "22222222-2222-4222-8222-222222222222";
 
 describe("TR1 ChatGPT advanced MCP tools", () => {
-  it("declares pricing preview and priced draft operations with correct write flags", () => {
+  it("declares priced preview, draft and confirmed submission operations with write flags", () => {
     expect(expandedTools.map((tool) => tool.name)).toEqual([
       "list_tr1_catalog", "get_tr1_agenda",
       "create_tr1_planned_visit", "preview_tr1_priced_order",
-      "create_tr1_priced_order_draft", "create_tr1_order_draft",
+      "create_tr1_priced_order_draft", "submit_tr1_priced_order", "create_tr1_order_draft",
     ]);
     expect(expandedTools.map((tool) => tool.annotations.readOnlyHint)).toEqual([
-      true, true, false, true, false, false,
+      true, true, false, true, false, false, false,
     ]);
   });
 
@@ -105,6 +105,25 @@ describe("TR1 ChatGPT advanced MCP tools", () => {
       args: { draft_items: input.items, confirmed: true } });
     expect(parseExpandedToolCall("create_tr1_priced_order_draft", {
       ...input, confirmed: true, note: "override 35%",
+    })).toBeNull();
+  });
+
+  it("requires exact document EAN, reviewed total and explicit approval for real order submission", () => {
+    const input = {
+      brand_pharmacy_id: pharmacy,
+      items: [{ product_id: product, quantity: 12, source_ean: "3770010539650" }],
+      order_number: "156589", request_id: request, expected_total_ht: 1134.81,
+    };
+    expect(parseExpandedToolCall("submit_tr1_priced_order", input)).toBeNull();
+    expect(parseExpandedToolCall("submit_tr1_priced_order", { ...input, confirmed: false })).toBeNull();
+    expect(parseExpandedToolCall("submit_tr1_priced_order", { ...input, confirmed: true }))
+      .toMatchObject({ rpc: "tr1_chatgpt_submit_priced_order", write: true,
+        args: { submitted_items: input.items, expected_total_ht: 1134.81, confirmed: true } });
+    expect(parseExpandedToolCall("submit_tr1_priced_order", {
+      ...input, confirmed: true, items: [{ ...input.items[0], source_ean: "bad" }],
+    })).toBeNull();
+    expect(parseExpandedToolCall("submit_tr1_priced_order", {
+      ...input, confirmed: true, discount: 40,
     })).toBeNull();
   });
 

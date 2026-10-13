@@ -5,10 +5,14 @@ const fake = vi.hoisted(() => ({
   getUser: vi.fn(),
   rpc: vi.fn(),
   createClient: vi.fn(),
+  syncHubSpotOrderAfterPersistence: vi.fn(),
 }));
 
 vi.mock("@supabase/supabase-js", () => ({
   createClient: fake.createClient,
+}));
+vi.mock("@/lib/integrations/hubspot/runtime", () => ({
+  syncHubSpotOrderAfterPersistence: fake.syncHubSpotOrderAfterPersistence,
 }));
 vi.mock("@/lib/supabase/env", () => ({
   getPublicSupabaseEnv: () => ({
@@ -74,15 +78,15 @@ describe("TR1 authenticated MCP endpoint", () => {
     expect(fake.createClient).not.toHaveBeenCalled();
   });
 
-  it("advertises six read tools and three explicitly labeled writes", async () => {
+  it("advertises six read tools and four explicitly labeled writes", async () => {
     const response = await POST(request("tools/list"));
     const body = await response.json();
     expect(response.status).toBe(200);
-    expect(body.result.tools).toHaveLength(9);
+    expect(body.result.tools).toHaveLength(10);
     expect(body.result.tools.filter((tool: { annotations: { readOnlyHint: boolean } }) =>
       tool.annotations.readOnlyHint)).toHaveLength(6);
     expect(body.result.tools.filter((tool: { annotations: { readOnlyHint: boolean } }) =>
-      !tool.annotations.readOnlyHint)).toHaveLength(3);
+      !tool.annotations.readOnlyHint)).toHaveLength(4);
     expect(body.result.tools.every((tool: { securitySchemes: Array<{type:string}> }) =>
       tool.securitySchemes[0].type === "oauth2")).toBe(true);
   });
@@ -281,4 +285,47 @@ describe("TR1 authenticated MCP endpoint", () => {
   it("does not accept GET as a way to access sensitive data", async () => {
     expect((await GET()).status).toBe(405);
   });
+  it("blocks real submission without explicit approval before DB access", async () => {
+    const response = await POST(request("tools/call", {
+      name: "submit_tr1_priced_order",
+      arguments: {
+        brand_pharmacy_id: "22222222-2222-4222-8222-222222222222",
+        items: [{ product_id: "33333333-3333-4333-8333-333333333333",
+          quantity: 12, source_ean: "3400000000001" }],
+        order_number: "MCP-REAL-001", expected_total_ht: 144.30,
+        request_id: "44444444-4444-4444-8444-444444444444",
+      },
+    }, "oauth-token"));
+    expect(response.status).toBe(200);
+    expect((await response.json()).error.message).toContain("unconfirmed");
+    expect(fake.rpc).not.toHaveBeenCalled();
+    expect(fake.syncHubSpotOrderAfterPersistence).not.toHaveBeenCalled();
+  });
+
+  it("syncs only a real persisted order from an authorized brand using the web sync helper", async () => {
+    const orderId = "55555555-5555-4555-8555-555555555555";
+    fake.rpc.mockImplementation(async (name: string) =>
+      name === "tr1_chatgpt_list_brands"
+        ? { data: [{ brand_id: brandId }], error: null }
+        : { data: { order_id: orderId, brand_id: brandId, status: "pending", created: true },
+          error: null });
+    const response = await POST(request("tools/call", {
+      name: "submit_tr1_priced_order",
+      arguments: {
+        brand_pharmacy_id: "22222222-2222-4222-8222-222222222222",
+        items: [{ product_id: "33333333-3333-4333-8333-333333333333",
+          quantity: 12, source_ean: "3400000000001" }],
+        order_number: "MCP-REAL-001", expected_total_ht: 144.30,
+        request_id: "44444444-4444-4444-8444-444444444444", confirmed: true,
+      },
+    }, "oauth-token"));
+    expect(response.status).toBe(200);
+    expect((await response.json()).result.structuredContent.order)
+      .toMatchObject({ order_id: orderId, hubspot_sync_triggered: true,
+        hubspot_sync_confirmed: false });
+    expect(fake.rpc).toHaveBeenCalledWith("tr1_chatgpt_submit_priced_order",
+      expect.objectContaining({ confirmed: true, expected_total_ht: 144.30 }));
+    expect(fake.syncHubSpotOrderAfterPersistence).toHaveBeenCalledWith(brandId, orderId);
+  });
+
 });

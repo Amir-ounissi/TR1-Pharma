@@ -101,6 +101,32 @@ export const expandedTools = [
     securitySchemes: [{ type: "oauth2", scopes: ["email"] }],
   },
   {
+    name: "submit_tr1_priced_order",
+    title: "Valider la commande et lancer la synchronisation HubSpot",
+    description: "Commande RÉELLE : enregistre une commande Naali/agent au statut en attente et déclenche la synchronisation HubSpot depuis TR1. Uniquement après prévisualisation des prix/UG/remises et confirmation EXPLICITE de la commande détaillée. Vérifie pour chaque ligne l'EAN du document, les prix catalogue et conditions commerciales TR1/HubSpot, le total HT validé, le numéro du bon et les doublons. Pas un mode test.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        brand_pharmacy_id: { type: "string", format: "uuid" },
+        items: { type: "array", minItems: 1, maxItems: 30, items: {
+          type: "object", properties: {
+            product_id: { type: "string", format: "uuid" },
+            quantity: { type: "integer", minimum: 1, maximum: 9999 },
+            source_ean: { type: "string", pattern: "^[0-9]{8,14}$" },
+          }, required: ["product_id","quantity","source_ean"], additionalProperties: false,
+        } },
+        order_number: { type: "string", minLength: 1, maxLength: 80 },
+        request_id: { type: "string", format: "uuid" },
+        expected_total_ht: { type: "number", minimum: 0 },
+        confirmed: { type: "boolean", const: true },
+      },
+      required: ["brand_pharmacy_id","items","order_number","request_id","expected_total_ht","confirmed"],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+    securitySchemes: [{ type: "oauth2", scopes: ["email"] }],
+  },
+  {
     name: "create_tr1_order_draft",
     title: "Créer un brouillon de commande TR1",
     description: "MODIFICATION TR1 : créer uniquement un BROUILLON NON ENVOYÉ. Toujours consulter le catalogue, afficher les lignes, quantités et prix HT catalogue à l'utilisateur puis demander sa confirmation EXPLICITE. Ne calcule PAS automatiquement les remises ni UG : vérification obligatoire dans TR1 avant transmission. Ne jamais annoncer qu'une commande a été envoyée.",
@@ -160,6 +186,19 @@ const pricedDraftArgs = pricedPreviewArgs.extend({
   confirmed: z.literal(true),
 });
 
+const submissionArgs = z.object({
+  brand_pharmacy_id: uuid,
+  items: z.array(z.object({
+    product_id: uuid,
+    quantity: z.number().int().min(1).max(9999),
+    source_ean: z.string().regex(/^[0-9]{8,14}$/),
+  }).strict()).min(1).max(30).refine(items => new Set(items.map(i => i.product_id)).size === items.length),
+  order_number: z.string().trim().min(1).max(80),
+  request_id: uuid,
+  expected_total_ht: z.number().nonnegative().finite(),
+  confirmed: z.literal(true),
+}).strict();
+
 export function parseExpandedToolCall(name: string, args: unknown):
   | { rpc: string; args: Record<string, unknown>; responseKey: string; write: boolean }
   | null {
@@ -207,6 +246,19 @@ export function parseExpandedToolCall(name: string, args: unknown):
         draft_items: parsed.data.items, order_type: parsed.data.order_type,
         request_id: parsed.data.request_id, confirmed: true },
       responseKey: "draft", write: true };
+  }
+  if (name === "submit_tr1_priced_order") {
+    const parsed = submissionArgs.safeParse(args);
+    if (!parsed.success) return null;
+    return { rpc: "tr1_chatgpt_submit_priced_order",
+      args: {
+        target_brand_pharmacy_id: parsed.data.brand_pharmacy_id,
+        submitted_items: parsed.data.items,
+        document_order_number: parsed.data.order_number,
+        request_id: parsed.data.request_id,
+        expected_total_ht: parsed.data.expected_total_ht,
+        confirmed: true,
+      }, responseKey: "order", write: true };
   }
   if (name === "create_tr1_order_draft") {
     const parsed = orderArgs.safeParse(args);
