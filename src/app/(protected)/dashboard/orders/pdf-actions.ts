@@ -213,7 +213,7 @@ export async function confirmPdfOrderAction(_state: PdfOrderActionState, formDat
   if (externalDuplicate || numberDuplicate) return { error: "Une commande avec ce numéro existe déjà pour cette marque." };
   const productById = new Map(products.map((product) => [product.id, product]));
   for (const item of parsed.data.items) {
-    const ean = item.sourceEan?.replace(/\\s/g, "") ?? "";
+    const ean = item.sourceEan?.replace(/\s/g, "") ?? "";
     const product = productById.get(item.productId);
     const productReferences = product?.product_references ?? [];
     const acceptedEans = [product?.ean, ...productReferences.map((reference) => reference.ean)].filter(Boolean);
