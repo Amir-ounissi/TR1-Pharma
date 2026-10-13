@@ -7,7 +7,7 @@ import { getNaaliHubSpotPharmacyPricing } from "@/lib/integrations/hubspot/naali
 import { syncHubSpotOrderAfterPersistence } from "@/lib/integrations/hubspot/runtime";
 import { resolveCommercialOrderLine } from "@/lib/orders/pdf-order-commercial";
 import { extractPdfOrder, PdfOrderImportError } from "@/lib/orders/pdf-order-extraction";
-import { calculateOrderTotal, consolidatePdfOrderLines, hasMeaningfulTotalDifference, matchPdfPharmacy, matchPdfProduct, resolvedLinePrice, type PharmacyCandidate, type ProductCandidate } from "@/lib/orders/pdf-order-matching";
+import { calculateOrderTotal, consolidatePdfOrderLines, hasMeaningfulTotalDifference, matchPdfPharmacy, matchPdfOrderProduct, resolvedLinePrice, type PharmacyCandidate, type ProductCandidate } from "@/lib/orders/pdf-order-matching";
 import type { PdfOrderExtraction } from "@/lib/orders/pdf-order-schema";
 import { automaticOrderType, COUNTED_ORDER_STATUSES } from "@/lib/orders/order-type";
 import { activeBrandHasCapability } from "@/lib/saas/server";
@@ -132,7 +132,7 @@ export async function analyzePdfOrderAction(_state: PdfOrderActionState, formDat
       ? `Remise ${terms.discountRate == null ? "inconnue" : `${terms.discountRate} %`} · UG ${terms.freeUnitsRule?.label ?? "aucune"}`
       : null;
     const lines = extraction.lines.map((line, index) => {
-      const productMatch = matchPdfProduct(line, products);
+      const productMatch = matchPdfOrderProduct(line, products);
       const price = resolvedLinePrice(line, productMatch.match);
       const resolvedTerms = isNaali && commercialTermsReady && terms && line.quantity != null && line.quantity > 0
         ? resolveCommercialOrderLine(line.quantity, terms)
