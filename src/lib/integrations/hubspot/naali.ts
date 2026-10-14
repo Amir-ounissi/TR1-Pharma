@@ -93,6 +93,7 @@ export const NAALI_HUBSPOT_CONFIGURATION: HubSpotBrandConfiguration = {
       amountHt: "amount",
       currency: "deal_currency_code",
       ownerId: "hubspot_owner_id",
+      orderTakenBy: "prise_de_commande",
       origin: "origine_de_la_commande",
       orderType: "type_de_commande",
       pipeline: "pipeline",
