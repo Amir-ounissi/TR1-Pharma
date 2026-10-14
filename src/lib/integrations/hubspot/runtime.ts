@@ -6,7 +6,7 @@ import { HubSpotClient, type HubSpotClientMode } from "./client";
 import { hubSpotRunFailureStatus } from "./runtime-status";
 import { applyHubSpotFieldMapping } from "./mapping-profile";
 import { assertHubSpotBrandConfiguration, type HubSpotBrandConfiguration, type HubSpotMeetingSyncInput, type HubSpotNoteSyncInput, type HubSpotOrderSyncInput } from "./model";
-import { NAALI_HUBSPOT_CONFIGURATION, resolveNaaliHubSpotOrderRoute } from "./naali";
+import { NAALI_HUBSPOT_CONFIGURATION, requireNaaliHubSpotOrderType, resolveNaaliHubSpotOrderRoute } from "./naali";
 import { resolveHubSpotOrderRouteOverride } from "./order-route-overrides";
 import {
   syncHubSpotNote,
@@ -533,7 +533,7 @@ export async function syncHubSpotOrderAfterPersistence(brandId: string, orderId:
     await withRuntime(brandId, "orders", async ({ admin, client, connection, config, links, journal }) => {
       const { data: order, error: orderError } = await admin
         .from("orders")
-        .select("id,brand_id,pharmacy_id,order_number,external_order_id,order_status,order_date,net_amount_ht,tax_amount,total_ttc,currency_code,source_user_id,created_by")
+        .select("id,brand_id,pharmacy_id,order_number,external_order_id,order_type,order_status,order_date,net_amount_ht,tax_amount,total_ttc,currency_code,source_user_id,created_by")
         .eq("id", orderId)
         .eq("brand_id", brandId)
         .is("archived_at", null)
@@ -565,6 +565,9 @@ export async function syncHubSpotOrderAfterPersistence(brandId: string, orderId:
             ? "agent"
             : roleKey,
       );
+
+      // A deal without type_de_commande is not a valid Naali HubSpot order.
+      const orderTypeValue = requireNaaliHubSpotOrderType(order.order_type);
 
       const productMappings = new Map<string, string>();
       const freeProductMappings = new Map<string, string>();
@@ -598,6 +601,7 @@ export async function syncHubSpotOrderAfterPersistence(brandId: string, orderId:
         orderNumber: String(order.order_number || order.external_order_id || order.id),
         status: String(order.order_status),
         orderDate: String(order.order_date),
+        orderTypeValue,
         netAmountHt: Number(order.net_amount_ht),
         taxAmount: Number(order.tax_amount),
         amountTtc: Number(order.total_ttc),
