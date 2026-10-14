@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { mapMeetingToHubSpot, mapOrderToHubSpot } from "./mappers";
 import {
+  NAALI_HUBSPOT_AMIR_OWNER_ID,
   NAALI_HUBSPOT_CONFIGURATION,
   requireNaaliHubSpotOrderType,
   resolveNaaliHubSpotOrderType,
@@ -51,6 +52,10 @@ describe("Naali HubSpot order mapping", () => {
     expect(resolveNaaliHubSpotOrderType("initial")).toBe("Implantation");
     expect(resolveNaaliHubSpotOrderType("reorder")).toBe("Réassort");
     expect(resolveNaaliHubSpotOrderType("other")).toBeNull();
+  });
+
+  it("uses the verified HubSpot owner ID for Amir Ounissi", () => {
+    expect(NAALI_HUBSPOT_AMIR_OWNER_ID).toBe("727665403");
   });
 
   it("requires a supported type for every synced Naali order deal", () => {
