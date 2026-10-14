@@ -8,6 +8,11 @@ INSERT INTO private.tr1_chatgpt_oauth_clients(client_id,resource_url,enabled)
 VALUES ('00000000-0000-0000-0000-00000000cb90',
   'https://test.tr1.invalid/api/connectors/chatgpt/mcp',true);
 
+-- The shared local test seed uses a demonstration brand (Dermavita).
+-- Temporarily use the Naali slug in this fully rolled-back test only.
+UPDATE public.brands SET slug='naali'
+WHERE id='00000000-0000-0000-0000-000000000101';
+
 INSERT INTO public.brand_pharmacy_commercial_terms
   (brand_pharmacy_id,brand_id,discount_rate,ug_paid_quantity,ug_free_quantity)
 VALUES ('00000000-0000-0000-0000-000000000411',
