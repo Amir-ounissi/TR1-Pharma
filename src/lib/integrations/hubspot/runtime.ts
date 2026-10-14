@@ -6,7 +6,7 @@ import { HubSpotClient, type HubSpotClientMode } from "./client";
 import { hubSpotRunFailureStatus } from "./runtime-status";
 import { applyHubSpotFieldMapping } from "./mapping-profile";
 import { assertHubSpotBrandConfiguration, type HubSpotBrandConfiguration, type HubSpotMeetingSyncInput, type HubSpotNoteSyncInput, type HubSpotOrderSyncInput } from "./model";
-import { NAALI_HUBSPOT_CONFIGURATION, requireNaaliHubSpotOrderType, resolveNaaliHubSpotOrderRoute } from "./naali";
+import { NAALI_HUBSPOT_AMIR_OWNER_ID, NAALI_HUBSPOT_CONFIGURATION, requireNaaliHubSpotOrderType, resolveNaaliHubSpotOrderRoute } from "./naali";
 import { resolveHubSpotOrderRouteOverride } from "./order-route-overrides";
 import {
   syncHubSpotNote,
@@ -551,10 +551,9 @@ export async function syncHubSpotOrderAfterPersistence(brandId: string, orderId:
       const ownerTr1UserId = order.source_user_id || order.created_by ? String(order.source_user_id || order.created_by) : null;
       if (!ownerTr1UserId) throw new Error(`TR1 order ${orderId} has no source user for HubSpot ownership and routing`);
 
-      const ownerExternalId = await externalIdFor(admin, connection.id, "users", ownerTr1UserId);
-      if (!ownerExternalId) {
-        throw new Error(`HubSpot owner mapping missing for TR1 user ${ownerTr1UserId}`);
-      }
+      // All Naali deals created by TR1 are owned by Amir Ounissi.
+      // Keep the TR1 source user for commercial-vs-agent pipeline routing.
+      const ownerExternalId = NAALI_HUBSPOT_AMIR_OWNER_ID;
 
       const roleKey = await roleKeyForOrderUser(admin, brandId, ownerTr1UserId);
       const routeOverride = resolveHubSpotOrderRouteOverride(connection.configuration, ownerTr1UserId);
@@ -569,24 +568,16 @@ export async function syncHubSpotOrderAfterPersistence(brandId: string, orderId:
       // A deal without type_de_commande is not a valid Naali HubSpot order.
       const orderTypeValue = requireNaaliHubSpotOrderType(order.order_type);
 
-      // "Prise de commande" tracks the actual TR1 creator, not the deal owner.
-      // HubSpot uses a restricted enumeration, so never submit an unknown value.
-      const creatorExternalId = order.created_by
-        ? await externalIdFor(admin, connection.id, "users", String(order.created_by))
-        : null;
-      let orderTakenByExternalId: string | null = null;
-      if (creatorExternalId && client.getMode() === "write") {
-        try {
-          const property = await client.read<{ options?: Array<{ value?: string }> }>(
-            "/crm/v3/properties/deals/prise_de_commande",
-          );
-          if (property.data?.options?.some((option) => option.value === creatorExternalId)) {
-            orderTakenByExternalId = creatorExternalId;
-          } else {
-            console.warn(`[hubspot] prise_de_commande option missing for creator ${creatorExternalId}; deal owner remains unchanged`);
-          }
-        } catch (error) {
-          console.warn(`[hubspot] prise_de_commande option validation unavailable: ${safeError(error)}`);
+      // User-requested Naali policy: both deal owner and "Prise de commande" are Amir.
+      // The custom field is an enumeration: reject sync if Amir is not an allowed option.
+      // Never silently create a deal missing this required attribution.
+      const orderTakenByExternalId = NAALI_HUBSPOT_AMIR_OWNER_ID;
+      if (client.getMode() === "write") {
+        const property = await client.read<{ options?: Array<{ value?: string }> }>(
+          "/crm/v3/properties/deals/prise_de_commande",
+        );
+        if (!property.data?.options?.some((option) => option.value === orderTakenByExternalId)) {
+          throw new Error(`HubSpot prise_de_commande is missing the Amir Ounissi option (${orderTakenByExternalId}); update HubSpot property options before syncing orders`);
         }
       }
 
