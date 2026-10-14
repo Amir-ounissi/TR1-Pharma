@@ -569,6 +569,27 @@ export async function syncHubSpotOrderAfterPersistence(brandId: string, orderId:
       // A deal without type_de_commande is not a valid Naali HubSpot order.
       const orderTypeValue = requireNaaliHubSpotOrderType(order.order_type);
 
+      // "Prise de commande" tracks the actual TR1 creator, not the deal owner.
+      // HubSpot uses a restricted enumeration, so never submit an unknown value.
+      const creatorExternalId = order.created_by
+        ? await externalIdFor(admin, connection.id, "users", String(order.created_by))
+        : null;
+      let orderTakenByExternalId: string | null = null;
+      if (creatorExternalId && client.getMode() === "write") {
+        try {
+          const property = await client.read<{ options?: Array<{ value?: string }> }>(
+            "/crm/v3/properties/deals/prise_de_commande",
+          );
+          if (property.data?.options?.some((option) => option.value === creatorExternalId)) {
+            orderTakenByExternalId = creatorExternalId;
+          } else {
+            console.warn(`[hubspot] prise_de_commande option missing for creator ${creatorExternalId}; deal owner remains unchanged`);
+          }
+        } catch (error) {
+          console.warn(`[hubspot] prise_de_commande option validation unavailable: ${safeError(error)}`);
+        }
+      }
+
       const productMappings = new Map<string, string>();
       const freeProductMappings = new Map<string, string>();
       for (const item of items ?? []) {
@@ -607,6 +628,7 @@ export async function syncHubSpotOrderAfterPersistence(brandId: string, orderId:
         amountTtc: Number(order.total_ttc),
         currency: String(order.currency_code || "EUR"),
         ownerExternalId,
+        orderTakenByExternalId,
         pipelineExternalId: route.pipeline,
         stageExternalId: route.confirmedStage,
         originValue: route.origin,
