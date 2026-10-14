@@ -358,6 +358,51 @@ describe("TR1 authenticated MCP endpoint", () => {
     expect(fake.refreshPricing).not.toHaveBeenCalled();
   });
 
+  it("passes an original pharmacy document number only to the scoped priced-draft RPC", async () => {
+    const relation = "22222222-2222-4222-8222-222222222222";
+    const pharmacy = "33333333-3333-4333-8333-333333333333";
+    const product = "44444444-4444-4444-8444-444444444444";
+    fake.rpc.mockImplementation(async (name: string) => {
+      if (name === "tr1_chatgpt_list_brands") {
+        return { data: [{ brand_id: brandId, brand_slug: "naali" }], error: null };
+      }
+      if (name === "tr1_chatgpt_pharmacy_summary") {
+        return { data: { brand_pharmacy_id: relation }, error: null };
+      }
+      if (name === "tr1_chatgpt_create_priced_order_draft_with_reference") {
+        return { data: { order_id: "55555555-5555-4555-8555-555555555555",
+          status: "draft", source_order_number: "156589", transmitted: false }, error: null };
+      }
+      throw new Error("Unexpected RPC: " + name);
+    });
+    fake.adminFrom.mockImplementation((table: string) => ({
+      select() { return this; }, eq() { return this; }, is() { return this; },
+      async maybeSingle() {
+        return { data: table === "brand_pharmacies"
+          ? { brand_id: brandId, pharmacy_id: pharmacy }
+          : { hubspot_synced_at: new Date().toISOString() }, error: null };
+      },
+    }));
+    const response = await POST(request("tools/call", {
+      name: "create_tr1_priced_order_draft",
+      arguments: { brand_pharmacy_id: relation,
+        items: [{ product_id: product, quantity: 12 }],
+        order_type: "reorder",
+        request_id: "66666666-6666-4666-8666-666666666666",
+        source_order_number: "156589",
+        confirmed: true },
+    }, "oauth-token"));
+    expect(response.status).toBe(200);
+    expect((await response.json()).result.structuredContent.draft).toMatchObject({
+      status: "draft", source_order_number: "156589", transmitted: false,
+    });
+    expect(fake.rpc).toHaveBeenCalledWith(
+      "tr1_chatgpt_create_priced_order_draft_with_reference",
+      expect.objectContaining({ source_order_number: "156589", confirmed: true }),
+    );
+    expect(fake.refreshPricing).not.toHaveBeenCalled();
+  });
+
   it("rejects an untrusted origin", async () => {
     expect((await POST(request("tools/list", {}, "", { origin: "https://attacker.test" }))).status).toBe(403);
   });
