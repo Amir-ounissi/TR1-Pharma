@@ -78,6 +78,65 @@ export const expandedTools = [
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     securitySchemes: [{ type: "oauth2", scopes: ["email"] }],
   },
+
+  {
+    name: "preview_tr1_ug_adjustments",
+    title: "Prévisualiser les UG exceptionnelles sur une commande",
+    description: "Lecture seule. Applique des exceptions UG UNIQUEMENT à cette commande sur le calcul commercial TR1/HubSpot vérifié. Pour chaque référence: mode add (ajouter aux UG normales) ou replace (remplacer les UG normales), quantité et classification obligatoires. L'offre exceptionnelle ne modifie jamais les conditions permanentes de la pharmacie. Aucun prix ou taux de remise fourni par le client n'est accepté.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        brand_pharmacy_id: { type: "string", format: "uuid" },
+        items: { type: "array", minItems: 1, maxItems: 30, items: {
+          type: "object", properties: {
+            product_id: { type: "string", format: "uuid" },
+            quantity: { type: "integer", minimum: 1, maximum: 9999 },
+          }, required: ["product_id","quantity"], additionalProperties: false,
+        } },
+        adjustments: { type: "array", minItems: 1, maxItems: 30, items: {
+          type: "object", properties: {
+            product_id: { type: "string", format: "uuid" },
+            mode: { type: "string", enum: ["add","replace"], description: "add = en PLUS des UG commerciales; replace = À LA PLACE des UG commerciales (0 autorisé)" },
+            quantity: { type: "integer", minimum: 0, maximum: 9999, description: "Nombre d'UG exceptionnelles à ajouter ou substituer" },
+            classification: { type: "string", enum: [
+              "compensation opé promo", "offre exceptionnelle sell-in", "geste commercial",
+              "échange périmé", "échange déféctueux", "litige logistique", "cadeau challenge"
+            ] },
+          }, required: ["product_id","mode","quantity","classification"], additionalProperties: false,
+        } },
+      },
+      required: ["brand_pharmacy_id","items","adjustments"], additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    securitySchemes: [{ type: "oauth2", scopes: ["email"] }],
+  },
+  {
+    name: "set_tr1_priced_order_ug_adjustments",
+    title: "Appliquer les UG exceptionnelles confirmées au brouillon",
+    description: "MODIFICATION DU BROUILLON NON ENVOYÉ uniquement. Après prévisualisation et confirmation EXPLICITE, définit la liste exhaustive des exceptions UG d'une commande Naali appartenant à l'utilisateur: add en supplément des UG commerciales, replace à la place des UG commerciales, y compris 0 pour supprimer les UG commerciales d'une ligne. Les exceptions sont classifiées et historisées par référence, sans changer les règles permanentes. La liste vide supprime les exceptions et rétablit les UG standard. Exige ensuite review_tr1_priced_order et une confirmation distincte avant tout envoi HubSpot.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        order_id: { type: "string", format: "uuid", description: "Brouillon chiffré créé par create_tr1_priced_order_draft" },
+        request_id: { type: "string", format: "uuid", description: "Clé identique à celle du brouillon" },
+        adjustments: { type: "array", maxItems: 30, items: {
+          type: "object", properties: {
+            product_id: { type: "string", format: "uuid" },
+            mode: { type: "string", enum: ["add","replace"] },
+            quantity: { type: "integer", minimum: 0, maximum: 9999 },
+            classification: { type: "string", enum: [
+              "compensation opé promo", "offre exceptionnelle sell-in", "geste commercial",
+              "échange périmé", "échange déféctueux", "litige logistique", "cadeau challenge"
+            ] },
+          }, required: ["product_id","mode","quantity","classification"], additionalProperties: false,
+        } },
+        confirmed: { type: "boolean", const: true, description: "Vrai seulement après confirmation explicite des écarts d'UG de cette commande" },
+      },
+      required: ["order_id","request_id","adjustments","confirmed"], additionalProperties: false,
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+    securitySchemes: [{ type: "oauth2", scopes: ["email"] }],
+  },
   {
     name: "create_tr1_priced_order_draft",
     title: "Créer un brouillon avec prix, remises et UG vérifiés",
@@ -183,6 +242,33 @@ const pricedPreviewArgs = z.object({
   items: z.array(z.object({ product_id: uuid, quantity: z.number().int().min(1).max(9999) }).strict())
     .min(1).max(30).refine(items => new Set(items.map(i => i.product_id)).size === items.length),
 }).strict();
+
+const adjustmentItemArgs = z.object({
+  product_id: uuid,
+  mode: z.enum(["add","replace"]),
+  quantity: z.number().int().min(0).max(9999),
+  classification: z.enum([
+    "compensation opé promo", "offre exceptionnelle sell-in", "geste commercial",
+    "échange périmé", "échange déféctueux", "litige logistique", "cadeau challenge",
+  ]),
+}).strict().refine(a => a.mode === "replace" || a.quantity > 0);
+const adjustmentListArgs = z.array(adjustmentItemArgs).max(30)
+  .refine(items => new Set(items.map(i => i.product_id)).size === items.length);
+const adjustedPreviewArgs = pricedPreviewArgs.extend({
+  adjustments: adjustmentListArgs.min(1),
+}).superRefine((input, ctx) => {
+  const ids = new Set(input.items.map(i => i.product_id));
+  if (input.adjustments.some(a => !ids.has(a.product_id))) {
+    ctx.addIssue({ code: "custom", message: "UG adjustment product not in basket" });
+  }
+});
+const setDraftAdjustmentsArgs = z.object({
+  order_id: uuid,
+  request_id: uuid,
+  adjustments: adjustmentListArgs,
+  confirmed: z.literal(true),
+}).strict();
+
 const pricedDraftArgs = pricedPreviewArgs.extend({
   order_type: z.enum(["initial","reorder","complementary","replacement","sample","return","credit_note","other"]),
   request_id: uuid,
@@ -234,6 +320,24 @@ export function parseExpandedToolCall(name: string, args: unknown):
     return { rpc: "tr1_chatgpt_priced_order_preview",
       args: { target_brand_pharmacy_id: parsed.data.brand_pharmacy_id,
         draft_items: parsed.data.items }, responseKey: "preview", write: false };
+  }
+
+  if (name === "preview_tr1_ug_adjustments") {
+    const parsed = adjustedPreviewArgs.safeParse(args);
+    if (!parsed.success) return null;
+    return { rpc: "tr1_chatgpt_ug_adjusted_preview",
+      args: { target_brand_pharmacy_id: parsed.data.brand_pharmacy_id,
+        draft_items: parsed.data.items, adjustments: parsed.data.adjustments },
+      responseKey: "preview", write: false };
+  }
+  if (name === "set_tr1_priced_order_ug_adjustments") {
+    const parsed = setDraftAdjustmentsArgs.safeParse(args);
+    if (!parsed.success) return null;
+    return { rpc: "tr1_chatgpt_set_draft_ug_adjustments",
+      args: { target_order_id: parsed.data.order_id,
+        request_id: parsed.data.request_id, adjustments: parsed.data.adjustments,
+        confirmed: true },
+      responseKey: "adjusted_draft", write: true };
   }
   if (name === "create_tr1_priced_order_draft") {
     const parsed = pricedDraftArgs.safeParse(args);
