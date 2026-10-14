@@ -102,6 +102,34 @@ export const expandedTools = [
     securitySchemes: [{ type: "oauth2", scopes: ["email"] }],
   },
   {
+    name: "review_tr1_priced_order",
+    title: "Relire le brouillon chiffré avant validation HubSpot",
+    description: "Lecture seule. Vérifie les lignes enregistrées, les remises et UG et retourne un jeton de revue. Présenter impérativement le détail et les totaux à l'utilisateur avant de demander sa confirmation. Aucune transmission.",
+    inputSchema: {
+      type: "object", properties: {
+        order_id: { type: "string", format: "uuid", description: "Identifiant du brouillon chiffré TR1" },
+        request_id: { type: "string", format: "uuid", description: "Identifiant stable employé à la création du brouillon" },
+      }, required: ["order_id","request_id"], additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    securitySchemes: [{ type: "oauth2", scopes: ["email"] }],
+  },
+  {
+    name: "submit_tr1_priced_order_to_hubspot",
+    title: "Valider une commande TR1 et la synchroniser dans HubSpot",
+    description: "MODIFICATION RÉELLE : fait passer un brouillon chiffré Naali au statut pending et synchronise immédiatement sa transaction et ses lignes HubSpot. Exige une revue préalable avec review_tr1_priced_order, le jeton correspondant et une confirmation EXPLICITE de l'utilisateur après examen de la pharmacie, des produits, quantités, remises, UG et totaux. Ne transmet pas d'email de commande à la marque. En cas d'échec HubSpot, l'ordre demeure soumis dans TR1 et peut être resynchronisé en rappelant l'outil avec les mêmes identifiants (sans doublon).",
+    inputSchema: {
+      type: "object", properties: {
+        order_id: { type: "string", format: "uuid" },
+        request_id: { type: "string", format: "uuid" },
+        review_token: { type: "string", pattern: "^[0-9a-f]{32}$", description: "Jeton retourné par la revue immédiate du brouillon" },
+        confirmed: { type: "boolean", const: true },
+      }, required: ["order_id","request_id","review_token","confirmed"], additionalProperties: false,
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+    securitySchemes: [{ type: "oauth2", scopes: ["email"] }],
+  },
+  {
     name: "create_tr1_order_draft",
     title: "Créer un brouillon de commande TR1",
     description: "MODIFICATION TR1 : créer uniquement un BROUILLON NON ENVOYÉ. Toujours consulter le catalogue, afficher les lignes, quantités et prix HT catalogue à l'utilisateur puis demander sa confirmation EXPLICITE. Ne calcule PAS automatiquement les remises ni UG : vérification obligatoire dans TR1 avant transmission. Ne jamais annoncer qu'une commande a été envoyée.",
@@ -162,6 +190,12 @@ const pricedDraftArgs = pricedPreviewArgs.extend({
   confirmed: z.literal(true),
 });
 
+const reviewedOrderArgs = z.object({ order_id: uuid, request_id: uuid }).strict();
+const submittedOrderArgs = reviewedOrderArgs.extend({
+  review_token: z.string().regex(/^[0-9a-f]{32}$/),
+  confirmed: z.literal(true),
+});
+
 export function parseExpandedToolCall(name: string, args: unknown):
   | { rpc: string; args: Record<string, unknown>; responseKey: string; write: boolean }
   | null {
@@ -213,6 +247,21 @@ export function parseExpandedToolCall(name: string, args: unknown):
         ...(parsed.data.source_order_number
           ? { source_order_number: parsed.data.source_order_number } : {}) },
       responseKey: "draft", write: true };
+  }
+  if (name === "review_tr1_priced_order") {
+    const parsed = reviewedOrderArgs.safeParse(args);
+    if (!parsed.success) return null;
+    return { rpc: "tr1_chatgpt_review_priced_order",
+      args: { target_order_id: parsed.data.order_id, request_id: parsed.data.request_id },
+      responseKey: "review", write: false };
+  }
+  if (name === "submit_tr1_priced_order_to_hubspot") {
+    const parsed = submittedOrderArgs.safeParse(args);
+    if (!parsed.success) return null;
+    return { rpc: "tr1_chatgpt_submit_priced_order",
+      args: { target_order_id: parsed.data.order_id, request_id: parsed.data.request_id,
+        review_token: parsed.data.review_token, confirmed: true },
+      responseKey: "submission", write: true };
   }
   if (name === "create_tr1_order_draft") {
     const parsed = orderArgs.safeParse(args);

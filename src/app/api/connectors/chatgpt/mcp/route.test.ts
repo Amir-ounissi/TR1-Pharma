@@ -8,9 +8,13 @@ const fake = vi.hoisted(() => ({
   createAdminClient: vi.fn(),
   adminFrom: vi.fn(),
   refreshPricing: vi.fn(),
+  deliverOrder: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: fake.createAdminClient }));
+vi.mock("@/lib/connectors/chatgpt-order-delivery", () => ({
+  deliverChatGptOrder: fake.deliverOrder,
+}));
 vi.mock("@/lib/integrations/hubspot/naali-pricing", () => ({
   getNaaliHubSpotPharmacyPricing: fake.refreshPricing,
 }));
@@ -54,6 +58,7 @@ describe("TR1 authenticated MCP endpoint", () => {
     vi.clearAllMocks();
     fake.createAdminClient.mockReturnValue({ from: fake.adminFrom });
     fake.refreshPricing.mockResolvedValue({ discountRate: 35 });
+    fake.deliverOrder.mockResolvedValue({ hubspot_synced: true, deal_id: "hubspot-deal-123" });
     fake.createClient.mockReturnValue({
       auth: { getClaims: fake.getClaims, getUser: fake.getUser },
       rpc: fake.rpc,
@@ -83,15 +88,15 @@ describe("TR1 authenticated MCP endpoint", () => {
     expect(fake.createClient).not.toHaveBeenCalled();
   });
 
-  it("advertises six read tools and three explicitly labeled writes", async () => {
+  it("advertises seven read tools and four explicit writes", async () => {
     const response = await POST(request("tools/list"));
     const body = await response.json();
     expect(response.status).toBe(200);
-    expect(body.result.tools).toHaveLength(9);
+    expect(body.result.tools).toHaveLength(11);
     expect(body.result.tools.filter((tool: { annotations: { readOnlyHint: boolean } }) =>
-      tool.annotations.readOnlyHint)).toHaveLength(6);
+      tool.annotations.readOnlyHint)).toHaveLength(7);
     expect(body.result.tools.filter((tool: { annotations: { readOnlyHint: boolean } }) =>
-      !tool.annotations.readOnlyHint)).toHaveLength(3);
+      !tool.annotations.readOnlyHint)).toHaveLength(4);
     expect(body.result.tools.every((tool: { securitySchemes: Array<{type:string}> }) =>
       tool.securitySchemes[0].type === "oauth2")).toBe(true);
   });
@@ -401,6 +406,74 @@ describe("TR1 authenticated MCP endpoint", () => {
       expect.objectContaining({ source_order_number: "156589", confirmed: true }),
     );
     expect(fake.refreshPricing).not.toHaveBeenCalled();
+  });
+
+  it("refuses to submit an unconfirmed priced order", async () => {
+    const response = await POST(request("tools/call", {
+      name: "submit_tr1_priced_order_to_hubspot",
+      arguments: {
+        order_id: "55555555-5555-4555-8555-555555555555",
+        request_id: "66666666-6666-4666-8666-666666666666",
+        review_token: "a".repeat(32),
+      },
+    }, "oauth-token"));
+    expect((await response.json()).error.message).toContain("unconfirmed");
+    expect(fake.deliverOrder).not.toHaveBeenCalled();
+  });
+
+  it("syncs only an explicitly reviewed, OAuth-scoped order", async () => {
+    const orderId = "55555555-5555-4555-8555-555555555555";
+    const requestId = "66666666-6666-4666-8666-666666666666";
+    fake.rpc.mockImplementation(async (name: string) => {
+      if (name === "tr1_chatgpt_list_brands") {
+        return { data: [{ brand_id: brandId }], error: null };
+      }
+      if (name === "tr1_chatgpt_submit_priced_order") {
+        return { data: { order_id: orderId, submitted: true, status: "pending" }, error: null };
+      }
+      throw new Error("Unexpected RPC " + name);
+    });
+    fake.adminFrom.mockImplementation((table: string) => ({
+      select() { return this; }, eq() { return this; }, is() { return this; },
+      async maybeSingle() {
+        return { data: table === "orders" ? { brand_id: brandId } : null, error: null };
+      },
+    }));
+    const response = await POST(request("tools/call", {
+      name: "submit_tr1_priced_order_to_hubspot",
+      arguments: {
+        order_id: orderId, request_id: requestId,
+        review_token: "a".repeat(32), confirmed: true,
+      },
+    }, "oauth-token"));
+    const payload = await response.json();
+    expect(payload.result.structuredContent.submission).toMatchObject({
+      submitted: true, hubspot_synced: true, deal_id: "hubspot-deal-123",
+    });
+    expect(fake.deliverOrder).toHaveBeenCalledWith(brandId, orderId);
+  });
+
+  it("reports partial delivery without claiming that HubSpot was synced", async () => {
+    const orderId = "55555555-5555-4555-8555-555555555555";
+    fake.rpc.mockImplementation(async (name: string) => name === "tr1_chatgpt_list_brands"
+      ? { data: [{ brand_id: brandId }], error: null }
+      : { data: { order_id: orderId, submitted: true, status: "pending" }, error: null });
+    fake.adminFrom.mockImplementation(() => ({
+      select() { return this; }, eq() { return this; }, is() { return this; },
+      async maybeSingle() { return { data: { brand_id: brandId }, error: null }; },
+    }));
+    fake.deliverOrder.mockRejectedValueOnce(new Error("HubSpot temporarily unreachable"));
+    const response = await POST(request("tools/call", {
+      name: "submit_tr1_priced_order_to_hubspot",
+      arguments: {
+        order_id: orderId,
+        request_id: "66666666-6666-4666-8666-666666666666",
+        review_token: "a".repeat(32), confirmed: true,
+      },
+    }, "oauth-token"));
+    expect((await response.json()).result.structuredContent.submission).toMatchObject({
+      submitted: true, hubspot_synced: false,
+    });
   });
 
   it("rejects an untrusted origin", async () => {

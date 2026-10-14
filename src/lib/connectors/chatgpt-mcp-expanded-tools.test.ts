@@ -12,11 +12,36 @@ describe("TR1 ChatGPT advanced MCP tools", () => {
     expect(expandedTools.map((tool) => tool.name)).toEqual([
       "list_tr1_catalog", "get_tr1_agenda",
       "create_tr1_planned_visit", "preview_tr1_priced_order",
-      "create_tr1_priced_order_draft", "create_tr1_order_draft",
+      "create_tr1_priced_order_draft", "review_tr1_priced_order",
+      "submit_tr1_priced_order_to_hubspot", "create_tr1_order_draft",
     ]);
     expect(expandedTools.map((tool) => tool.annotations.readOnlyHint)).toEqual([
-      true, true, false, true, false, false,
+      true, true, false, true, false, true, false, false,
     ]);
+  });
+
+  it("requires review token and explicit confirmation to submit a priced order", () => {
+    const args = {
+      order_id: "55555555-5555-4555-8555-555555555555",
+      request_id: request,
+      review_token: "a".repeat(32),
+    };
+    expect(parseExpandedToolCall("review_tr1_priced_order", {
+      order_id: args.order_id, request_id: request,
+    })).toMatchObject({ rpc: "tr1_chatgpt_review_priced_order", write: false });
+    expect(parseExpandedToolCall("submit_tr1_priced_order_to_hubspot", args)).toBeNull();
+    expect(parseExpandedToolCall("submit_tr1_priced_order_to_hubspot", {
+      ...args, confirmed: false,
+    })).toBeNull();
+    expect(parseExpandedToolCall("submit_tr1_priced_order_to_hubspot", {
+      ...args, review_token: "invalid", confirmed: true,
+    })).toBeNull();
+    expect(parseExpandedToolCall("submit_tr1_priced_order_to_hubspot", {
+      ...args, confirmed: true,
+    })).toMatchObject({
+      rpc: "tr1_chatgpt_submit_priced_order",
+      write: true, args: { confirmed: true, request_id: request },
+    });
   });
 
   it("allows catalog lookup without write access", () => {

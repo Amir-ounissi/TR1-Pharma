@@ -4,6 +4,7 @@ import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getNaaliHubSpotPharmacyPricing } from "@/lib/integrations/hubspot/naali-pricing";
 import { expandedTools, parseExpandedToolCall } from "@/lib/connectors/chatgpt-mcp-expanded-tools";
+import { deliverChatGptOrder } from "@/lib/connectors/chatgpt-order-delivery";
 import { getPublicSupabaseEnv } from "@/lib/supabase/env";
 import {
   CHATGPT_MCP_MAX_BODY_BYTES,
@@ -296,6 +297,37 @@ export async function POST(request: Request) {
       return rpcError(id, -32602, "TR1 rejected invalid, duplicate, or conflicting action", 400);
     }
     if (error) return rpcError(id, -32004, "TR1 operation temporarily unavailable", 503);
+
+    // Only the explicitly confirmed, reviewed tool finalizes a priced order.
+    // The OAuth-bound database RPC has already enforced original ownership,
+    // pharmacy assignment, pricing integrity and idempotency.
+    if (params.data.name === "submit_tr1_priced_order_to_hubspot") {
+      const submission = data as { order_id?: string; submitted?: boolean };
+      const orderId = submission?.order_id;
+      if (!orderId || !submission.submitted) return rpcError(id, -32004, "TR1 submission not verified", 503);
+      const admin = createAdminClient();
+      const { data: order, error: lookupError } = await admin.from("orders")
+        .select("brand_id").eq("id", orderId).eq("created_by", identity.user.id)
+        .eq("external_order_id", `chatgpt:${String(expandedCall.args.request_id)}`)
+        .is("archived_at", null).maybeSingle();
+      if (lookupError || !order ||
+        !(contexts ?? []).some((ctx: { brand_id: string }) => ctx.brand_id === order.brand_id)) {
+        return rpcError(id, -32003, "Order scope unavailable after submission", 403);
+      }
+      let delivery: Record<string, unknown>;
+      try {
+        delivery = await deliverChatGptOrder(String(order.brand_id), String(orderId));
+      } catch {
+        delivery = { hubspot_synced: false, reason: "HubSpot delivery unavailable; retry the same reviewed order" };
+      }
+      const response = { submission: { ...submission, ...delivery } };
+      return rpcResult(id, {
+        content: [{ type: "text", text: JSON.stringify(response) }],
+        structuredContent: response,
+        isError: false,
+      });
+    }
+
     const response = { [expandedCall.responseKey]: data };
     return rpcResult(id, {
       content: [{ type: "text", text: JSON.stringify(response) }],
