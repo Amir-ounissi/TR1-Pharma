@@ -81,7 +81,7 @@ export const expandedTools = [
   {
     name: "create_tr1_priced_order_draft",
     title: "Créer un brouillon avec prix, remises et UG vérifiés",
-    description: "Crée uniquement un BROUILLON NON ENVOYÉ avec remises et unités gratuites calculées depuis les conditions TR1/HubSpot. Exige la prévisualisation et une confirmation explicite. Ne synchronise pas HubSpot et ne transmet pas la commande.",
+    description: "Crée uniquement un BROUILLON NON ENVOYÉ avec remises et unités gratuites calculées depuis TR1/HubSpot. Si fourni, conserve le numéro du bon d’origine dans order_number, distinct de l’identifiant technique ChatGPT. Exige prévisualisation et confirmation. Ne transmet jamais la commande.",
     inputSchema: {
       type: "object",
       properties: {
@@ -94,6 +94,7 @@ export const expandedTools = [
         } },
         order_type: { type: "string", enum: ["initial","reorder","complementary","replacement","sample","return","credit_note","other"] },
         request_id: { type: "string", format: "uuid" },
+        source_order_number: { type: "string", minLength: 1, maxLength: 80, description: "Numéro du bon de commande fourni par la pharmacie, ex. 156589. Facultatif, distinct du numéro technique ChatGPT/HubSpot." },
         confirmed: { type: "boolean", const: true },
       }, required: ["brand_pharmacy_id","items","order_type","request_id","confirmed"], additionalProperties: false,
     },
@@ -157,6 +158,7 @@ const pricedPreviewArgs = z.object({
 const pricedDraftArgs = pricedPreviewArgs.extend({
   order_type: z.enum(["initial","reorder","complementary","replacement","sample","return","credit_note","other"]),
   request_id: uuid,
+  source_order_number: z.string().trim().min(1).max(80).regex(/^[^\u0000-\u001f\u007f]+$/).optional(),
   confirmed: z.literal(true),
 });
 
@@ -202,10 +204,14 @@ export function parseExpandedToolCall(name: string, args: unknown):
   if (name === "create_tr1_priced_order_draft") {
     const parsed = pricedDraftArgs.safeParse(args);
     if (!parsed.success) return null;
-    return { rpc: "tr1_chatgpt_create_priced_order_draft",
+    return { rpc: parsed.data.source_order_number
+      ? "tr1_chatgpt_create_priced_order_draft_with_reference"
+      : "tr1_chatgpt_create_priced_order_draft",
       args: { target_brand_pharmacy_id: parsed.data.brand_pharmacy_id,
         draft_items: parsed.data.items, order_type: parsed.data.order_type,
-        request_id: parsed.data.request_id, confirmed: true },
+        request_id: parsed.data.request_id, confirmed: true,
+        ...(parsed.data.source_order_number
+          ? { source_order_number: parsed.data.source_order_number } : {}) },
       responseKey: "draft", write: true };
   }
   if (name === "create_tr1_order_draft") {
