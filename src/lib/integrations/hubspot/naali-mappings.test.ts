@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { mapMeetingToHubSpot, mapOrderToHubSpot } from "./mappers";
 import {
   NAALI_HUBSPOT_CONFIGURATION,
+  requireNaaliHubSpotOrderType,
   resolveNaaliHubSpotOrderType,
   resolveNaaliHubSpotVisitType,
 } from "./naali";
@@ -50,6 +51,13 @@ describe("Naali HubSpot order mapping", () => {
     expect(resolveNaaliHubSpotOrderType("initial")).toBe("Implantation");
     expect(resolveNaaliHubSpotOrderType("reorder")).toBe("Réassort");
     expect(resolveNaaliHubSpotOrderType("other")).toBeNull();
+  });
+
+  it("requires a supported type for every synced Naali order deal", () => {
+    expect(requireNaaliHubSpotOrderType("initial")).toBe("Implantation");
+    expect(requireNaaliHubSpotOrderType("reorder")).toBe("Réassort");
+    expect(() => requireNaaliHubSpotOrderType(null)).toThrow(/mandatory Naali HubSpot type_de_commande/);
+    expect(() => requireNaaliHubSpotOrderType("complementary")).toThrow(/mandatory Naali HubSpot type_de_commande/);
   });
 
   it("writes type_de_commande only when TR1 supplied an unambiguous HubSpot value", () => {
