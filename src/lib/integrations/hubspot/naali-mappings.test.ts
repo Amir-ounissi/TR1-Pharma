@@ -84,6 +84,24 @@ describe("Naali HubSpot order mapping", () => {
     expect(mapped.deal.properties.prise_de_commande).toBe("29151394");
   });
 
+  it("omits prise_de_commande while its HubSpot enum lacks Amir", () => {
+    const mapped = mapOrderToHubSpot({
+      id: "order-without-taking-option",
+      orderNumber: "CMD-002",
+      status: "confirmed",
+      orderDate: "2026-10-14T09:00:00.000Z",
+      orderTypeValue: "Implantation",
+      ownerExternalId: NAALI_HUBSPOT_AMIR_OWNER_ID,
+      netAmountHt: 150,
+      currency: "EUR",
+      lines: [],
+    }, NAALI_HUBSPOT_CONFIGURATION);
+
+    expect(mapped.deal.properties.type_de_commande).toBe("Implantation");
+    expect(mapped.deal.properties.hubspot_owner_id).toBe(NAALI_HUBSPOT_AMIR_OWNER_ID);
+    expect(mapped.deal.properties).not.toHaveProperty("prise_de_commande");
+  });
+
   it("writes the Naali tax-rate group for a 5.5% order line", () => {
     const mapped = mapOrderToHubSpot({
       id: "order-tax",
