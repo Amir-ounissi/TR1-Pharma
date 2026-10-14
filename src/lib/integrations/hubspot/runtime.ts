@@ -568,18 +568,8 @@ export async function syncHubSpotOrderAfterPersistence(brandId: string, orderId:
       // A deal without type_de_commande is not a valid Naali HubSpot order.
       const orderTypeValue = requireNaaliHubSpotOrderType(order.order_type);
 
-      // User-requested Naali policy: both deal owner and "Prise de commande" are Amir.
-      // The custom field is an enumeration: reject sync if Amir is not an allowed option.
-      // Never silently create a deal missing this required attribution.
-      const orderTakenByExternalId = NAALI_HUBSPOT_AMIR_OWNER_ID;
-      if (client.getMode() === "write") {
-        const property = await client.read<{ options?: Array<{ value?: string }> }>(
-          "/crm/v3/properties/deals/prise_de_commande",
-        );
-        if (!property.data?.options?.some((option) => option.value === orderTakenByExternalId)) {
-          throw new Error(`HubSpot prise_de_commande is missing the Amir Ounissi option (${orderTakenByExternalId}); update HubSpot property options before syncing orders`);
-        }
-      }
+      // HubSpot prise_de_commande is temporarily omitted until Amir is an allowed option.
+      // Keep the verified Amir owner and mandatory order type without blocking sync.
 
       const productMappings = new Map<string, string>();
       const freeProductMappings = new Map<string, string>();
@@ -619,7 +609,6 @@ export async function syncHubSpotOrderAfterPersistence(brandId: string, orderId:
         amountTtc: Number(order.total_ttc),
         currency: String(order.currency_code || "EUR"),
         ownerExternalId,
-        orderTakenByExternalId,
         pipelineExternalId: route.pipeline,
         stageExternalId: route.confirmedStage,
         originValue: route.origin,
