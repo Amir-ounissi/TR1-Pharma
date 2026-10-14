@@ -67,12 +67,16 @@ describe("Naali HubSpot order mapping", () => {
       status: "confirmed",
       orderDate: "2026-09-11T09:00:00.000Z",
       orderTypeValue: "Réassort",
+      ownerExternalId: "32320882",
+      orderTakenByExternalId: "29151394",
       netAmountHt: 100,
       currency: "EUR",
       lines: [],
     }, NAALI_HUBSPOT_CONFIGURATION);
 
     expect(mapped.deal.properties.type_de_commande).toBe("Réassort");
+    expect(mapped.deal.properties.hubspot_owner_id).toBe("32320882");
+    expect(mapped.deal.properties.prise_de_commande).toBe("29151394");
   });
 
   it("writes the Naali tax-rate group for a 5.5% order line", () => {
