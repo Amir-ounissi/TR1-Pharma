@@ -48,7 +48,8 @@ SELECT is((
     AND p.oid NOT IN (
       'public.tr1_chatgpt_create_planned_visit(uuid,uuid[],text,text,text,timestamptz,timestamptz,boolean)'::regprocedure,
       'public.tr1_chatgpt_create_order_draft(uuid,jsonb,text,text,uuid,boolean)'::regprocedure,
-      'public.tr1_chatgpt_create_priced_order_draft(uuid,jsonb,text,uuid,boolean)'::regprocedure
+      'public.tr1_chatgpt_create_priced_order_draft(uuid,jsonb,text,uuid,boolean)'::regprocedure,
+      'public.tr1_chatgpt_create_priced_order_draft_with_reference(uuid,jsonb,text,uuid,boolean,text)'::regprocedure
     )
 ),0::bigint,'MCP OAuth token cannot call unrelated mutating SECURITY DEFINER RPCs');
 SELECT is((
@@ -59,9 +60,10 @@ SELECT is((
     AND p.oid IN (
       'public.tr1_chatgpt_create_planned_visit(uuid,uuid[],text,text,text,timestamptz,timestamptz,boolean)'::regprocedure,
       'public.tr1_chatgpt_create_order_draft(uuid,jsonb,text,text,uuid,boolean)'::regprocedure,
-      'public.tr1_chatgpt_create_priced_order_draft(uuid,jsonb,text,uuid,boolean)'::regprocedure
+      'public.tr1_chatgpt_create_priced_order_draft(uuid,jsonb,text,uuid,boolean)'::regprocedure,
+      'public.tr1_chatgpt_create_priced_order_draft_with_reference(uuid,jsonb,text,uuid,boolean,text)'::regprocedure
     )
-),3::bigint,'Only the three explicitly scoped MCP writes may be executed');
+),4::bigint,'Only the four explicitly scoped MCP writes may be executed');
 SELECT ok(NOT has_function_privilege('authenticated',
   'private.tr1_chatgpt_oauth_token_hook(jsonb)','EXECUTE'),
   'Browser sessions cannot invoke the OAuth signing hook');
