@@ -143,6 +143,7 @@ export function mapOrderToHubSpot(input: HubSpotOrderSyncInput, config: HubSpotB
   if (input.amountTtc !== null && input.amountTtc !== undefined) set(dealProperties, orderMap.amountTtc, decimal(input.amountTtc));
   set(dealProperties, orderMap.currency, input.currency);
   set(dealProperties, orderMap.ownerId, input.ownerExternalId);
+  set(dealProperties, orderMap.orderTakenBy, input.orderTakenByExternalId);
   set(dealProperties, orderMap.origin, input.originValue);
   set(dealProperties, orderMap.pipeline, input.pipelineExternalId ?? config.deal.pipeline);
   set(dealProperties, orderMap.stage, input.stageExternalId ?? config.deal.confirmedStage);
