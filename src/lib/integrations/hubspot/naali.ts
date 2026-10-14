@@ -55,6 +55,13 @@ export function resolveNaaliHubSpotOrderType(orderType: string | null | undefine
   return normalized ? NAALI_HUBSPOT_ORDER_TYPES[normalized] ?? null : null;
 }
 
+// Never create a Naali deal without a verified HubSpot order type.
+export function requireNaaliHubSpotOrderType(orderType: string | null | undefined) {
+  const value = resolveNaaliHubSpotOrderType(orderType);
+  if (!value) throw new Error(`Unsupported TR1 order type for mandatory Naali HubSpot type_de_commande: ${orderType ?? "missing"}`);
+  return value;
+}
+
 // Portal-specific values live here, never in the generic HubSpot runtime.
 // Pipeline/property names and route values were verified read-only against the connected Naali portal.
 export const NAALI_HUBSPOT_CONFIGURATION: HubSpotBrandConfiguration = {
