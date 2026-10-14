@@ -240,6 +240,7 @@ export async function POST(request: Request) {
   // Never trust a brand ID or discount submitted as a tool argument.
   if (expandedCall && (
     params.data.name === "preview_tr1_priced_order" ||
+    params.data.name === "preview_tr1_ug_adjustments" ||
     params.data.name === "create_tr1_priced_order_draft"
   )) {
     const relationId = String(expandedCall.args.target_brand_pharmacy_id ?? "");

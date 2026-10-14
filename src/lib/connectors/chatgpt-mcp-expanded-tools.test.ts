@@ -12,11 +12,12 @@ describe("TR1 ChatGPT advanced MCP tools", () => {
     expect(expandedTools.map((tool) => tool.name)).toEqual([
       "list_tr1_catalog", "get_tr1_agenda",
       "create_tr1_planned_visit", "preview_tr1_priced_order",
+      "preview_tr1_ug_adjustments", "set_tr1_priced_order_ug_adjustments",
       "create_tr1_priced_order_draft", "review_tr1_priced_order",
       "submit_tr1_priced_order_to_hubspot", "create_tr1_order_draft",
     ]);
     expect(expandedTools.map((tool) => tool.annotations.readOnlyHint)).toEqual([
-      true, true, false, true, false, true, false, false,
+      true, true, false, true, true, false, false, true, false, false,
     ]);
   });
 
@@ -146,6 +147,64 @@ describe("TR1 ChatGPT advanced MCP tools", () => {
     expect(parseExpandedToolCall("create_tr1_priced_order_draft", {
       ...input, confirmed: true, source_order_number: "X".repeat(81),
     })).toBeNull();
+  });
+
+
+  it("previews per-order add and replace UG, rejecting unsafe overrides", () => {
+    const p2 = "33333333-3333-4333-8333-333333333333";
+    const items = [{ product_id: product, quantity: 24 }, { product_id: p2, quantity: 24 }];
+    const adjustments = [
+      { product_id: product, mode: "replace", quantity: 24,
+        classification: "offre exceptionnelle sell-in" },
+      { product_id: p2, mode: "add", quantity: 17,
+        classification: "compensation opé promo" },
+    ];
+    expect(parseExpandedToolCall("preview_tr1_ug_adjustments", {
+      brand_pharmacy_id: pharmacy, items, adjustments,
+    })).toMatchObject({
+      rpc: "tr1_chatgpt_ug_adjusted_preview", write: false,
+      args: { adjustments },
+    });
+    const base = { brand_pharmacy_id: pharmacy, items, adjustments };
+    expect(parseExpandedToolCall("preview_tr1_ug_adjustments", {
+      ...base, adjustments: [{ ...adjustments[0], quantity: -1 }],
+    })).toBeNull();
+    expect(parseExpandedToolCall("preview_tr1_ug_adjustments", {
+      ...base, adjustments: [{ ...adjustments[1], mode: "add", quantity: 0 }],
+    })).toBeNull();
+    expect(parseExpandedToolCall("preview_tr1_ug_adjustments", {
+      ...base, adjustments: [{ ...adjustments[0], discount_rate: 10 }],
+    })).toBeNull();
+    expect(parseExpandedToolCall("preview_tr1_ug_adjustments", {
+      ...base, adjustments: [adjustments[0], adjustments[0]],
+    })).toBeNull();
+    expect(parseExpandedToolCall("preview_tr1_ug_adjustments", {
+      ...base, adjustments: [{ ...adjustments[0], classification: "unknown" }],
+    })).toBeNull();
+  });
+
+  it("requires explicit confirmation for UG draft changes and supports zero replacement", () => {
+    const adjustments = [{
+      product_id: product, mode: "replace", quantity: 0,
+      classification: "geste commercial",
+    }];
+    const input = { order_id: pharmacy, request_id: request, adjustments };
+    expect(parseExpandedToolCall("set_tr1_priced_order_ug_adjustments", input)).toBeNull();
+    expect(parseExpandedToolCall("set_tr1_priced_order_ug_adjustments", {
+      ...input, confirmed: false,
+    })).toBeNull();
+    expect(parseExpandedToolCall("set_tr1_priced_order_ug_adjustments", {
+      ...input, confirmed: true,
+    })).toMatchObject({
+      rpc: "tr1_chatgpt_set_draft_ug_adjustments", write: true,
+      args: { confirmed: true, adjustments },
+    });
+    expect(parseExpandedToolCall("set_tr1_priced_order_ug_adjustments", {
+      ...input, adjustments: [], confirmed: true,
+    })).toMatchObject({
+      rpc: "tr1_chatgpt_set_draft_ug_adjustments", write: true,
+      args: { adjustments: [] },
+    });
   });
 
 });
