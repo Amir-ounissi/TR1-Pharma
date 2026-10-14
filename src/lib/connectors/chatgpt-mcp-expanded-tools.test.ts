@@ -116,7 +116,7 @@ describe("TR1 ChatGPT advanced MCP tools", () => {
       ...input, confirmed: true, source_order_number: "  ",
     })).toBeNull();
     expect(parseExpandedToolCall("create_tr1_priced_order_draft", {
-      ...input, confirmed: true, source_order_number: "156589\\nother",
+      ...input, confirmed: true, source_order_number: "156589".concat(String.fromCharCode(10), "other"),
     })).toBeNull();
     expect(parseExpandedToolCall("create_tr1_priced_order_draft", {
       ...input, confirmed: true, source_order_number: "X".repeat(81),
