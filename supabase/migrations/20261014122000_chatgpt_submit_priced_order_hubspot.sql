@@ -75,7 +75,7 @@ BEGIN
   END IF;
   review_fingerprint:=md5(
     o.id::text || ':' || o.order_type::text || ':' ||
-    coalesce(o.order_number,'') || ':' || preview->'items'::text || ':' ||
+    coalesce(o.order_number,'') || ':' || (preview->'items')::text || ':' ||
     (preview->>'total_ht')
   );
   RETURN jsonb_build_object(
