@@ -88,15 +88,15 @@ describe("TR1 authenticated MCP endpoint", () => {
     expect(fake.createClient).not.toHaveBeenCalled();
   });
 
-  it("advertises seven read tools and four explicit writes", async () => {
+  it("advertises eight read tools and five explicit writes", async () => {
     const response = await POST(request("tools/list"));
     const body = await response.json();
     expect(response.status).toBe(200);
-    expect(body.result.tools).toHaveLength(11);
+    expect(body.result.tools).toHaveLength(13);
     expect(body.result.tools.filter((tool: { annotations: { readOnlyHint: boolean } }) =>
-      tool.annotations.readOnlyHint)).toHaveLength(7);
+      tool.annotations.readOnlyHint)).toHaveLength(8);
     expect(body.result.tools.filter((tool: { annotations: { readOnlyHint: boolean } }) =>
-      !tool.annotations.readOnlyHint)).toHaveLength(4);
+      !tool.annotations.readOnlyHint)).toHaveLength(5);
     expect(body.result.tools.every((tool: { securitySchemes: Array<{type:string}> }) =>
       tool.securitySchemes[0].type === "oauth2")).toBe(true);
   });
@@ -234,6 +234,38 @@ describe("TR1 authenticated MCP endpoint", () => {
       arguments: { brand_pharmacy_id: "22222222-2222-4222-8222-222222222222" },
     }, "oauth-token"));
     expect(response.status).toBe(403);
+  });
+
+
+  it("keeps UG changes behind explicit confirmation and scoped RPC", async () => {
+    const args = {
+      order_id: "22222222-2222-4222-8222-222222222222",
+      request_id: "33333333-3333-4333-8333-333333333333",
+      adjustments: [{
+        product_id: "44444444-4444-4444-8444-444444444444",
+        mode: "add", quantity: 17, classification: "compensation opé promo",
+      }],
+    };
+    const unconfirmed = await POST(request("tools/call", {
+      name: "set_tr1_priced_order_ug_adjustments", arguments: args,
+    }, "oauth-token"));
+    expect((await unconfirmed.json()).error.message).toContain("unconfirmed");
+    expect(fake.rpc).not.toHaveBeenCalled();
+
+    fake.rpc.mockImplementation(async (name: string) => name === "tr1_chatgpt_list_brands"
+      ? { data: [{ brand_id: brandId, brand_slug: "naali" }], error: null }
+      : { data: { order_id: args.order_id, adjustments_applied: true, status: "draft" }, error: null });
+    const confirmed = await POST(request("tools/call", {
+      name: "set_tr1_priced_order_ug_adjustments",
+      arguments: { ...args, confirmed: true },
+    }, "oauth-token"));
+    expect(confirmed.status).toBe(200);
+    expect((await confirmed.json()).result.structuredContent.adjusted_draft.status).toBe("draft");
+    expect(fake.rpc).toHaveBeenCalledWith("tr1_chatgpt_set_draft_ug_adjustments", {
+      target_order_id: args.order_id,
+      request_id: args.request_id, adjustments: args.adjustments, confirmed: true,
+    });
+    expect(fake.deliverOrder).not.toHaveBeenCalled();
   });
 
   it("never contacts TR1 database for an unconfirmed order write", async () => {
