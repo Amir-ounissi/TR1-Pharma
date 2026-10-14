@@ -1,5 +1,8 @@
 import type { HubSpotBrandConfiguration } from "./model";
 
+// HubSpot owner verified against the Naali portal (Amir Ounissi).
+export const NAALI_HUBSPOT_AMIR_OWNER_ID = "727665403";
+
 export const NAALI_HUBSPOT_ORDER_ROUTES = {
   commercial: {
     pipeline: "1543644371",
