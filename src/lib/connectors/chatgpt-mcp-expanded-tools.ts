@@ -255,7 +255,7 @@ const adjustmentItemArgs = z.object({
 const adjustmentListArgs = z.array(adjustmentItemArgs).max(30)
   .refine(items => new Set(items.map(i => i.product_id)).size === items.length);
 const adjustedPreviewArgs = pricedPreviewArgs.extend({
-  adjustments: adjustmentListArgs.min(1),
+  adjustments: adjustmentListArgs.refine(items => items.length > 0),
 }).superRefine((input, ctx) => {
   const ids = new Set(input.items.map(i => i.product_id));
   if (input.adjustments.some(a => !ids.has(a.product_id))) {
