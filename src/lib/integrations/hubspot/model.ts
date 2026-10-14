@@ -6,6 +6,7 @@ export type HubSpotLinePricingMode = "unit_price_with_discount" | "net_unit_pric
 export type HubSpotPropertyMap = {
   externalId?: string;
   ownerId?: string;
+  orderTakenBy?: string;
   origin?: string;
   name?: string;
   description?: string;
@@ -113,6 +114,7 @@ export type HubSpotOrderSyncInput = {
   amountTtc?: number | null;
   currency?: string | null;
   ownerExternalId?: string | null;
+  orderTakenByExternalId?: string | null;
   pipelineExternalId?: string | null;
   stageExternalId?: string | null;
   originValue?: string | null;

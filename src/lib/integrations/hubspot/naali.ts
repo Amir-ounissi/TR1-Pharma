@@ -1,5 +1,8 @@
 import type { HubSpotBrandConfiguration } from "./model";
 
+// HubSpot owner verified against the Naali portal (Amir Ounissi).
+export const NAALI_HUBSPOT_AMIR_OWNER_ID = "727665403";
+
 export const NAALI_HUBSPOT_ORDER_ROUTES = {
   commercial: {
     pipeline: "1543644371",
@@ -55,6 +58,13 @@ export function resolveNaaliHubSpotOrderType(orderType: string | null | undefine
   return normalized ? NAALI_HUBSPOT_ORDER_TYPES[normalized] ?? null : null;
 }
 
+// Never create a Naali deal without a verified HubSpot order type.
+export function requireNaaliHubSpotOrderType(orderType: string | null | undefined) {
+  const value = resolveNaaliHubSpotOrderType(orderType);
+  if (!value) throw new Error(`Unsupported TR1 order type for mandatory Naali HubSpot type_de_commande: ${orderType ?? "missing"}`);
+  return value;
+}
+
 // Portal-specific values live here, never in the generic HubSpot runtime.
 // Pipeline/property names and route values were verified read-only against the connected Naali portal.
 export const NAALI_HUBSPOT_CONFIGURATION: HubSpotBrandConfiguration = {
@@ -86,6 +96,7 @@ export const NAALI_HUBSPOT_CONFIGURATION: HubSpotBrandConfiguration = {
       amountHt: "amount",
       currency: "deal_currency_code",
       ownerId: "hubspot_owner_id",
+      orderTakenBy: "prise_de_commande",
       origin: "origine_de_la_commande",
       orderType: "type_de_commande",
       pipeline: "pipeline",

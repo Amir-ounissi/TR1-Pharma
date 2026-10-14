@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { mapMeetingToHubSpot, mapOrderToHubSpot } from "./mappers";
 import {
+  NAALI_HUBSPOT_AMIR_OWNER_ID,
   NAALI_HUBSPOT_CONFIGURATION,
+  requireNaaliHubSpotOrderType,
   resolveNaaliHubSpotOrderType,
   resolveNaaliHubSpotVisitType,
 } from "./naali";
@@ -52,6 +54,17 @@ describe("Naali HubSpot order mapping", () => {
     expect(resolveNaaliHubSpotOrderType("other")).toBeNull();
   });
 
+  it("uses the verified HubSpot owner ID for Amir Ounissi", () => {
+    expect(NAALI_HUBSPOT_AMIR_OWNER_ID).toBe("727665403");
+  });
+
+  it("requires a supported type for every synced Naali order deal", () => {
+    expect(requireNaaliHubSpotOrderType("initial")).toBe("Implantation");
+    expect(requireNaaliHubSpotOrderType("reorder")).toBe("Réassort");
+    expect(() => requireNaaliHubSpotOrderType(null)).toThrow(/mandatory Naali HubSpot type_de_commande/);
+    expect(() => requireNaaliHubSpotOrderType("complementary")).toThrow(/mandatory Naali HubSpot type_de_commande/);
+  });
+
   it("writes type_de_commande only when TR1 supplied an unambiguous HubSpot value", () => {
     const mapped = mapOrderToHubSpot({
       id: "order-1",
@@ -59,12 +72,34 @@ describe("Naali HubSpot order mapping", () => {
       status: "confirmed",
       orderDate: "2026-09-11T09:00:00.000Z",
       orderTypeValue: "Réassort",
+      ownerExternalId: "32320882",
+      orderTakenByExternalId: "29151394",
       netAmountHt: 100,
       currency: "EUR",
       lines: [],
     }, NAALI_HUBSPOT_CONFIGURATION);
 
     expect(mapped.deal.properties.type_de_commande).toBe("Réassort");
+    expect(mapped.deal.properties.hubspot_owner_id).toBe("32320882");
+    expect(mapped.deal.properties.prise_de_commande).toBe("29151394");
+  });
+
+  it("omits prise_de_commande while its HubSpot enum lacks Amir", () => {
+    const mapped = mapOrderToHubSpot({
+      id: "order-without-taking-option",
+      orderNumber: "CMD-002",
+      status: "confirmed",
+      orderDate: "2026-10-14T09:00:00.000Z",
+      orderTypeValue: "Implantation",
+      ownerExternalId: NAALI_HUBSPOT_AMIR_OWNER_ID,
+      netAmountHt: 150,
+      currency: "EUR",
+      lines: [],
+    }, NAALI_HUBSPOT_CONFIGURATION);
+
+    expect(mapped.deal.properties.type_de_commande).toBe("Implantation");
+    expect(mapped.deal.properties.hubspot_owner_id).toBe(NAALI_HUBSPOT_AMIR_OWNER_ID);
+    expect(mapped.deal.properties).not.toHaveProperty("prise_de_commande");
   });
 
   it("writes the Naali tax-rate group for a 5.5% order line", () => {
