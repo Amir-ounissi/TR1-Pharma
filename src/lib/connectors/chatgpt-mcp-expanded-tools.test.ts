@@ -106,6 +106,21 @@ describe("TR1 ChatGPT advanced MCP tools", () => {
     expect(parseExpandedToolCall("create_tr1_priced_order_draft", {
       ...input, confirmed: true, note: "override 35%",
     })).toBeNull();
+    expect(parseExpandedToolCall("create_tr1_priced_order_draft", {
+      ...input, confirmed: true, source_order_number: " 156589 ",
+    })).toMatchObject({
+      rpc: "tr1_chatgpt_create_priced_order_draft_with_reference", write: true,
+      args: { source_order_number: "156589", request_id: request },
+    });
+    expect(parseExpandedToolCall("create_tr1_priced_order_draft", {
+      ...input, confirmed: true, source_order_number: "  ",
+    })).toBeNull();
+    expect(parseExpandedToolCall("create_tr1_priced_order_draft", {
+      ...input, confirmed: true, source_order_number: "156589\\nother",
+    })).toBeNull();
+    expect(parseExpandedToolCall("create_tr1_priced_order_draft", {
+      ...input, confirmed: true, source_order_number: "X".repeat(81),
+    })).toBeNull();
   });
 
 });
