@@ -1,5 +1,7 @@
-release=naali-web-order-ean-catalog-pr353-production-candidate
-target=staging_then_guarded_production
-reason=promote_only_after_ci_staging_migrations_and_authenticated_smoke
-requested_by=user
-production=only_after_all_release_gates_pass
+release=chatgpt-ug-exceptions-20261014
+target=staging
+feature=add_or_replace_free_units_per_order_with_classification_and_confirmation
+source_pr=361
+source_merge=39caff888b5dd8b1cd166dbd97ba97fd6fabecb1
+safety=ci_green_pgTAP_oauth_review_only_then_guarded_promotion
+request=authorized_user_connector_upgrade
