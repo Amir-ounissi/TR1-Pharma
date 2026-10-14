@@ -12,7 +12,8 @@ describe("TR1 ChatGPT advanced MCP tools", () => {
     expect(expandedTools.map((tool) => tool.name)).toEqual([
       "list_tr1_catalog", "get_tr1_agenda",
       "create_tr1_planned_visit", "preview_tr1_priced_order",
-      "create_tr1_priced_order_draft", "create_tr1_order_draft",
+      "create_tr1_priced_order_draft", "review_tr1_priced_order",
+      "submit_tr1_priced_order_to_hubspot", "create_tr1_order_draft",
     ]);
     expect(expandedTools.map((tool) => tool.annotations.readOnlyHint)).toEqual([
       true, true, false, true, false, false,
