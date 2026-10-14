@@ -4,7 +4,7 @@
 CREATE OR REPLACE FUNCTION public.tr1_chatgpt_review_priced_order(
   target_order_id uuid, request_id uuid
 ) RETURNS jsonb
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = ''
 AS $fn$
 DECLARE
   o record;
