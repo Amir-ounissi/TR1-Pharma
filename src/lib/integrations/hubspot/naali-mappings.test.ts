@@ -214,6 +214,30 @@ describe("Naali HubSpot order mapping", () => {
     ]);
   });
 
+  it("uses HubSpot's internal enum value for 17 promo compensation UG", () => {
+    const mapped = mapOrderToHubSpot({
+      id: "order-vitrolles", orderNumber: "416508", status: "pending",
+      orderDate: "2026-10-15T08:00:00.000Z", netAmountHt: 1753.6,
+      lines: [{
+        id: "anti-stress", productId: "anti-stress", productExternalId: "hs-stress",
+        freeProductExternalId: "hs-stress-ug", name: "Gommes Anti Stress x60",
+        quantity: 24, freeQuantity: 21,
+        freeUnitAllocations: [
+          { source: "manual", quantity: 17, classification: "compensation opé promo" },
+          { source: "commercial_terms", quantity: 4, classification: "conditions commerciales client" },
+        ],
+        unitPriceHt: 28.34, discountPercent: 35, vatRate: 5.5,
+      }],
+    }, NAALI_HUBSPOT_CONFIGURATION);
+    expect(mapped.lineItems.map(line => [
+      line.tr1RecordId, line.properties.quantity, line.properties.test_type_dug,
+    ])).toEqual([
+      ["anti-stress", "24", undefined],
+      ["anti-stress:free:commercial_terms", "4", "conditions commerciale client"],
+      ["anti-stress:free:manual", "17", "test"],
+    ]);
+  });
+
   it("blocks transmission when recorded UG reasons do not cover all free units", () => {
     expect(() => mapOrderToHubSpot({
       id: "order-mismatch", orderNumber: "BAD", status: "pending",
