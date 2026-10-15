@@ -363,7 +363,7 @@ const tradePreorderPreviewArgs = z.object({
     .refine(items => items.reduce((n,i) => n + i.quantity + i.free_quantity,0) % 2 === 0),
 }).strict();
 const tradePreorderDraftArgs = tradePreorderPreviewArgs.extend({
-  source_order_number: z.string().trim().min(1).max(80).regex(/^[^\\u0000-\\u001f\\u007f]+$/),
+  source_order_number: z.string().trim().min(1).max(80).regex(/^[^\u0000-\u001f\u007f]+$/),
   request_id: uuid,
   confirmed: z.literal(true),
 });
