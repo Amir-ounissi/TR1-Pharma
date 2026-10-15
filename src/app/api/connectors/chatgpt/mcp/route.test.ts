@@ -510,6 +510,9 @@ describe("TR1 authenticated MCP endpoint", () => {
 
 
   it("allows a Black Friday preview through only its scoped read-only RPC", async () => {
+    const product = "22222222-2222-4222-8222-222222222222";
+    const pharmacy = "33333333-3333-4333-8333-333333333333";
+    const relation = "44444444-4444-4444-8444-444444444444";
     const items = [
       { product_id: product, quantity: 48, free_quantity: 6 },
       { product_id: "33333333-3333-4333-8333-333333333333", quantity: 12, free_quantity: 2 },
