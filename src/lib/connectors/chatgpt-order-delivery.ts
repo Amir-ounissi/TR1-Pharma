@@ -59,6 +59,12 @@ export async function deliverChatGptOrder(brandId: string, orderId: string) {
     allocationsByItem.set(key, [...(allocationsByItem.get(key) ?? []), String(allocation.source)]);
   }
 
+  const { data: trade, error: tradeError } = await admin
+    .from("tr1_chatgpt_trade_preorders")
+    .select("campaign,gift_antistress_quantity,gift_dream_quantity")
+    .eq("order_id", orderId).maybeSingle();
+  if (tradeError) return { hubspot_synced: false, reason: "Preorder gift metadata unavailable" };
+
   const keys = items.flatMap((item) => {
     const ugKeys = allocationsByItem.get(String(item.id)) ?? [];
     return [
@@ -70,6 +76,9 @@ export async function deliverChatGptOrder(brandId: string, orderId: string) {
         : []),
     ];
   });
+  if (trade?.campaign === "black_friday_2026") {
+    keys.push(`${orderId}:bf26:as`, `${orderId}:bf26:dream`);
+  }
   for (const key of keys) {
     const written = runEvents.some((event) => event.child_key === key &&
       (event.event_type === "create" || event.event_type === "update") &&
