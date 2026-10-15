@@ -99,6 +99,8 @@ export const NAALI_HUBSPOT_CONFIGURATION: HubSpotBrandConfiguration = {
       orderTakenBy: "prise_de_commande",
       origin: "origine_de_la_commande",
       orderType: "type_de_commande",
+      preorderType: "type_de_precommande",
+      conversionReason: "closed_won_reason",
       pipeline: "pipeline",
       stage: "dealstage",
     },
