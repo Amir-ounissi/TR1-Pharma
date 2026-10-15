@@ -22,6 +22,8 @@ export type HubSpotPropertyMap = {
   orderNumber?: string;
   orderDate?: string;
   orderType?: string;
+  preorderType?: string;
+  conversionReason?: string;
   amountHt?: string;
   taxAmount?: string;
   amountTtc?: string;
@@ -125,6 +127,13 @@ export type HubSpotOrderSyncInput = {
   stageExternalId?: string | null;
   originValue?: string | null;
   lines: HubSpotOrderLineSyncInput[];
+  blackFridayTrade?: {
+    campaign: "black_friday_2026";
+    giftAntiStressQuantity: number;
+    giftDreamQuantity: number;
+    giftAntiStressProductExternalId: string;
+    giftDreamProductExternalId: string;
+  };
 };
 
 export type HubSpotMeetingSyncInput = {
