@@ -274,13 +274,13 @@ export async function syncHubSpotOrder(options: {
   const mapped = mapOrderToHubSpot(order, config);
   const parent = await links.getParent(order.id);
 
-  if (!parent) {
-    const dealName = await resolveNewDealName(client, config, pharmacyExternalId);
-    if (dealName) {
-      const nameProperty = config.properties.order.name;
-      if (!nameProperty) throw new Error("HubSpot deal name property is not configured");
-      mapped.deal.properties[nameProperty] = dealName;
-    }
+  // Always derive the deal name from its HubSpot company, including retries.
+  // Otherwise mapOrderToHubSpot's order number would rename existing deals on resync.
+  const dealName = await resolveNewDealName(client, config, pharmacyExternalId);
+  if (dealName) {
+    const nameProperty = config.properties.order.name;
+    if (!nameProperty) throw new Error("HubSpot deal name property is not configured");
+    mapped.deal.properties[nameProperty] = dealName;
   }
 
   const deal = await upsertRecord(client, journal, order.id, undefined, config.objects.deals, mapped.deal, parent?.externalId ?? null);
