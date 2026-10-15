@@ -91,7 +91,7 @@ BEGIN
     IF p.id IS NULL OR p.wholesale_price_ht IS NULL OR p.wholesale_price_ht < 0
        OR p.tax_rate IS NULL
        OR (p.minimum_order_quantity IS NOT NULL AND qty < p.minimum_order_quantity)
-       OR p.sku IN ('1tdahfraise','1antistress60fdb') THEN
+       OR p.sku ILIKE '1tdah%' OR p.sku='1antistress60fdb' THEN
       RAISE EXCEPTION 'Unavailable/discontinued campaign product, price or minimum' USING ERRCODE='22023';
     END IF;
     ht:=round(qty*p.wholesale_price_ht*(1-disc/100),2);
