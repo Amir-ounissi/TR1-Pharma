@@ -158,4 +158,75 @@ describe("Naali HubSpot order mapping", () => {
       test_type_dug: "conditions commerciale client",
     });
   });
+  it("preserves commercial Collagène and expired Mango compensation as distinct HubSpot reasons", () => {
+    const mapped = mapOrderToHubSpot({
+      id: "order-auchan", orderNumber: "TEST-AUCHAN", status: "pending",
+      orderDate: "2026-10-15T08:00:00.000Z", netAmountHt: 317.15,
+      lines: [
+        {
+          id: "collagene", productId: "collagene", productExternalId: "hs-collagene",
+          freeProductExternalId: "hs-collagene-ug", name: "Collagène Citron-Vert Menthe",
+          quantity: 12, freeQuantity: 2,
+          freeUnitAllocations: [{ source: "commercial_terms", quantity: 2,
+            classification: "conditions commerciales client" }],
+          unitPriceHt: 40.66, discountPercent: 35, vatRate: 5.5,
+        },
+        {
+          id: "mangue", productId: "mangue", productExternalId: "hs-mangue",
+          freeProductExternalId: "hs-mangue-ug", name: "Gommes Anti Stress x60",
+          quantity: 0, freeQuantity: 3,
+          freeUnitAllocations: [{ source: "manual", quantity: 3,
+            classification: "échange périmé" }],
+          unitPriceHt: 28.34, discountPercent: 35, vatRate: 5.5,
+        },
+      ],
+    }, NAALI_HUBSPOT_CONFIGURATION);
+    expect(mapped.lineItems).toHaveLength(3);
+    expect(mapped.lineItems.map((line) => [line.tr1RecordId,
+      line.properties.quantity, line.properties.test_type_dug])).toEqual([
+      ["collagene", "12", undefined],
+      ["collagene:free", "2", "conditions commerciale client"],
+      ["mangue:free", "3", "échange périmé"],
+    ]);
+    expect(mapped.lineItems[2]?.properties.price).toBe("0");
+  });
+
+  it("splits a single reference into separate commercial and manual UG lines", () => {
+    const mapped = mapOrderToHubSpot({
+      id: "order-split", orderNumber: "TEST-SPLIT", status: "pending",
+      orderDate: "2026-10-15T08:00:00.000Z", netAmountHt: 221.05,
+      lines: [{
+        id: "anti-stress", productId: "anti-stress", productExternalId: "hs-stress",
+        freeProductExternalId: "hs-stress-ug", name: "Gommes Anti Stress x60",
+        quantity: 12, freeQuantity: 19,
+        freeUnitAllocations: [
+          { source: "manual", quantity: 17, classification: "échange périmé" },
+          { source: "commercial_terms", quantity: 2, classification: "conditions commerciales client" },
+        ],
+        unitPriceHt: 28.34, discountPercent: 35, vatRate: 5.5,
+      }],
+    }, NAALI_HUBSPOT_CONFIGURATION);
+    expect(mapped.lineItems.map((line) => [line.tr1RecordId,
+      line.properties.quantity, line.properties.test_type_dug])).toEqual([
+      ["anti-stress", "12", undefined],
+      ["anti-stress:free:commercial_terms", "2", "conditions commerciale client"],
+      ["anti-stress:free:manual", "17", "échange périmé"],
+    ]);
+  });
+
+  it("blocks transmission when recorded UG reasons do not cover all free units", () => {
+    expect(() => mapOrderToHubSpot({
+      id: "order-mismatch", orderNumber: "BAD", status: "pending",
+      orderDate: "2026-10-15T08:00:00.000Z", netAmountHt: 221.05,
+      lines: [{
+        id: "item", productId: "product", productExternalId: "hs-normal",
+        freeProductExternalId: "hs-ug", name: "Produit test",
+        quantity: 12, freeQuantity: 5,
+        freeUnitAllocations: [{ source: "manual", quantity: 3,
+          classification: "échange périmé" }],
+        unitPriceHt: 28.34,
+      }],
+    }, NAALI_HUBSPOT_CONFIGURATION)).toThrow(/UG classification\/quantity mismatch/);
+  });
+
 });
