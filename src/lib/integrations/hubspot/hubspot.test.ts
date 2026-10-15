@@ -250,6 +250,9 @@ describe("HubSpot order sync idempotence", () => {
         const payload = JSON.parse(String(init?.body ?? "{}")) as { properties?: Record<string, string> };
         if (url.endsWith("/crm/v3/objects/deals/deal-1")) {
           expect(payload.properties?.hubspot_owner_id).toBe("owner-123");
+          // An existing deal must never be renamed to the source order number.
+          expect(payload.properties?.dealname).toBe("PHARMACIE TEST - 1234567 - 30000");
+          expect(payload.properties?.tr1_order_number).toBe("CMD-001");
         }
         if (url.includes("/crm/v3/objects/line_items/")) {
           expect(payload.properties?.hs_product_id).toBeUndefined();
@@ -294,8 +297,8 @@ describe("HubSpot order sync idempotence", () => {
     expect(second.lineItemExternalIds).toEqual({ "line-1": "line-paid-1", "line-1:free": "line-free-1" });
 
     const secondCalls = fetchImpl.mock.calls.slice(firstCallCount);
-    expect(secondCalls).toHaveLength(6);
-    expect(secondCalls.map(([, init]) => init?.method)).toEqual(["PATCH", "PUT", "PATCH", "PUT", "PATCH", "PUT"]);
+    expect(secondCalls).toHaveLength(7);
+    expect(secondCalls.map(([, init]) => init?.method)).toEqual(["GET", "PATCH", "PUT", "PATCH", "PUT", "PATCH", "PUT"]);
     expect(secondCalls.some(([input]) => String(input).endsWith("/crm/v3/objects/deals/deal-1"))).toBe(true);
     expect(secondCalls.some(([input]) => String(input).endsWith("/crm/v3/objects/line_items/line-paid-1"))).toBe(true);
     expect(secondCalls.some(([input]) => String(input).endsWith("/crm/v3/objects/line_items/line-free-1"))).toBe(true);
