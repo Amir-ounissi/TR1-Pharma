@@ -15,6 +15,8 @@ describe("TR1 ChatGPT advanced MCP tools", () => {
       "preview_tr1_ug_adjustments", "set_tr1_priced_order_ug_adjustments",
       "create_tr1_priced_order_draft", "review_tr1_priced_order",
       "submit_tr1_priced_order_to_hubspot", "create_tr1_order_draft",
+      "preview_tr1_black_friday_preorder", "create_tr1_black_friday_preorder_draft",
+      "review_tr1_black_friday_preorder", "submit_tr1_black_friday_preorder_to_hubspot",
     ]);
     expect(expandedTools.map((tool) => tool.annotations.readOnlyHint)).toEqual([
       true, true, false, true, true, false, false, true, false, false,
