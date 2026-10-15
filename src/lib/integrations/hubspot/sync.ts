@@ -274,13 +274,14 @@ export async function syncHubSpotOrder(options: {
   const mapped = mapOrderToHubSpot(order, config);
   const parent = await links.getParent(order.id);
 
-  if (!parent) {
-    const dealName = await resolveNewDealName(client, config, pharmacyExternalId);
-    if (dealName) {
-      const nameProperty = config.properties.order.name;
-      if (!nameProperty) throw new Error("HubSpot deal name property is not configured");
-      mapped.deal.properties[nameProperty] = dealName;
-    }
+  // The HubSpot company name is the canonical Naali deal name, for both
+  // first creation and idempotent retries. Never let the pharmacy's purchase
+  // order number overwrite the deal title on a later PATCH.
+  const dealName = await resolveNewDealName(client, config, pharmacyExternalId);
+  if (dealName) {
+    const nameProperty = config.properties.order.name;
+    if (!nameProperty) throw new Error("HubSpot deal name property is not configured");
+    mapped.deal.properties[nameProperty] = dealName;
   }
 
   const deal = await upsertRecord(client, journal, order.id, undefined, config.objects.deals, mapped.deal, parent?.externalId ?? null);
