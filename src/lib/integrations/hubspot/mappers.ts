@@ -125,12 +125,15 @@ function mapFreeLine(
   set(properties, map.unitPriceHt, "0");
   set(properties, map.vatRate, line.vatRate === null || line.vatRate === undefined ? null : decimal(line.vatRate));
   set(properties, map.taxRateGroupId, taxRateGroupId(line.vatRate, config));
-  // HubSpot's enum is singular "conditions commerciale client", while
-  // TR1 stores the plural label. Preserve exceptional reasons per source.
+  // HubSpot stores enum *values*, not the labels shown in its UI.
+  // Naali uses two legacy internal values that differ from TR1's labels.
+  const normalizedReason = reason?.trim();
   const mappedReason = source === "commercial_terms" ||
-    reason === "conditions commerciales client"
+    normalizedReason === "conditions commerciales client"
     ? "conditions commerciale client"
-    : (reason?.trim() || config.order.freeUnitReasonValue);
+    : normalizedReason === "compensation opé promo"
+      ? "test"
+      : (normalizedReason || config.order.freeUnitReasonValue);
   set(properties, map.freeUnitReason, mappedReason);
   set(properties, map.isFreeUnit, "true");
   return externalRecord(`${line.id}:free${source ? `:${source}` : ""}`, map, properties);
