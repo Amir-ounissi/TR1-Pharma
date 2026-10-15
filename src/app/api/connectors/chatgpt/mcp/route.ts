@@ -241,7 +241,9 @@ export async function POST(request: Request) {
   if (expandedCall && (
     params.data.name === "preview_tr1_priced_order" ||
     params.data.name === "preview_tr1_ug_adjustments" ||
-    params.data.name === "create_tr1_priced_order_draft"
+    params.data.name === "create_tr1_priced_order_draft" ||
+    params.data.name === "preview_tr1_black_friday_preorder" ||
+    params.data.name === "create_tr1_black_friday_preorder_draft"
   )) {
     const relationId = String(expandedCall.args.target_brand_pharmacy_id ?? "");
     const { data: accessible, error: accessError } = await supabase.rpc(
@@ -302,7 +304,8 @@ export async function POST(request: Request) {
     // Only the explicitly confirmed, reviewed tool finalizes a priced order.
     // The OAuth-bound database RPC has already enforced original ownership,
     // pharmacy assignment, pricing integrity and idempotency.
-    if (params.data.name === "submit_tr1_priced_order_to_hubspot") {
+    if (params.data.name === "submit_tr1_priced_order_to_hubspot" ||
+        params.data.name === "submit_tr1_black_friday_preorder_to_hubspot") {
       const submission = data as { order_id?: string; submitted?: boolean };
       const orderId = submission?.order_id;
       if (!orderId || !submission.submitted) return rpcError(id, -32004, "TR1 submission not verified", 503);

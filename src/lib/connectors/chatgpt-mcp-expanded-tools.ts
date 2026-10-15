@@ -189,6 +189,81 @@ export const expandedTools = [
     securitySchemes: [{ type: "oauth2", scopes: ["email"] }],
   },
   {
+    name: "preview_tr1_black_friday_preorder",
+    title: "Prévisualiser une précommande Trade Black Friday Naali",
+    description: "Lecture seule. Calcule la remise HT du catalogue/HubSpot et les UG commerciales EXPLICITEMENT indiquées pour chaque référence. Calcule automatiquement 1 cadeau consommateur par unité facturée ou offerte, réparti moitié Dream x20 et moitié Anti-Stress x20. Le total doit être pair. Ne crée aucune commande; refuser les références arrêtées Zen fraise / Fruits des Bois.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        brand_pharmacy_id: { type: "string", format: "uuid" },
+        items: { type: "array", minItems: 1, maxItems: 30, items: {
+          type: "object", properties: {
+            product_id: { type: "string", format: "uuid" },
+            quantity: { type: "integer", minimum: 1, maximum: 9999 },
+            free_quantity: { type: "integer", minimum: 0, maximum: 9999, description: "UG commerciales confirmées pour CETTE précommande (non les conditions permanentes)" },
+          }, required: ["product_id","quantity","free_quantity"], additionalProperties: false,
+        } },
+      }, required: ["brand_pharmacy_id","items"], additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    securitySchemes: [{ type: "oauth2", scopes: ["email"] }],
+  },
+  {
+    name: "create_tr1_black_friday_preorder_draft",
+    title: "Créer un brouillon Black Friday non transmis",
+    description: "MODIFICATION TR1 SEULEMENT. Après aperçu et approbation EXPLICITE du panier, crée un brouillon Naali de type Réassort/Précommande Opération Trade, avec numéro source, prix catalogue et remise HubSpot, UG classées conditions commerciales et cadeaux Black Friday calculés automatiquement 50/50. Ne transmet rien à HubSpot. Utiliser un UUID request_id stable. Ne recréez JAMAIS un bon déjà enregistré dans HubSpot, notamment Praden n°492986.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        brand_pharmacy_id: { type: "string", format: "uuid" },
+        items: { type: "array", minItems: 1, maxItems: 30, items: {
+          type: "object", properties: {
+            product_id: { type: "string", format: "uuid" },
+            quantity: { type: "integer", minimum: 1, maximum: 9999 },
+            free_quantity: { type: "integer", minimum: 0, maximum: 9999 },
+          }, required: ["product_id","quantity","free_quantity"], additionalProperties: false,
+        } },
+        source_order_number: { type: "string", minLength: 1, maxLength: 80 },
+        request_id: { type: "string", format: "uuid" },
+        confirmed: { type: "boolean", const: true },
+      },
+      required: ["brand_pharmacy_id","items","source_order_number","request_id","confirmed"],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+    securitySchemes: [{ type: "oauth2", scopes: ["email"] }],
+  },
+  {
+    name: "review_tr1_black_friday_preorder",
+    title: "Revoir les produits, UG, cadeaux et totaux de la précommande",
+    description: "Lecture seule. Revérifie les prix/UG commerciaux saisis, les cadeaux automatiques Black Friday, le numéro source, le montant et les champs HubSpot avant de délivrer le jeton de revue. Aucune transmission.",
+    inputSchema: {
+      type: "object", properties: {
+        order_id: { type: "string", format: "uuid" },
+        request_id: { type: "string", format: "uuid" },
+      }, required: ["order_id","request_id"], additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    securitySchemes: [{ type: "oauth2", scopes: ["email"] }],
+  },
+  {
+    name: "submit_tr1_black_friday_preorder_to_hubspot",
+    title: "Enregistrer la précommande Black Friday dans HubSpot",
+    description: "MODIFICATION RÉELLE. Uniquement après revue et confirmation distincte EXPLICITE, envoie la précommande en étape Précommande du pipeline commercial, Type Réassort, type Précommande Opération Trade, motif Black Friday 2026. Crée les lignes payantes + UG + cadeaux consommateurs 50/50 à zéro euro. N'envoie aucun email ni n'ordonne l'expédition. Retenter avec les MÊMES identifiants en cas d'échec de synchronisation, sans doublon.",
+    inputSchema: {
+      type: "object", properties: {
+        order_id: { type: "string", format: "uuid" },
+        request_id: { type: "string", format: "uuid" },
+        review_token: { type: "string", pattern: "^[0-9a-f]{32}$" },
+        confirmed: { type: "boolean", const: true },
+      },
+      required: ["order_id","request_id","review_token","confirmed"],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+    securitySchemes: [{ type: "oauth2", scopes: ["email"] }],
+  },
+  {
     name: "create_tr1_order_draft",
     title: "Créer un brouillon de commande TR1",
     description: "MODIFICATION TR1 : créer uniquement un BROUILLON NON ENVOYÉ. Toujours consulter le catalogue, afficher les lignes, quantités et prix HT catalogue à l'utilisateur puis demander sa confirmation EXPLICITE. Ne calcule PAS automatiquement les remises ni UG : vérification obligatoire dans TR1 avant transmission. Ne jamais annoncer qu'une commande a été envoyée.",
@@ -276,6 +351,22 @@ const pricedDraftArgs = pricedPreviewArgs.extend({
   confirmed: z.literal(true),
 });
 
+const tradePreorderItemArgs = z.object({
+  product_id: uuid,
+  quantity: z.number().int().min(1).max(9999),
+  free_quantity: z.number().int().min(0).max(9999),
+}).strict().refine(x => x.quantity + x.free_quantity <= 9999);
+const tradePreorderPreviewArgs = z.object({
+  brand_pharmacy_id: uuid,
+  items: z.array(tradePreorderItemArgs).min(1).max(30)
+    .refine(items => new Set(items.map(i => i.product_id)).size === items.length)
+    .refine(items => items.reduce((n,i) => n + i.quantity + i.free_quantity,0) % 2 === 0),
+}).strict();
+const tradePreorderDraftArgs = tradePreorderPreviewArgs.extend({
+  source_order_number: z.string().trim().min(1).max(80).regex(/^[^\u0000-\u001f\u007f]+$/),
+  request_id: uuid,
+  confirmed: z.literal(true),
+});
 const reviewedOrderArgs = z.object({ order_id: uuid, request_id: uuid }).strict();
 const submittedOrderArgs = reviewedOrderArgs.extend({
   review_token: z.string().regex(/^[0-9a-f]{32}$/),
@@ -363,6 +454,37 @@ export function parseExpandedToolCall(name: string, args: unknown):
     const parsed = submittedOrderArgs.safeParse(args);
     if (!parsed.success) return null;
     return { rpc: "tr1_chatgpt_submit_priced_order",
+      args: { target_order_id: parsed.data.order_id, request_id: parsed.data.request_id,
+        review_token: parsed.data.review_token, confirmed: true },
+      responseKey: "submission", write: true };
+  }
+  if (name === "preview_tr1_black_friday_preorder") {
+    const parsed = tradePreorderPreviewArgs.safeParse(args);
+    if (!parsed.success) return null;
+    return { rpc: "tr1_chatgpt_trade_preorder_preview",
+      args: { target_brand_pharmacy_id: parsed.data.brand_pharmacy_id,
+        draft_items: parsed.data.items }, responseKey: "preview", write: false };
+  }
+  if (name === "create_tr1_black_friday_preorder_draft") {
+    const parsed = tradePreorderDraftArgs.safeParse(args);
+    if (!parsed.success) return null;
+    return { rpc: "tr1_chatgpt_create_trade_preorder_draft",
+      args: { target_brand_pharmacy_id: parsed.data.brand_pharmacy_id,
+        draft_items: parsed.data.items, source_order_number: parsed.data.source_order_number,
+        request_id: parsed.data.request_id, confirmed: true },
+      responseKey: "draft", write: true };
+  }
+  if (name === "review_tr1_black_friday_preorder") {
+    const parsed = reviewedOrderArgs.safeParse(args);
+    if (!parsed.success) return null;
+    return { rpc: "tr1_chatgpt_review_trade_preorder",
+      args: { target_order_id: parsed.data.order_id, request_id: parsed.data.request_id },
+      responseKey: "review", write: false };
+  }
+  if (name === "submit_tr1_black_friday_preorder_to_hubspot") {
+    const parsed = submittedOrderArgs.safeParse(args);
+    if (!parsed.success) return null;
+    return { rpc: "tr1_chatgpt_submit_trade_preorder",
       args: { target_order_id: parsed.data.order_id, request_id: parsed.data.request_id,
         review_token: parsed.data.review_token, confirmed: true },
       responseKey: "submission", write: true };

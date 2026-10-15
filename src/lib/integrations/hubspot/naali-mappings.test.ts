@@ -229,4 +229,64 @@ describe("Naali HubSpot order mapping", () => {
     }, NAALI_HUBSPOT_CONFIGURATION)).toThrow(/UG classification\/quantity mismatch/);
   });
 
+  it("maps a verified Black Friday 2026 preorder into the trade pipeline and consumer gifts", () => {
+    const lines = [
+      { id: "as-20", productId: "as-20", productExternalId: "37677518042",
+        freeProductExternalId: "108803558618",
+        name: "Sachet découverte Gommes Anti-Stress x20", quantity: 48, freeQuantity: 6,
+        freeUnitAllocations: [{ source: "commercial_terms" as const, quantity: 6, classification: "conditions commerciales client" }],
+        unitPriceHt: 10.33, discountPercent: 40, vatRate: 5.5 },
+      { id: "kids", productId: "kids", productExternalId: "415729775816",
+        freeProductExternalId: "415571299543",
+        name: "Safran Kids", quantity: 48, freeQuantity: 6,
+        freeUnitAllocations: [{ source: "commercial_terms" as const, quantity: 6, classification: "conditions commerciales client" }],
+        unitPriceHt: 28.34, discountPercent: 40, vatRate: 5.5 },
+    ];
+    const mapped = mapOrderToHubSpot({
+      id: "preorder-1", orderNumber: "492986", status: "pending",
+      orderDate: "2026-10-15T12:00:00Z", orderTypeValue: "Réassort",
+      netAmountHt: 1113.69, ownerExternalId: "727665403",
+      stageExternalId: "2110945486", pipelineExternalId: "1543644371",
+      orderTakenByExternalId: "727665403",
+      blackFridayTrade: {
+        campaign: "black_friday_2026", giftAntiStressQuantity: 54, giftDreamQuantity: 54,
+        giftAntiStressProductExternalId: "434521369830",
+        giftDreamProductExternalId: "434520650953",
+      },
+      lines,
+    }, NAALI_HUBSPOT_CONFIGURATION);
+    expect(mapped.deal.properties).toMatchObject({
+      type_de_commande: "Réassort",
+      type_de_precommande: "Précommande Opération Trade",
+      closed_won_reason: "Black Friday 2026",
+      dealstage: "2110945486",
+      pipeline: "1543644371",
+      prise_de_commande: "727665403",
+    });
+    expect(mapped.lineItems).toHaveLength(6);
+    const gifts = mapped.lineItems.slice(-2);
+    expect(gifts.map(x => [x.tr1RecordId, x.properties.name, x.properties.quantity,
+      x.properties.price, x.properties.type_de_produit_naali])).toEqual([
+      ["preorder-1:bf26:as", "Cadeau sell-out Black Friday 26 - Sachet Anti-Stress x20", "54", "0", "Autre"],
+      ["preorder-1:bf26:dream", "Cadeau sell-out Black Friday 26 - Sachet Dream x20", "54", "0", "Autre"],
+    ]);
+    expect(gifts.map(x => x.properties.hs_product_id)).toEqual(["434521369830", "434520650953"]);
+    expect(mapped.lineItems.filter(x => x.properties.test_type_dug === "conditions commerciale client")).toHaveLength(2);
+  });
+
+  it("refuses odd or tampered promotional gift quantities", () => {
+    const base = {
+      id: "bad-trade", orderNumber: "BAD", status: "pending",
+      orderDate: "2026-10-15T12:00:00Z", orderTypeValue: "Réassort",
+      netAmountHt: 100, lines: [],
+    };
+    expect(() => mapOrderToHubSpot({
+      ...base, blackFridayTrade: {
+        campaign: "black_friday_2026" as const,
+        giftAntiStressQuantity: 88, giftDreamQuantity: 87,
+        giftAntiStressProductExternalId: "434521369830", giftDreamProductExternalId: "434520650953",
+      },
+    }, NAALI_HUBSPOT_CONFIGURATION)).toThrow(/Invalid Black Friday gift allocation/);
+  });
+
 });

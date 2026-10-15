@@ -6,7 +6,7 @@ import { HubSpotClient, type HubSpotClientMode } from "./client";
 import { hubSpotRunFailureStatus } from "./runtime-status";
 import { applyHubSpotFieldMapping } from "./mapping-profile";
 import { assertHubSpotBrandConfiguration, type HubSpotBrandConfiguration, type HubSpotMeetingSyncInput, type HubSpotNoteSyncInput, type HubSpotOrderSyncInput } from "./model";
-import { NAALI_HUBSPOT_AMIR_OWNER_ID, NAALI_HUBSPOT_CONFIGURATION, requireNaaliHubSpotOrderType, resolveNaaliHubSpotOrderRoute } from "./naali";
+import { NAALI_HUBSPOT_AMIR_OWNER_ID, NAALI_HUBSPOT_BF26_GIFT_PRODUCTS, NAALI_HUBSPOT_BF26_PREORDER_STAGE, NAALI_HUBSPOT_CONFIGURATION, NAALI_HUBSPOT_ORDER_ROUTES, requireNaaliHubSpotOrderType, resolveNaaliHubSpotOrderRoute } from "./naali";
 import { resolveHubSpotOrderRouteOverride } from "./order-route-overrides";
 import {
   syncHubSpotNote,
@@ -541,6 +541,12 @@ export async function syncHubSpotOrderAfterPersistence(brandId: string, orderId:
       if (orderError) throw orderError;
       if (!order || !config.order.syncStatuses.includes(String(order.order_status))) return;
 
+      const { data: trade, error: tradeError } = await admin
+        .from("tr1_chatgpt_trade_preorders")
+        .select("campaign,gift_antistress_quantity,gift_dream_quantity,source_order_number")
+        .eq("order_id", orderId).maybeSingle();
+      if (tradeError) throw tradeError;
+
       const { data: items, error: itemsError } = await admin
         .from("order_items")
         .select("id,product_id,product_name_snapshot,sku_snapshot,quantity,free_quantity,unit_price_ht,discount_rate,tax_rate")
@@ -588,6 +594,17 @@ export async function syncHubSpotOrderAfterPersistence(brandId: string, orderId:
 
       // A deal without type_de_commande is not a valid Naali HubSpot order.
       const orderTypeValue = requireNaaliHubSpotOrderType(order.order_type);
+      if (trade) {
+        const expectedGiftTotal = (items ?? []).reduce((sum, item) =>
+          sum + Number(item.quantity) + Number(item.free_quantity ?? 0), 0);
+        if (trade.campaign !== "black_friday_2026" ||
+            orderTypeValue !== "Réassort" ||
+            String(order.order_number) !== String(trade.source_order_number) ||
+            Number(trade.gift_antistress_quantity) !== Number(trade.gift_dream_quantity) ||
+            Number(trade.gift_antistress_quantity) * 2 !== expectedGiftTotal) {
+          throw new Error("Trade preorder campaign totals or source order changed");
+        }
+      }
 
       // HubSpot prise_de_commande is temporarily omitted until Amir is an allowed option.
       // Keep the verified Amir owner and mandatory order type without blocking sync.
@@ -630,9 +647,18 @@ export async function syncHubSpotOrderAfterPersistence(brandId: string, orderId:
         amountTtc: Number(order.total_ttc),
         currency: String(order.currency_code || "EUR"),
         ownerExternalId,
-        pipelineExternalId: route.pipeline,
-        stageExternalId: route.confirmedStage,
-        originValue: route.origin,
+        // Black Friday needs the existing Naali commercial preorder pipeline.
+        orderTakenByExternalId: trade ? NAALI_HUBSPOT_AMIR_OWNER_ID : undefined,
+        pipelineExternalId: trade ? NAALI_HUBSPOT_ORDER_ROUTES.commercial.pipeline : route.pipeline,
+        stageExternalId: trade ? NAALI_HUBSPOT_BF26_PREORDER_STAGE : route.confirmedStage,
+        originValue: trade ? NAALI_HUBSPOT_ORDER_ROUTES.commercial.origin : route.origin,
+        blackFridayTrade: trade ? {
+          campaign: "black_friday_2026",
+          giftAntiStressQuantity: Number(trade.gift_antistress_quantity),
+          giftDreamQuantity: Number(trade.gift_dream_quantity),
+          giftAntiStressProductExternalId: NAALI_HUBSPOT_BF26_GIFT_PRODUCTS.antiStress,
+          giftDreamProductExternalId: NAALI_HUBSPOT_BF26_GIFT_PRODUCTS.dream,
+        } : undefined,
         lines: (items ?? []).map((item) => {
           const tr1ProductId = String(item.product_id);
           const productExternalId = productMappings.get(tr1ProductId);

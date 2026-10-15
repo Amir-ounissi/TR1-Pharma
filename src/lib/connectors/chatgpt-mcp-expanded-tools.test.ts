@@ -14,10 +14,14 @@ describe("TR1 ChatGPT advanced MCP tools", () => {
       "create_tr1_planned_visit", "preview_tr1_priced_order",
       "preview_tr1_ug_adjustments", "set_tr1_priced_order_ug_adjustments",
       "create_tr1_priced_order_draft", "review_tr1_priced_order",
-      "submit_tr1_priced_order_to_hubspot", "create_tr1_order_draft",
+      "submit_tr1_priced_order_to_hubspot",
+      "preview_tr1_black_friday_preorder", "create_tr1_black_friday_preorder_draft",
+      "review_tr1_black_friday_preorder", "submit_tr1_black_friday_preorder_to_hubspot",
+      "create_tr1_order_draft",
     ]);
     expect(expandedTools.map((tool) => tool.annotations.readOnlyHint)).toEqual([
-      true, true, false, true, true, false, false, true, false, false,
+      true, true, false, true, true, false, false, true, false,
+      true, false, true, false, false,
     ]);
   });
 
@@ -205,6 +209,56 @@ describe("TR1 ChatGPT advanced MCP tools", () => {
       rpc: "tr1_chatgpt_set_draft_ug_adjustments", write: true,
       args: { adjustments: [] },
     });
+  });
+
+  it("accepts the Praden Black Friday preorder in a restricted preview, with 20 explicit UG", () => {
+    const items = [
+      { product_id: product, quantity: 48, free_quantity: 6 },
+      { product_id: "33333333-3333-4333-8333-333333333333", quantity: 48, free_quantity: 6 },
+      { product_id: "44444444-4444-4444-8444-444444444444", quantity: 48, free_quantity: 6 },
+      { product_id: "55555555-5555-4555-8555-555555555555", quantity: 12, free_quantity: 2 },
+    ];
+    expect(parseExpandedToolCall("preview_tr1_black_friday_preorder", {
+      brand_pharmacy_id: pharmacy, items,
+    })).toMatchObject({
+      rpc: "tr1_chatgpt_trade_preorder_preview", write: false,
+      args: { draft_items: items },
+    });
+    expect(parseExpandedToolCall("preview_tr1_black_friday_preorder", {
+      brand_pharmacy_id: pharmacy, items: items.map(i => ({ ...i, discount_rate: 40 })),
+    })).toBeNull();
+    expect(parseExpandedToolCall("preview_tr1_black_friday_preorder", {
+      brand_pharmacy_id: pharmacy, items: [items[0], items[0]],
+    })).toBeNull();
+    expect(parseExpandedToolCall("preview_tr1_black_friday_preorder", {
+      brand_pharmacy_id: pharmacy, items: [{ ...items[0], free_quantity: 5 }],
+    })).toBeNull();
+  });
+
+  it("requires a distinct confirmed trade draft then a reviewed trade submission", () => {
+    const input = { brand_pharmacy_id: pharmacy,
+      items: [{ product_id: product, quantity: 12, free_quantity: 2 }],
+      source_order_number: "BF-2026-100",
+      request_id: request,
+    };
+    expect(parseExpandedToolCall("create_tr1_black_friday_preorder_draft", input)).toBeNull();
+    expect(parseExpandedToolCall("create_tr1_black_friday_preorder_draft", {
+      ...input, confirmed: false,
+    })).toBeNull();
+    expect(parseExpandedToolCall("create_tr1_black_friday_preorder_draft", {
+      ...input, confirmed: true,
+    })).toMatchObject({
+      rpc: "tr1_chatgpt_create_trade_preorder_draft", write: true,
+      args: { source_order_number: "BF-2026-100", draft_items: input.items, confirmed: true },
+    });
+    expect(parseExpandedToolCall("review_tr1_black_friday_preorder", {
+      order_id: pharmacy, request_id: request,
+    })).toMatchObject({ rpc: "tr1_chatgpt_review_trade_preorder", write: false });
+    const submit = { order_id: pharmacy, request_id: request, review_token: "a".repeat(32) };
+    expect(parseExpandedToolCall("submit_tr1_black_friday_preorder_to_hubspot", submit)).toBeNull();
+    expect(parseExpandedToolCall("submit_tr1_black_friday_preorder_to_hubspot", {
+      ...submit, confirmed: true,
+    })).toMatchObject({ rpc: "tr1_chatgpt_submit_trade_preorder", write: true });
   });
 
 });

@@ -88,15 +88,15 @@ describe("TR1 authenticated MCP endpoint", () => {
     expect(fake.createClient).not.toHaveBeenCalled();
   });
 
-  it("advertises eight read tools and five explicit writes", async () => {
+  it("advertises ten read tools and seven explicit writes", async () => {
     const response = await POST(request("tools/list"));
     const body = await response.json();
     expect(response.status).toBe(200);
-    expect(body.result.tools).toHaveLength(13);
+    expect(body.result.tools).toHaveLength(17);
     expect(body.result.tools.filter((tool: { annotations: { readOnlyHint: boolean } }) =>
-      tool.annotations.readOnlyHint)).toHaveLength(8);
+      tool.annotations.readOnlyHint)).toHaveLength(10);
     expect(body.result.tools.filter((tool: { annotations: { readOnlyHint: boolean } }) =>
-      !tool.annotations.readOnlyHint)).toHaveLength(5);
+      !tool.annotations.readOnlyHint)).toHaveLength(7);
     expect(body.result.tools.every((tool: { securitySchemes: Array<{type:string}> }) =>
       tool.securitySchemes[0].type === "oauth2")).toBe(true);
   });
@@ -508,6 +508,49 @@ describe("TR1 authenticated MCP endpoint", () => {
     });
   });
 
+
+  it("allows a Black Friday preview through only its scoped read-only RPC", async () => {
+    const product = "22222222-2222-4222-8222-222222222222";
+    const pharmacy = "33333333-3333-4333-8333-333333333333";
+    const relation = "44444444-4444-4444-8444-444444444444";
+    const items = [
+      { product_id: product, quantity: 48, free_quantity: 6 },
+      { product_id: "33333333-3333-4333-8333-333333333333", quantity: 12, free_quantity: 2 },
+    ];
+    fake.rpc.mockImplementation(async (name: string) =>
+      name === "tr1_chatgpt_list_brands"
+        ? { data: [{ brand_id: brandId, brand_slug: "naali" }], error: null }
+        : name === "tr1_chatgpt_pharmacy_summary"
+          ? { data: { name: "PRADEN" }, error: null }
+          : name === "tr1_chatgpt_trade_preorder_preview"
+            ? { data: { items, gift_total: 68, status: "preview" }, error: null }
+            : { data: [], error: null });
+    fake.adminFrom.mockImplementation((table: string) => ({
+      select() { return this; }, eq() { return this; }, is() { return this; },
+      async maybeSingle() {
+        return { data: table === "brand_pharmacies"
+          ? { brand_id: brandId, pharmacy_id: pharmacy }
+          : { hubspot_synced_at: new Date().toISOString() }, error: null };
+      },
+    }));
+    const response = await POST(request("tools/call", {
+      name: "preview_tr1_black_friday_preorder",
+      arguments: { brand_pharmacy_id: relation, items },
+    }, "oauth-token"));
+    expect(response.status).toBe(200);
+    expect((await response.json()).result.structuredContent.preview.gift_total).toBe(68);
+  });
+
+  it("does not send an unreviewed Black Friday preorder", async () => {
+    const response = await POST(request("tools/call", {
+      name: "submit_tr1_black_friday_preorder_to_hubspot",
+      arguments: { order_id: "55555555-5555-4555-8555-555555555555",
+        request_id: "66666666-6666-4666-8666-666666666666",
+        review_token: "a".repeat(32) },
+    }, "oauth-token"));
+    expect((await response.json()).error.message).toContain("unconfirmed");
+    expect(fake.deliverOrder).not.toHaveBeenCalled();
+  });
   it("rejects an untrusted origin", async () => {
     expect((await POST(request("tools/list", {}, "", { origin: "https://attacker.test" }))).status).toBe(403);
   });
