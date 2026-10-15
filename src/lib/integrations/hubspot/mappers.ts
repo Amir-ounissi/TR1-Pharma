@@ -212,8 +212,8 @@ export function mapOrderToHubSpot(input: HubSpotOrderSyncInput, config: HubSpotB
         !Number.isInteger(promo.giftDreamQuantity) ||
         promo.giftAntiStressQuantity <= 0 ||
         promo.giftAntiStressQuantity !== promo.giftDreamQuantity ||
-        !/^\\d+$/.test(promo.giftAntiStressProductExternalId) ||
-        !/^\\d+$/.test(promo.giftDreamProductExternalId)) {
+        !/^[0-9]+$/.test(promo.giftAntiStressProductExternalId) ||
+        !/^[0-9]+$/.test(promo.giftDreamProductExternalId)) {
       throw new Error("Invalid Black Friday gift allocation");
     }
     const map = config.properties.lineItem;
