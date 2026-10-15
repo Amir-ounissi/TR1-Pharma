@@ -3,6 +3,15 @@ import type { HubSpotBrandConfiguration } from "./model";
 // HubSpot owner verified against the Naali portal (Amir Ounissi).
 export const NAALI_HUBSPOT_AMIR_OWNER_ID = "727665403";
 
+// Verified read-only against the Naali HubSpot catalog (2026-10-15).
+// Promotional consumer sachets are not sellable/UG TR1 products.
+export const NAALI_HUBSPOT_BF26_GIFT_PRODUCTS = {
+  antiStress: "434521369830",
+  dream: "434520650953",
+} as const;
+
+export const NAALI_HUBSPOT_BF26_PREORDER_STAGE = "2110945486";
+
 export const NAALI_HUBSPOT_ORDER_ROUTES = {
   commercial: {
     pipeline: "1543644371",
