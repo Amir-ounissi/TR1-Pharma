@@ -14,12 +14,14 @@ describe("TR1 ChatGPT advanced MCP tools", () => {
       "create_tr1_planned_visit", "preview_tr1_priced_order",
       "preview_tr1_ug_adjustments", "set_tr1_priced_order_ug_adjustments",
       "create_tr1_priced_order_draft", "review_tr1_priced_order",
-      "submit_tr1_priced_order_to_hubspot", "create_tr1_order_draft",
+      "submit_tr1_priced_order_to_hubspot",
       "preview_tr1_black_friday_preorder", "create_tr1_black_friday_preorder_draft",
       "review_tr1_black_friday_preorder", "submit_tr1_black_friday_preorder_to_hubspot",
+      "create_tr1_order_draft",
     ]);
     expect(expandedTools.map((tool) => tool.annotations.readOnlyHint)).toEqual([
-      true, true, false, true, true, false, false, true, false, false,
+      true, true, false, true, true, false, false, true, false,
+      true, false, true, false, false,
     ]);
   });
 
