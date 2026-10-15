@@ -216,6 +216,7 @@ export function mapOrderToHubSpot(input: HubSpotOrderSyncInput, config: HubSpotB
         !/^\\d+$/.test(promo.giftDreamProductExternalId)) {
       throw new Error("Invalid Black Friday gift allocation");
     }
+    const map = config.properties.lineItem;
     const giftRows = [
       { key: "as", name: "Cadeau sell-out Black Friday 26 - Sachet Anti-Stress x20",
         externalId: promo.giftAntiStressProductExternalId, quantity: promo.giftAntiStressQuantity },
