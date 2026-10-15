@@ -548,6 +548,27 @@ export async function syncHubSpotOrderAfterPersistence(brandId: string, orderId:
         .eq("brand_id", brandId);
       if (itemsError) throw itemsError;
 
+      const allocationsByItem = new Map<string, Array<{
+        source: "commercial_terms" | "manual"; quantity: number; classification: string;
+      }>>();
+      if (items?.length) {
+        const { data: allocations, error: allocationError } = await admin
+          .from("order_item_free_unit_allocations")
+          .select("order_item_id,source,quantity,classification")
+          .in("order_item_id", items.map((item) => item.id));
+        if (allocationError) throw allocationError;
+        for (const allocation of allocations ?? []) {
+          const key = String(allocation.order_item_id);
+          const current = allocationsByItem.get(key) ?? [];
+          current.push({
+            source: allocation.source as "commercial_terms" | "manual",
+            quantity: Number(allocation.quantity),
+            classification: String(allocation.classification),
+          });
+          allocationsByItem.set(key, current);
+        }
+      }
+
       const ownerTr1UserId = order.source_user_id || order.created_by ? String(order.source_user_id || order.created_by) : null;
       if (!ownerTr1UserId) throw new Error(`TR1 order ${orderId} has no source user for HubSpot ownership and routing`);
 
@@ -630,6 +651,7 @@ export async function syncHubSpotOrderAfterPersistence(brandId: string, orderId:
             sku: item.sku_snapshot ? String(item.sku_snapshot) : null,
             quantity: Number(item.quantity),
             freeQuantity,
+            freeUnitAllocations: allocationsByItem.get(String(item.id)),
             unitPriceHt: Number(item.unit_price_ht),
             discountPercent: item.discount_rate === null ? null : Number(item.discount_rate),
             vatRate: item.tax_rate === null ? null : Number(item.tax_rate),

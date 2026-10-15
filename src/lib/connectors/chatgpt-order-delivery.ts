@@ -48,10 +48,28 @@ export async function deliverChatGptOrder(brandId: string, orderId: string) {
   const { data: items, error: itemsError } = await admin.from("order_items")
     .select("id,quantity,free_quantity").eq("brand_id", brandId).eq("order_id", orderId);
   if (itemsError || !items?.length) return { hubspot_synced: false, reason: "Order lines unavailable" };
-  const keys = items.flatMap((item) => [
-    ...(Number(item.quantity) > 0 ? [String(item.id)] : []),
-    ...(Number(item.free_quantity) > 0 ? [`${item.id}:free`] : []),
-  ]);
+
+  const { data: allocations, error: allocationsError } = await admin
+    .from("order_item_free_unit_allocations").select("order_item_id,source")
+    .in("order_item_id", items.map((item) => item.id));
+  if (allocationsError) return { hubspot_synced: false, reason: "UG classifications unavailable" };
+  const allocationsByItem = new Map<string, string[]>();
+  for (const allocation of allocations ?? []) {
+    const key = String(allocation.order_item_id);
+    allocationsByItem.set(key, [...(allocationsByItem.get(key) ?? []), String(allocation.source)]);
+  }
+
+  const keys = items.flatMap((item) => {
+    const ugKeys = allocationsByItem.get(String(item.id)) ?? [];
+    return [
+      ...(Number(item.quantity) > 0 ? [String(item.id)] : []),
+      ...(Number(item.free_quantity) > 0
+        ? ugKeys.length > 1
+          ? ugKeys.map((source) => `${item.id}:free:${source}`)
+          : [`${item.id}:free`]
+        : []),
+    ];
+  });
   for (const key of keys) {
     const written = runEvents.some((event) => event.child_key === key &&
       (event.event_type === "create" || event.event_type === "update") &&

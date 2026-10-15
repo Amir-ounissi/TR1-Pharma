@@ -98,6 +98,12 @@ export type HubSpotOrderLineSyncInput = {
   sku?: string | null;
   quantity: number;
   freeQuantity?: number | null;
+  /** Audited breakdown: commercial conditions versus manual per-order UG. */
+  freeUnitAllocations?: Array<{
+    quantity: number;
+    classification: string;
+    source: "commercial_terms" | "manual";
+  }>;
   unitPriceHt: number;
   discountPercent?: number | null;
   vatRate?: number | null;
