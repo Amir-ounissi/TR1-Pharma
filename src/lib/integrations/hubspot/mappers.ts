@@ -147,6 +147,14 @@ export function mapOrderToHubSpot(input: HubSpotOrderSyncInput, config: HubSpotB
   set(dealProperties, orderMap.orderNumber, input.orderNumber);
   set(dealProperties, orderMap.orderDate, input.orderDate);
   set(dealProperties, orderMap.orderType, input.orderTypeValue);
+  if (input.blackFridayTrade) {
+    if (input.blackFridayTrade.campaign !== "black_friday_2026" ||
+        input.orderTypeValue !== "Réassort") {
+      throw new Error("Unsupported Black Friday HubSpot preorder metadata");
+    }
+    set(dealProperties, orderMap.preorderType, "Précommande Opération Trade");
+    set(dealProperties, orderMap.conversionReason, "Black Friday 2026");
+  }
   set(dealProperties, orderMap.amountHt, decimal(input.netAmountHt));
   if (input.taxAmount !== null && input.taxAmount !== undefined) set(dealProperties, orderMap.taxAmount, decimal(input.taxAmount));
   if (input.amountTtc !== null && input.amountTtc !== undefined) set(dealProperties, orderMap.amountTtc, decimal(input.amountTtc));
@@ -193,6 +201,37 @@ export function mapOrderToHubSpot(input: HubSpotOrderSyncInput, config: HubSpotB
           }
         }
       }
+    }
+  }
+
+  // Campaign gifts are not UG, must never change the invoiced amount, and
+  // are first-class HubSpot product lines with stable identities for retries.
+  if (input.blackFridayTrade) {
+    const promo = input.blackFridayTrade;
+    if (!Number.isInteger(promo.giftAntiStressQuantity) ||
+        !Number.isInteger(promo.giftDreamQuantity) ||
+        promo.giftAntiStressQuantity <= 0 ||
+        promo.giftAntiStressQuantity !== promo.giftDreamQuantity ||
+        !/^\\d+$/.test(promo.giftAntiStressProductExternalId) ||
+        !/^\\d+$/.test(promo.giftDreamProductExternalId)) {
+      throw new Error("Invalid Black Friday gift allocation");
+    }
+    const giftRows = [
+      { key: "as", name: "Cadeau sell-out Black Friday 26 - Sachet Anti-Stress x20",
+        externalId: promo.giftAntiStressProductExternalId, quantity: promo.giftAntiStressQuantity },
+      { key: "dream", name: "Cadeau sell-out Black Friday 26 - Sachet Dream x20",
+        externalId: promo.giftDreamProductExternalId, quantity: promo.giftDreamQuantity },
+    ];
+    for (const gift of giftRows) {
+      const p: Record<string, string> = {};
+      set(p, map.name, gift.name);
+      set(p, map.productExternalId, gift.externalId);
+      set(p, map.productType, "Autre");
+      set(p, map.quantity, gift.quantity);
+      set(p, map.unitPriceHt, "0");
+      set(p, map.taxRateGroupId, taxRateGroupId(5.5, config));
+      set(p, map.description, "Black Friday 2026 — cadeau consommateur : un sachet par boîte, UG comprises. Offre du 16/11 au 12/12.");
+      lineItems.push(externalRecord(`${input.id}:bf26:${gift.key}`, map, p));
     }
   }
 
