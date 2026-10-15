@@ -103,7 +103,10 @@ function mapPaidLine(line: HubSpotOrderLineSyncInput, config: HubSpotBrandConfig
   return externalRecord(line.id, map, properties);
 }
 
-function mapFreeLine(line: HubSpotOrderLineSyncInput, freeQuantity: number, config: HubSpotBrandConfiguration): HubSpotMappedRecord {
+function mapFreeLine(
+  line: HubSpotOrderLineSyncInput, freeQuantity: number,
+  config: HubSpotBrandConfiguration, reason?: string, source?: "commercial_terms" | "manual",
+): HubSpotMappedRecord {
   const map = config.properties.lineItem;
   const properties: Record<string, string> = {};
   const productExternalId = requiredProductExternalId(line);
@@ -122,9 +125,15 @@ function mapFreeLine(line: HubSpotOrderLineSyncInput, freeQuantity: number, conf
   set(properties, map.unitPriceHt, "0");
   set(properties, map.vatRate, line.vatRate === null || line.vatRate === undefined ? null : decimal(line.vatRate));
   set(properties, map.taxRateGroupId, taxRateGroupId(line.vatRate, config));
-  set(properties, map.freeUnitReason, config.order.freeUnitReasonValue);
+  // HubSpot's enum is singular "conditions commerciale client", while
+  // TR1 stores the plural label. Preserve exceptional reasons per source.
+  const mappedReason = source === "commercial_terms" ||
+    reason === "conditions commerciales client"
+    ? "conditions commerciale client"
+    : (reason?.trim() || config.order.freeUnitReasonValue);
+  set(properties, map.freeUnitReason, mappedReason);
   set(properties, map.isFreeUnit, "true");
-  return externalRecord(`${line.id}:free`, map, properties);
+  return externalRecord(`${line.id}:free${source ? `:${source}` : ""}`, map, properties);
 }
 
 export function mapOrderToHubSpot(input: HubSpotOrderSyncInput, config: HubSpotBrandConfiguration): HubSpotMappedOrder {
@@ -158,7 +167,32 @@ export function mapOrderToHubSpot(input: HubSpotOrderSyncInput, config: HubSpotB
       lineItems.push(mapPaidLine({ ...line, quantity: line.quantity + freeQuantity, freeQuantity: 0 }, config));
     } else {
       if (line.quantity > 0) lineItems.push(mapPaidLine(line, config));
-      if (freeQuantity > 0) lineItems.push(mapFreeLine(line, freeQuantity, config));
+      if (freeQuantity > 0) {
+        const allocations = line.freeUnitAllocations;
+        if (!allocations?.length) {
+          // Historical orders without classified allocations preserve their
+          // existing HubSpot identity and default commercial reason.
+          lineItems.push(mapFreeLine(line, freeQuantity, config));
+        } else {
+          const quantitySum = allocations.reduce((sum, a) => {
+            if (!Number.isInteger(a.quantity) || a.quantity <= 0 ||
+                !a.classification?.trim() ||
+                !["commercial_terms", "manual"].includes(a.source)) {
+              throw new Error("Invalid classified UG allocation");
+            }
+            return sum + a.quantity;
+          }, 0);
+          if (quantitySum !== freeQuantity ||
+              new Set(allocations.map((a) => a.source)).size !== allocations.length) {
+            throw new Error("UG classification/quantity mismatch; refusing HubSpot sync");
+          }
+          const split = allocations.length > 1;
+          for (const allocation of [...allocations].sort((a, b) => a.source.localeCompare(b.source))) {
+            lineItems.push(mapFreeLine(line, allocation.quantity, config,
+              allocation.classification, split ? allocation.source : undefined));
+          }
+        }
+      }
     }
   }
 
