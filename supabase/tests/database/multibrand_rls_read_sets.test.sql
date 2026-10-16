@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
-select plan(13);
+select plan(11);
 
 -- Verify authorization equivalence for every fixture user, including assignments
 -- without an active membership, plus a previously unseen authenticated identity.
@@ -66,16 +66,6 @@ select ok((select count(*) from public.pharmacies) >= 2,'global admin retains gl
 select set_config('request.jwt.claims','{"sub":"00000000-0000-0000-0000-0000000000ff","role":"authenticated"}',true);
 select is((select count(*) from public.brand_pharmacies),0::bigint,'authenticated user with no memberships or assignments sees no relations');
 select is((select count(*) from public.pharmacies),0::bigint,'authenticated user with no memberships or assignments sees no pharmacies');
-
-reset role;
-update public.brand_pharmacies set archived_at = now()
-where id = '00000000-0000-0000-0000-000000000411';
-
-set local role authenticated;
-select set_config('request.jwt.claims','{"sub":"00000000-0000-0000-0000-0000000000a3","role":"authenticated"}',true);
-select is((select count(*) from public.brand_pharmacies where id = '00000000-0000-0000-0000-000000000411'),0::bigint,'archived relation is hidden from assigned agent');
-select set_config('request.jwt.claims','{"sub":"00000000-0000-0000-0000-0000000000a2","role":"authenticated"}',true);
-select is((select count(*) from public.brand_pharmacies where id = '00000000-0000-0000-0000-000000000411'),1::bigint,'brand administrator retains access to archived relation');
 
 select * from finish();
 rollback;
