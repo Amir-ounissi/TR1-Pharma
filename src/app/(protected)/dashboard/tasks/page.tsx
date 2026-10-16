@@ -7,16 +7,19 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getBrandContexts, requireActiveBrand } from "@/lib/auth";
+import { buildPageHref } from "@/lib/pagination";
 import { presentationText } from "@/lib/presentation";
 import { uiLabel } from "@/lib/ui-copy";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+const pageSize = 30;
 const taskStatuses = ["open", "in_progress", "overdue", "completed", "cancelled"];
 const taskPriorities = ["low", "normal", "high", "urgent"];
 const taskTypes = ["call", "email", "visit", "appointment", "send_offer", "follow_up", "qualify", "update_contact", "check_stock", "request_order", "internal_review", "other"];
 
 export default async function TasksPage({ searchParams }: { searchParams: SearchParams }) {
   const params = await searchParams;
+  const page = Math.max(1, Math.floor(Number(typeof params.page === "string" ? params.page : "1") || 1));
   const { supabase, brand, userId } = await requireActiveBrand();
   const contexts = await getBrandContexts();
   const role = contexts.find((context) => context.id === brand.id)?.role ?? "brand_user";
@@ -27,7 +30,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Search
   const rangeEnd = new Date(today);
   rangeEnd.setUTCDate(rangeEnd.getUTCDate() + (scope === "week" ? 7 : 1));
 
-  let query = supabase.from("commercial_tasks").select("*").eq("brand_id", brand.id).order("due_at", { ascending: true, nullsFirst: false });
+  let query = supabase.from("commercial_tasks").select("id,title,task_type,priority,brand_pharmacy_id,pharmacy_name,assigned_name,due_at,effective_status,status").eq("brand_id", brand.id).order("due_at", { ascending: true, nullsFirst: false });
   if (scope === "mine" || isAgent) query = query.eq("assigned_to", userId);
   if (scope === "overdue") query = query.eq("effective_status", "overdue");
   if (scope === "completed") query = query.eq("effective_status", "completed");
@@ -41,7 +44,9 @@ export default async function TasksPage({ searchParams }: { searchParams: Search
   if (!isAgent && typeof params.territory === "string" && params.territory) query = query.eq("territory_id", params.territory);
   if (typeof params.pharmacy === "string" && params.pharmacy) query = query.ilike("pharmacy_name", `%${params.pharmacy}%`);
 
-  const { data: tasks, error } = await query.limit(200);
+  const { data: pageRows, error } = await query.range((page - 1) * pageSize, page * pageSize);
+  const hasNextPage = (pageRows ?? []).length > pageSize;
+  const tasks = (pageRows ?? []).slice(0, pageSize);
   let users: { id: string; name: string }[] = [];
   let territories: { id: string; name: string }[] = [];
   if (!isAgent) {
@@ -63,6 +68,13 @@ export default async function TasksPage({ searchParams }: { searchParams: Search
     <div><h1 className="text-2xl font-semibold">{isAgent ? "Mes tâches" : "Tâches commerciales"}</h1><p className="text-muted-foreground">{isAgent ? "Vos relances et prochaines actions, limitées à votre portefeuille." : "Mes tâches, équipe, retards et échéances."}</p></div>
     <div className="flex flex-wrap gap-2">{scopes.map(([value, label]) => <Button key={value} asChild variant={scope === value ? "default" : "outline"} size="sm"><Link href={`?scope=${value}`}>{label}</Link></Button>)}</div>
     <Card><CardContent className="pt-6"><form className={`grid gap-3 sm:grid-cols-2 ${isAgent ? "xl:grid-cols-5" : "xl:grid-cols-8"}`}><input type="hidden" name="scope" value={scope} /><Select name="status" defaultValue={typeof params.status === "string" ? params.status : "all"}><SelectTrigger><SelectValue placeholder="Statut" /></SelectTrigger><SelectContent><SelectItem value="all">Tous statuts</SelectItem>{taskStatuses.map((value) => <SelectItem key={value} value={value}>{uiLabel(value)}</SelectItem>)}</SelectContent></Select><Select name="priority" defaultValue={typeof params.priority === "string" ? params.priority : "all"}><SelectTrigger><SelectValue placeholder="Priorité" /></SelectTrigger><SelectContent><SelectItem value="all">Toutes priorités</SelectItem>{taskPriorities.map((value) => <SelectItem key={value} value={value}>{uiLabel(value)}</SelectItem>)}</SelectContent></Select><Select name="type" defaultValue={typeof params.type === "string" ? params.type : "all"}><SelectTrigger><SelectValue placeholder="Type" /></SelectTrigger><SelectContent><SelectItem value="all">Tous types</SelectItem>{taskTypes.map((value) => <SelectItem key={value} value={value}>{uiLabel(value)}</SelectItem>)}</SelectContent></Select>{!isAgent ? <><Select name="user"><SelectTrigger><SelectValue placeholder="Responsable" /></SelectTrigger><SelectContent>{users.map((user) => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}</SelectContent></Select><Select name="agent"><SelectTrigger><SelectValue placeholder="Agent du compte" /></SelectTrigger><SelectContent>{users.map((user) => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}</SelectContent></Select><Select name="territory"><SelectTrigger><SelectValue placeholder="Territoire" /></SelectTrigger><SelectContent>{territories.map((territory) => <SelectItem key={territory.id} value={territory.id}>{territory.name}</SelectItem>)}</SelectContent></Select></> : null}<Input name="pharmacy" placeholder="Pharmacie" defaultValue={typeof params.pharmacy === "string" ? params.pharmacy : ""} /><Button>Filtrer</Button></form></CardContent></Card>
-    <Card><CardContent className="p-0">{error ? <p className="p-6 text-destructive">Chargement impossible.</p> : (tasks ?? []).length === 0 ? <div className="p-10 text-center"><p className="text-muted-foreground">Aucune tâche dans cette vue.</p>{isAgent ? <Button asChild className="mt-4" size="sm" variant="outline"><Link href="/dashboard/pharmacies">Choisir une pharmacie</Link></Button> : null}</div> : <Table><TableHeader><TableRow><TableHead>Tâche</TableHead><TableHead>Pharmacie</TableHead><TableHead>Responsable</TableHead><TableHead>Échéance</TableHead><TableHead>Statut</TableHead><TableHead>Action</TableHead></TableRow></TableHeader><TableBody>{tasks?.map((task) => <TableRow key={task.id}><TableCell><p className="font-medium">{presentationText(task.title)}</p><p className="text-xs text-muted-foreground">{uiLabel(task.task_type)} · {uiLabel(task.priority)}</p></TableCell><TableCell><Link href={`/dashboard/pharmacies/${task.brand_pharmacy_id}`} className="hover:underline">{task.pharmacy_name || "Pharmacie"}</Link></TableCell><TableCell>{task.assigned_name || "—"}</TableCell><TableCell className={task.effective_status === "overdue" ? "text-destructive" : ""}>{task.due_at ? new Date(task.due_at).toLocaleString("fr-FR") : "Sans échéance"}</TableCell><TableCell><Badge variant="secondary">{uiLabel(task.effective_status)}</Badge></TableCell><TableCell>{!["completed", "cancelled"].includes(task.status) ? <div className="space-y-2"><form action={updateTaskAction}><input type="hidden" name="id" value={task.id} /><input type="hidden" name="status" value="completed" /><Button size="sm" variant="outline">Terminer</Button></form><form action={updateTaskAction} className="flex gap-1"><input type="hidden" name="id" value={task.id} /><input type="hidden" name="status" value="cancelled" /><Input name="cancellationReason" placeholder="Motif obligatoire" required className="h-8 min-w-36" /><Button size="sm" variant="ghost">Annuler</Button></form></div> : "—"}</TableCell></TableRow>)}</TableBody></Table>}</CardContent></Card>
+    <Card><CardContent className="p-0">{error ? <p className="p-6 text-destructive">Chargement impossible.</p> : tasks.length === 0 ? <div className="p-10 text-center"><p className="text-muted-foreground">Aucune tâche dans cette vue.</p>{isAgent ? <Button asChild className="mt-4" size="sm" variant="outline"><Link href="/dashboard/pharmacies">Choisir une pharmacie</Link></Button> : null}</div> : <Table><TableHeader><TableRow><TableHead>Tâche</TableHead><TableHead>Pharmacie</TableHead><TableHead>Responsable</TableHead><TableHead>Échéance</TableHead><TableHead>Statut</TableHead><TableHead>Action</TableHead></TableRow></TableHeader><TableBody>{tasks.map((task) => <TableRow key={task.id}><TableCell><p className="font-medium">{presentationText(task.title)}</p><p className="text-xs text-muted-foreground">{uiLabel(task.task_type)} · {uiLabel(task.priority)}</p></TableCell><TableCell><Link href={`/dashboard/pharmacies/${task.brand_pharmacy_id}`} className="hover:underline">{task.pharmacy_name || "Pharmacie"}</Link></TableCell><TableCell>{task.assigned_name || "—"}</TableCell><TableCell className={task.effective_status === "overdue" ? "text-destructive" : ""}>{task.due_at ? new Date(task.due_at).toLocaleString("fr-FR") : "Sans échéance"}</TableCell><TableCell><Badge variant="secondary">{uiLabel(task.effective_status)}</Badge></TableCell><TableCell>{!["completed", "cancelled"].includes(task.status) ? <div className="space-y-2"><form action={updateTaskAction}><input type="hidden" name="id" value={task.id} /><input type="hidden" name="status" value="completed" /><Button size="sm" variant="outline">Terminer</Button></form><form action={updateTaskAction} className="flex gap-1"><input type="hidden" name="id" value={task.id} /><input type="hidden" name="status" value="cancelled" /><Input name="cancellationReason" placeholder="Motif obligatoire" required className="h-8 min-w-36" /><Button size="sm" variant="ghost">Annuler</Button></form></div> : "—"}</TableCell></TableRow>)}</TableBody></Table>}</CardContent></Card>
+    <nav aria-label="Pagination des tâches" className="flex items-center justify-between gap-3 text-sm">
+      <span className="text-muted-foreground">Page {page} · {tasks.length} tâche{tasks.length > 1 ? "s" : ""} affichée{tasks.length > 1 ? "s" : ""}</span>
+      <div className="flex gap-2">
+        {page > 1 ? <Button asChild variant="outline" size="sm"><Link href={buildPageHref("/dashboard/tasks", params, page - 1)}>Précédent</Link></Button> : null}
+        {hasNextPage ? <Button asChild variant="outline" size="sm"><Link href={buildPageHref("/dashboard/tasks", params, page + 1)}>Suivant</Link></Button> : null}
+      </div>
+    </nav>
   </div>;
 }
