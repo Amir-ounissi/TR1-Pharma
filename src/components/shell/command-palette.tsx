@@ -49,13 +49,13 @@ export function CommandPalette({ items, loadItemsAction }: { items: SearchItem[]
     const timer = window.setTimeout(() => {
       startRemoteTransition(async () => {
         try {
-          const nextItems = await loadItemsAction(query);
+          const nextItems = await loadItemsAction(query.trim());
           if (!cancelled) setRemoteItems(nextItems);
         } catch {
           if (!cancelled) setRemoteItems([]);
         }
       });
-    }, 160);
+    }, 350);
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
