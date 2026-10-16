@@ -1,7 +1,7 @@
 "use client";
 
 import Link, { useLinkStatus } from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { NavigationIcon } from "@/components/shell/navigation-icons";
 import { MobileCreateMenu } from "@/components/shell/mobile-create-menu";
 import type { SaasCapability } from "@/lib/saas/capabilities";
@@ -43,17 +43,13 @@ export function MobileBottomNav({ role, capabilities }: { role: string; capabili
 
 function MobileLink({ item, pathname }: { item: NavigationItem; pathname: string }) {
   const active = isNavigationItemActive(pathname, item.href);
-  const router = useRouter();
-  const warmRoute = () => router.prefetch(item.href);
 
   return (
     <Link
       aria-current={active ? "page" : undefined}
       className="flex min-h-14 touch-manipulation select-none items-stretch rounded-[0.7rem] px-0.5 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--tr1-orange)] focus-visible:ring-inset"
       href={item.href}
-      onPointerDown={warmRoute}
-      onPointerEnter={warmRoute}
-      onFocus={warmRoute}
+      prefetch={false}
     >
       <MobileLinkContent item={item} active={active} />
     </Link>

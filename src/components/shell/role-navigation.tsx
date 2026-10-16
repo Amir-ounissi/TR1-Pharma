@@ -61,9 +61,9 @@ export function RoleNavigation({
                     active && "border-white/8 bg-white/9 font-semibold text-white",
                   )}
                   href={item.href}
+                  prefetch={false}
                   key={item.href}
                   onPointerEnter={warmRoute}
-                  onPointerDown={warmRoute}
                   onFocus={warmRoute}
                   onClick={onNavigate}
                 >
