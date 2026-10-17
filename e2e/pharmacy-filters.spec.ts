@@ -23,7 +23,7 @@ test("la recherche pharmacies desktop filtre sans cliquer sur Appliquer", async 
   const search = page.getByRole("textbox", { name: "Rechercher une pharmacie" });
   await search.fill("République");
   await expect(page).toHaveURL(/q=R%C3%A9publique/);
-  await expect(page.getByText("Pharmacie République", { exact: true }).first()).toBeVisible();
+  await expect(page.locator("table:visible").getByText("Pharmacie République", { exact: true })).toBeVisible();
 
   await search.fill("zzaucuneofficine99");
   await expect(page).toHaveURL(/q=zzaucuneofficine99/);
