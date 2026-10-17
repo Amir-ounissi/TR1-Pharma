@@ -47,7 +47,7 @@ export function tokenizeSearch(value: string): string[] {
   return normalizeSearchValue(value).replace(/[^\p{L}\p{N}]+/gu, " ").split(/\s+/).filter(Boolean);
 }
 
-export function mentionedSearchBrands(query: string, brands: readonly { id: string; name: string }[]) {
+export function mentionedSearchBrands<T extends { id: string; name: string }>(query: string, brands: readonly T[]) {
   const paddedQuery = ` ${tokenizeSearch(query).join(" ")} `;
   return brands.filter((brand) => {
     const phrase = tokenizeSearch(brand.name).join(" ");
@@ -131,7 +131,7 @@ export function searchScopedItems(items: SearchItem[], query: string, limit = 16
       const matches = tokens.map((token) => tokenMatch(token, words, haystack));
       const valid = tokens.length === 0 || matches.every((score) => score >= 0);
       const score = (label === normalizedQuery ? -6 : label.startsWith(normalizedQuery) ? -4 : 0)
-        + matches.reduce((sum, current) => sum + current, 0);
+        + matches.reduce<number>((sum, current) => sum + current, 0);
       return { item, index, valid, score };
     })
     .filter((entry) => entry.valid)
