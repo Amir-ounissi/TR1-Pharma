@@ -6,7 +6,7 @@ import { ACTIVE_BRAND_COOKIE, getBrandContexts, isPlatformAdmin, requireActiveBr
 import { presentationLabel, presentationText } from "@/lib/presentation";
 import { getActiveBrandSaasContext } from "@/lib/saas/server";
 import { getRoleFamily } from "@/lib/ux/navigation";
-import { mentionedSearchBrands, searchCandidateFragment, searchIntent } from "@/lib/ux/search";
+import { mentionedSearchBrands, searchCandidateFragments, searchIntent } from "@/lib/ux/search";
 import type { SearchItem } from "@/lib/ux/search";
 
 export async function signOutAction() {
@@ -95,8 +95,8 @@ export async function searchDashboardAction(rawQuery: string): Promise<SearchIte
   const byId = new Map(targets.map((scope) => [scope.id, scope]));
   const activeBrandId = brand.id;
   const intent = searchIntent(query);
-  const fragment = searchCandidateFragment(query, scopes);
-  const safeFragment = fragment.replace(/[^a-z0-9]/g, "");
+  const fragments = searchCandidateFragments(query, scopes).map((value) => value.replace(/[^a-z0-9]/g, ""));
+  const safeFragments = fragments.filter(Boolean);
   const result: SearchItem[] = [];
 
   for (const scope of targets) {
@@ -142,13 +142,14 @@ export async function searchDashboardAction(rawQuery: string): Promise<SearchIte
         label: `Consulter les produits${suffix}`,
         description: scope.name,
         href: href("/dashboard/products"),
-        keywords: ["produits références stocks catalogue"],
+        keywords: ["rechercher un produit", "produits références stocks catalogue"],
       });
     }
   }
 
-  if (!safeFragment || targets.length === 0) return result;
-  const pattern = `%${safeFragment}%`;
+  if (!safeFragments.length || targets.length === 0) return result;
+  const fragmentsOr = (column: string) => safeFragments.map((fragment) => `${column}.ilike.%${fragment}%`).join(",");
+  const columnsOr = (...columns: string[]) => columns.map(fragmentsOr).join(",");
   const crmIds = targets.filter((scope) => scope.capabilities.has("core_crm")).map((scope) => scope.id);
   const orderIds = targets.filter((scope) => scope.capabilities.has("orders")).map((scope) => scope.id);
   const missionIds = targets.filter((scope) => scope.capabilities.has("missions")).map((scope) => scope.id);
@@ -156,27 +157,27 @@ export async function searchDashboardAction(rawQuery: string): Promise<SearchIte
   const [pharmaciesResult, productsResult, ordersResult, missionsResult, tasksResult] = await Promise.all([
     crmIds.length ? supabase.from("brand_pharmacy_directory")
       .select("id,brand_id,trade_name,legal_name,city,postal_code")
-      .in("brand_id", crmIds).is("archived_at", null).ilike("search_text", pattern).limit(35)
+      .in("brand_id", crmIds).is("archived_at", null).or(fragmentsOr("search_text")).limit(35)
       : Promise.resolve({ data: [], error: null }),
     crmIds.length ? supabase.from("products")
       .select("id,brand_id,name,sku,ean")
       .in("brand_id", crmIds).is("discontinued_at", null)
-      .or(`name.ilike.${pattern},sku.ilike.${pattern},ean.ilike.${pattern}`).limit(24)
+      .or(columnsOr("name", "sku", "ean")).limit(24)
       : Promise.resolve({ data: [], error: null }),
     orderIds.length ? supabase.from("orders")
       .select("id,brand_id,order_number,external_order_id")
       .in("brand_id", orderIds).is("archived_at", null)
-      .or(`order_number.ilike.${pattern},external_order_id.ilike.${pattern}`).limit(12)
+      .or(columnsOr("order_number", "external_order_id")).limit(12)
       : Promise.resolve({ data: [], error: null }),
     missionIds.length ? supabase.from("missions")
       .select("id,brand_id,title,status")
       .in("brand_id", missionIds).is("archived_at", null)
-      .ilike("title", pattern).limit(12)
+      .or(fragmentsOr("title")).limit(12)
       : Promise.resolve({ data: [], error: null }),
     crmIds.length ? supabase.from("commercial_tasks")
       .select("id,brand_id,title,pharmacy_name")
       .in("brand_id", crmIds).is("archived_at", null)
-      .or(`title.ilike.${pattern},pharmacy_name.ilike.${pattern}`).limit(12)
+      .or(columnsOr("title", "pharmacy_name")).limit(12)
       : Promise.resolve({ data: [], error: null }),
   ]);
 
@@ -209,7 +210,7 @@ export async function searchDashboardAction(rawQuery: string): Promise<SearchIte
       id: `product-${scope.id}-${row.id}`, kind: "product",
       label: row.name, description: brandDescription(scope.name, [row.sku, row.ean].filter(Boolean).join(" · ")),
       href: scopeHref(scope.id, `/dashboard/products?product=${row.id}`),
-      keywords: [scope.name, row.sku, row.ean].filter((value): value is string => Boolean(value)),
+      keywords: ["produit référence catalogue", scope.name, row.sku, row.ean].filter((value): value is string => Boolean(value)),
     });
   }
   for (const row of ordersResult.data ?? []) {
