@@ -12,7 +12,7 @@ export function CommandPalette({ items, loadItemsAction }: { items: SearchItem[]
   const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
   // Associate server results with their originating query: never show stale matches.
   const [remoteResponse, setRemoteResponse] = useState<{ query: string; items: SearchItem[]; failed: boolean } | null>(null);
   const requestVersion = useRef(0);
@@ -29,7 +29,7 @@ export function CommandPalette({ items, loadItemsAction }: { items: SearchItem[]
     setQuery("");
     requestVersion.current += 1;
     setRemoteResponse(null);
-    setSelectedIndex(0);
+    setSelectedIndex(-1);
     setOpen(true);
   }, []);
 
@@ -88,9 +88,9 @@ export function CommandPalette({ items, loadItemsAction }: { items: SearchItem[]
       event.preventDefault();
       setSelectedIndex((current) => moveSearchSelection(current, event.key === "ArrowDown" ? 1 : -1, orderedResults.length));
     }
-    if (event.key === "Enter" && orderedResults[selectedIndex]) {
+    if (event.key === "Enter" && orderedResults.length) {
       event.preventDefault();
-      navigate(orderedResults[selectedIndex]);
+      navigate(orderedResults[selectedIndex >= 0 ? selectedIndex : 0]);
     }
     if (event.key === "Escape") {
       requestVersion.current += 1;
@@ -132,7 +132,7 @@ export function CommandPalette({ items, loadItemsAction }: { items: SearchItem[]
                   const nextQuery = event.target.value;
                   requestVersion.current += 1;
                   setQuery(nextQuery);
-                  setSelectedIndex(0);
+                  setSelectedIndex(-1);
                 }}
                 onKeyDown={handleKeyDown}
                 placeholder="Pharmacie, produit, commande ou action…"
@@ -147,7 +147,7 @@ export function CommandPalette({ items, loadItemsAction }: { items: SearchItem[]
                   <p className="mb-2 text-[0.68rem] font-semibold uppercase tracking-wider text-muted-foreground">Essayez une demande</p>
                   <div className="flex flex-wrap gap-2">
                     {["Pharmacies à relancer", "Créer commande", "Rechercher un produit"].map((example) => (
-                      <button key={example} type="button" onClick={() => { setQuery(example); setSelectedIndex(0); inputRef.current?.focus(); }}
+                      <button key={example} type="button" onClick={() => { setQuery(example); setSelectedIndex(-1); inputRef.current?.focus(); }}
                         className="rounded-full border border-[var(--tr1-line-strong)] bg-background px-3 py-2 text-xs font-medium hover:bg-muted">
                         {example}
                       </button>
