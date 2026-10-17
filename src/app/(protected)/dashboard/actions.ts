@@ -4,7 +4,6 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { ACTIVE_BRAND_COOKIE, getBrandContexts, isPlatformAdmin, requireActiveBrand, requireUser } from "@/lib/auth";
 import { presentationLabel, presentationText } from "@/lib/presentation";
-import { getActiveBrandSaasContext } from "@/lib/saas/server";
 import { getRoleFamily } from "@/lib/ux/navigation";
 import { mentionedSearchBrands, searchCandidateFragments, searchIntent } from "@/lib/ux/search";
 import type { SearchItem } from "@/lib/ux/search";
