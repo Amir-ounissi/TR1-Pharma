@@ -23,6 +23,7 @@ export function CommandPalette({ items, loadItemsAction }: { items: SearchItem[]
   const searchableItems = useMemo(() => [...items, ...remoteItems], [items, remoteItems]);
   const results = useMemo(() => searchScopedItems(searchableItems, query), [searchableItems, query]);
   const groups = useMemo(() => groupSearchItems(results), [results]);
+  const orderedResults = useMemo(() => groups.flatMap((group) => group.items), [groups]);
 
   const openPalette = useCallback(() => {
     setQuery("");
@@ -74,17 +75,22 @@ export function CommandPalette({ items, loadItemsAction }: { items: SearchItem[]
   function navigate(item: SearchItem) {
     requestVersion.current += 1;
     setOpen(false);
-    router.push(item.href);
+    if (item.href.startsWith("/dashboard/search/open?")) {
+      // Switching the brand requires a fresh RSC tree, not the cached tenant route.
+      window.location.assign(item.href);
+    } else {
+      router.push(item.href);
+    }
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault();
-      setSelectedIndex((current) => moveSearchSelection(current, event.key === "ArrowDown" ? 1 : -1, results.length));
+      setSelectedIndex((current) => moveSearchSelection(current, event.key === "ArrowDown" ? 1 : -1, orderedResults.length));
     }
-    if (event.key === "Enter" && results[selectedIndex]) {
+    if (event.key === "Enter" && orderedResults[selectedIndex]) {
       event.preventDefault();
-      navigate(results[selectedIndex]);
+      navigate(orderedResults[selectedIndex]);
     }
     if (event.key === "Escape") {
       requestVersion.current += 1;
@@ -109,7 +115,7 @@ export function CommandPalette({ items, loadItemsAction }: { items: SearchItem[]
       {open && (
         <div className="fixed inset-0 z-[100] grid items-start justify-items-center bg-[var(--tr1-navy)]/52 px-3 pt-[10vh] backdrop-blur-sm" onMouseDown={() => { requestVersion.current += 1; setOpen(false); }}>
           <section
-            aria-label="Recherche globale"
+            aria-label="Recherche globale intelligente"
             aria-modal="true"
             className="w-full max-w-2xl overflow-hidden rounded-2xl border bg-popover text-popover-foreground shadow-2xl"
             data-testid="command-palette"
@@ -129,18 +135,31 @@ export function CommandPalette({ items, loadItemsAction }: { items: SearchItem[]
                   setSelectedIndex(0);
                 }}
                 onKeyDown={handleKeyDown}
-                placeholder="Pharmacie, mission, tâche ou action…"
+                placeholder="Pharmacie, produit, commande ou action…"
                 ref={inputRef}
                 value={query}
               />
               <Button aria-label="Fermer la recherche" onClick={() => { requestVersion.current += 1; setOpen(false); }} size="icon" type="button" variant="ghost"><X className="size-4" /></Button>
             </div>
-            <div className="max-h-[60vh] overflow-y-auto p-2" id="command-results">
+            <div className="max-h-[min(62vh,34rem)] overflow-y-auto p-2" id="command-results">
+              {!query.trim() ? (
+                <div className="border-b px-2 pb-3 pt-2">
+                  <p className="mb-2 text-[0.68rem] font-semibold uppercase tracking-wider text-muted-foreground">Essayez une demande</p>
+                  <div className="flex flex-wrap gap-2">
+                    {["Pharmacies à relancer", "Créer commande", "Rechercher un produit"].map((example) => (
+                      <button key={example} type="button" onClick={() => { setQuery(example); setSelectedIndex(0); inputRef.current?.focus(); }}
+                        className="rounded-full border border-[var(--tr1-line-strong)] bg-background px-3 py-2 text-xs font-medium hover:bg-muted">
+                        {example}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
               {groups.map((group) => (
                 <div className="py-2" key={group.kind}>
                   <p className="px-2 pb-1 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{group.label}</p>
                   {group.items.map((item) => {
-                    const index = results.indexOf(item);
+                    const index = orderedResults.indexOf(item);
                     return (
                       <button
                         className={cn("flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-left transition-colors", index === selectedIndex && "bg-accent")}
@@ -159,7 +178,7 @@ export function CommandPalette({ items, loadItemsAction }: { items: SearchItem[]
               ))}
               {remotePending ? <p aria-live="polite" className="px-4 py-3 text-center text-xs text-muted-foreground">Recherche dans votre portefeuille…</p> : null}
               {remoteFailed ? <p role="status" className="px-4 py-3 text-center text-xs text-muted-foreground">Recherche distante indisponible. Les raccourcis restent accessibles.</p> : null}
-              {!results.length && !remotePending && !remoteFailed ? <p className="px-4 py-12 text-center text-sm text-muted-foreground">Aucun résultat dans votre périmètre.</p> : null}
+              {!orderedResults.length && !remotePending && !remoteFailed ? <p className="px-4 py-12 text-center text-sm text-muted-foreground">Aucun résultat dans votre périmètre.</p> : null}
             </div>
             <div className="flex gap-4 border-t bg-muted/40 px-4 py-2 text-xs text-muted-foreground"><span>↑↓ Naviguer</span><span>↵ Ouvrir</span><span>Esc Fermer</span></div>
           </section>
