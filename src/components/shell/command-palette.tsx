@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, Search, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -13,15 +13,21 @@ export function CommandPalette({ items, loadItemsAction }: { items: SearchItem[]
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [remoteItems, setRemoteItems] = useState<SearchItem[]>([]);
-  const [remotePending, startRemoteTransition] = useTransition();
+  // Associate server results with their originating query: never show stale matches.
+  const [remoteResponse, setRemoteResponse] = useState<{ query: string; items: SearchItem[]; failed: boolean } | null>(null);
+  const requestVersion = useRef(0);
+  const trimmedQuery = query.trim();
+  const remoteItems = remoteResponse?.query === trimmedQuery ? remoteResponse.items : [];
+  const remotePending = Boolean(open && loadItemsAction && trimmedQuery.length >= 2 && remoteResponse?.query !== trimmedQuery);
+  const remoteFailed = remoteResponse?.query === trimmedQuery && remoteResponse.failed;
   const searchableItems = useMemo(() => [...items, ...remoteItems], [items, remoteItems]);
   const results = useMemo(() => searchScopedItems(searchableItems, query), [searchableItems, query]);
   const groups = useMemo(() => groupSearchItems(results), [results]);
 
   const openPalette = useCallback(() => {
     setQuery("");
-    setRemoteItems([]);
+    requestVersion.current += 1;
+    setRemoteResponse(null);
     setSelectedIndex(0);
     setOpen(true);
   }, []);
@@ -44,26 +50,29 @@ export function CommandPalette({ items, loadItemsAction }: { items: SearchItem[]
   }, [open]);
 
   useEffect(() => {
-    if (!open || !loadItemsAction || query.trim().length < 2) return;
-    let cancelled = false;
+    if (!open || !loadItemsAction || trimmedQuery.length < 2) return;
+    const currentRequest = ++requestVersion.current;
     const timer = window.setTimeout(() => {
-      startRemoteTransition(async () => {
-        try {
-          const nextItems = await loadItemsAction(query.trim());
-          if (!cancelled) setRemoteItems(nextItems);
-        } catch {
-          if (!cancelled) setRemoteItems([]);
-        }
-      });
-    }, 350);
+      void loadItemsAction(trimmedQuery)
+        .then((nextItems) => {
+          if (requestVersion.current === currentRequest) {
+            setRemoteResponse({ query: trimmedQuery, items: nextItems, failed: false });
+          }
+        })
+        .catch(() => {
+          if (requestVersion.current === currentRequest) {
+            setRemoteResponse({ query: trimmedQuery, items: [], failed: true });
+          }
+        });
+    }, 300);
     return () => {
-      cancelled = true;
+      requestVersion.current += 1;
       window.clearTimeout(timer);
     };
-  }, [loadItemsAction, open, query]);
-
+  }, [loadItemsAction, open, trimmedQuery]);
 
   function navigate(item: SearchItem) {
+    requestVersion.current += 1;
     setOpen(false);
     router.push(item.href);
   }
@@ -77,7 +86,10 @@ export function CommandPalette({ items, loadItemsAction }: { items: SearchItem[]
       event.preventDefault();
       navigate(results[selectedIndex]);
     }
-    if (event.key === "Escape") setOpen(false);
+    if (event.key === "Escape") {
+      requestVersion.current += 1;
+      setOpen(false);
+    }
   }
 
   return (
@@ -95,7 +107,7 @@ export function CommandPalette({ items, loadItemsAction }: { items: SearchItem[]
       </Button>
 
       {open && (
-        <div className="fixed inset-0 z-[100] grid items-start justify-items-center bg-[var(--tr1-navy)]/52 px-3 pt-[10vh] backdrop-blur-sm" onMouseDown={() => setOpen(false)}>
+        <div className="fixed inset-0 z-[100] grid items-start justify-items-center bg-[var(--tr1-navy)]/52 px-3 pt-[10vh] backdrop-blur-sm" onMouseDown={() => { requestVersion.current += 1; setOpen(false); }}>
           <section
             aria-label="Recherche globale"
             aria-modal="true"
@@ -112,16 +124,16 @@ export function CommandPalette({ items, loadItemsAction }: { items: SearchItem[]
                 className="h-14 min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground"
                 onChange={(event) => {
                   const nextQuery = event.target.value;
+                  requestVersion.current += 1;
                   setQuery(nextQuery);
                   setSelectedIndex(0);
-                  if (nextQuery.trim().length < 2) setRemoteItems([]);
                 }}
                 onKeyDown={handleKeyDown}
                 placeholder="Pharmacie, mission, tâche ou action…"
                 ref={inputRef}
                 value={query}
               />
-              <Button aria-label="Fermer la recherche" onClick={() => setOpen(false)} size="icon" type="button" variant="ghost"><X className="size-4" /></Button>
+              <Button aria-label="Fermer la recherche" onClick={() => { requestVersion.current += 1; setOpen(false); }} size="icon" type="button" variant="ghost"><X className="size-4" /></Button>
             </div>
             <div className="max-h-[60vh] overflow-y-auto p-2" id="command-results">
               {groups.map((group) => (
@@ -145,8 +157,9 @@ export function CommandPalette({ items, loadItemsAction }: { items: SearchItem[]
                   })}
                 </div>
               ))}
-              {remotePending ? <p className="px-4 py-3 text-center text-xs text-muted-foreground">Recherche dans votre portefeuille…</p> : null}
-              {!results.length && !remotePending ? <p className="px-4 py-12 text-center text-sm text-muted-foreground">Aucun résultat dans votre périmètre.</p> : null}
+              {remotePending ? <p aria-live="polite" className="px-4 py-3 text-center text-xs text-muted-foreground">Recherche dans votre portefeuille…</p> : null}
+              {remoteFailed ? <p role="status" className="px-4 py-3 text-center text-xs text-muted-foreground">Recherche distante indisponible. Les raccourcis restent accessibles.</p> : null}
+              {!results.length && !remotePending && !remoteFailed ? <p className="px-4 py-12 text-center text-sm text-muted-foreground">Aucun résultat dans votre périmètre.</p> : null}
             </div>
             <div className="flex gap-4 border-t bg-muted/40 px-4 py-2 text-xs text-muted-foreground"><span>↑↓ Naviguer</span><span>↵ Ouvrir</span><span>Esc Fermer</span></div>
           </section>

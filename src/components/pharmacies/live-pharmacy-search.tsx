@@ -2,19 +2,27 @@
 
 import { LoaderCircle, Search, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 type LivePharmacySearchProps = {
   initialValue: string;
   params: Record<string, string | string[] | undefined>;
+  compact?: boolean;
 };
 
-export function LivePharmacySearch({ initialValue, params }: LivePharmacySearchProps) {
+export function LivePharmacySearch({ initialValue, params, compact = false }: LivePharmacySearchProps) {
   const router = useRouter();
   const [query, setQuery] = useState(initialValue);
   const [isPending, startTransition] = useTransition();
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Preserve keyboard focus through server navigation. Still synchronize browser
+  // back/forward or external filter changes when the field is not being edited.
+  useEffect(() => {
+    if (document.activeElement !== inputRef.current) setQuery(initialValue);
+  }, [initialValue]);
 
   useEffect(() => {
     const trimmed = query.trim();
@@ -31,7 +39,7 @@ export function LivePharmacySearch({ initialValue, params }: LivePharmacySearchP
       startTransition(() => {
         router.replace(`/dashboard/pharmacies?${next.toString()}`, { scroll: false });
       });
-    }, 350);
+    }, 300);
 
     return () => window.clearTimeout(timeout);
   }, [initialValue, params, query, router]);
@@ -39,27 +47,29 @@ export function LivePharmacySearch({ initialValue, params }: LivePharmacySearchP
   return (
     <div className="space-y-1.5">
       <div className="relative">
-        <Search className="absolute left-3 top-3 size-4 text-muted-foreground" />
+        <Search className={compact ? "absolute left-3 top-2.5 size-4 text-muted-foreground" : "absolute left-3 top-3 size-4 text-muted-foreground"} />
         <Input
           aria-label="Rechercher une pharmacie"
           autoComplete="off"
+          name="q"
+          ref={inputRef}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === "Enter") event.preventDefault();
           }}
-          className="h-10 rounded-xl border-[var(--tr1-line-strong)] bg-white pl-9 pr-10 text-sm"
+          className={compact ? "h-9 rounded-md border-[var(--tr1-line-strong)] bg-white/90 pl-9 pr-10 text-sm" : "h-10 rounded-xl border-[var(--tr1-line-strong)] bg-white pl-9 pr-10 text-sm"}
           placeholder="Pharmacie, ville, CP, CIP…"
         />
         {isPending ? (
-          <LoaderCircle className="absolute right-3 top-3 size-4 animate-spin text-[var(--tr1-orange)]" aria-label="Recherche en cours" />
+          <LoaderCircle className={compact ? "absolute right-3 top-2.5 size-4 animate-spin text-[var(--tr1-orange)]" : "absolute right-3 top-3 size-4 animate-spin text-[var(--tr1-orange)]"} aria-label="Recherche en cours" />
         ) : query ? (
           <Button
             type="button"
             size="icon"
             variant="ghost"
-            className="absolute right-1 top-1 size-8 rounded-lg text-muted-foreground"
-            onClick={() => setQuery("")}
+            className={compact ? "absolute right-0.5 top-0.5 size-8 rounded-lg text-muted-foreground" : "absolute right-1 top-1 size-8 rounded-lg text-muted-foreground"}
+            onClick={() => { setQuery(""); inputRef.current?.focus(); }}
           >
             <X className="size-4" />
             <span className="sr-only">Effacer la recherche</span>

@@ -1,6 +1,7 @@
-import { Building2, CircleAlert, MapPin, Plus, RotateCcw, Search, SlidersHorizontal, UserRound } from "lucide-react";
+import { Building2, CircleAlert, MapPin, Plus, RotateCcw, SlidersHorizontal, UserRound } from "lucide-react";
 import Link from "next/link";
 import { MobilePharmacyPortfolioControls } from "@/components/pharmacies/mobile-pharmacy-portfolio-controls";
+import { LivePharmacySearch } from "@/components/pharmacies/live-pharmacy-search";
 import { PharmacyListWithPanel } from "@/components/pharmacies/pharmacy-list-with-panel";
 import { MapFilters } from "@/components/network-map/map-filters";
 import { NetworkMap } from "@/components/network-map/network-map";
@@ -159,9 +160,8 @@ export default async function PharmaciesPage({ searchParams }: { searchParams: S
           ) : null}
         </ToolbarRow>
         <form className="mt-2 flex flex-col gap-2.5 lg:flex-row lg:flex-nowrap lg:items-center">
-            <div className="relative lg:min-w-0 lg:flex-1">
-              <Search className="absolute left-3 top-3 size-3.5 text-muted-foreground" />
-              <Input name="q" defaultValue={search} className="h-9 rounded-md bg-white/90 pl-9 text-sm" placeholder="Rechercher une pharmacie, une ville, un CIP…" />
+            <div className="lg:min-w-0 lg:flex-1">
+              <LivePharmacySearch initialValue={search} params={params} compact />
             </div>
             <Select name="status" defaultValue={typeof params.status === "string" ? params.status : "all"}><SelectTrigger className="h-9 w-full rounded-md bg-white/90 lg:w-[11rem] lg:min-w-[11rem]"><SelectValue placeholder="Statut" /></SelectTrigger><SelectContent><SelectItem value="all">Tous les statuts</SelectItem>{commercialStatuses.map((status) => <SelectItem key={status} value={status}>{labels.commercialStatus[status]}</SelectItem>)}</SelectContent></Select>
             <Select name="activity" defaultValue={typeof params.activity === "string" ? params.activity : "all"}><SelectTrigger className="h-9 w-full rounded-md bg-white/90 lg:w-[11rem] lg:min-w-[11rem]"><SelectValue placeholder="Activité" /></SelectTrigger><SelectContent><SelectItem value="all">Toute activité</SelectItem>{activityStatuses.map((status) => <SelectItem key={status} value={status}>{labels.activityStatus[status]}</SelectItem>)}</SelectContent></Select>
