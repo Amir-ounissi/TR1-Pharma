@@ -13,7 +13,10 @@ import {
 } from "@/lib/product-distribution";
 import { canAdministerProducts } from "@/lib/product-permissions";
 
-export default async function ProductsPage() {
+type SearchParams = Promise<{ product?: string }>;
+
+export default async function ProductsPage({ searchParams }: { searchParams: SearchParams }) {
+  const { product: requestedProductId } = await searchParams;
   const [{ supabase, brand }, contexts] = await Promise.all([
     requireActiveBrand(),
     getBrandContexts(),
@@ -87,6 +90,8 @@ export default async function ProductsPage() {
 
           <CardContent className="p-0">
             <ProductCatalog
+              key={`${brand.id}:${requestedProductId ?? ""}`}
+              initialProductId={requestedProductId}
               products={catalogProducts}
               currency={currency}
               canManage={canManage}

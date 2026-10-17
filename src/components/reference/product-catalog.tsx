@@ -51,13 +51,15 @@ export function ProductCatalog({
   products,
   currency,
   canManage,
+  initialProductId,
 }: {
   products: ProductCatalogItem[];
   currency: string;
   canManage: boolean;
+  initialProductId?: string;
 }) {
   const [selectedProduct, setSelectedProduct] =
-    useState<ProductCatalogItem | null>(null);
+    useState<ProductCatalogItem | null>(() => products.find((product) => product.id === initialProductId) ?? null);
 
   function openProduct(product: ProductCatalogItem) {
     setSelectedProduct(product);
