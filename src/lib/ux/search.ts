@@ -28,7 +28,7 @@ const groupLabels: Record<SearchItemKind, string> = {
 const ignoredWords = new Set([
   "a", "au", "aux", "de", "des", "du", "en", "et", "je", "la", "le", "les",
   "ma", "mes", "mon", "nos", "notre", "par", "pour", "que", "sur", "un", "une",
-  "voir", "montre", "trouve", "retrouve", "cherche", "chercher", "affiche",
+  "voir", "montre", "trouve", "retrouve", "cherche", "chercher", "rechercher", "affiche",
 ]);
 
 const categoryWords = new Set([
@@ -55,16 +55,24 @@ export function mentionedSearchBrands(query: string, brands: readonly { id: stri
   });
 }
 
-/** Obtain a selective prefix even for a mistyped phrase, without a full-table scan. */
-export function searchCandidateFragment(query: string, brands: readonly { id: string; name: string }[]): string {
+/** Bounded trigrams allow the server to retrieve candidates even for accents and typos. */
+export function searchCandidateFragments(query: string, brands: readonly { id: string; name: string }[]): string[] {
   const excluded = new Set(brands.flatMap((brand) => tokenizeSearch(brand.name)));
   const tokens = tokenizeSearch(query).filter((token) =>
     !ignoredWords.has(token) && !categoryWords.has(token) && !excluded.has(token),
-  );
-  const longest = tokens.sort((a, b) => b.length - a.length)[0] ?? "";
-  if (longest.length <= 3) return longest;
-  // A middle trigram survives many leading-character errors and accent variations.
-  return longest.slice(Math.floor((longest.length - 3) / 2), Math.floor((longest.length - 3) / 2) + 3);
+  ).sort((a, b) => b.length - a.length).slice(0, 2);
+
+  const result = new Set<string>();
+  for (const token of tokens) {
+    if (token.length < 3) {
+      result.add(token);
+    } else {
+      result.add(token.slice(0, 3));
+      result.add(token.slice(Math.floor((token.length - 3) / 2), Math.floor((token.length - 3) / 2) + 3));
+      result.add(token.slice(1, 4));
+    }
+  }
+  return [...result].slice(0, 5);
 }
 
 export function searchIntent(query: string) {
@@ -83,6 +91,12 @@ export function searchIntent(query: string) {
 function distanceWithin(left: string, right: string, max: number) {
   if (Math.abs(left.length - right.length) > max) return false;
   if (left === right) return true;
+  if (left.length === right.length) {
+    for (let i = 0; i < left.length - 1; i += 1) {
+      if (left[i] === right[i + 1] && left[i + 1] === right[i] &&
+          left.slice(0, i) === right.slice(0, i) && left.slice(i + 2) === right.slice(i + 2)) return true;
+    }
+  }
   let previous = Array.from({ length: right.length + 1 }, (_, i) => i);
   for (let i = 1; i <= left.length; i += 1) {
     const current = [i];
