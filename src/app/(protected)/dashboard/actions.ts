@@ -127,7 +127,7 @@ export async function searchDashboardAction(rawQuery: string): Promise<SearchIte
         keywords: ["commandes réassorts commandes en cours"],
       });
     }
-    if (scope.capabilities.has("orders") && intent.createOrder && searchOrderRoles.has(scope.role)) {
+    if (scope.id !== activeBrandId && scope.capabilities.has("orders") && intent.createOrder && searchOrderRoles.has(scope.role)) {
       result.push({
         id: `action-new-order-${scope.id}`, kind: "action",
         label: `Créer une commande${suffix}`,
