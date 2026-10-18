@@ -7,9 +7,38 @@ import { MarketingPageEvent, MarketingTrackedLink } from "@/components/marketing
 import { RecoveryHashRedirect } from "@/components/auth/recovery-hash-redirect";
 import styles from "./landing-editorial.module.css";
 
+const pageTitle = "TR1 PHARMA — Votre développement en pharmacie";
+const pageDescription = "Développez votre marque en pharmacie avec Amir Ounissi : prospection, implantation, formation et suivi commercial en PACA, dans le Gard et l’Hérault.";
+const publicUrl = "https://www.tr1pharma.com/";
+
 export const metadata: Metadata = {
-  title: "TR1 PHARMA — Votre développement en pharmacie",
-  description: "Développez votre marque en pharmacie avec Amir Ounissi : prospection, implantation, formation et suivi commercial en PACA, dans le Gard et l’Hérault.",
+  title: pageTitle,
+  description: pageDescription,
+  alternates: { canonical: publicUrl },
+  openGraph: {
+    title: pageTitle,
+    description: pageDescription,
+    siteName: "TR1 PHARMA",
+    url: publicUrl,
+    locale: "fr_FR",
+    type: "website",
+  },
+  twitter: { card: "summary", title: pageTitle, description: pageDescription },
+};
+
+const businessStructuredData = {
+  "@context": "https://schema.org",
+  "@type": "ProfessionalService",
+  name: "TR1 PHARMA",
+  url: publicUrl,
+  description: pageDescription,
+  inLanguage: "fr-FR",
+  areaServed: [
+    { "@type": "AdministrativeArea", name: "Provence-Alpes-Côte d’Azur" },
+    { "@type": "AdministrativeArea", name: "Gard" },
+    { "@type": "AdministrativeArea", name: "Hérault" },
+  ],
+  founder: { "@type": "Person", name: "Amir Ounissi" },
 };
 
 const missions = [
@@ -21,6 +50,10 @@ const missions = [
 export default function LandingPage() {
   return (
     <main id="contenu" className={styles.page}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(businessStructuredData).replace(/</g, "\\u003c") }}
+      />
       <RecoveryHashRedirect />
       <MarketingPageEvent event="landing_view" />
       <section className={styles.hero} aria-labelledby="hero-title">
