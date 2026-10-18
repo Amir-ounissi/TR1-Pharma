@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { Tr1BrandLogo } from "@/components/brand/tr1-brand-logo";
 import { MarketingTrackedLink } from "@/components/marketing/marketing-events";
+import { MobilePublicNav } from "@/components/marketing/mobile-public-nav";
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -20,15 +21,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
           <MarketingTrackedLink className="ml-auto inline-flex min-h-11 items-center gap-3 rounded-sm bg-[#182824] px-4 text-xs font-semibold text-white transition hover:bg-[#314b40] focus-visible:outline-2 focus-visible:outline-offset-4 lg:ml-4" event="primary_cta_click" href="/#contact" properties={{ placement: "header" }}>
             Nous contacter <ArrowUpRight size={15} aria-hidden="true" />
           </MarketingTrackedLink>
-          <details className="relative lg:hidden">
-            <summary className="grid min-h-11 cursor-pointer list-none place-items-center rounded-sm border border-[#182824]/20 px-3 text-xs font-semibold focus-visible:outline-2 focus-visible:outline-offset-4">Menu</summary>
-            <nav aria-label="Navigation mobile" className="absolute right-0 top-[calc(100%+.75rem)] z-50 grid w-60 gap-1 rounded border border-[#182824]/15 bg-[#faf9f6] p-2 text-sm shadow-lg">
-              <Link className="rounded px-3 py-3 hover:bg-white" href="/#marques">L’accompagnement</Link>
-              <Link className="rounded px-3 py-3 hover:bg-white" href="/#terrain">À propos</Link>
-              <Link className="rounded px-3 py-3 hover:bg-white" href="/#pharmacies">Pharmacies</Link>
-              <Link className="rounded px-3 py-3 hover:bg-white" href="/connexion">Connexion</Link>
-            </nav>
-          </details>
+          <MobilePublicNav />
           <Link className="hidden min-h-11 items-center px-1 text-xs text-[#5d6962] hover:text-[#bc4c27] lg:inline-flex" href="/connexion">Connexion</Link>
         </div>
       </header>
