@@ -22,6 +22,32 @@ async function primaryBrandName() {
 
 test.beforeAll(() => mkdirSync(artifacts, { recursive: true }));
 
+test("landing respecte la charte TR1 officielle (logo, couleurs et CTA)", async ({ page }) => {
+  await page.goto("/");
+
+  const tokens = await page.evaluate(() => {
+    const root = getComputedStyle(document.documentElement);
+    return {
+      navy: root.getPropertyValue("--tr1-navy").trim(),
+      ivory: root.getPropertyValue("--tr1-ivory").trim(),
+      orange: root.getPropertyValue("--tr1-orange").trim(),
+    };
+  });
+  expect(tokens).toEqual({
+    navy: "#0e1d31",
+    ivory: "#f4f0e7",
+    orange: "#ea7015",
+  });
+
+  const logoPaths = page.locator('header svg[aria-label="TR1 Pharma"] path');
+  await expect(logoPaths).toHaveCount(2);
+  await expect(logoPaths.first()).toHaveAttribute("fill", "#121e31");
+  await expect(logoPaths.last()).toHaveAttribute("fill", "#ea6820");
+  await expect(page.getByRole("link", { name: "Parlons de votre marque" })).toHaveCSS("background-color", "rgb(234, 112, 21)");
+  await expect(page.locator("header")).toHaveCSS("background-color", /244, 240, 231/);
+});
+
+
 test("landing desktop, parcours marque/pharmacie et capture des leads", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1, name: /Votre marque mérite.*plus qu’une place en rayon/ })).toBeVisible();
