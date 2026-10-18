@@ -160,7 +160,7 @@ export default function LandingPage() {
           <div className={styles.contactIntro}><p className={styles.kicker}><span className={styles.kickerLine}/> LE PREMIER ÉCHANGE</p><div className={styles.contactIntroGrid}><h2 id="contact-title">Le prochain chapitre<br/><span>commence ici.</span></h2><p>Vous développez une marque ou vous représentez une officine ? Parlez-nous de votre projet. Nous reviendrons vers vous pour un échange concret.</p></div></div>
           <div className={styles.contactGrid}>
             <article id="contact-marque" className={styles.contactCard}><div className={styles.contactCardTop}><span>01 — MARQUE & LABORATOIRE</span><ArrowUpRight size={20} aria-hidden="true"/></div><h3>Développons votre marque.</h3><p className={styles.cardDescription}>Parlez-nous de votre gamme et de vos ambitions en pharmacie.</p><LeadForm audience="brand" /></article>
-            <article id="contact-pharmacie" className={styles.contactCard}><div className={styles.contactCardTop}><span>02 — PHARMACIE</span><ArrowUpRight size={20} aria-hidden="true"/></div><h3>Parlons de votre officine.</h3><p className={styles.cardDescription}>Découvrons les gammes et l'accompagnement adaptés à votre équipe.</p><LeadForm audience="pharmacy" /></article>
+            <article id="contact-pharmacie" className={styles.contactCard}><div className={styles.contactCardTop}><span>02 — PHARMACIE</span><ArrowUpRight size={20} aria-hidden="true"/></div><h3>Parlons de votre officine.</h3><p className={styles.cardDescription}>Découvrons les gammes et l’accompagnement adaptés à votre équipe.</p><LeadForm audience="pharmacy" /></article>
           </div>
         </div>
       </section>
