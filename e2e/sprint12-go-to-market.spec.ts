@@ -79,3 +79,29 @@ test("landing mobile reste lisible et sans débordement", async ({ page }) => {
   await page.screenshot({ path: `${artifacts}/landing-mobile.png`, fullPage: true });
 });
 
+
+test("landing : menu mobile accessible et balisage SEO cohérent", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+
+  await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "https://www.tr1pharma.com/");
+  await expect(page.locator('meta[property="og:locale"]')).toHaveAttribute("content", "fr_FR");
+  const schemaContent = await page.locator('script[type="application/ld+json"]').textContent();
+  expect(schemaContent).not.toBeNull();
+  const schema = JSON.parse(schemaContent ?? "{}") as { name?: string; areaServed?: unknown[] };
+  expect(schema.name).toBe("TR1 PHARMA");
+  expect(schema.areaServed).toHaveLength(3);
+
+  const details = page.locator("header details");
+  await details.locator("summary").click();
+  await expect(details).toHaveAttribute("open", "");
+  await details.getByRole("link", { name: "Pharmacies" }).click();
+  await expect(details).not.toHaveAttribute("open", "");
+  await expect(page.locator("#pharmacies")).toBeInViewport();
+
+  await details.locator("summary").click();
+  await expect(details).toHaveAttribute("open", "");
+  await details.locator("summary").press("Escape");
+  await expect(details).not.toHaveAttribute("open", "");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+});
