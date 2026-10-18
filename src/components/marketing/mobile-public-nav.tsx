@@ -3,7 +3,7 @@
 import { useRef } from "react";
 import Link from "next/link";
 
-/** Native disclosure menu with keyboard support and reliable same-page closing. */
+/** Accessible native mobile navigation matching the established TR1 palette. */
 export function MobilePublicNav() {
   const menu = useRef<HTMLDetailsElement>(null);
   return (
@@ -21,12 +21,12 @@ export function MobilePublicNav() {
         }
       }}
     >
-      <summary className="grid min-h-11 cursor-pointer list-none place-items-center rounded-md border border-white/25 px-3 text-xs font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#b9edcf]">Menu</summary>
-      <nav aria-label="Navigation mobile" className="absolute right-0 top-[calc(100%+.75rem)] z-50 grid w-[min(78vw,290px)] gap-1 rounded-xl border border-white/10 bg-[#14293a] p-2 text-sm text-[#e7f2f4] shadow-2xl">
-        <Link className="rounded-md px-4 py-3 transition hover:bg-white/10" href="/#marques">Notre approche</Link>
-        <Link className="rounded-md px-4 py-3 transition hover:bg-white/10" href="/#terrain">Notre expertise</Link>
-        <Link className="rounded-md px-4 py-3 transition hover:bg-white/10" href="/#pharmacies">Pharmacies</Link>
-        <Link className="rounded-md px-4 py-3 transition hover:bg-white/10" href="/connexion">Connexion</Link>
+      <summary className="grid min-h-11 cursor-pointer list-none place-items-center rounded-[5px] border border-[var(--tr1-line-strong)] px-3 text-xs font-semibold text-[var(--tr1-navy)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--tr1-orange)]">Menu</summary>
+      <nav aria-label="Navigation mobile" className="absolute right-0 top-[calc(100%+.75rem)] z-50 grid w-[min(78vw,290px)] gap-1 rounded-md border border-[var(--tr1-line)] bg-[var(--tr1-ivory)] p-2 text-sm text-[var(--tr1-navy)] shadow-xl">
+        <Link className="rounded-sm px-4 py-3 transition hover:bg-[var(--tr1-ivory-deep)]" href="/#marques">Notre approche</Link>
+        <Link className="rounded-sm px-4 py-3 transition hover:bg-[var(--tr1-ivory-deep)]" href="/#terrain">Notre expertise</Link>
+        <Link className="rounded-sm px-4 py-3 transition hover:bg-[var(--tr1-ivory-deep)]" href="/#pharmacies">Pharmacies</Link>
+        <Link className="rounded-sm px-4 py-3 transition hover:bg-[var(--tr1-ivory-deep)]" href="/connexion">Connexion</Link>
       </nav>
     </details>
   );
