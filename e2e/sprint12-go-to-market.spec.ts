@@ -24,14 +24,16 @@ test.beforeAll(() => mkdirSync(artifacts, { recursive: true }));
 
 test("landing desktop, parcours marque/pharmacie et capture des leads", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1, name: /Votre marque.*Les bonnes officines.*Une vraie présence/ })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: /Votre marque mérite.*plus qu’une place en rayon/ })).toBeVisible();
   await expect(page.getByRole("link", { name: "Parlons de votre marque" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Je suis pharmacien" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: /L’implantation est un début/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Pas simplement être présent/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: /Des marques à découvrir/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: /Amir Ounissi/ })).toBeVisible();
   await expect(page.getByRole("link", { name: "Voir le travail terrain" })).toHaveAttribute("href", "https://fr.linkedin.com/in/amirounissi");
   await expect(page.locator("main > section")).toHaveCount(5);
+  await expect(page.getByRole("img", { name: /Capture réelle de l’interface de suivi commercial TR1 PHARMA/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Ouvrir les bonnes portes." })).toBeVisible();
   await page.screenshot({ path: `${artifacts}/landing-desktop.png`, fullPage: true });
 
   await page.getByRole("link", { name: "Nous contacter" }).first().click();
@@ -69,11 +71,12 @@ test("landing desktop, parcours marque/pharmacie et capture des leads", async ({
 test("landing mobile reste lisible et sans débordement", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1, name: /Votre marque.*Les bonnes officines.*Une vraie présence/ })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: /Votre marque mérite.*plus qu’une place en rayon/ })).toBeVisible();
   await expect(page.getByRole("link", { name: "Parlons de votre marque" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Je suis pharmacien" })).toBeVisible();
   await expect(page.getByRole("heading", { name: /Amir Ounissi/ })).toBeVisible();
   await expect(page.locator("#contact-marque")).toBeVisible();
+  await expect(page.getByRole("img", { name: /Capture réelle de l’interface de suivi commercial TR1 PHARMA/ })).toBeVisible();
   await expect(page.locator("#contact-pharmacie")).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
   await page.screenshot({ path: `${artifacts}/landing-mobile.png`, fullPage: true });
