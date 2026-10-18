@@ -8,7 +8,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
   return (
     <div className="min-h-screen bg-[var(--tr1-ivory)] text-[var(--tr1-navy)]">
       <a href="#contenu" className="sr-only z-50 rounded bg-white p-4 focus:not-sr-only focus:fixed focus:left-4 focus:top-4">Aller au contenu</a>
-      <header className="sticky top-0 z-40 border-b border-[var(--tr1-line)] bg-[var(--tr1-ivory)]/95 text-[var(--tr1-navy)] backdrop-blur-xl">
+      <header className="sticky top-0 z-40 border-b border-[var(--tr1-line)] bg-[var(--tr1-ivory)] text-[var(--tr1-navy)] backdrop-blur-xl">
         <div className="mx-auto flex h-[78px] max-w-[1348px] items-center gap-4 px-[18px] sm:px-8 lg:px-11">
           <Link aria-label="TR1 Pharma — Accueil" className="flex h-16 w-[96px] shrink-0 items-center" href="/">
             <Tr1BrandLogo className="block h-[58px] w-[96px] shrink-0" />
