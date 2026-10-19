@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
-import { ArrowDownRight, ArrowRight, ArrowUpRight, Check, MoveUpRight, MapPin } from "lucide-react";
+import { ArrowDownRight, ArrowRight, ArrowUpRight, Check, MapPin, Store, UsersRound, Package, Boxes, ClipboardList, GraduationCap, CheckCircle2, CalendarClock } from "lucide-react";
 import { LeadForm } from "@/components/marketing/lead-form";
 import { MarketingPageEvent, MarketingTrackedLink } from "@/components/marketing/marketing-events";
 import { RecoveryHashRedirect } from "@/components/auth/recovery-hash-redirect";
@@ -75,21 +74,64 @@ export default function LandingPage() {
           <div className={styles.heroGrid}>
             <div className={styles.heroCopy}>
               <div className={styles.heroLabel}>DÉVELOPPEMENT COMMERCIAL EN PHARMACIE <span> / TR1</span></div>
-              <h1 id="hero-title">Votre marque mérite <span>plus qu’une place en rayon.</span></h1>
-              <p className={styles.heroIntro}>De la première implantation aux réassorts, nous donnons à votre marque une vraie présence commerciale en pharmacie. Sur le terrain, avec une méthode et des outils pour garder le cap.</p>
+              <h1 id="hero-title">Plus qu’une présence,<br/>un développement durable <span>en pharmacie.</span></h1>
+              <p className={styles.heroIntro}>TR1 PHARMA accompagne les marques de santé et bien-être avec une présence terrain structurée : visite, implantation, formation, suivi et réassort.</p>
               <div className={styles.heroActions}>
-                <MarketingTrackedLink event="primary_cta_click" href="#contact-marque" properties={{ placement: "hero_brand" }} className={styles.primaryCta}>Parlons de votre marque <ArrowUpRight size={19} aria-hidden="true" /></MarketingTrackedLink>
+                <MarketingTrackedLink event="primary_cta_click" href="#marques" properties={{ placement: "hero_brand" }} className={styles.primaryCta}>Découvrir notre accompagnement <ArrowUpRight size={19} aria-hidden="true" /></MarketingTrackedLink>
                 <a className={styles.heroSecondary} href="#pharmacies">Je suis pharmacien <ArrowRight size={17} aria-hidden="true" /></a>
               </div>
               <div className={styles.heroTrust}><span className={styles.smallLine} /> Une présence terrain, du premier contact au suivi.</div>
             </div>
-            <div className={styles.heroVisual}>
-              <div className={styles.visualTopline}><span><span className={styles.visualDot} /> TR1 PHARMA / PILOTAGE TERRAIN</span><span>01 — 03</span></div>
-              <div className={styles.visualFrame}>
-                <div className={styles.visualBrowser}><span className={styles.browserDots} aria-hidden="true"><i/><i/><i/></span><span>APERÇU DE LA PLATEFORME</span><span className={styles.visualSecure}>TR1 / WORKSPACE</span></div>
-                <Image src="/marketing/manager-day.webp" alt="Capture réelle de l’interface de suivi commercial TR1 PHARMA" width={1440} height={1000} priority sizes="(max-width: 760px) 92vw, (max-width: 1200px) 45vw, 550px" className={styles.visualScreenshot} />
+            <div className={styles.heroVisual} role="group" aria-label="Illustration du parcours commercial en pharmacie, sans données réelles">
+              <div className={styles.visualTopline}><span><span className={styles.visualDot} /> TR1 PHARMA / ACCOMPAGNEMENT TERRAIN</span><span>PARCOURS ILLUSTRATIF</span></div>
+              <div className={styles.journeyGrid} aria-label="Les étapes de notre accompagnement">
+                <div className={styles.journeyStep}>
+                  <div className={styles.stepIcons}><Store size={23} aria-hidden="true" /><CheckCircle2 size={18} aria-hidden="true" /></div>
+                  <strong>Visite réalisée</strong><span className={styles.donePill}>Réalisé</span>
+                </div>
+                <div className={styles.journeyStep}>
+                  <div className={styles.stepIcons}><Boxes size={23} aria-hidden="true" /><CheckCircle2 size={18} aria-hidden="true" /></div>
+                  <strong>Implantation validée</strong><span className={styles.donePill}>Réalisé</span>
+                </div>
+                <div className={styles.journeyStep}>
+                  <div className={styles.stepIcons}><UsersRound size={23} aria-hidden="true" /><span className={styles.blueIndicator} /></div>
+                  <strong>Formation équipe</strong><span className={styles.currentPill}>En cours</span>
+                </div>
+                <div className={styles.journeyStep}>
+                  <div className={styles.stepIcons}><Package size={23} aria-hidden="true" /><span className={styles.orangeIndicator} /></div>
+                  <strong>Réassort à planifier</strong><span className={styles.nextPill}>À suivre</span>
+                </div>
               </div>
-              <div className={styles.visualFooter}><div><span className={styles.visualFooterKicker}>NOTRE DIFFÉRENCE</span><p>Une présence qui se construit.<br/>Un développement qui se suit.</p></div><MoveUpRight size={24} aria-hidden="true" /></div>
+              <div className={styles.terrainCard}>
+                <div className={styles.terrainCardIntro}>
+                  <div><p>LA MÉTHODE TR1 PHARMA</p><h2>Suivi terrain</h2><span>Une exécution structurée pour développer vos marques en pharmacie, étape par étape.</span></div>
+                  <span className={styles.terrainCardMonogram} aria-hidden="true">TR<span>1</span></span>
+                </div>
+                <div className={styles.terrainCardGrid}>
+                  <div className={styles.fieldScene} aria-hidden="true">
+                    <div className={styles.sceneSign}>PHARMACIE <span>✚</span></div>
+                    <div className={styles.sceneShelves}>
+                      <div/><div/><div/>
+                    </div>
+                    <div className={styles.sceneCaption}><Store size={17} /><span>Officine partenaire <small>Un suivi de proximité</small></span></div>
+                  </div>
+                  <ol className={styles.terrainTimeline} aria-label="Visite, implantation, formation, suivi et réassort">
+                    <li className={styles.timelineDone}><span className={styles.timelineIcon}><Store size={18} aria-hidden="true" /></span><div><strong>Visite terrain</strong><span>Échange et recommandations</span></div></li>
+                    <li className={styles.timelineDone}><span className={styles.timelineIcon}><Boxes size={18} aria-hidden="true" /></span><div><strong>Implantation rayon</strong><span>Mise en avant de la gamme</span></div></li>
+                    <li className={styles.timelineActive}><span className={styles.timelineIcon}><GraduationCap size={18} aria-hidden="true" /></span><div><strong>Formation équipe</strong><span>Présentation et conseils</span></div></li>
+                    <li><span className={styles.timelineIcon}><ClipboardList size={18} aria-hidden="true" /></span><div><strong>Suivi des commandes</strong><span>Contrôle et accompagnement</span></div></li>
+                    <li><span className={styles.timelineIcon}><Package size={18} aria-hidden="true" /></span><div><strong>Réassort programmé</strong><span>Anticipation des besoins</span></div></li>
+                  </ol>
+                  <div className={styles.nextAction}>
+                    <p className={styles.nextActionLabel}>PROCHAINE ACTION</p>
+                    <div className={styles.nextActionIcon}><Package size={22} aria-hidden="true" /></div>
+                    <strong>Réassort de la gamme à confirmer</strong>
+                    <p>Anticiper les besoins et préparer les prochaines actions.</p>
+                    <div className={styles.nextActionWhen}><CalendarClock size={15} aria-hidden="true" /> Étape à planifier</div>
+                    <MarketingTrackedLink event="primary_cta_click" href="#contact-marque" properties={{ placement: "terrain_card" }} className={styles.nextActionCta}>Échanger sur vos besoins <ArrowUpRight size={15} aria-hidden="true" /></MarketingTrackedLink>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
           <div className={styles.heroBottom}><span>UNE APPROCHE DE BOUT EN BOUT</span><div><span>Prospecter</span><i/><span>Implanter</span><i/><span>Accompagner</span></div><a href="#marques">Explorer notre méthode <ArrowDownRight size={17} aria-hidden="true" /></a></div>
