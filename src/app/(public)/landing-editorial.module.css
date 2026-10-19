@@ -230,3 +230,36 @@
  .nextActionWhen{padding-top:11px}
  .nextActionCta{font-size:12px}
 }
+
+
+/* Photo issue de la maquette de la marque : arrière-plan éditorial sans texte ni cartes incrustées.
+   La carte et les CTA restent des éléments HTML accessibles, non une capture d'écran. */
+.hero{
+ background-color:var(--tr1-ivory);
+ background-image:
+   linear-gradient(180deg,rgba(244,240,231,.98) 0%,rgba(244,240,231,.91) 27%,rgba(244,240,231,.57) 53%,rgba(244,240,231,.15) 100%),
+   linear-gradient(90deg,rgba(244,240,231,.2) 0%,rgba(244,240,231,.08) 45%,rgba(244,240,231,.52) 100%),
+   url("/marketing/tr1-pharmacy-hero.webp");
+ background-repeat:no-repeat;
+ background-size:cover;
+ background-position:center,center,center 50%;
+}
+.heroCopy{ text-shadow:0 1px 10px rgba(244,240,231,.2); }
+.heroVisual{ filter:drop-shadow(0 14px 30px rgba(14,29,49,.08)); }
+@media(max-width:900px){
+ .hero{
+  background-image:
+    linear-gradient(180deg,rgba(244,240,231,.97) 0%,rgba(244,240,231,.86) 48%,rgba(244,240,231,.8) 100%),
+    url("/marketing/tr1-pharmacy-hero.webp");
+  background-position:center,29% center;
+ }
+}
+@media(max-width:650px){
+ .hero{
+  background-image:
+    linear-gradient(180deg,rgba(244,240,231,.98) 0%,rgba(244,240,231,.91) 44%,rgba(244,240,231,.86) 100%),
+    url("/marketing/tr1-pharmacy-hero.webp");
+  background-position:center,26% center;
+ }
+ .heroVisual{filter:none}
+}
