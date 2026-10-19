@@ -263,3 +263,23 @@
  }
  .heroVisual{filter:none}
 }
+
+
+/* Landing photo HD : photographie indépendante des contenus interactifs.
+   Le fichier source issu de la maquette est conservé en secours mais n'est plus étiré. */
+.hero{background:var(--tr1-ivory);color:var(--tr1-navy)}
+.heroMedia{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+.heroMediaPhoto{object-fit:cover;object-position:center center;image-rendering:auto}
+.heroMedia::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,rgba(244,240,231,.28) 0%,rgba(244,240,231,.09) 46%,rgba(244,240,231,.08) 78%,rgba(244,240,231,.23) 100%)}
+.hero>.container{position:relative;z-index:2}
+.hero::after,.heroGlow{display:none}
+.heroVisual{filter:drop-shadow(0 10px 25px rgba(14,29,49,.06))}
+@media(max-width:900px){
+ .heroMediaPhoto{object-position:22% center}
+ .heroMedia::after{background:linear-gradient(180deg,rgba(244,240,231,.78) 0%,rgba(244,240,231,.66) 40%,rgba(244,240,231,.68) 100%)}
+}
+@media(max-width:650px){
+ .heroMediaPhoto{object-position:27% center}
+ .heroMedia::after{background:linear-gradient(180deg,rgba(244,240,231,.9) 0%,rgba(244,240,231,.78) 47%,rgba(244,240,231,.81) 100%)}
+ .heroVisual{filter:none}
+}
