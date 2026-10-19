@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowDownRight, ArrowRight, ArrowUpRight, Check, MapPin, Store, UsersRound, Package, Boxes, ClipboardList, GraduationCap, CheckCircle2, CalendarClock } from "lucide-react";
 import { LeadForm } from "@/components/marketing/lead-form";
 import { Tr1BrandLogo } from "@/components/brand/tr1-brand-logo";
@@ -66,6 +67,17 @@ export default function LandingPage() {
       <MarketingPageEvent event="landing_view" />
 
       <section className={styles.hero} aria-labelledby="hero-title">
+        <div className={styles.heroMedia} aria-hidden="true">
+          <Image
+            src="/marketing/tr1-pharmacy-hero-hd.webp"
+            alt=""
+            fill
+            priority
+            unoptimized
+            sizes="100vw"
+            className={styles.heroMediaPhoto}
+          />
+        </div>
         <div className={styles.heroGlow} aria-hidden="true" />
         <div className={styles.container}>
           <div className={styles.heroEyebrow}>
