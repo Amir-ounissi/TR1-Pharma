@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowDownRight, ArrowRight, ArrowUpRight, Check, MapPin, Store, UsersRound, Package, Boxes, ClipboardList, GraduationCap, CheckCircle2, CalendarClock } from "lucide-react";
 import { LeadForm } from "@/components/marketing/lead-form";
+import { Tr1BrandLogo } from "@/components/brand/tr1-brand-logo";
 import { MarketingPageEvent, MarketingTrackedLink } from "@/components/marketing/marketing-events";
 import { RecoveryHashRedirect } from "@/components/auth/recovery-hash-redirect";
 import styles from "./landing-editorial.module.css";
@@ -105,7 +106,7 @@ export default function LandingPage() {
               <div className={styles.terrainCard}>
                 <div className={styles.terrainCardIntro}>
                   <div><p>LA MÉTHODE TR1 PHARMA</p><h2>Suivi terrain</h2><span>Une exécution structurée pour développer vos marques en pharmacie, étape par étape.</span></div>
-                  <span className={styles.terrainCardMonogram} aria-hidden="true">TR<span>1</span></span>
+                  <Tr1BrandLogo className={styles.terrainCardBrandLogo} />
                 </div>
                 <div className={styles.terrainCardGrid}>
                   <div className={styles.fieldScene} aria-hidden="true">
