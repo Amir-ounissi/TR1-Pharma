@@ -119,3 +119,116 @@
 @media(max-width:650px){.container{width:calc(100% - 36px)}.hero{padding-top:20px}.heroEyebrow{font-size:9px;letter-spacing:.09em;padding-bottom:17px}.heroRegion{display:none}.heroGrid{padding:48px 0 40px;gap:34px}.heroLabel{font-size:10px;letter-spacing:.09em;margin-bottom:19px}.heroCopy h1{font-size:clamp(41px,10.4vw,65px);line-height:1.08;letter-spacing:-.065em}.heroIntro{margin-top:21px!important;font-size:15px;line-height:1.68}.heroActions{align-items:stretch;gap:13px;margin-top:25px}.primaryCta{width:100%;min-height:52px}.heroSecondary{min-height:42px}.heroTrust{margin-top:21px;font-size:10px}.heroVisual{padding:10px 10px 13px;border-radius:10px}.visualTopline{font-size:8px;padding:4px 2px 12px}.visualBrowser{font-size:7px;padding:9px 7px;gap:6px}.visualSecure{display:none}.visualFooter{padding:14px 4px 0}.visualFooter p{font-size:14px}.heroBottom{grid-template-columns:1fr;gap:9px;padding:17px 0}.heroBottom>a{justify-self:start}.missions,.terrain,.contact{padding:65px 0}.kicker{font-size:9px;letter-spacing:.09em}.sectionIntro h2,.terrain h2,.pharmacies h2,.contact h2{font-size:clamp(35px,9.1vw,51px);line-height:1.14}.sectionIntro h2{margin-top:19px}.sectionIntro>p,.terrainIntro,.contactIntroGrid>p{font-size:15px}.serviceGrid{grid-template-columns:1fr;margin-top:30px;gap:12px}.serviceCard{min-height:0;padding:25px}.serviceCard h3{margin-top:32px;font-size:26px}.serviceTags{padding-top:25px}.sectionEnd{align-items:flex-start;flex-direction:column;gap:16px}.sectionEnd>span{line-height:1.6}.terrainGrid{gap:30px}.terrainMessage h2{margin-top:19px}.terrainIntro{margin-top:18px!important}.founderPanel{padding:24px}.founderMonogram{font-size:56px}.founderMain h3{font-size:28px}.founderBadge{font-size:9px}.pharmacies{padding:55px 0}.pharmacyShell{padding:26px 22px}.pharmacyOverline,.pharmacyBottom{font-size:9px;letter-spacing:.07em}.pharmacyOverline>span{display:none}.pharmacyGrid{padding:35px 0 40px}.pharmacyGrid p{font-size:15px}.pharmacyCta{width:100%}.contactGrid{grid-template-columns:1fr;gap:16px;margin-top:32px}.contactCard{padding:26px 20px}.contactCard h3{font-size:25px;margin-top:20px}.cardDescription{margin-bottom:24px!important}}
 @media(max-width:360px){.heroCopy h1{font-size:38px}.heroLabel{font-size:9px}.primaryCta{gap:12px;padding:13px 15px}.visualTopline{font-size:7px}.visualFooter p{font-size:13px}.pharmacyShell{padding-inline:17px}}
 @media(prefers-reduced-motion:reduce){.primaryCta,.serviceCard,.pharmacyCta{transition:none}.primaryCta:hover,.serviceCard:hover{transform:none}}
+
+
+/* Landing 2026 : parcours de terrain illustratif. Aucun lien avec le CRM ni les données métier. */
+.hero{background:linear-gradient(119deg,#fffdf8 5%,#f4f0e7 60%,#ebe6db 100%);color:var(--tr1-navy)}
+.hero:after{background-image:linear-gradient(rgba(14,29,49,.024) 1px,transparent 1px),linear-gradient(90deg,rgba(14,29,49,.024) 1px,transparent 1px);mask-image:linear-gradient(90deg,transparent,#000);background-size:100px 100px}
+.heroGlow{background:radial-gradient(circle,rgba(234,112,21,.095),transparent 65%)}
+.heroEyebrow,.heroBottom{color:var(--tr1-muted);border-color:var(--tr1-line)}
+.heroBottom>div,.heroBottom a{color:var(--tr1-navy)}
+.heroBottom a:hover{color:var(--tr1-orange)}
+.heroGrid{grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);gap:45px;padding:65px 0 72px}
+.heroCopy h1{font-size:clamp(41px,4.3vw,62px);line-height:1.07;letter-spacing:-.055em;font-weight:730}
+.heroCopy h1 span{color:var(--tr1-success)}
+.heroIntro{color:var(--tr1-navy-soft);font-size:16px;line-height:1.7;max-width:480px}
+.heroSecondary{color:var(--tr1-navy)}
+.heroSecondary:hover{color:var(--tr1-orange)}
+.heroTrust{color:var(--tr1-muted)}
+.heroVisual{padding:0;background:transparent;border:0;box-shadow:none;transform:none}
+.visualTopline{color:var(--tr1-muted);padding:0 3px 15px;font-size:9px;letter-spacing:.08em}
+.journeyGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;position:relative;z-index:1}
+.journeyStep{display:flex;min-width:0;min-height:142px;flex-direction:column;align-items:flex-start;gap:11px;padding:15px 13px 13px;border-radius:16px;border:1px solid rgba(14,29,49,.075);background:rgba(255,253,248,.96);box-shadow:0 8px 24px rgba(14,29,49,.055)}
+.journeyStep:nth-child(1){background:#f2f7f0}
+.journeyStep:nth-child(2){background:#f0f5f7}
+.journeyStep:nth-child(3){background:#eef5fb}
+.journeyStep:nth-child(4){background:#fcf3e8}
+.stepIcons{display:flex;align-items:center;justify-content:space-between;width:100%;color:var(--tr1-navy)}
+.stepIcons>svg:last-child{color:#2e9865}
+.blueIndicator,.orangeIndicator{width:14px;height:14px;border:4px solid #a1c8fb;border-radius:50%;background:#2b5fc7;box-shadow:0 0 0 3px rgba(43,95,199,.08)}
+.orangeIndicator{border-color:#fbd8ae;background:var(--tr1-orange);box-shadow:0 0 0 3px rgba(234,112,21,.08)}
+.journeyStep strong{font-size:12px;line-height:1.24;letter-spacing:-.02em;font-weight:750;color:var(--tr1-navy);min-height:30px}
+.donePill,.currentPill,.nextPill{display:inline-flex;align-items:center;gap:5px;margin-top:auto;padding:5px 9px;border-radius:100px;background:#e0efe2;color:#2b6b44;font-size:10px;font-weight:700}
+.currentPill{background:#dceafa;color:#2b5fc7}
+.nextPill{background:#ffead2;color:#a7500c}
+.terrainCard{margin-top:15px;padding:24px;border:1px solid rgba(14,29,49,.07);border-radius:22px;background:rgba(255,253,248,.96);color:var(--tr1-navy);box-shadow:0 25px 58px rgba(14,29,49,.105)}
+.terrainCardIntro{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}
+.terrainCardIntro p{font-family:var(--font-mono,ui-monospace,monospace);font-size:9px;font-weight:750;letter-spacing:.12em;color:var(--tr1-orange);margin-bottom:6px}
+.terrainCardIntro h2{font-size:24px;font-weight:750;letter-spacing:-.04em}
+.terrainCardIntro>div>span{display:block;max-width:455px;margin-top:7px;color:#627285;font-size:12px;line-height:1.55}
+.terrainCardMonogram{flex:none;font-size:22px;font-weight:850;letter-spacing:-.08em}
+.terrainCardMonogram span{color:var(--tr1-orange)}
+.terrainCardGrid{display:grid;grid-template-columns:minmax(0,.94fr) minmax(0,1.06fr) minmax(0,.95fr);gap:12px;align-items:stretch;margin-top:19px}
+.fieldScene{position:relative;display:flex;flex-direction:column;justify-content:space-between;min-width:0;min-height:271px;padding:15px 13px 12px;overflow:hidden;border-radius:15px;background:linear-gradient(150deg,#e6e3d5 0%,#d5e4df 58%,#c2d1cb 100%);border:1px solid rgba(14,29,49,.06)}
+.fieldScene:before{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(14,29,49,.12),transparent 48%),radial-gradient(circle at 20% 45%,rgba(255,255,255,.85),transparent 42%);pointer-events:none}
+.sceneSign{position:relative;z-index:1;padding:12px 8px;border-radius:6px;background:#176b52;color:#fff;font-size:10px;font-weight:850;letter-spacing:.08em;text-align:center;box-shadow:0 8px 14px rgba(14,29,49,.15)}
+.sceneSign span{margin-left:3px;font-size:13px}
+.sceneShelves{position:relative;z-index:1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;height:101px;margin:5px 5px 15px;align-items:stretch}
+.sceneShelves>div{border-radius:4px;background:repeating-linear-gradient(0deg,rgba(255,253,248,.92) 0 13px,#d0c8b9 13px 17px,transparent 17px 23px),repeating-linear-gradient(90deg,#f6dfd3 0 13px,#e0eadb 13px 26px,#e2d5ed 26px 40px);border:4px solid #cfbba5;box-shadow:0 0 12px rgba(255,255,255,.25)}
+.sceneCaption{position:relative;z-index:1;display:flex;gap:9px;align-items:center;padding:10px;border-radius:9px;background:#fffdf8;box-shadow:0 5px 13px rgba(14,29,49,.09);color:var(--tr1-navy)}
+.sceneCaption>svg{color:#238b64;flex:none}
+.sceneCaption>span{font-size:10px;font-weight:800;line-height:1.25}
+.sceneCaption small{display:block;margin-top:3px;font-size:9px;font-weight:500;color:var(--tr1-muted)}
+.terrainTimeline{list-style:none;padding:5px 0;margin:0;display:flex;flex-direction:column;gap:13px}
+.terrainTimeline li{display:flex;align-items:flex-start;gap:9px;min-width:0;position:relative}
+.timelineIcon{display:grid;place-items:center;width:28px;height:28px;flex:none;border-radius:9px;background:#edf1f5;color:var(--tr1-navy)}
+.terrainTimeline li>div{min-width:0;padding-top:1px}
+.terrainTimeline strong{display:block;font-size:11px;line-height:1.3;font-weight:770;color:var(--tr1-navy)}
+.terrainTimeline li>div>span{display:block;margin-top:3px;font-size:10px;line-height:1.38;color:#637183}
+.terrainTimeline .timelineDone .timelineIcon{background:#e1f1e6;color:#287b55}
+.terrainTimeline .timelineActive .timelineIcon{background:#e2edfb;color:var(--tr1-blue)}
+.nextAction{display:flex;flex-direction:column;align-items:flex-start;min-width:0;padding:18px 14px;border:1px solid #f5e9d9;border-radius:15px;background:linear-gradient(145deg,#fcf7ee 0%,#f9efe0 100%)}
+.nextActionLabel{font-family:var(--font-mono,ui-monospace,monospace);font-size:9px;font-weight:800;letter-spacing:.06em}
+.nextActionIcon{display:grid;place-items:center;width:41px;height:41px;margin-top:17px;border-radius:12px;color:var(--tr1-orange);background:#fffdf8}
+.nextAction>strong{display:block;margin-top:13px;font-size:13px;line-height:1.36}
+.nextAction>p:not(.nextActionLabel){margin-top:8px;font-size:10px;line-height:1.6;color:#637183}
+.nextActionWhen{display:flex;align-items:center;gap:7px;margin-top:auto;padding-top:14px;color:var(--tr1-muted);font-size:10px}
+.nextActionCta{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-height:39px;margin-top:13px;padding:10px 11px;border-radius:8px;background:var(--tr1-navy);color:#fffdf8;font-size:10px;font-weight:750;line-height:1.2}
+.nextActionCta:hover{background:var(--tr1-navy-soft)}
+@media(max-width:1160px){
+ .heroGrid{gap:27px}
+ .terrainCard{padding:18px}
+ .terrainCardGrid{grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr)}
+ .nextAction{grid-column:1/-1;display:grid;grid-template-columns:41px 1fr;column-gap:13px;padding:13px;align-items:center}
+ .nextActionLabel{grid-column:1/-1;margin-bottom:8px!important}
+ .nextActionIcon{margin:0;grid-column:1;grid-row:2/4}
+ .nextAction>strong{grid-column:2;grid-row:2;margin-top:0}
+ .nextAction>p:not(.nextActionLabel){grid-column:2;grid-row:3}
+ .nextActionWhen{grid-column:1/-1;padding-top:12px}
+ .nextActionCta{grid-column:1/-1}
+}
+@media(max-width:900px){
+ .heroGrid{grid-template-columns:1fr;gap:40px;padding:57px 0 62px}
+ .heroCopy h1{max-width:720px;font-size:clamp(43px,6.5vw,67px)}
+ .heroVisual{width:min(100%,750px);margin-inline:auto}
+ .terrainCardGrid{grid-template-columns:minmax(0,.94fr) minmax(0,1.06fr) minmax(0,.95fr)}
+ .nextAction{grid-column:auto;display:flex;padding:15px}
+ .nextActionLabel{margin:0!important}
+ .nextActionIcon{margin-top:17px}
+ .nextAction>strong{margin-top:13px}
+}
+@media(max-width:650px){
+ .hero{padding-top:20px}
+ .heroGrid{padding:41px 0 43px;gap:31px}
+ .heroCopy h1{font-size:clamp(37px,9.4vw,52px);line-height:1.11}
+ .heroIntro{font-size:15px}
+ .visualTopline{font-size:8px;flex-wrap:wrap}
+ .journeyGrid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+ .journeyStep{min-height:120px;padding:12px}
+ .journeyStep strong{min-height:0;font-size:12px}
+ .terrainCard{margin-top:11px;padding:17px 13px;border-radius:17px}
+ .terrainCardIntro h2{font-size:21px}
+ .terrainCardIntro>div>span{font-size:11px}
+ .terrainCardGrid{grid-template-columns:1fr;gap:13px;margin-top:16px}
+ .fieldScene{min-height:235px}
+ .sceneShelves{height:92px}
+ .terrainTimeline{display:grid;grid-template-columns:1fr;gap:13px;padding:6px 5px}
+ .terrainTimeline strong{font-size:12px}
+ .terrainTimeline li>div>span{font-size:11px}
+ .nextAction{grid-column:auto;display:flex;padding:17px}
+ .nextActionLabel{margin:0!important}
+ .nextActionIcon{margin-top:13px}
+ .nextAction>strong{margin-top:10px}
+ .nextActionWhen{padding-top:11px}
+ .nextActionCta{font-size:12px}
+}
