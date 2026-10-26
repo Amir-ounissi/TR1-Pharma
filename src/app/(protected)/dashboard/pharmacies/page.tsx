@@ -269,12 +269,20 @@ export default async function PharmaciesPage({ searchParams }: { searchParams: S
             Page {page}
           </span>
           <div className="flex gap-2">
-            <Button asChild variant="outline" size="sm" className="rounded-md" disabled={page <= 1}>
-              <Link href={buildPageHref(urlParams, Math.max(1, page - 1))}>Précédent</Link>
-            </Button>
-            <Button asChild variant="outline" size="sm" className="rounded-md" disabled={!hasNextPage}>
-              <Link href={buildPageHref(urlParams, page + 1)}>Suivant</Link>
-            </Button>
+            {page <= 1 ? (
+              <Button type="button" variant="outline" size="sm" className="rounded-md" disabled>Précédent</Button>
+            ) : (
+              <Button asChild variant="outline" size="sm" className="rounded-md">
+                <Link href={buildPageHref(urlParams, page - 1)}>Précédent</Link>
+              </Button>
+            )}
+            {hasNextPage ? (
+              <Button asChild variant="outline" size="sm" className="rounded-md">
+                <Link href={buildPageHref(urlParams, page + 1)}>Suivant</Link>
+              </Button>
+            ) : (
+              <Button type="button" variant="outline" size="sm" className="rounded-md" disabled>Suivant</Button>
+            )}
           </div>
         </div>
       ) : null}
