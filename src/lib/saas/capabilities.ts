@@ -20,10 +20,7 @@ export const SAAS_CAPABILITIES = [
   "direction_workspace",
   "connectors",
   "multi_provider",
-  "advanced_audit",
-  "api_access",
   "sso",
-  "custom_roles",
 ] as const;
 
 export type SaasCapability = (typeof SAAS_CAPABILITIES)[number];
