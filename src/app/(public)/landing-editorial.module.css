@@ -12,6 +12,7 @@
 .heroCopy { min-width: 0; }
 .hero h1 { font-size: clamp(2.55rem, 3.45vw, 3.6rem); line-height: 1.06; letter-spacing: -.055em; text-wrap: balance; }
 .hero h1 span { color: var(--accent); }
+.heroLocation { white-space: nowrap; }
 .heroIntro { margin-top: 28px !important; max-width: 60ch; font-size: 1.05rem; line-height: 1.8; color: var(--muted); }
 .heroActions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; margin-top: 30px; }
 .primaryCta, .secondaryCta, .textCta, .pharmacyCta { display: inline-flex; align-items: center; justify-content: center; gap: 12px; min-height: 50px; font-size: .92rem; line-height: 1.45; font-weight: 650; text-decoration: none; }
@@ -107,8 +108,7 @@
   .eyebrow { font-size: .7rem; margin-bottom: 18px !important; }
   .hero { padding-block: 37px 44px; }
   .heroGrid { gap: 30px; }
-  .hero h1 { font-size: clamp(2.12rem, 8.9vw, 3rem); line-height: 1.1; letter-spacing: -.05em; text-wrap: pretty; }
-  .heroBreak { display: none; }
+  .hero h1 { font-size: clamp(1.9rem, 8.2vw, 3rem); line-height: 1.14; letter-spacing: -.05em; text-wrap: pretty; }
   .heroIntro { font-size: .96rem; line-height: 1.75; margin-top: 23px !important; }
   .heroActions { display: grid; justify-items: stretch; gap: 5px; margin-top: 25px; }
   .primaryCta { width: 100%; padding-inline: 14px; gap: 8px; font-size: .86rem; }

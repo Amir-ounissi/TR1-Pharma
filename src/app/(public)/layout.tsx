@@ -9,7 +9,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
     <div className="min-h-screen bg-[var(--tr1-ivory)] text-[var(--tr1-navy)]">
       <a href="#contenu" className="sr-only z-50 rounded bg-white p-4 focus:not-sr-only focus:fixed focus:left-4 focus:top-4">Aller au contenu</a>
       <header className="sticky top-0 z-40 border-b border-[var(--tr1-line)] bg-[var(--tr1-ivory)] text-[var(--tr1-navy)] backdrop-blur-xl">
-        <div className="mx-auto flex h-[78px] max-w-[1348px] items-center gap-4 px-[18px] sm:px-8 lg:px-11">
+        <div className="mx-auto flex h-[78px] max-w-[1348px] items-center gap-3 px-[18px] sm:px-8 lg:px-11">
           <Link aria-label="TR1 Pharma — Accueil" className="flex h-16 w-[96px] shrink-0 items-center" href="/">
             <Tr1BrandLogo className="block h-[58px] w-[96px] shrink-0" />
           </Link>
@@ -20,11 +20,11 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
             <Link className="py-3 transition hover:text-[var(--tr1-orange)]" href="/#terrain">Suivi terrain</Link>
             <Link className="py-3 transition hover:text-[var(--tr1-orange)]" href="/#pharmacies">Pharmacies</Link>
           </nav>
-          <MarketingTrackedLink className="ml-auto inline-flex min-h-11 items-center gap-3 rounded-[5px] bg-[var(--tr1-orange)] px-4 text-xs font-bold text-[var(--tr1-navy)] transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--tr1-orange)] lg:ml-3" event="primary_cta_click" href="/#contact" properties={{ placement: "header" }}>
+          <MarketingTrackedLink className="ml-auto inline-flex min-h-11 items-center gap-2 rounded-[5px] bg-[var(--tr1-orange)] px-3 text-xs font-bold text-[var(--tr1-navy)] transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--tr1-orange)] sm:gap-3 sm:px-4 lg:ml-3" event="primary_cta_click" href="/#contact" properties={{ placement: "header" }}>
             Nous contacter <ArrowUpRight size={16} aria-hidden="true" />
           </MarketingTrackedLink>
           <MobilePublicNav />
-          <Link className="hidden min-h-11 items-center px-1 text-xs text-[var(--tr1-muted)] transition hover:text-[var(--tr1-navy)] lg:inline-flex" href="/connexion">Connexion</Link>
+          <Link className="hidden min-h-11 items-center px-1 text-xs text-[#515d6b] transition hover:text-[var(--tr1-navy)] lg:inline-flex" href="/connexion">Connexion</Link>
         </div>
       </header>
       <div>{children}</div>
@@ -32,9 +32,9 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
         <div className="mx-auto flex max-w-[1260px] flex-col gap-9 md:flex-row md:items-end md:justify-between">
           <div>
             <Tr1BrandLogo className="block h-[58px] w-[96px]" />
-            <p className="mt-4 text-xs leading-6 text-[var(--tr1-muted)]">Prospection. Implantation. Développement.<br/>PACA · Gard · Hérault</p>
+            <p className="mt-4 text-xs leading-6 text-[#515d6b]">Prospection. Implantation. Développement.<br/>PACA · Gard · Hérault</p>
           </div>
-          <div className="flex flex-wrap gap-x-6 gap-y-3 text-xs text-[var(--tr1-muted)]">
+          <div className="flex flex-wrap gap-x-6 gap-y-3 text-xs text-[#515d6b]">
             <Link className="py-2 transition hover:text-[var(--tr1-orange)]" href="/connexion">Connexion</Link>
             <Link className="py-2 transition hover:text-[var(--tr1-orange)]" href="/mentions-legales">Mentions légales</Link>
             <Link className="py-2 transition hover:text-[var(--tr1-orange)]" href="/politique-de-confidentialite">Confidentialité</Link>

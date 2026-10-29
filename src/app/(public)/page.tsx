@@ -61,7 +61,7 @@ export default function LandingPage() {
         <div className={`${styles.container} ${styles.heroGrid}`}>
           <div className={styles.heroCopy}>
             <p className={styles.eyebrow}>DÉVELOPPEMENT COMMERCIAL EN PHARMACIE</p>
-            <h1 id="hero-title">Implantez votre marque.<br className={styles.heroBreak} /> <span>Développez ses ventes en pharmacie.</span></h1>
+            <h1 id="hero-title">Implantez votre marque.<br /> <span>Développez ses ventes <span className={styles.heroLocation}>en pharmacie.</span></span></h1>
             <p className={styles.heroIntro}>TR1 PHARMA représente les marques de santé, de beauté et de bien-être en PACA, dans le Gard et dans l’Hérault. Prospection, implantation, formation et suivi des réassorts : un interlocuteur terrain pour développer votre présence en officine.</p>
             <div className={styles.heroActions}>
               <MarketingTrackedLink event="primary_cta_click" href="#contact-marque" properties={{ placement: "hero_brand" }} className={styles.primaryCta}>Parlons de votre développement <ArrowUpRight size={18} aria-hidden="true" /></MarketingTrackedLink>
