@@ -43,25 +43,25 @@ test("landing respecte la charte TR1 officielle (logo, couleurs et CTA)", async 
   await expect(logoPaths).toHaveCount(2);
   await expect(logoPaths.first()).toHaveAttribute("fill", "#121e31");
   await expect(logoPaths.last()).toHaveAttribute("fill", "#ea6820");
-  await expect(page.getByRole("link", { name: "Parlons de votre développement" })).toHaveCSS("background-color", "rgb(234, 112, 21)");
+  await expect(page.getByRole("link", { name: "Parlons de votre marque" })).toHaveCSS("background-color", "rgb(234, 112, 21)");
   await expect(page.locator("header")).toHaveCSS("background-color", /244, 240, 231/);
 });
 
 
 test("landing desktop, parcours marque/pharmacie et capture des leads", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1, name: /Implantez votre marque.*Développez ses ventes en pharmacie/ })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Parlons de votre développement" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: /Du sell-in au sell-out.*développons votre marque en pharmacie/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Parlons de votre marque" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Je suis pharmacien" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: /De l’ouverture de compte/ })).toBeVisible();
-  await expect(page.getByRole("heading", { name: /Des gammes à découvrir/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Implanter votre marque.*Activer ses ventes/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Des gammes pour votre officine/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: /Amir Ounissi/ })).toBeVisible();
   await expect(page.getByRole("link", { name: "Découvrir mon parcours" })).toHaveAttribute("href", "https://fr.linkedin.com/in/amirounissi");
   await expect(page.locator("main > section")).toHaveCount(6);
   await expect(page.getByRole("img", { name: /Illustration graphique d’une officine/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: /Une vision claire des actions/ })).toBeVisible();
   await expect(page.getByRole("img", { name: /Capture réelle de l’interface/ })).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Ouvrir les bons comptes." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Développer votre distribution." })).toBeVisible();
   await page.screenshot({ path: `${artifacts}/landing-desktop.png`, fullPage: true });
 
   await page.getByRole("link", { name: "Nous contacter" }).first().click();
@@ -104,8 +104,8 @@ test("landing desktop, parcours marque/pharmacie et capture des leads", async ({
 test("landing mobile reste lisible et sans débordement", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1, name: /Implantez votre marque.*Développez ses ventes en pharmacie/ })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Parlons de votre développement" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: /Du sell-in au sell-out.*développons votre marque en pharmacie/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Parlons de votre marque" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Je suis pharmacien" })).toBeVisible();
   await expect(page.getByRole("heading", { name: /Amir Ounissi/ })).toBeVisible();
   await expect(page.locator("#contact-marque")).toBeVisible();
