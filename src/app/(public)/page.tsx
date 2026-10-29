@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import Image from "next/image";
-import { ArrowDownRight, ArrowRight, ArrowUpRight, Check, MapPin, Store, UsersRound, Package, Boxes, ClipboardList, GraduationCap, CheckCircle2, CalendarClock } from "lucide-react";
+import { ArrowRight, ArrowUpRight } from "lucide-react";
 import { LeadForm } from "@/components/marketing/lead-form";
-import { Tr1BrandLogo } from "@/components/brand/tr1-brand-logo";
+import { FieldReferences } from "@/components/marketing/field-references";
+import { PharmacyIllustration } from "@/components/marketing/pharmacy-illustration";
 import { MarketingPageEvent, MarketingTrackedLink } from "@/components/marketing/marketing-events";
 import { RecoveryHashRedirect } from "@/components/auth/recovery-hash-redirect";
 import styles from "./landing-editorial.module.css";
@@ -24,8 +23,7 @@ export const metadata: Metadata = {
 };
 
 const businessStructuredData = {
-  "@context": "https://schema.org",
-  "@type": "ProfessionalService",
+  "@context": "https://schema.org", "@type": "ProfessionalService",
   name: "TR1 PHARMA", url: publicUrl, description: pageDescription, inLanguage: "fr-FR",
   areaServed: [
     { "@type": "AdministrativeArea", name: "Provence-Alpes-Côte d’Azur" },
@@ -37,25 +35,19 @@ const businessStructuredData = {
 
 const services = [
   {
-    number: "01",
-    label: "DÉPLOYER",
-    title: "Ouvrir les bonnes portes.",
-    description: "Cibler les officines adaptées à votre gamme, rencontrer les décideurs et transformer les échanges en implantations.",
-    tags: ["Prospection", "Rendez-vous", "Implantation"],
+    number: "01", label: "Déployer", title: "Ouvrir les bons comptes.",
+    description: "Cibler les officines adaptées à votre gamme, rencontrer les décideurs et accompagner les premières commandes.",
+    tags: "Ciblage · Prospection · Implantation",
   },
   {
-    number: "02",
-    label: "ACTIVER",
-    title: "Faire vivre vos produits.",
-    description: "Accompagner les équipes officinales, renforcer leur connaissance de la gamme et organiser les actions de visibilité.",
-    tags: ["Formation", "Merchandising", "Animation"],
+    number: "02", label: "Activer", title: "Donner aux équipes les moyens de vendre.",
+    description: "Former les équipes, travailler la visibilité en rayon et coordonner les actions d’animation adaptées à la pharmacie.",
+    tags: "Formation · Merchandising · Animation",
   },
   {
-    number: "03",
-    label: "DÉVELOPPER",
-    title: "Installer la relation dans la durée.",
-    description: "Suivre les pharmacies, anticiper les besoins de réassort et faire remonter les informations utiles du terrain.",
-    tags: ["Suivi terrain", "Réassort", "Retour d’expérience"],
+    number: "03", label: "Développer", title: "Faire progresser la relation commerciale.",
+    description: "Suivre les ventes selon les données disponibles, identifier les besoins de réassort, réactiver les comptes et faire remonter les informations utiles du terrain.",
+    tags: "Suivi · Réactivation · Réassort",
   },
 ];
 
@@ -65,157 +57,91 @@ export default function LandingPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(businessStructuredData).replace(/</g, "\\u003c") }} />
       <RecoveryHashRedirect />
       <MarketingPageEvent event="landing_view" />
-
       <section className={styles.hero} aria-labelledby="hero-title">
-        <div className={styles.heroMedia} aria-hidden="true">
-          <Image
-            src="/marketing/tr1-pharmacy-hero-hd.webp"
-            alt=""
-            fill
-            priority
-            unoptimized
-            sizes="100vw"
-            className={styles.heroMediaPhoto}
-          />
-        </div>
-        <div className={styles.heroGlow} aria-hidden="true" />
-        <div className={styles.container}>
-          <div className={styles.heroEyebrow}>
-            <span className={styles.eyebrowLeft}><span className={styles.liveDot} /> L’EXPERTISE TERRAIN. LA VISION EN PLUS.</span>
-            <span className={styles.heroRegion}><MapPin size={14} aria-hidden="true" /> PACA · GARD · HÉRAULT</span>
-          </div>
-          <div className={styles.heroGrid}>
-            <div className={styles.heroCopy}>
-              <div className={styles.heroLabel}>DÉVELOPPEMENT COMMERCIAL EN PHARMACIE <span> / TR1</span></div>
-              <h1 id="hero-title">Plus qu’une présence,<br/>un développement durable <span>en pharmacie.</span></h1>
-              <p className={styles.heroIntro}>TR1 PHARMA accompagne les marques de santé et bien-être avec une présence terrain structurée : visite, implantation, formation, suivi et réassort.</p>
-              <div className={styles.heroActions}>
-                <MarketingTrackedLink event="primary_cta_click" href="#marques" properties={{ placement: "hero_brand" }} className={styles.primaryCta}>Découvrir notre accompagnement <ArrowUpRight size={19} aria-hidden="true" /></MarketingTrackedLink>
-                <a className={styles.heroSecondary} href="#pharmacies">Je suis pharmacien <ArrowRight size={17} aria-hidden="true" /></a>
-              </div>
-              <div className={styles.heroTrust}><span className={styles.smallLine} /> Une présence terrain, du premier contact au suivi.</div>
+        <div className={`${styles.container} ${styles.heroGrid}`}>
+          <div className={styles.heroCopy}>
+            <p className={styles.eyebrow}>DÉVELOPPEMENT COMMERCIAL EN PHARMACIE</p>
+            <h1 id="hero-title">Implantez votre marque.<br className={styles.heroBreak} /> <span>Développez ses ventes en pharmacie.</span></h1>
+            <p className={styles.heroIntro}>TR1 PHARMA représente les marques de santé, de beauté et de bien-être en PACA, dans le Gard et dans l’Hérault. Prospection, implantation, formation et suivi des réassorts : un interlocuteur terrain pour développer votre présence en officine.</p>
+            <div className={styles.heroActions}>
+              <MarketingTrackedLink event="primary_cta_click" href="#contact-marque" properties={{ placement: "hero_brand" }} className={styles.primaryCta}>Parlons de votre développement <ArrowUpRight size={18} aria-hidden="true" /></MarketingTrackedLink>
+              <a className={styles.secondaryCta} href="#pharmacies">Je suis pharmacien <ArrowRight size={17} aria-hidden="true" /></a>
             </div>
-            <div className={styles.heroVisual} role="group" aria-label="Illustration du parcours commercial en pharmacie, sans données réelles">
-              <div className={styles.visualTopline}><span><span className={styles.visualDot} /> TR1 PHARMA / ACCOMPAGNEMENT TERRAIN</span><span>PARCOURS ILLUSTRATIF</span></div>
-              <div className={styles.journeyGrid} aria-label="Les étapes de notre accompagnement">
-                <div className={styles.journeyStep}>
-                  <div className={styles.stepIcons}><Store size={23} aria-hidden="true" /><CheckCircle2 size={18} aria-hidden="true" /></div>
-                  <strong>Visite réalisée</strong><span className={styles.donePill}>Réalisé</span>
-                </div>
-                <div className={styles.journeyStep}>
-                  <div className={styles.stepIcons}><Boxes size={23} aria-hidden="true" /><CheckCircle2 size={18} aria-hidden="true" /></div>
-                  <strong>Implantation validée</strong><span className={styles.donePill}>Réalisé</span>
-                </div>
-                <div className={styles.journeyStep}>
-                  <div className={styles.stepIcons}><UsersRound size={23} aria-hidden="true" /><span className={styles.blueIndicator} /></div>
-                  <strong>Formation équipe</strong><span className={styles.currentPill}>En cours</span>
-                </div>
-                <div className={styles.journeyStep}>
-                  <div className={styles.stepIcons}><Package size={23} aria-hidden="true" /><span className={styles.orangeIndicator} /></div>
-                  <strong>Réassort à planifier</strong><span className={styles.nextPill}>À suivre</span>
-                </div>
-              </div>
-              <div className={styles.terrainCard}>
-                <div className={styles.terrainCardIntro}>
-                  <div><p>LA MÉTHODE TR1 PHARMA</p><h2>Suivi terrain</h2><span>Une exécution structurée pour développer vos marques en pharmacie, étape par étape.</span></div>
-                  <Tr1BrandLogo className={styles.terrainCardBrandLogo} />
-                </div>
-                <div className={styles.terrainCardGrid}>
-                  <div className={styles.fieldScene} aria-hidden="true">
-                    <div className={styles.sceneSign}>PHARMACIE <span>✚</span></div>
-                    <div className={styles.sceneShelves}>
-                      <div/><div/><div/>
-                    </div>
-                    <div className={styles.sceneCaption}><Store size={17} /><span>Officine partenaire <small>Un suivi de proximité</small></span></div>
-                  </div>
-                  <ol className={styles.terrainTimeline} aria-label="Visite, implantation, formation, suivi et réassort">
-                    <li className={styles.timelineDone}><span className={styles.timelineIcon}><Store size={18} aria-hidden="true" /></span><div><strong>Visite terrain</strong><span>Échange et recommandations</span></div></li>
-                    <li className={styles.timelineDone}><span className={styles.timelineIcon}><Boxes size={18} aria-hidden="true" /></span><div><strong>Implantation rayon</strong><span>Mise en avant de la gamme</span></div></li>
-                    <li className={styles.timelineActive}><span className={styles.timelineIcon}><GraduationCap size={18} aria-hidden="true" /></span><div><strong>Formation équipe</strong><span>Présentation et conseils</span></div></li>
-                    <li><span className={styles.timelineIcon}><ClipboardList size={18} aria-hidden="true" /></span><div><strong>Suivi des commandes</strong><span>Contrôle et accompagnement</span></div></li>
-                    <li><span className={styles.timelineIcon}><Package size={18} aria-hidden="true" /></span><div><strong>Réassort programmé</strong><span>Anticipation des besoins</span></div></li>
-                  </ol>
-                  <div className={styles.nextAction}>
-                    <p className={styles.nextActionLabel}>PROCHAINE ACTION</p>
-                    <div className={styles.nextActionIcon}><Package size={22} aria-hidden="true" /></div>
-                    <strong>Réassort de la gamme à confirmer</strong>
-                    <p>Anticiper les besoins et préparer les prochaines actions.</p>
-                    <div className={styles.nextActionWhen}><CalendarClock size={15} aria-hidden="true" /> Étape à planifier</div>
-                    <MarketingTrackedLink event="primary_cta_click" href="#contact-marque" properties={{ placement: "terrain_card" }} className={styles.nextActionCta}>Échanger sur vos besoins <ArrowUpRight size={15} aria-hidden="true" /></MarketingTrackedLink>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <p className={styles.heroNote}>Du sell-in au sell-out, un accompagnement dans la durée.</p>
           </div>
-          <div className={styles.heroBottom}><span>UNE APPROCHE DE BOUT EN BOUT</span><div><span>Prospecter</span><i/><span>Implanter</span><i/><span>Accompagner</span></div><a href="#marques">Explorer notre méthode <ArrowDownRight size={17} aria-hidden="true" /></a></div>
+          <figure className={styles.heroVisual}>
+            <PharmacyIllustration />
+            <figcaption>PACA · Gard · Hérault <span>Une présence au plus près des officines.</span></figcaption>
+          </figure>
         </div>
       </section>
-
       <section id="marques" className={styles.missions} aria-labelledby="missions-title">
         <div className={styles.container}>
           <div className={styles.sectionIntro}>
-            <div><p className={styles.kicker}><span className={styles.kickerLine}/> POUR LES MARQUES & LABORATOIRES</p><h2 id="missions-title">Pas simplement être présent.<br/><span>Être vraiment développé.</span></h2></div>
-            <p>Une belle implantation ne suffit pas. Ce qui compte, c’est ce qui se passe ensuite : les équipes qui connaissent la gamme, les visites qui s’enchaînent et la relation qui dure.</p>
+            <div><p className={styles.eyebrow}>Notre accompagnement</p><h2 id="missions-title">De l’ouverture de compte <span>au réassort.</span></h2></div>
+            <p>Chaque implantation est un point de départ. Nous accompagnons ensuite les équipes et suivons les comptes pour soutenir le développement de votre gamme.</p>
           </div>
           <div id="methode" className={styles.serviceGrid}>
             {services.map((service) => (
-              <article className={styles.serviceCard} key={service.number}>
-                <div className={styles.serviceTop}><span>{service.number} / {service.label}</span><ArrowUpRight size={21} aria-hidden="true"/></div>
+              <article className={styles.service} key={service.number}>
+                <p className={styles.serviceStep}><span>{service.number}</span> {service.label}</p>
                 <h3>{service.title}</h3>
-                <p>{service.description}</p>
-                <div className={styles.serviceTags}>{service.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
+                <p className={styles.serviceDescription}>{service.description}</p>
+                <p className={styles.serviceTags}>{service.tags}</p>
               </article>
             ))}
           </div>
-          <div className={styles.sectionEnd}><span>STRATÉGIE COMMERCIALE + EXÉCUTION TERRAIN + SUIVI</span><MarketingTrackedLink event="primary_cta_click" href="#contact-marque" properties={{ placement: "services" }} className={styles.textCta}>Discutons de vos objectifs <ArrowUpRight size={18} aria-hidden="true" /></MarketingTrackedLink></div>
         </div>
       </section>
-
-      <section id="terrain" className={styles.terrain} aria-labelledby="terrain-title">
-        <div className={styles.container}>
-          <div className={styles.terrainGrid}>
-            <div className={styles.terrainMessage}>
-              <p className={styles.kicker}><span className={styles.kickerLine} /> UNE MÉTHODE, PAS UNE PROMESSE</p>
-              <h2 id="terrain-title">Le terrain d’abord.<br/><span>La visibilité en plus.</span></h2>
-              <p className={styles.terrainIntro}>Les résultats commerciaux se construisent en officine. Leur suivi mérite la même attention. TR1 PHARMA associe le travail de terrain à une plateforme dédiée à la continuité des actions.</p>
-              <ul className={styles.checkList}>
-                <li><Check size={16} aria-hidden="true"/> Visites et échanges structurés</li>
-                <li><Check size={16} aria-hidden="true"/> Commandes et réassorts suivis</li>
-                <li><Check size={16} aria-hidden="true"/> Prochaines actions identifiées</li>
-              </ul>
-              <Link href="/connexion" className={styles.terrainLink}>Accès à la plateforme <ArrowUpRight size={17} aria-hidden="true"/></Link>
-            </div>
-            <div className={styles.founderPanel}>
-              <div className={styles.founderBadge}>VOTRE INTERLOCUTEUR SUR LE TERRAIN <span>↗</span></div>
-              <div className={styles.founderMain}>
-                <span className={styles.founderMonogram} aria-hidden="true">AO.</span>
-                <h3>Amir Ounissi.</h3>
-                <p className={styles.founderRole}>Fondateur de TR1 PHARMA · Développement commercial en pharmacie</p>
-                <p>Un seul interlocuteur pour représenter votre marque, construire les relations en officine et assurer leur suivi dans le Sud de la France.</p>
-                <a href="https://fr.linkedin.com/in/amirounissi" target="_blank" rel="noopener noreferrer" className={styles.founderLink}>Voir le travail terrain <ArrowUpRight size={17} aria-hidden="true"/></a>
-              </div>
-              <div className={styles.founderFoot}>PROXIMITÉ <span>—</span> EXÉCUTION <span>—</span> CONTINUITÉ</div>
-            </div>
+      <FieldReferences items={[]} />
+      <section id="terrain" className={styles.followUp} aria-labelledby="terrain-title">
+        <div className={`${styles.container} ${styles.followUpGrid}`}>
+          <div>
+            <p className={styles.eyebrow}>Le suivi au service du terrain</p>
+            <h2 id="terrain-title">Une vision claire des actions <span>sur votre secteur.</span></h2>
+            <p className={styles.bodyCopy}>Le suivi complète le travail en officine : actions réalisées, besoins identifiés et prochaines étapes. Vous disposez d’informations concrètes pour échanger sur le développement de votre marque.</p>
+          </div>
+          <figure className={styles.methodFigure}>
+            <div className={styles.methodHeading}>Un échange, des actions, une suite.</div>
+            <ol className={styles.methodSteps}>
+              <li><span aria-hidden="true">01</span><div><strong>Actions réalisées</strong><p>Visites et accompagnement des équipes</p></div></li>
+              <li><span aria-hidden="true">02</span><div><strong>Besoins identifiés</strong><p>Retours officine et besoins de la gamme</p></div></li>
+              <li><span aria-hidden="true">03</span><div><strong>Prochaines étapes</strong><p>Actions à prévoir et réassorts à préparer</p></div></li>
+            </ol>
+            <figcaption>Illustration de la méthode de suivi</figcaption>
+          </figure>
+        </div>
+      </section>
+      <section id="amir" className={styles.founder} aria-labelledby="founder-title">
+        <div className={`${styles.container} ${styles.founderGrid}`}>
+          <div><p className={styles.eyebrow}>Une relation directe</p><h2 id="founder-title">Amir Ounissi,<br/><span>votre interlocuteur terrain.</span></h2></div>
+          <div>
+            <p className={styles.founderRole}>Fondateur de TR1 PHARMA · Développement commercial en pharmacie</p>
+            <p className={styles.bodyCopy}>J’accompagne les marques dans leur développement en officine, de la prise de contact au suivi des comptes. Mon rôle : construire une relation avec les pharmaciens, accompagner leurs équipes et assurer la continuité des actions sur le terrain.</p>
+            <a href="https://fr.linkedin.com/in/amirounissi" target="_blank" rel="noopener noreferrer" className={styles.textCta}>Découvrir mon parcours <ArrowUpRight size={18} aria-hidden="true"/></a>
           </div>
         </div>
       </section>
-
       <section id="pharmacies" className={styles.pharmacies} aria-labelledby="pharmacy-title">
-        <div className={styles.container}>
-          <div className={styles.pharmacyShell}>
-            <div className={styles.pharmacyOverline}>VOUS ÊTES PHARMACIEN ? <span>02 / NOS PARTENAIRES</span></div>
-            <div className={styles.pharmacyGrid}><h2 id="pharmacy-title">Des marques à découvrir.<br/><span>Un vrai suivi à vos côtés.</span></h2><div><p>Des gammes adaptées à votre officine, des échanges directs et un accompagnement concret pour vos équipes. De la découverte au réassort, vous savez à qui vous adresser.</p><MarketingTrackedLink event="primary_cta_click" href="#contact-pharmacie" properties={{ placement: "pharmacy_section" }} className={styles.pharmacyCta}>Échanger pour mon officine <ArrowUpRight size={18} aria-hidden="true"/></MarketingTrackedLink></div></div>
-            <div className={styles.pharmacyBottom}><span>UNE RELATION DIRECTE, SUR LE TERRAIN</span><span>TR1 PHARMA <ArrowUpRight size={15} aria-hidden="true"/></span></div>
-          </div>
+        <div className={`${styles.container} ${styles.pharmacyGrid}`}>
+          <div><p className={styles.eyebrow}>Vous êtes pharmacien ?</p><h2 id="pharmacy-title">Des gammes à découvrir.<br/><span>Un interlocuteur pour les développer.</span></h2></div>
+          <div><p className={styles.bodyCopy}>Échangeons sur les gammes adaptées à votre officine et les moyens de les accompagner : présentation des produits, formation de l’équipe, visibilité et suivi des réassorts.</p><MarketingTrackedLink event="primary_cta_click" href="#contact-pharmacie" properties={{ placement: "pharmacy_section" }} className={styles.pharmacyCta}>Échanger pour mon officine <ArrowUpRight size={18} aria-hidden="true"/></MarketingTrackedLink></div>
         </div>
       </section>
-
       <section id="contact" className={styles.contact} aria-labelledby="contact-title">
         <div className={styles.container}>
-          <div className={styles.contactIntro}><p className={styles.kicker}><span className={styles.kickerLine}/> LE PREMIER ÉCHANGE</p><div className={styles.contactIntroGrid}><h2 id="contact-title">Le prochain chapitre<br/><span>commence ici.</span></h2><p>Vous développez une marque ou vous représentez une officine ? Parlez-nous de votre projet. Nous reviendrons vers vous pour un échange concret.</p></div></div>
+          <div className={styles.contactIntro}><p className={styles.eyebrow}>Faisons le point</p><h2 id="contact-title">Parlons de vos besoins <span>en pharmacie.</span></h2></div>
           <div className={styles.contactGrid}>
-            <article id="contact-marque" className={styles.contactCard}><div className={styles.contactCardTop}><span>01 — MARQUE & LABORATOIRE</span><ArrowUpRight size={20} aria-hidden="true"/></div><h3>Développons votre marque.</h3><p className={styles.cardDescription}>Parlez-nous de votre gamme et de vos ambitions en pharmacie.</p><LeadForm audience="brand" /></article>
-            <article id="contact-pharmacie" className={styles.contactCard}><div className={styles.contactCardTop}><span>02 — PHARMACIE</span><ArrowUpRight size={20} aria-hidden="true"/></div><h3>Parlons de votre officine.</h3><p className={styles.cardDescription}>Découvrons les gammes et l’accompagnement adaptés à votre équipe.</p><LeadForm audience="pharmacy" /></article>
+            <article id="contact-marque" className={styles.contactCard}>
+              <p className={styles.contactAudience}>Marque & laboratoire</p><h3>Développons votre marque.</h3>
+              <p className={styles.cardDescription}>Un premier échange pour faire le point sur votre gamme, votre territoire et vos objectifs en pharmacie.</p>
+              <LeadForm audience="brand" />
+            </article>
+            <article id="contact-pharmacie" className={styles.contactCard}>
+              <p className={styles.contactAudience}>Pharmacie</p><h3>Parlons de votre officine.</h3>
+              <p className={styles.cardDescription}>Présentez-nous votre officine et les besoins de votre équipe.</p>
+              <LeadForm audience="pharmacy" />
+            </article>
           </div>
         </div>
       </section>

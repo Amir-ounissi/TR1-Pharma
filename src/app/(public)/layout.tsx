@@ -14,10 +14,10 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
             <Tr1BrandLogo className="block h-[58px] w-[96px] shrink-0" />
           </Link>
           <div className="ml-0 hidden h-8 w-px bg-[var(--tr1-navy)]/15 lg:ml-2 lg:block" aria-hidden="true" />
-          <p className="hidden font-mono text-[10px] font-semibold uppercase tracking-[.14em] text-[var(--tr1-muted)] xl:block">Développement commercial en pharmacie</p>
+          <p className="hidden max-w-48 text-xs leading-5 text-[#515d6b] xl:block">Développement commercial<br/>en pharmacie</p>
           <nav aria-label="Navigation principale" className="ml-auto hidden items-center gap-8 text-[13px] font-semibold text-[var(--tr1-navy)] lg:flex">
             <Link className="py-3 transition hover:text-[var(--tr1-orange)]" href="/#marques">Notre approche</Link>
-            <Link className="py-3 transition hover:text-[var(--tr1-orange)]" href="/#terrain">Notre expertise</Link>
+            <Link className="py-3 transition hover:text-[var(--tr1-orange)]" href="/#terrain">Suivi terrain</Link>
             <Link className="py-3 transition hover:text-[var(--tr1-orange)]" href="/#pharmacies">Pharmacies</Link>
           </nav>
           <MarketingTrackedLink className="ml-auto inline-flex min-h-11 items-center gap-3 rounded-[5px] bg-[var(--tr1-orange)] px-4 text-xs font-bold text-[var(--tr1-navy)] transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--tr1-orange)] lg:ml-3" event="primary_cta_click" href="/#contact" properties={{ placement: "header" }}>
