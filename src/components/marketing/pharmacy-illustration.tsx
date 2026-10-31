@@ -1,73 +1,134 @@
-/** Editorial artwork: an illustrative pharmacy, not a client reference. */
+/** Animated editorial illustration of the same pharmacy across the sell-in to sell-out journey. */
 export function PharmacyIllustration() {
   return (
-    <svg viewBox="0 0 480 420" fill="none" role="img" aria-label="Illustration d’une pharmacie : façade arrondie, vitrine de produits et porte ouverte">
-      {/* A quiet backdrop keeps the illustration integrated into the page. */}
-      <path d="M45 298C22 239 49 129 126 77C197 29 314 33 382 95C454 161 469 264 417 324C357 395 90 412 45 298Z" fill="#e7dfd0" />
-      <circle cx="377" cy="81" r="27" fill="#ea7015" />
-      <path d="M52 128H79M65 115V141" stroke="#b8ad99" strokeWidth="1.5" strokeLinecap="round" />
-      <ellipse cx="246" cy="351" rx="192" ry="14" fill="#d8cebc" fillOpacity=".6" />
-      <path d="M33 349H449" stroke="#b8ad99" strokeWidth="1.5" strokeLinecap="round" />
+    <svg viewBox="0 0 560 410" fill="none" role="img" aria-label="Parcours animé dans une même pharmacie : implantation de la gamme, formation de l’équipe, puis conseil à une cliente et vente.">
+      <style>{`
+        .tr1-scene { animation: tr1-scene-cycle 12s linear infinite; }
+        .tr1-scene-two { animation-delay: -8s; }
+        .tr1-scene-three { animation-delay: -4s; }
+        .tr1-product { transform-box: fill-box; transform-origin: center bottom; animation: tr1-product-breathe 2.5s ease-in-out infinite; }
+        @keyframes tr1-scene-cycle {
+          0%, 29% { opacity: 1; transform: translateY(0); }
+          33%, 96% { opacity: 0; transform: translateY(5px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes tr1-product-breathe {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-2px); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .tr1-scene, .tr1-product { animation: none; }
+          .tr1-scene-two, .tr1-scene-three { display: none; }
+        }
+      `}</style>
 
-      {/* A slightly offset side wall gives the shop depth without changing style. */}
-      <path d="M328 89L393 113V337L367 349V156C367 126 353 104 328 89Z" fill="#d8cebc" stroke="#0e1d31" strokeWidth="2.2" strokeLinejoin="round" />
-      <path d="M83 339V153C83 111 117 77 159 77H292C334 77 368 111 368 153V339H83Z" fill="#fffdf8" stroke="#0e1d31" strokeWidth="2.2" />
-      <path d="M94 148C97 113 124 88 159 88H291" stroke="#e7dfd0" strokeWidth="2" strokeLinecap="round" />
-      <text x="111" y="136" fill="#0e1d31" fontFamily="Arial, sans-serif" fontSize="19" fontWeight="700" letterSpacing="2">PHARMACIE</text>
-      <path d="M323 111V143M307 127H339" stroke="#ad4b08" strokeWidth="9" strokeLinecap="square" />
-      <path d="M83 161H368" stroke="#0e1d31" strokeWidth="2.2" />
+      {/* Permanent scenery: a soft architectural cutaway, not three separate slides. */}
+      <path d="M51 284C27 209 81 87 187 55C293 22 440 52 493 161C548 273 474 364 343 368C207 372 80 370 51 284Z" fill="#e7dfd0" />
+      <circle cx="484" cy="87" r="24" fill="#ea7015" />
+      <path d="M47 139H77M62 124V154" stroke="#b8ad99" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M47 354H521" stroke="#b8ad99" strokeWidth="1.5" strokeLinecap="round" />
+      <ellipse cx="279" cy="354" rx="213" ry="9" fill="#d8cebc" fillOpacity=".5" />
 
-      {/* A restrained canvas awning frames the display and entrance. */}
-      <path d="M94 166H357L369 191H82L94 166Z" fill="#e7dfd0" stroke="#0e1d31" strokeWidth="1.8" strokeLinejoin="round" />
-      <path d="M106 166H132L126 191H97L106 166ZM163 166H189L187 191H158L163 166ZM220 166H246L249 191H220V166ZM277 166H303L311 191H282L277 166ZM334 166H357L369 191H340L334 166Z" fill="#cf7739" />
-      <path d="M82 191H369V201C362 207 355 207 348 201C341 207 334 207 327 201C320 207 313 207 306 201C299 207 292 207 285 201C278 207 271 207 264 201C257 207 250 207 243 201C236 207 229 207 222 201C215 207 208 207 201 201C194 207 187 207 180 201C173 207 166 207 159 201C152 207 145 207 138 201C131 207 124 207 117 201C110 207 103 207 96 201C91 204 86 204 82 201V191Z" fill="#fffdf8" stroke="#0e1d31" strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="M83 339V137C83 101 111 73 147 73H422C458 73 486 101 486 137V339" fill="#fffdf8" stroke="#0e1d31" strokeWidth="1.9" strokeLinejoin="round" />
+      <path d="M95 143H474" stroke="#0e1d31" strokeWidth="1.7" />
+      <path d="M97 151H472V338H97Z" fill="#f5f1e9" />
+      <path d="M108 151V334M463 151V334" stroke="#c5b9a8" strokeWidth="1.1" />
+      <path d="M96 338H474" stroke="#0e1d31" strokeWidth="2" strokeLinecap="round" />
+      <path d="M103 133C106 105 124 86 153 86H323" stroke="#e3dbcc" strokeWidth="2" strokeLinecap="round" />
+      <text x="125" y="119" fill="#0e1d31" fontFamily="Arial, sans-serif" fontSize="18" fontWeight="700" letterSpacing="2.5">PHARMACIE</text>
+      <path d="M429 98V125M415.5 111.5H442.5" stroke="#ad4b08" strokeWidth="7" strokeLinecap="square" />
 
-      {/* Product silhouettes, varied in form rather than a grid of blocks. */}
-      <rect x="104" y="218" width="139" height="99" rx="3" fill="#eee9df" stroke="#0e1d31" strokeWidth="1.8" />
-      <path d="M113 225H234V307H113V225Z" fill="#f4f0e7" />
-      <path d="M107 263H240M107 302H240" stroke="#b8ad99" strokeWidth="2.5" />
-      <rect x="119" y="240" width="16" height="21" rx="3" fill="#162a45" />
-      <rect x="123" y="235" width="8" height="5" rx="1" fill="#162a45" />
-      <path d="M123 248H131" stroke="#fffdf8" strokeWidth="2" />
-      <rect x="145" y="232" width="20" height="29" rx="1.5" fill="#c2b298" />
-      <path d="M150 241H160M150 245H157" stroke="#fffdf8" strokeWidth="1.5" />
-      <path d="M178 239H193L191 261H180L178 239Z" fill="#cf7739" />
-      <path d="M181 248H190" stroke="#fffdf8" strokeWidth="2" />
-      <rect x="206" y="235" width="21" height="26" rx="2" fill="#fffdf8" stroke="#b8ad99" strokeWidth="1.2" />
-      <path d="M212 243H221M212 247H218" stroke="#b8ad99" strokeWidth="1.5" />
-      <rect x="121" y="281" width="28" height="19" rx="3" fill="#c2b298" />
-      <path d="M121 284H149M129 291H141" stroke="#fffdf8" strokeWidth="1.5" />
-      <rect x="161" y="275" width="19" height="25" rx="2" fill="#cf7739" />
-      <path d="M166 283H175M166 287H172" stroke="#fffdf8" strokeWidth="1.5" />
-      <rect x="194" y="279" width="12" height="21" rx="3" fill="#162a45" />
-      <rect x="197" y="274" width="6" height="5" rx="1" fill="#162a45" />
-      <rect x="213" y="279" width="12" height="21" rx="3" fill="#162a45" />
-      <rect x="216" y="274" width="6" height="5" rx="1" fill="#162a45" />
-      <path d="M113 233L125 222M117 239L134 222" stroke="#fffdf8" strokeWidth="2.5" strokeLinecap="round" />
-      <path d="M100 321H247" stroke="#0e1d31" strokeWidth="2.2" strokeLinecap="round" />
+      {/* Back shelves remain identical through every part of the sequence. */}
+      <rect x="326" y="169" width="116" height="107" rx="2" fill="#fffdf8" stroke="#c5b9a8" strokeWidth="1.4" />
+      <path d="M334 204H434M334 240H434" stroke="#b8ad99" strokeWidth="1.8" />
+      <rect x="338" y="182" width="15" height="22" rx="2" fill="#c2b298" />
+      <rect x="360" y="187" width="12" height="17" rx="2" fill="#cf7739" />
+      <rect x="379" y="179" width="17" height="25" rx="2" fill="#162a45" />
+      <rect x="403" y="184" width="14" height="20" rx="2" fill="#ddd4c3" />
+      <path d="M342 189H350M363 194H369M383 187H391M406 192H414" stroke="#fffdf8" strokeWidth="1.4" />
+      <rect x="341" y="214" width="16" height="26" rx="2" fill="#fffdf8" stroke="#c2b298" strokeWidth="1" />
+      <rect x="365" y="220" width="19" height="20" rx="2" fill="#cf7739" />
+      <rect x="393" y="214" width="12" height="26" rx="3" fill="#162a45" />
+      <rect x="410" y="219" width="17" height="21" rx="2" fill="#c2b298" />
+      <path d="M345 224H353M369 228H379M413 227H423" stroke="#fffdf8" strokeWidth="1.4" />
+      <path d="M108 300H141M124.5 300V269M124 283L111 274M124 281L136 270" stroke="#0e1d31" strokeWidth="1.4" strokeLinecap="round" />
+      <path d="M123 280C111 274 110 260 116 254C125 260 129 271 123 280ZM127 291C128 275 139 271 147 274C147 284 137 291 127 291Z" fill="#c2b298" />
+      <path d="M109 301H141L137 328H113L109 301Z" fill="#cf7739" stroke="#0e1d31" strokeWidth="1.4" />
 
-      {/* The open door provides a welcoming, readable focal point. */}
-      <path d="M267 339V220H345V339" fill="#ddd4c3" stroke="#0e1d31" strokeWidth="2" />
-      <path d="M277 230H335V293H277Z" fill="#eee9df" />
-      <path d="M282 248H330M282 268H330" stroke="#c2b298" strokeWidth="2" />
-      <path d="M287 238H294V247H287ZM302 234H311V247H302ZM318 240H325V247H318Z" fill="#b8ad99" />
-      <path d="M278 285H338V314H278V285Z" fill="#fffdf8" stroke="#b8ad99" strokeWidth="1.5" />
-      <path d="M307 293V305M301 299H313" stroke="#ad4b08" strokeWidth="3" />
-      <path d="M267 220L300 233V350L267 339V220Z" fill="#fffdf8" stroke="#0e1d31" strokeWidth="2" strokeLinejoin="round" />
-      <path d="M275 233L292 240V292L275 286V233Z" fill="#e7dfd0" stroke="#b8ad99" strokeWidth="1.2" />
-      <path d="M291 303V316" stroke="#ad4b08" strokeWidth="3" strokeLinecap="round" />
-      <path d="M303 339H351L358 349H304" fill="#fffdf8" stroke="#0e1d31" strokeWidth="1.8" strokeLinejoin="round" />
-      <path d="M83 332H257M83 339H257" stroke="#b8ad99" strokeWidth="1.2" />
+      {/* 01 · Sell-in: the TR1 representative presents the range to a pharmacist. */}
+      <g className="tr1-scene">
+        <path d="M159 236L152 262L143 294M189 236L199 270L208 291" stroke="#0e1d31" strokeWidth="2" strokeLinecap="round" />
+        <path d="M160 231Q175 218 190 231L196 303H153L160 231Z" fill="#162a45" stroke="#0e1d31" strokeWidth="1.6" />
+        <path d="M171 232L175 249L181 231" fill="#fffdf8" stroke="#0e1d31" strokeWidth="1.1" />
+        <path d="M174 248V286" stroke="#c2b298" strokeWidth="1.4" />
+        <path d="M191 241L223 260L250 257" stroke="#0e1d31" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M191 241L223 260L250 257" stroke="#162a45" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx="175" cy="208" r="19" fill="#e4ba94" stroke="#0e1d31" strokeWidth="1.5" />
+        <path d="M157 209C153 189 164 182 175 182C189 182 197 194 193 207C184 202 176 196 163 200Z" fill="#162a45" />
+        <path d="M121 277H144V309H121Z" fill="#c2b298" stroke="#0e1d31" strokeWidth="1.4" />
+        <path d="M127 277V270H138V277" stroke="#0e1d31" strokeWidth="1.4" />
+        <circle cx="285" cy="207" r="19" fill="#e4ba94" stroke="#0e1d31" strokeWidth="1.5" />
+        <path d="M267 206C265 187 276 184 285 184C296 184 302 193 303 207" fill="#5b4a3e" />
+        <path d="M269 235Q285 225 302 235L308 310H262L269 235Z" fill="#fffdf8" stroke="#0e1d31" strokeWidth="1.5" />
+        <path d="M283 235V306M269 244L280 260L285 247M301 244L290 260" stroke="#b8ad99" strokeWidth="1.4" />
+        <path d="M270 246L257 263" stroke="#fffdf8" strokeWidth="9" strokeLinecap="round" />
+        <path d="M270 246L257 263" stroke="#0e1d31" strokeWidth="1.4" strokeLinecap="round" />
+        <circle cx="255" cy="263" r="4" fill="#e4ba94" />
+        <text x="282" y="377" textAnchor="middle" fontFamily="Arial, sans-serif" fontSize="13" fontWeight="700" letterSpacing="1.3" fill="#ad4b08">01  /  IMPLANTER LA GAMME</text>
+      </g>
 
-      {/* One small living detail balances the architecture. */}
-      <path d="M59 319V282M59 304L47 294M59 297L70 285" stroke="#0e1d31" strokeWidth="1.6" strokeLinecap="round" />
-      <path d="M59 292C46 286 48 274 53 270C61 275 64 283 59 292Z" fill="#b8ad99" />
-      <path d="M61 301C60 287 71 279 79 281C79 292 72 300 61 301Z" fill="#c2b298" />
-      <path d="M55 310C43 308 36 298 39 290C50 292 56 300 55 310Z" fill="#b8ad99" />
-      <path d="M43 318H75L71 345H47L43 318Z" fill="#cf7739" stroke="#0e1d31" strokeWidth="1.5" strokeLinejoin="round" />
-      <path d="M48 323H70" stroke="#fffdf8" strokeOpacity=".5" strokeWidth="1.5" />
-      <path d="M110 373H207M274 373H371" stroke="#b8ad99" strokeWidth="1.2" strokeLinecap="round" />
-      <circle cx="229" cy="373" r="3" fill="#0e1d31" /><circle cx="241" cy="373" r="3" fill="#ea7015" /><circle cx="253" cy="373" r="3" fill="#0e1d31" />
+      {/* 02 · Same shop, now the representative trains the pharmacy team. */}
+      <g className="tr1-scene tr1-scene-two">
+        <circle cx="164" cy="212" r="18" fill="#e4ba94" stroke="#0e1d31" strokeWidth="1.5" />
+        <path d="M146 211C145 194 153 187 166 188C177 188 183 199 182 212" fill="#162a45" />
+        <path d="M147 238Q162 228 181 239L187 308H141L147 238Z" fill="#162a45" stroke="#0e1d31" strokeWidth="1.5" />
+        <path d="M158 240L163 251L170 240" fill="#fffdf8" />
+        <path d="M181 248L219 230L238 231" stroke="#162a45" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx="238" cy="231" r="4.4" fill="#e4ba94" />
+        <path d="M220 233V283M205 251H241" stroke="#ad4b08" strokeWidth="1.5" strokeLinecap="round" />
+        <rect x="215" y="237" width="30" height="42" rx="2" fill="#fffdf8" stroke="#0e1d31" strokeWidth="1.2" />
+        <path d="M221 246H239M221 253H236M221 260H234" stroke="#c2b298" strokeWidth="2" strokeLinecap="round" />
+        <rect x="225" y="266" width="11" height="9" rx="1" fill="#cf7739" />
+        <circle cx="285" cy="207" r="19" fill="#e4ba94" stroke="#0e1d31" strokeWidth="1.4" />
+        <path d="M267 205C267 189 277 184 287 185C296 186 304 197 303 207" fill="#5b4a3e" />
+        <path d="M267 235Q285 226 303 236L309 310H261L267 235Z" fill="#fffdf8" stroke="#0e1d31" strokeWidth="1.5" />
+        <path d="M284 239V303" stroke="#b8ad99" strokeWidth="1.3" />
+        <circle cx="375" cy="210" r="18" fill="#cfaa83" stroke="#0e1d31" strokeWidth="1.4" />
+        <path d="M358 209C359 191 372 184 386 195L390 208C377 204 370 203 358 209Z" fill="#162a45" />
+        <path d="M358 235Q376 227 391 239L398 307H352L358 235Z" fill="#fffdf8" stroke="#0e1d31" strokeWidth="1.5" />
+        <path d="M372 241V305" stroke="#b8ad99" strokeWidth="1.3" />
+        <text x="282" y="377" textAnchor="middle" fontFamily="Arial, sans-serif" fontSize="13" fontWeight="700" letterSpacing="1.2" fill="#ad4b08">02  /  FORMER &amp; ANIMER</text>
+      </g>
+
+      {/* 03 · The pharmacist recommends the same orange product to a customer. */}
+      <g className="tr1-scene tr1-scene-three">
+        <circle cx="177" cy="212" r="19" fill="#e4ba94" stroke="#0e1d31" strokeWidth="1.4" />
+        <path d="M158 211C157 193 167 188 178 189C193 191 196 202 194 214L187 207L169 202Z" fill="#5b4a3e" />
+        <path d="M159 240Q175 230 192 240L198 307H153L159 240Z" fill="#c2b298" stroke="#0e1d31" strokeWidth="1.5" />
+        <path d="M191 247L226 270L247 260" stroke="#c2b298" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx="249" cy="260" r="4.5" fill="#e4ba94" />
+        <path d="M145 276L129 301L144 314H162L174 303L160 285" fill="#fffdf8" stroke="#0e1d31" strokeWidth="1.4" strokeLinejoin="round" />
+        <path d="M147 290Q152 280 160 290" stroke="#0e1d31" strokeWidth="1.4" />
+        <circle cx="286" cy="207" r="19" fill="#e4ba94" stroke="#0e1d31" strokeWidth="1.4" />
+        <path d="M267 208C267 189 278 184 289 185C301 187 304 196 304 208" fill="#5b4a3e" />
+        <path d="M269 234Q285 226 303 237L309 309H262L269 234Z" fill="#fffdf8" stroke="#0e1d31" strokeWidth="1.5" />
+        <path d="M283 237V306M266 244L283 258L300 244" stroke="#b8ad99" strokeWidth="1.3" />
+        <path d="M269 247L253 258" stroke="#fffdf8" strokeWidth="9" strokeLinecap="round" />
+        <path d="M269 247L253 258" stroke="#0e1d31" strokeWidth="1.4" strokeLinecap="round" />
+        <path d="M258 250L254 259" stroke="#e4ba94" strokeWidth="4" strokeLinecap="round" />
+        <path d="M234 222L238 214M248 225L258 223M241 234L247 242" stroke="#ad4b08" strokeWidth="1.7" strokeLinecap="round" />
+        <text x="282" y="377" textAnchor="middle" fontFamily="Arial, sans-serif" fontSize="13" fontWeight="700" letterSpacing="1.1" fill="#ad4b08">03  /  DÉVELOPPER LES VENTES</text>
+      </g>
+
+      {/* A single orange pack persists at exactly the same location across stages. */}
+      <g className="tr1-product">
+        <rect x="246" y="268" width="24" height="31" rx="2" fill="#cf7739" stroke="#0e1d31" strokeWidth="1.3" />
+        <path d="M251 277H265M252 282H263M254 288H261" stroke="#fffdf8" strokeWidth="1.7" strokeLinecap="round" />
+      </g>
+      {/* The counter is foreground furniture, not a separate scene. */}
+      <path d="M234 300H448V337H234Z" fill="#fffdf8" stroke="#0e1d31" strokeWidth="1.7" />
+      <path d="M234 300H448M246 312H436" stroke="#b8ad99" strokeWidth="1.2" />
+      <path d="M244 337V346M438 337V346" stroke="#0e1d31" strokeWidth="1.7" />
     </svg>
   );
 }
