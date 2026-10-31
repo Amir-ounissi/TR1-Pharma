@@ -8,8 +8,8 @@ export function PharmacyIllustration() {
         .tr1-scene-three { animation-delay: -4s; }
         .tr1-product { transform-box: fill-box; transform-origin: center bottom; animation: tr1-product-breathe 2.5s ease-in-out infinite; }
         @keyframes tr1-scene-cycle {
-          0%, 29% { opacity: 1; transform: translateY(0); }
-          33%, 96% { opacity: 0; transform: translateY(5px); }
+          0%, 28% { opacity: 1; transform: translateY(0); }
+          31%, 98% { opacity: 0; transform: translateY(5px); }
           100% { opacity: 1; transform: translateY(0); }
         }
         @keyframes tr1-product-breathe {
