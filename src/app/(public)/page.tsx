@@ -122,6 +122,24 @@ export default function LandingPage() {
           </figure>
         </div>
       </section>
+      <section id="reseau" className={styles.network} aria-labelledby="network-title">
+        <div className={styles.container}>
+          <div className={styles.sectionIntro}>
+            <div><p className={styles.eyebrow}>LE RÉSEAU TR1 PHARMA</p><h2 id="network-title">Des expertises complémentaires.<br/><span>Une même exigence terrain.</span></h2></div>
+            <p>Agents commerciaux, formateurs et animateurs : TR1 PHARMA coordonne les compétences nécessaires pour accompagner les marques et les pharmacies, de l’implantation au conseil et à la vente.</p>
+          </div>
+          <div className={styles.networkRoles}>
+            <article><p className={styles.networkLabel}>DÉVELOPPER</p><h3>Les agents commerciaux</h3><p>Présenter les gammes, ouvrir les comptes et entretenir la relation avec l’officine. Un suivi commercial pour faire le lien entre les besoins du point de vente et les marques représentées.</p></article>
+            <article><p className={styles.networkLabel}>TRANSMETTRE</p><h3>Les formateurs</h3><p>Donner aux équipes les connaissances produit et les arguments utiles au conseil. Des échanges concrets, adaptés aux questions rencontrées au comptoir.</p></article>
+            <article><p className={styles.networkLabel}>ACTIVER</p><h3>Les animateurs</h3><p>Faire découvrir les produits aux clients, accompagner leur prise en main et soutenir les temps forts en officine. Une présence au contact des consommateurs.</p></article>
+          </div>
+          <div className={styles.networkAudiences}>
+            <div><h3>Pour les marques</h3><p>Des relais terrain coordonnés pour déployer votre gamme, accompagner les équipes et faire remonter les retours des points de vente.</p><MarketingTrackedLink event="primary_cta_click" href="#contact-marque" properties={{ placement: "network_brand" }} className={styles.textCta}>Mobiliser le réseau pour ma marque <ArrowUpRight size={18} aria-hidden="true"/></MarketingTrackedLink></div>
+            <div><h3>Pour les pharmacies</h3><p>Des compétences complémentaires autour de votre officine, avec des interventions organisées selon vos besoins et les marques travaillées.</p><MarketingTrackedLink event="primary_cta_click" href="#contact-pharmacie" properties={{ placement: "network_pharmacy" }} className={styles.textCta}>Être accompagné dans mon officine <ArrowUpRight size={18} aria-hidden="true"/></MarketingTrackedLink></div>
+          </div>
+          <p className={styles.networkNote}>Interventions organisées selon le secteur, les besoins et la disponibilité des intervenants. Présence actuelle : PACA, Gard et Hérault.</p>
+        </div>
+      </section>
       <section id="amir" className={styles.founder} aria-labelledby="founder-title">
         <div className={`${styles.container} ${styles.founderGrid}`}>
           <div><p className={styles.eyebrow}>Une relation directe</p><h2 id="founder-title">Amir Ounissi,<br/><span>votre interlocuteur terrain.</span></h2></div>
@@ -133,9 +151,38 @@ export default function LandingPage() {
         </div>
       </section>
       <section id="pharmacies" className={styles.pharmacies} aria-labelledby="pharmacy-title">
-        <div className={`${styles.container} ${styles.pharmacyGrid}`}>
-          <div><p className={styles.eyebrow}>Vous êtes pharmacien ?</p><h2 id="pharmacy-title">Des gammes pour votre officine.<br/><span>Un interlocuteur à vos côtés.</span></h2></div>
-          <div><p className={styles.bodyCopy}>Découvrez les marques que nous représentons et échangeons sur leur place dans votre officine : présentation des produits, formation de l’équipe, visibilité et suivi des réassorts.</p><MarketingTrackedLink event="primary_cta_click" href="#contact-pharmacie" properties={{ placement: "pharmacy_section" }} className={styles.pharmacyCta}>Échanger pour mon officine <ArrowUpRight size={18} aria-hidden="true"/></MarketingTrackedLink></div>
+        <div className={styles.container}>
+          <div className={styles.pharmacyGrid}>
+            <div>
+              <p className={styles.eyebrow}>PHARMACIES · VOTRE PARTENAIRE DANS LE SUD-EST</p>
+              <h2 id="pharmacy-title">Des marques à potentiel.<br/><span>Un partenaire pour les faire tourner.</span></h2>
+            </div>
+            <div>
+              <p className={styles.bodyCopy}>Des gammes adaptées à votre clientèle, une équipe accompagnée et un suivi dans la durée. Avec TR1 PHARMA, construisez une sélection cohérente pour votre officine et faites-la vivre, du rayon au comptoir.</p>
+              <MarketingTrackedLink event="primary_cta_click" href="#contact-pharmacie" properties={{ placement: "pharmacy_section" }} className={styles.pharmacyCta}>Échanger pour mon officine <ArrowUpRight size={18} aria-hidden="true"/></MarketingTrackedLink>
+            </div>
+          </div>
+          <div className={styles.pharmacyBenefits}>
+            <article><p className={styles.pharmacyStep}>01 · SÉLECTIONNER</p><h3>Des gammes qui ont leur place chez vous.</h3><p>Nous échangeons sur votre clientèle, vos besoins et votre espace de vente pour choisir les marques et les références pertinentes pour votre officine.</p></article>
+            <article><p className={styles.pharmacyStep}>02 · FAIRE VIVRE</p><h3>Un accompagnement après l’implantation.</h3><p>Formation de l’équipe, mise en avant et animations : nous définissons les actions adaptées pour faciliter le conseil et soutenir les ventes.</p></article>
+            <article><p className={styles.pharmacyStep}>03 · SUIVRE</p><h3>Un interlocuteur qui revient.</h3><p>Des points réguliers sur les rotations, les stocks et les retours de votre équipe pour ajuster les actions et préparer les réassorts selon vos besoins.</p></article>
+          </div>
+          <aside className={styles.partnerProgram} aria-labelledby="partner-program-title">
+            <div>
+              <p className={styles.eyebrow}>LE PROGRAMME TR1 PARTENAIRES</p>
+              <h3 id="partner-program-title">Plusieurs marques.<br/>Une relation qui vous apporte plus.</h3>
+              <p>Votre engagement ouvre l’accès à des avantages progressifs, selon les marques partenaires travaillées, la régularité des réassorts et les actions mises en place ensemble.</p>
+              <MarketingTrackedLink event="primary_cta_click" href="#contact-pharmacie" properties={{ placement: "pharmacy_partner_program" }} className={styles.pharmacyCta}>Découvrir les avantages pour mon officine <ArrowUpRight size={18} aria-hidden="true"/></MarketingTrackedLink>
+            </div>
+            <div>
+              <ul className={styles.partnerAdvantages}>
+                <li><strong>Des bonus produits</strong><span>Dotations et offres partenaires selon les marques participantes.</span></li>
+                <li><strong>Des moyens pour gagner en visibilité</strong><span>Supports de mise en avant et opérations commerciales adaptées.</span></li>
+                <li><strong>Des actions pour accompagner votre équipe</strong><span>Formations et animations supplémentaires selon les conditions du programme.</span></li>
+              </ul>
+              <p className={styles.partnerTerms}>Avantages soumis aux conditions du programme et des marques participantes, précisés lors de notre échange. Les actions sont définies ensemble selon les besoins de l’officine.</p>
+            </div>
+          </aside>
         </div>
       </section>
       <section id="contact" className={styles.contact} aria-labelledby="contact-title">
@@ -149,7 +196,7 @@ export default function LandingPage() {
             </article>
             <details id="contact-pharmacie" className={styles.pharmacyContact}><summary>Vous représentez une pharmacie ? Contactez-nous <ArrowRight size={17} aria-hidden="true" /></summary><div className={styles.pharmacyContactBody}>
               <p className={styles.contactAudience}>Pharmacie</p><h3>Parlons de votre officine.</h3>
-              <p className={styles.cardDescription}>Présentez-nous votre officine et les besoins de votre équipe.</p>
+              <p className={styles.cardDescription}>Échangeons sur les marques adaptées à votre officine, l’accompagnement de votre équipe et les avantages TR1 Partenaires.</p>
               <LeadForm audience="pharmacy" />
             </div></details>
           </div>

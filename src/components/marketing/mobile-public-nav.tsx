@@ -25,6 +25,7 @@ export function MobilePublicNav() {
       <nav aria-label="Navigation mobile" className="absolute right-0 top-[calc(100%+.75rem)] z-50 grid w-[min(78vw,290px)] gap-1 rounded-md border border-[var(--tr1-line)] bg-[var(--tr1-ivory)] p-2 text-sm text-[var(--tr1-navy)] shadow-xl">
         <Link className="rounded-sm px-4 py-3 transition hover:bg-[var(--tr1-ivory-deep)]" href="/#marques">Accompagnement marques</Link>
         <Link className="rounded-sm px-4 py-3 transition hover:bg-[var(--tr1-ivory-deep)]" href="/#terrain">Suivi terrain</Link>
+        <Link className="rounded-sm px-4 py-3 transition hover:bg-[var(--tr1-ivory-deep)]" href="/#reseau">Le réseau TR1</Link>
         <Link className="rounded-sm px-4 py-3 transition hover:bg-[var(--tr1-ivory-deep)]" href="/#pharmacies">Pharmacies</Link>
         <Link className="rounded-sm px-4 py-3 transition hover:bg-[var(--tr1-ivory-deep)]" href="/connexion">Connexion</Link>
       </nav>

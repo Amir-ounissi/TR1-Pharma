@@ -14,10 +14,11 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
             <Tr1BrandLogo className="block h-[58px] w-[96px] shrink-0" />
           </Link>
           <div className="ml-0 hidden h-8 w-px bg-[var(--tr1-navy)]/15 lg:ml-2 lg:block" aria-hidden="true" />
-          <p className="hidden max-w-48 text-xs leading-5 text-[#515d6b] xl:block">Votre marque en pharmacie<br/>et parapharmacie</p>
-          <nav aria-label="Navigation principale" className="ml-auto hidden items-center gap-8 text-[13px] font-semibold text-[var(--tr1-navy)] lg:flex">
+          <p className="hidden max-w-40 text-xs leading-5 text-[#515d6b] 2xl:block">Votre marque en pharmacie<br/>et parapharmacie</p>
+          <nav aria-label="Navigation principale" className="ml-auto hidden items-center gap-5 text-[13px] font-semibold text-[var(--tr1-navy)] lg:flex">
             <Link className="py-3 transition hover:text-[var(--tr1-orange)]" href="/#marques">Accompagnement marques</Link>
             <Link className="py-3 transition hover:text-[var(--tr1-orange)]" href="/#terrain">Suivi terrain</Link>
+            <Link className="py-3 transition hover:text-[var(--tr1-orange)]" href="/#reseau">Le réseau TR1</Link>
             <Link className="py-3 transition hover:text-[var(--tr1-orange)]" href="/#pharmacies">Pharmacies</Link>
           </nav>
           <MarketingTrackedLink className="ml-auto inline-flex min-h-11 items-center gap-2 rounded-[5px] bg-[var(--tr1-orange)] px-3 text-xs font-bold text-[var(--tr1-navy)] transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--tr1-orange)] sm:gap-3 sm:px-4 lg:ml-3" event="primary_cta_click" href="/#contact-marque" properties={{ placement: "header" }}>
