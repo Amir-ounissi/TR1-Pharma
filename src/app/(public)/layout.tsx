@@ -14,14 +14,14 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
             <Tr1BrandLogo className="block h-[58px] w-[96px] shrink-0" />
           </Link>
           <div className="ml-0 hidden h-8 w-px bg-[var(--tr1-navy)]/15 lg:ml-2 lg:block" aria-hidden="true" />
-          <p className="hidden max-w-48 text-xs leading-5 text-[#515d6b] xl:block">Développement commercial<br/>en pharmacie</p>
+          <p className="hidden max-w-48 text-xs leading-5 text-[#515d6b] xl:block">Votre marque en pharmacie<br/>et parapharmacie</p>
           <nav aria-label="Navigation principale" className="ml-auto hidden items-center gap-8 text-[13px] font-semibold text-[var(--tr1-navy)] lg:flex">
-            <Link className="py-3 transition hover:text-[var(--tr1-orange)]" href="/#marques">Notre approche</Link>
+            <Link className="py-3 transition hover:text-[var(--tr1-orange)]" href="/#marques">Accompagnement marques</Link>
             <Link className="py-3 transition hover:text-[var(--tr1-orange)]" href="/#terrain">Suivi terrain</Link>
             <Link className="py-3 transition hover:text-[var(--tr1-orange)]" href="/#pharmacies">Pharmacies</Link>
           </nav>
-          <MarketingTrackedLink className="ml-auto inline-flex min-h-11 items-center gap-2 rounded-[5px] bg-[var(--tr1-orange)] px-3 text-xs font-bold text-[var(--tr1-navy)] transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--tr1-orange)] sm:gap-3 sm:px-4 lg:ml-3" event="primary_cta_click" href="/#contact" properties={{ placement: "header" }}>
-            Nous contacter <ArrowUpRight size={16} aria-hidden="true" />
+          <MarketingTrackedLink className="ml-auto inline-flex min-h-11 items-center gap-2 rounded-[5px] bg-[var(--tr1-orange)] px-3 text-xs font-bold text-[var(--tr1-navy)] transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--tr1-orange)] sm:gap-3 sm:px-4 lg:ml-3" event="primary_cta_click" href="/#contact-marque" properties={{ placement: "header" }}>
+            <span className="sm:hidden">Votre marque</span><span className="hidden sm:inline">Parlons de votre marque</span> <ArrowUpRight size={16} aria-hidden="true" />
           </MarketingTrackedLink>
           <MobilePublicNav />
           <Link className="hidden min-h-11 items-center px-1 text-xs text-[#515d6b] transition hover:text-[var(--tr1-navy)] lg:inline-flex" href="/connexion">Connexion</Link>
@@ -32,7 +32,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
         <div className="mx-auto flex max-w-[1260px] flex-col gap-9 md:flex-row md:items-end md:justify-between">
           <div>
             <Tr1BrandLogo className="block h-[58px] w-[96px]" />
-            <p className="mt-4 text-xs leading-6 text-[#515d6b]">Prospection. Implantation. Développement.<br/>PACA · Gard · Hérault</p>
+            <p className="mt-4 text-xs leading-6 text-[#515d6b]">Du sell-in au sell-out.<br/>PACA · Gard · Hérault</p>
           </div>
           <div className="flex flex-wrap gap-x-6 gap-y-3 text-xs text-[#515d6b]">
             <Link className="py-2 transition hover:text-[var(--tr1-orange)]" href="/connexion">Connexion</Link>

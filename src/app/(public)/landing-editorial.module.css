@@ -30,7 +30,7 @@
 .missions { padding-block: 96px; }
 .sectionIntro { display: grid; grid-template-columns: 1.2fr 1fr; align-items: end; gap: 90px; margin-bottom: 58px; }
 .sectionIntro > p, .bodyCopy { color: var(--muted); font-size: 1rem; line-height: 1.85; }
-.serviceGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 36px; }
+.serviceGrid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 36px; }
 .service { display: flex; flex-direction: column; padding-top: 24px; border-top: 1px solid #c8c3b9; }
 .serviceStep { display: flex; align-items: center; gap: 12px; font-size: .95rem; font-weight: 600; }
 .serviceStep span { font-variant-numeric: tabular-nums; color: var(--accent); font-size: .78rem; }
@@ -132,4 +132,20 @@
   .contactCard + .contactCard { padding: 32px 0 0; border-left: 0; border-top: 1px solid #ded9cf; }
   .contactCard h3 { font-size: 1.6rem; }
   .cardDescription { min-height: 0; margin-bottom: 24px !important; }
+}
+
+/* Brand enquiries lead the page; pharmacy enquiries remain available below. */
+.contactGrid { grid-template-columns: minmax(0, 760px); justify-content: center; }
+.contactCard { padding: 36px 0 0; }
+.cardDescription { min-height: 0; }
+.pharmacyContact { margin-top: 40px; padding-top: 24px; border-top: 1px solid #ded9cf; }
+.pharmacyContact summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; cursor: pointer; min-height: 48px; font-size: .9rem; font-weight: 600; }
+.pharmacyContact summary:focus-visible { outline: 3px solid var(--ink); outline-offset: 5px; }
+.pharmacyContact[open] summary svg { transform: rotate(90deg); }
+.pharmacyContactBody { padding-top: 24px; }
+.pharmacyContactBody h3 { font-size: 1.5rem; }
+
+@media (min-width: 821px) {
+  .service { grid-column: span 2; }
+  .service:nth-last-child(-n+2) { grid-column: span 3; }
 }
