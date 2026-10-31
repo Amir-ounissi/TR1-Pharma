@@ -54,10 +54,11 @@ test("landing desktop, parcours marque/pharmacie et capture des leads", async ({
   await expect(page.getByRole("link", { name: "Parlons de votre marque" }).first()).toBeVisible();
   await expect(page.getByRole("link", { name: "Échanger pour mon officine" })).toBeVisible();
   await expect(page.getByRole("heading", { name: /Cinq leviers pour développer votre marque/ })).toBeVisible();
-  await expect(page.getByRole("heading", { name: /Des gammes pour votre officine/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Des marques à potentiel/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Des expertises complémentaires/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: /Amir Ounissi/ })).toBeVisible();
   await expect(page.getByRole("link", { name: "Découvrir mon parcours" })).toHaveAttribute("href", "https://fr.linkedin.com/in/amirounissi");
-  await expect(page.locator("main > section")).toHaveCount(6);
+  await expect(page.locator("main > section")).toHaveCount(7);
   await expect(page.getByRole("img", { name: /commercial présente une gamme de produits/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: /Une vision claire des actions/ })).toBeVisible();
   await expect(page.getByRole("img", { name: /Capture réelle de l’interface/ })).toHaveCount(0);
