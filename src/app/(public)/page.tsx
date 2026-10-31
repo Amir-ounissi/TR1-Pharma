@@ -82,7 +82,7 @@ export default function LandingPage() {
           </div>
           <figure className={styles.heroVisual}>
             <PharmacyIllustration />
-            <figcaption>Votre marque, accompagnée à chaque étape.<span>Ouvrir des comptes · Former · Animer · Suivre · Vous informer</span></figcaption>
+            <figcaption>Votre marque, accompagnée à chaque étape.<span>Implanter · Accompagner · Développer les ventes</span></figcaption>
           </figure>
         </div>
       </section>
