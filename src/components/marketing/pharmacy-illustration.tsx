@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
 import { useEffect, useState } from "react";
 import styles from "./pharmacy-illustration.module.css";
@@ -43,9 +42,14 @@ export function PharmacyIllustration() {
   const [playing, setPlaying] = useState(true);
 
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setPlaying(false);
-    }
+    const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const syncMotion = () => setPlaying(!preference.matches);
+    preference.addEventListener("change", syncMotion);
+    const timer = window.setTimeout(syncMotion, 0);
+    return () => {
+      window.clearTimeout(timer);
+      preference.removeEventListener("change", syncMotion);
+    };
   }, []);
 
   useEffect(() => {
@@ -74,12 +78,13 @@ export function PharmacyIllustration() {
             className={index === active ? `${styles.slide} ${styles.visible}` : styles.slide}
             aria-hidden={index !== active}
           >
-            <Image
+            <img
               src={scene.image}
               alt={scene.alt}
-              fill
-              sizes="(max-width: 820px) 460px, (max-width: 1300px) 45vw, 580px"
-              priority={index === 0}
+              width={1360}
+              height={766}
+              loading="eager"
+              fetchPriority={index === 0 ? "high" : "auto"}
               className={styles.image}
             />
           </div>
