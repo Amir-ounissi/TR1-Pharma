@@ -43,28 +43,28 @@ test("landing respecte la charte TR1 officielle (logo, couleurs et CTA)", async 
   await expect(logoPaths).toHaveCount(2);
   await expect(logoPaths.first()).toHaveAttribute("fill", "#121e31");
   await expect(logoPaths.last()).toHaveAttribute("fill", "#ea6820");
-  await expect(page.getByRole("link", { name: "Découvrir notre accompagnement" })).toHaveCSS("background-color", "rgb(234, 112, 21)");
+  await expect(page.getByRole("link", { name: "Parlons de votre marque" }).first()).toHaveCSS("background-color", "rgb(234, 112, 21)");
   await expect(page.locator("header")).toHaveCSS("background-color", /244, 240, 231/);
 });
 
 
 test("landing desktop, parcours marque/pharmacie et capture des leads", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1, name: /Plus qu’une présence.*un développement durable.*en pharmacie/ })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Découvrir notre accompagnement" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Je suis pharmacien" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: /Pas simplement être présent/ })).toBeVisible();
-  await expect(page.getByRole("heading", { name: /Des marques à découvrir/ })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: /Votre partenaire commercial terrain en pharmacie et parapharmacie/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Parlons de votre marque" }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "Échanger pour mon officine" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Cinq leviers pour développer votre marque/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Des gammes pour votre officine/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: /Amir Ounissi/ })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Voir le travail terrain" })).toHaveAttribute("href", "https://fr.linkedin.com/in/amirounissi");
-  await expect(page.locator("main > section")).toHaveCount(5);
-  await expect(page.getByRole("group", { name: /Illustration du parcours commercial en pharmacie/ })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Suivi terrain" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Découvrir mon parcours" })).toHaveAttribute("href", "https://fr.linkedin.com/in/amirounissi");
+  await expect(page.locator("main > section")).toHaveCount(6);
+  await expect(page.getByRole("img", { name: /commercial présente une gamme de produits/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Une vision claire des actions/ })).toBeVisible();
   await expect(page.getByRole("img", { name: /Capture réelle de l’interface/ })).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Ouvrir les bonnes portes." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Développons votre marque." })).toBeVisible();
   await page.screenshot({ path: `${artifacts}/landing-desktop.png`, fullPage: true });
 
-  await page.getByRole("link", { name: "Nous contacter" }).first().click();
+  await page.getByRole("link", { name: "Parlons de votre marque" }).first().click();
   await expect(page.locator("#contact")).toBeInViewport();
 
   const brandForm = page.locator("#contact-marque");
@@ -72,41 +72,48 @@ test("landing desktop, parcours marque/pharmacie et capture des leads", async ({
   await brandForm.getByLabel("Nom et prénom").fill("Marie Martin");
   await brandForm.getByLabel("Email professionnel").fill(leadEmail.toUpperCase());
   await brandForm.getByLabel("Marque ou laboratoire").fill("Nova Santé");
-  await brandForm.getByRole("button", { name: "Parler de mon développement" }).click();
+  await expect(brandForm.getByLabel("Site web")).not.toHaveAttribute("required");
+  await brandForm.getByLabel("Site web").fill("https://nova-sante.test");
+  await brandForm.getByLabel("Votre besoin").fill("Développer notre distribution");
+  await brandForm.getByRole("button", { name: "Échanger sur mon développement" }).click();
   await expect(page).toHaveURL(/\/merci$/);
   await expect(page.getByRole("heading", { name: "Votre demande a bien été envoyée." })).toBeVisible();
 
   await page.goto("/");
+  await page.getByText("Vous représentez une pharmacie ? Contactez-nous").click();
   const pharmacyForm = page.locator("#contact-pharmacie");
   await pharmacyForm.getByLabel("Nom et prénom").fill("Claire Dupont");
   await pharmacyForm.getByLabel("Email professionnel").fill(pharmacyLeadEmail.toUpperCase());
   await pharmacyForm.getByLabel("Nom de la pharmacie").fill("Pharmacie du Centre");
+  await pharmacyForm.getByLabel("Ville ou code postal").fill("13800");
+  await pharmacyForm.getByLabel("Votre besoin").fill("Former notre équipe");
   await pharmacyForm.getByRole("button", { name: "Être recontacté" }).click();
   await expect(page).toHaveURL(/\/merci$/);
   await page.screenshot({ path: `${artifacts}/thank-you-desktop.png`, fullPage: true });
 
   const { data: leads, error } = await adminClient()
     .from("commercial_leads")
-    .select("professional_email,status,source")
+    .select("professional_email,status,source,internal_notes")
     .in("professional_email", [leadEmail, pharmacyLeadEmail])
     .order("professional_email");
   expect(error).toBeNull();
   expect(leads).toEqual([
-    { professional_email: pharmacyLeadEmail, status: "new", source: "website_pharmacy" },
-    { professional_email: leadEmail, status: "new", source: "website_brand" },
+    { professional_email: pharmacyLeadEmail, status: "new", source: "website_pharmacy", internal_notes: "Demande via le site\nVille ou code postal : 13800\nBesoin exprimé : Former notre équipe" },
+    { professional_email: leadEmail, status: "new", source: "website_brand", internal_notes: "Demande via le site\nSite web : https://nova-sante.test\nBesoin exprimé : Développer notre distribution" },
   ]);
 });
 test("landing mobile reste lisible et sans débordement", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1, name: /Plus qu’une présence.*un développement durable.*en pharmacie/ })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Découvrir notre accompagnement" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Je suis pharmacien" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: /Votre partenaire commercial terrain en pharmacie et parapharmacie/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Parlons de votre marque" }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "Échanger pour mon officine" })).toBeVisible();
   await expect(page.getByRole("heading", { name: /Amir Ounissi/ })).toBeVisible();
   await expect(page.locator("#contact-marque")).toBeVisible();
-  await expect(page.getByRole("group", { name: /Illustration du parcours commercial en pharmacie/ })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Suivi terrain" })).toBeVisible();
+  await expect(page.getByRole("img", { name: /commercial présente une gamme de produits/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Une vision claire des actions/ })).toBeVisible();
   await expect(page.getByRole("img", { name: /Capture réelle de l’interface/ })).toHaveCount(0);
+  await page.getByText("Vous représentez une pharmacie ? Contactez-nous").click();
   await expect(page.locator("#contact-pharmacie")).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
   await page.screenshot({ path: `${artifacts}/landing-mobile.png`, fullPage: true });

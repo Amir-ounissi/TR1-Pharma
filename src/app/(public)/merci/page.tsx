@@ -10,7 +10,7 @@ export default function ThankYouPage() {
       <div>
         <p className="font-mono text-xs font-bold uppercase tracking-[.16em] text-[#c9562d]">Demande reçue</p>
         <h1 className="mt-4 text-4xl font-black tracking-[-.035em] sm:text-5xl">Votre demande a bien été envoyée.</h1>
-        <p className="mx-auto mt-6 max-w-xl text-lg leading-8 text-[#596574]">Nous vous recontacterons pour convenir d’un créneau de démonstration.</p>
+        <p className="mx-auto mt-6 max-w-xl text-lg leading-8 text-[#596574]">Merci pour votre message. Nous vous recontacterons pour échanger sur vos besoins en pharmacie.</p>
         {bookingUrl ? (
           <MarketingTrackedLink className="mt-8 inline-flex rounded-md bg-[#0f2740] px-5 py-3 font-mono text-xs font-black uppercase text-white" event="booking_click" href={bookingUrl}>Choisir un créneau</MarketingTrackedLink>
         ) : null}

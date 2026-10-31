@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canTransitionLead, leadCaptureSchema, leadDeduplicationScope, normalizeLeadInput, pilotPreparationSchema } from "./leads";
+import { canTransitionLead, formatLeadRequest, leadCaptureSchema, leadDeduplicationScope, normalizeLeadInput, pilotPreparationSchema } from "./leads";
 
 describe("marketing leads", () => {
   it("validates and normalizes public submissions", () => {
@@ -15,6 +15,21 @@ describe("marketing leads", () => {
     expect(canTransitionLead("new", "qualified")).toBe(true);
     expect(canTransitionLead("qualified", "new")).toBe(false);
     expect(canTransitionLead("won", "archived")).toBe(true);
+  });
+
+  it("separates the optional public website from the honeypot", () => {
+    const base = { fullName: "Marie Martin", professionalEmail: "marie@example.com", companyName: "Nova Santé" };
+    expect(leadCaptureSchema.safeParse({ ...base, websiteUrl: "https://example.com", website: "" }).success).toBe(true);
+    expect(leadCaptureSchema.safeParse({ ...base, websiteUrl: "" }).success).toBe(true);
+    expect(leadCaptureSchema.safeParse({ ...base, website: "spam" }).success).toBe(false);
+    expect(leadCaptureSchema.safeParse({ ...base, websiteUrl: "javascript:alert(1)" }).success).toBe(false);
+  });
+
+  it("requires a location only for pharmacies and keeps request details", () => {
+    const base = { leadAudience: "pharmacy", fullName: "Marie Martin", professionalEmail: "marie@example.com", companyName: "Officine Exemple", need: "Former notre équipe" };
+    expect(leadCaptureSchema.safeParse(base).success).toBe(false);
+    const parsed = leadCaptureSchema.parse({ ...base, location: "  Istres  " });
+    expect(formatLeadRequest(parsed)).toBe("Ville ou code postal : Istres\nBesoin exprimé : Former notre équipe");
   });
 
   it("builds a stable daily idempotence scope", () => {

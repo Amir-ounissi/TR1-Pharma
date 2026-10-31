@@ -1,0 +1,6 @@
+.section { width: min(100% - 80px, 1260px); margin-inline: auto; padding-bottom: 80px; }
+.section h2 { margin-bottom: 28px; }
+.section article { padding-block: 25px; border-top: 1px solid #c8c3b9; }
+.section h3 { margin-block: 12px; font-size: 1.5rem; }
+.section p { max-width: 72ch; color: #515d6b; line-height: 1.8; }
+@media(max-width: 600px) { .section { width: calc(100% - 40px); padding-bottom: 52px; } }
