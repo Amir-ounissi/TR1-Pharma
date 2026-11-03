@@ -7,8 +7,8 @@ import { MarketingPageEvent, MarketingTrackedLink } from "@/components/marketing
 import { RecoveryHashRedirect } from "@/components/auth/recovery-hash-redirect";
 import styles from "./landing-editorial.module.css";
 
-const pageTitle = "TR1 PHARMA — Votre marque en pharmacie et parapharmacie";
-const pageDescription = "Développez votre marque en pharmacie et parapharmacie, du sell-in au sell-out : prospection, implantation, formation des équipes et animations. TR1 PHARMA accompagne les marques en PACA, dans le Gard et l’Hérault.";
+const pageTitle = "TR1 PHARMA — Développement commercial en pharmacie";
+const pageDescription = "TR1 PHARMA accompagne les marques de santé, beauté et bien-être en pharmacie et parapharmacie, du sell-in au sell-out : ouverture de comptes, formation, animation et suivi terrain.";
 const publicUrl = "https://www.tr1pharma.com/";
 
 export const metadata: Metadata = {
@@ -35,29 +35,29 @@ const businessStructuredData = {
 
 const services = [
   {
-    number: "01", label: "SELL-IN", title: "Ouvertures de comptes",
-    description: "Cibler les pharmacies et parapharmacies adaptées à votre gamme, rencontrer les acheteurs et négocier les premières commandes pour développer votre distribution.",
-    tags: "Prospection · Présentation de gamme · Implantation",
+    number: "01", label: "SELL-IN", title: "Ouvrir les bons comptes",
+    description: "Identifier les pharmacies et parapharmacies pertinentes pour votre gamme, rencontrer les décideurs et transformer les opportunités en premières implantations.",
+    tags: "Ciblage · Prospection · Négociation · Implantation",
   },
   {
-    number: "02", label: "FORMATION", title: "Donner aux équipes les clés du conseil.",
-    description: "Former les équipes à vos produits, à leurs bénéfices et à leurs arguments de conseil pour qu’elles puissent recommander votre gamme au comptoir.",
-    tags: "Connaissance produit · Arguments de conseil · Équipes",
+    number: "02", label: "FORMATION", title: "Donner aux équipes les bons arguments",
+    description: "Transmettre les connaissances produit, les bénéfices et les arguments utiles pour que les équipes puissent présenter et conseiller vos références.",
+    tags: "Connaissance produit · Conseil · Équipes officinales",
   },
   {
-    number: "03", label: "ANIMATION", title: "Faire vivre votre marque en point de vente.",
-    description: "Organiser et coordonner des animations commerciales pour faire découvrir vos produits aux consommateurs et soutenir les ventes en pharmacie et parapharmacie.",
-    tags: "Découverte produit · Mise en avant · Sell-out",
+    number: "03", label: "ANIMATION", title: "Créer des temps forts en officine",
+    description: "Organiser des animations et des mises en avant pour faire découvrir vos produits, engager les équipes et soutenir l’activité commerciale.",
+    tags: "Découverte produit · Visibilité · Sell-out",
   },
   {
-    number: "04", label: "SUIVI DE LA PERFORMANCE", title: "Suivre les résultats et ajuster les actions.",
-    description: "Faire le point sur les commandes, les réassorts et les ventes selon les données disponibles. Identifier les comptes à développer et prioriser les prochaines actions avec votre marque.",
+    number: "04", label: "PERFORMANCE", title: "Suivre la distribution et les ventes",
+    description: "Lire les commandes, les réassorts et les ventes disponibles, repérer les comptes à potentiel et définir les actions prioritaires.",
     tags: "Commandes · Réassorts · Bilans commerciaux",
   },
   {
-    number: "05", label: "REMONTÉES TERRAIN", title: "Comprendre ce qui se passe en rayon.",
-    description: "Vous transmettre les retours des équipes, les objections, les besoins et les observations en point de vente pour adapter votre approche commerciale à la réalité du terrain.",
-    tags: "Retours équipes · Visibilité · Opportunités",
+    number: "05", label: "REMONTÉES TERRAIN", title: "Faire remonter la réalité du terrain",
+    description: "Partager les retours des pharmaciens, les questions des équipes, les objections et les opportunités pour ajuster le discours et les actions.",
+    tags: "Retours équipes · Besoins · Opportunités",
   },
 ];
 
@@ -70,27 +70,32 @@ export default function LandingPage() {
       <section className={styles.hero} aria-labelledby="hero-title">
         <div className={`${styles.container} ${styles.heroGrid}`}>
           <div className={styles.heroCopy}>
-            <p className={styles.eyebrow}>MARQUES DE SANTÉ, BEAUTÉ & BIEN-ÊTRE</p>
-            <h1 id="hero-title">Votre partenaire commercial terrain <span>en pharmacie et parapharmacie.</span></h1>
-            <p className={styles.heroIntro}>TR1 PHARMA accompagne le développement de votre marque, du sell-in au sell-out. Ouvertures de comptes, formation, animation, suivi de la performance et remontées terrain : une présence à vos côtés et auprès des points de vente.</p>
+            <p className={styles.eyebrow}>DÉVELOPPEMENT COMMERCIAL EN PHARMACIE & PARAPHARMACIE</p>
+            <h1 id="hero-title">Du référencement à la vente, <span>votre marque se construit sur le terrain.</span></h1>
+            <p className={styles.heroIntro}>TR1 PHARMA accompagne les marques de santé, beauté et bien-être pour ouvrir les bons comptes, mobiliser les équipes officinales et activer les ventes. Un partenaire commercial à vos côtés, du sell-in au sell-out.</p>
             <div className={styles.heroActions}>
-              <MarketingTrackedLink event="primary_cta_click" href="#contact-marque" properties={{ placement: "hero_brand" }} className={styles.primaryCta}>Parlons de votre marque <ArrowUpRight size={18} aria-hidden="true" /></MarketingTrackedLink>
-              <a className={styles.secondaryCta} href="#marques">Découvrir l’accompagnement <ArrowRight size={17} aria-hidden="true" /></a>
+              <MarketingTrackedLink event="primary_cta_click" href="#contact-marque" properties={{ placement: "hero_brand" }} className={styles.primaryCta}>Construisons votre présence en pharmacie <ArrowUpRight size={18} aria-hidden="true" /></MarketingTrackedLink>
+              <a className={styles.secondaryCta} href="#marques">Voir notre méthode <ArrowRight size={17} aria-hidden="true" /></a>
             </div>
-            <p className={styles.heroTerritory}>PACA · Gard · Hérault</p>
-            <p className={styles.heroNote}>Votre partenaire terrain, du sell-in au sell-out.</p>
+            <ul className={styles.heroSignals} aria-label="Domaines d’intervention">
+              <li><span aria-hidden="true" />Développer la distribution</li>
+              <li><span aria-hidden="true" />Activer les équipes</li>
+              <li><span aria-hidden="true" />Suivre les ventes</li>
+            </ul>
+            <p className={styles.heroTerritory}>SUD-EST · PACA · GARD · HÉRAULT</p>
+            <p className={styles.heroNote}>Un interlocuteur commercial. Des expertises terrain mobilisées selon vos besoins.</p>
           </div>
           <figure className={styles.heroVisual}>
             <PharmacyIllustration />
-            <figcaption>Votre marque, accompagnée à chaque étape.<span>Implanter · Former · Animer · Suivre les résultats</span></figcaption>
+            <figcaption>De la première implantation au suivi des ventes.<span>Ouvrir · Former · Animer · Développer</span></figcaption>
           </figure>
         </div>
       </section>
       <section id="marques" className={styles.missions} aria-labelledby="missions-title">
         <div className={styles.container}>
           <div className={styles.sectionIntro}>
-            <div><p className={styles.eyebrow}>Notre accompagnement, du sell-in au sell-out</p><h2 id="missions-title">Cinq leviers pour <span>développer votre marque.</span></h2></div>
-            <p>Vous lancez votre gamme, développez votre distribution ou souhaitez mieux accompagner vos comptes existants ? Nous construisons avec vous un plan d’action adapté à votre marque et à votre secteur.</p>
+            <div><p className={styles.eyebrow}>CE QUE TR1 PREND EN CHARGE</p><h2 id="missions-title">Une présence commerciale qui <span>va au-delà de l’implantation.</span></h2></div>
+            <p>Une gamme référencée n’est qu’un point de départ. Nous accompagnons aussi ce qui construit sa place dans la durée : connaissance produit, visibilité, conseil, réassort et retours terrain.</p>
           </div>
           <div id="methode" className={styles.serviceGrid}>
             {services.map((service) => (
@@ -105,47 +110,51 @@ export default function LandingPage() {
         </div>
       </section>
       <FieldReferences items={[]} />
+      <section id="reseau" className={styles.network} aria-labelledby="network-title">
+        <div className={styles.container}>
+          <div className={styles.sectionIntro}>
+            <div><p className={styles.eyebrow}>LE RÉSEAU TR1 PHARMA</p><h2 id="network-title">Un interlocuteur commercial.<br/><span>Un réseau pour aller plus loin.</span></h2></div>
+            <p>Selon les objectifs de la marque et les besoins des officines, TR1 coordonne des agents commerciaux, formateurs et animateurs. Chaque expertise intervient au bon moment, dans une logique commune de développement.</p>
+          </div>
+          <div className={styles.networkRoles}>
+            <article><p className={styles.networkLabel}>DÉVELOPPER</p><h3>Les agents commerciaux</h3><p>Ouvrir les comptes, présenter les gammes, négocier les implantations et entretenir la relation avec les officines.</p></article>
+            <article><p className={styles.networkLabel}>TRANSMETTRE</p><h3>Les formateurs</h3><p>Faire progresser les équipes en connaissance produit et leur donner les arguments concrets pour le conseil.</p></article>
+            <article><p className={styles.networkLabel}>ACTIVER</p><h3>Les animateurs</h3><p>Créer la rencontre avec le consommateur, faire découvrir la gamme et accompagner les temps forts en point de vente.</p></article>
+          </div>
+          <div className={styles.networkPromise}>
+            <strong>Une coordination, plusieurs expertises.</strong>
+            <p>La marque conserve un interlocuteur commercial. TR1 organise les relais terrain nécessaires selon le secteur, les objectifs et les actions à mener.</p>
+          </div>
+          <div className={styles.networkAudiences}>
+            <div><h3>Pour les marques</h3><p>Un dispositif terrain adapté à votre ambition, à votre secteur et au niveau de développement de votre marque.</p><MarketingTrackedLink event="primary_cta_click" href="#contact-marque" properties={{ placement: "network_brand" }} className={styles.textCta}>Mobiliser le réseau pour ma marque <ArrowUpRight size={18} aria-hidden="true"/></MarketingTrackedLink></div>
+            <div><h3>Pour les pharmacies</h3><p>Des interventions coordonnées autour des marques partenaires, en fonction des besoins de votre officine.</p><MarketingTrackedLink event="primary_cta_click" href="#contact-pharmacie" properties={{ placement: "network_pharmacy" }} className={styles.textCta}>Être accompagné dans mon officine <ArrowUpRight size={18} aria-hidden="true"/></MarketingTrackedLink></div>
+          </div>
+          <p className={styles.networkNote}>Les interventions sont organisées selon le secteur, les objectifs et la disponibilité des intervenants. Zone actuelle : PACA, Gard et Hérault.</p>
+        </div>
+      </section>
       <section id="terrain" className={styles.followUp} aria-labelledby="terrain-title">
         <div className={`${styles.container} ${styles.followUpGrid}`}>
           <div>
-            <p className={styles.eyebrow}>Le suivi commercial</p>
-            <h2 id="terrain-title">Une vision claire des actions <span>sur votre secteur.</span></h2>
-            <p className={styles.bodyCopy}>Des échanges réguliers pour savoir ce qui a été réalisé, comprendre les retours des pharmacies et définir les prochaines actions.</p>
+            <p className={styles.eyebrow}>LE PILOTAGE TERRAIN</p>
+            <h2 id="terrain-title">Chaque action terrain <span>prépare la suivante.</span></h2>
+            <p className={styles.bodyCopy}>Les informations collectées en officine servent à décider quoi faire ensuite : relancer, former, animer, réassortir ou ouvrir un nouveau compte. Le suivi ne s’arrête pas à la visite.</p>
           </div>
           <figure className={styles.methodFigure}>
-            <div className={styles.methodHeading}>Du terrain aux prochaines actions.</div>
+            <div className={styles.methodHeading}>Un suivi commercial exploitable.</div>
             <ol className={styles.methodSteps}>
-              <li><span aria-hidden="true">01</span><div><strong>Actions réalisées</strong><p>Visites, implantations et accompagnement des équipes</p></div></li>
-              <li><span aria-hidden="true">02</span><div><strong>Retours du terrain</strong><p>Besoins, objections et opportunités identifiées</p></div></li>
-              <li><span aria-hidden="true">03</span><div><strong>Prochaines actions</strong><p>Relances, formations, animations et réassorts à préparer</p></div></li>
+              <li><span aria-hidden="true">01</span><div><strong>Actions menées</strong><p>Visites, implantations et accompagnement des équipes</p></div></li>
+              <li><span aria-hidden="true">02</span><div><strong>Signaux du terrain</strong><p>Retours, objections, besoins et opportunités identifiés</p></div></li>
+              <li><span aria-hidden="true">03</span><div><strong>Plan d’action</strong><p>Relances, formations, animations et réassorts à préparer</p></div></li>
             </ol>
           </figure>
         </div>
       </section>
-      <section id="reseau" className={styles.network} aria-labelledby="network-title">
-        <div className={styles.container}>
-          <div className={styles.sectionIntro}>
-            <div><p className={styles.eyebrow}>LE RÉSEAU TR1 PHARMA</p><h2 id="network-title">Des expertises complémentaires.<br/><span>Une même exigence terrain.</span></h2></div>
-            <p>Agents commerciaux, formateurs et animateurs : TR1 PHARMA coordonne les compétences nécessaires pour accompagner les marques et les pharmacies, de l’implantation au conseil et à la vente.</p>
-          </div>
-          <div className={styles.networkRoles}>
-            <article><p className={styles.networkLabel}>DÉVELOPPER</p><h3>Les agents commerciaux</h3><p>Présenter les gammes, ouvrir les comptes et entretenir la relation avec l’officine. Un suivi commercial pour faire le lien entre les besoins du point de vente et les marques représentées.</p></article>
-            <article><p className={styles.networkLabel}>TRANSMETTRE</p><h3>Les formateurs</h3><p>Donner aux équipes les connaissances produit et les arguments utiles au conseil. Des échanges concrets, adaptés aux questions rencontrées au comptoir.</p></article>
-            <article><p className={styles.networkLabel}>ACTIVER</p><h3>Les animateurs</h3><p>Faire découvrir les produits aux clients, accompagner leur prise en main et soutenir les temps forts en officine. Une présence au contact des consommateurs.</p></article>
-          </div>
-          <div className={styles.networkAudiences}>
-            <div><h3>Pour les marques</h3><p>Des relais terrain coordonnés pour déployer votre gamme, accompagner les équipes et faire remonter les retours des points de vente.</p><MarketingTrackedLink event="primary_cta_click" href="#contact-marque" properties={{ placement: "network_brand" }} className={styles.textCta}>Mobiliser le réseau pour ma marque <ArrowUpRight size={18} aria-hidden="true"/></MarketingTrackedLink></div>
-            <div><h3>Pour les pharmacies</h3><p>Des compétences complémentaires autour de votre officine, avec des interventions organisées selon vos besoins et les marques travaillées.</p><MarketingTrackedLink event="primary_cta_click" href="#contact-pharmacie" properties={{ placement: "network_pharmacy" }} className={styles.textCta}>Être accompagné dans mon officine <ArrowUpRight size={18} aria-hidden="true"/></MarketingTrackedLink></div>
-          </div>
-          <p className={styles.networkNote}>Interventions organisées selon le secteur, les besoins et la disponibilité des intervenants. Présence actuelle : PACA, Gard et Hérault.</p>
-        </div>
-      </section>
       <section id="amir" className={styles.founder} aria-labelledby="founder-title">
         <div className={`${styles.container} ${styles.founderGrid}`}>
-          <div><p className={styles.eyebrow}>Une relation directe</p><h2 id="founder-title">Amir Ounissi,<br/><span>votre interlocuteur terrain.</span></h2></div>
+          <div><p className={styles.eyebrow}>UNE RELATION DIRECTE</p><h2 id="founder-title">Amir Ounissi,<br/><span>votre interlocuteur terrain.</span></h2></div>
           <div>
             <p className={styles.founderRole}>Fondateur de TR1 PHARMA</p>
-            <p className={styles.bodyCopy}>J’accompagne les marques dans leur développement en pharmacie et parapharmacie, du sell-in au sell-out. Prospection, implantation, formation des équipes, visibilité en officine et animations commerciales : mon objectif est de faire le lien entre la présence de la marque sur le terrain et l’activation de ses ventes.</p>
+            <p className={styles.bodyCopy}>J’accompagne les marques au contact des pharmacies : prospection, implantation, formation, animation et suivi. Je privilégie une approche directe : comprendre les enjeux de la marque, les réalités de l’officine et transformer les échanges terrain en actions commerciales concrètes.</p>
             <a href="https://fr.linkedin.com/in/amirounissi" target="_blank" rel="noopener noreferrer" className={styles.textCta}>Découvrir mon parcours <ArrowUpRight size={18} aria-hidden="true"/></a>
           </div>
         </div>
@@ -187,11 +196,11 @@ export default function LandingPage() {
       </section>
       <section id="contact" className={styles.contact} aria-labelledby="contact-title">
         <div className={styles.container}>
-          <div className={styles.contactIntro}><p className={styles.eyebrow}>Faisons le point</p><h2 id="contact-title">Parlons du développement <span>de votre marque.</span></h2></div>
+          <div className={styles.contactIntro}><p className={styles.eyebrow}>PREMIER ÉCHANGE</p><h2 id="contact-title">Parlons de votre <span>développement en pharmacie.</span></h2></div>
           <div className={styles.contactGrid}>
             <article id="contact-marque" className={styles.contactCard}>
-              <p className={styles.contactAudience}>Marque & laboratoire</p><h3>Développons votre marque.</h3>
-              <p className={styles.cardDescription}>Un premier échange pour faire le point sur votre gamme, votre territoire et vos objectifs en pharmacie et parapharmacie.</p>
+              <p className={styles.contactAudience}>Marque & laboratoire</p><h3>Construisons la suite.</h3>
+              <p className={styles.cardDescription}>Présentez-nous votre gamme, votre territoire et vos objectifs. Nous ferons le point sur les leviers à activer pour développer votre présence en pharmacie.</p>
               <LeadForm audience="brand" />
             </article>
             <details id="contact-pharmacie" className={styles.pharmacyContact}><summary>Vous représentez une pharmacie ? Contactez-nous <ArrowRight size={17} aria-hidden="true" /></summary><div className={styles.pharmacyContactBody}>
