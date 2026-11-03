@@ -28,9 +28,8 @@ describe("role navigation", () => {
   it("separates platform pilotage, administration and offer management", () => {
     const sections = getNavigationSections("super_admin", "platform");
     expect(sections.map((section) => section.label)).toEqual([
-      "Pilotage plateforme",
-      "Administration",
-      "Offre & revenus",
+      "TR1 PHARMA",
+      "Partenaires",
     ]);
   });
 
@@ -40,23 +39,23 @@ describe("role navigation", () => {
 
     expect(globalLinks).toEqual([
       "/dashboard",
-      "/dashboard/admin/access-requests",
+      "/dashboard/admin/leads",
       "/dashboard/admin/onboarding",
       "/dashboard/admin/users",
-      "/dashboard/admin/saas",
-      "/dashboard/admin/saas-commercial",
-      "/dashboard/admin/leads",
+      "/dashboard/admin/access-requests",
     ]);
-    expect(globalLinks).not.toContain("/dashboard/users");
-    expect(globalLinks).not.toContain("/dashboard/imports");
-    expect(tenantLinks).toContain("/dashboard/users");
-    expect(tenantLinks).toContain("/dashboard/imports");
-    expect(tenantLinks).toContain("/dashboard/connectors");
-    expect(tenantLinks).not.toContain("/dashboard/providers");
-    expect(tenantLinks).toContain("/dashboard/subscription");
+    expect(globalLinks).not.toContain("/dashboard/admin/saas");
+    expect(globalLinks).not.toContain("/dashboard/admin/saas-commercial");
+    expect(tenantLinks).toEqual([
+      "/dashboard",
+      "/dashboard/pharmacies",
+      "/dashboard/orders",
+      "/dashboard/missions",
+      "/dashboard/network/commercial",
+    ]);
+    expect(tenantLinks).not.toContain("/dashboard/subscription");
+    expect(tenantLinks).not.toContain("/dashboard/imports");
     expect(tenantLinks).not.toContain("/dashboard/admin/leads");
-    expect(tenantLinks).not.toContain("/dashboard/admin/saas");
-    expect(tenantLinks).not.toContain("/dashboard/admin/saas-commercial");
   });
 
   it("keeps platform functions hidden from brand admins and preserves field roles", () => {
