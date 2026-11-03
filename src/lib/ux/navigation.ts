@@ -87,13 +87,22 @@ const facilitatorMobileItems: NavigationItem[] = [
 ];
 
 const platformAdminItems: NavigationItem[] = [
-  { href: "/dashboard", label: "Vue globale", shortLabel: "Accueil", icon: "layout" },
+  { href: "/dashboard", label: "Pilotage TR1", shortLabel: "Accueil", icon: "layout" },
+  { href: "/dashboard/admin/leads", label: "Demandes entrantes", icon: "leads" },
+  { href: "/dashboard/admin/onboarding", label: "Marques partenaires", icon: "badge" },
+  { href: "/dashboard/admin/users", label: "Accès partenaires", icon: "users" },
   { href: "/dashboard/admin/access-requests", label: "Demandes d’accès", icon: "users" },
-  { href: "/dashboard/admin/onboarding", label: "Marques & déploiements", icon: "badge" },
-  { href: "/dashboard/admin/users", label: "Utilisateurs & accès", icon: "users" },
-  { href: "/dashboard/admin/saas", label: "Offres & capacités", icon: "boxes" },
-  { href: "/dashboard/admin/saas-commercial", label: "Quotas & facturation", icon: "chart" },
-  { href: "/dashboard/admin/leads", label: "Leads TR1", icon: "leads" },
+];
+
+// Le propriétaire pilote une agence commerciale multimarque, pas un SaaS.
+// Les routes historiques restent disponibles aux administrateurs mais ne
+// structurent plus l'expérience quotidienne.
+const ownerItems: NavigationItem[] = [
+  { href: "/dashboard", label: "Tableau de bord", icon: "layout" },
+  { href: "/dashboard/pharmacies", label: "Pharmacies", icon: "building", capability: "core_crm" },
+  { href: "/dashboard/orders", label: "Commandes", icon: "clipboard", capability: "orders" },
+  { href: "/dashboard/missions", label: "Prestations", icon: "calendar", capability: "missions" },
+  { href: "/dashboard/network/commercial", label: "Performance", icon: "chart", capability: "performance" },
 ];
 
 function filterItems(items: NavigationItem[], enabledCapabilities?: readonly SaasCapability[]) {
@@ -133,10 +142,13 @@ export function getNavigationSections(
 
   if (scope === "platform") {
     return compactSections([
-      { label: "Pilotage plateforme", items: platformAdminItems.slice(0, 3) },
-      { label: "Administration", items: platformAdminItems.slice(3, 4) },
-      { label: "Offre & revenus", items: platformAdminItems.slice(4) },
+      { label: "TR1 PHARMA", items: platformAdminItems.slice(0, 2) },
+      { label: "Partenaires", items: platformAdminItems.slice(2) },
     ], enabledCapabilities);
+  }
+
+  if (role === "super_admin") {
+    return compactSections([{ label: "Mon activité", items: ownerItems }], enabledCapabilities);
   }
 
   if (family === "agent") {
