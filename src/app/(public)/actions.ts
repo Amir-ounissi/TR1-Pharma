@@ -7,7 +7,7 @@ import { formatLeadRequest, leadCaptureSchema, leadDeduplicationScope, normalize
 import { readRuntimeEnvironment } from "@/lib/runtime-environment";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-type LeadField = "fullName" | "professionalEmail" | "companyName" | "websiteUrl" | "location" | "need";
+type LeadField = "fullName" | "professionalEmail" | "companyName" | "websiteUrl" | "location" | "need" | "requestType";
 
 export type LeadCaptureState = {
   error?: string;
@@ -19,9 +19,11 @@ export async function captureLeadAction(_state: LeadCaptureState, formData: Form
   const correlationId = randomUUID();
   const website = String(formData.get("website") ?? "");
   const leadAudience = String(formData.get("leadAudience") ?? "brand") === "pharmacy" ? "pharmacy" : "brand";
+  const requestType = String(formData.get("requestType") ?? "implantation") === "reorder" ? "reorder" : "implantation";
   if (website) redirect("/merci");
   const fields = {
     leadAudience,
+    requestType,
     fullName: String(formData.get("fullName") ?? ""),
     professionalEmail: String(formData.get("professionalEmail") ?? ""),
     companyName: String(formData.get("companyName") ?? ""),
@@ -45,6 +47,14 @@ export async function captureLeadAction(_state: LeadCaptureState, formData: Form
         location: flattened.location?.[0],
         need: flattened.need?.[0],
       },
+    };
+  }
+
+  if (leadAudience === "pharmacy" && requestType === "reorder" && (validation.data.need ?? "").trim().length < 5) {
+    return {
+      error: "Précisez les produits et quantités souhaités pour votre réassort.",
+      fields,
+      fieldErrors: { need: "Indiquez au minimum un produit et sa quantité." },
     };
   }
 
@@ -82,7 +92,12 @@ export async function captureLeadAction(_state: LeadCaptureState, formData: Form
 
     // Keep the existing RPC, destination and anti-abuse controls. The existing
     // notes field holds request details; compare-and-set preserves staff edits.
-    const requestDetails = formatLeadRequest(validation.data);
+    // Une demande client reste une demande à vérifier : elle ne crée pas
+    // de commande validée ni de commission tant que TR1 ne l'a pas traitée.
+    const requestDetails = [
+      leadAudience === "pharmacy" ? `Type de demande : ${requestType === "reorder" ? "Réassort à confirmer" : "Présentation / implantation"}` : "",
+      formatLeadRequest(validation.data),
+    ].filter(Boolean).join("\n");
     if (requestDetails) {
       const { data: lead, error: readError } = await admin.from("commercial_leads").select("internal_notes").eq("id", leadId).single();
       if (readError || !lead) throw new Error("lead_request_read_failed");
