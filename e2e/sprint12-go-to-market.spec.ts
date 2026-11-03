@@ -58,7 +58,7 @@ test("landing desktop, parcours marque/pharmacie et capture des leads", async ({
   await expect(page.getByRole("heading", { name: /Les bonnes expertises, au bon moment/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: /Un accompagnement ancré dans le terrain/ })).toBeVisible();
   await expect(page.getByRole("link", { name: "Découvrir mon parcours" })).toHaveAttribute("href", "https://fr.linkedin.com/in/amirounissi");
-  await expect(page.locator("main > section")).toHaveCount(7);
+  await expect(page.locator("main > section")).toHaveCount(6);
   await expect(page.getByRole("img", { name: /commercial présente une gamme de produits/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: /Les bonnes expertises, au bon moment/ })).toBeVisible();
   await expect(page.getByRole("img", { name: /Capture réelle de l’interface/ })).toHaveCount(0);
