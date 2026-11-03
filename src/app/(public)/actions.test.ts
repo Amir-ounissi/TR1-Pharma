@@ -41,6 +41,26 @@ describe("public lead submission without live database writes", () => {
     expect(mocks.rpc).not.toHaveBeenCalled();
   });
 
+  it("blocks an empty reorder request before touching the database", async () => {
+    const result = await captureLeadAction({}, submission({
+      leadAudience: "pharmacy", location: "13800", requestType: "reorder", need: "",
+    }));
+    expect(result.fieldErrors?.need).toBeTruthy();
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+
+  it("records a reorder as a request to confirm, never as a validated order", async () => {
+    await expect(captureLeadAction({}, submission({
+      leadAudience: "pharmacy", location: "13800", requestType: "reorder", need: "VK SWISS : 12 boîtes Collagène",
+    }))).rejects.toThrow("REDIRECT:/merci");
+    expect(mocks.rpc).toHaveBeenCalledWith("capture_commercial_lead", expect.objectContaining({
+      lead_source: "website_pharmacy",
+    }));
+    expect(mocks.update).toHaveBeenCalledWith({
+      internal_notes: "Note de l’équipe\\n\\nDemande via le site\\nType de demande : Réassort à confirmer\\nSite web : https://example.com\\nVille ou code postal : 13800\\nBesoin exprimé : VK SWISS : 12 boîtes Collagène".replaceAll("\\n", "\n"),
+    });
+  });
+
   it("keeps every visible field after a database rejection", async () => {
     mocks.rpc.mockResolvedValue({ data: null, error: { code: "P0001" } });
     const result = await captureLeadAction({}, submission({ leadAudience: "pharmacy", location: "13800" }));
