@@ -135,7 +135,7 @@ export default function LandingPage() {
             </div>
             <div>
               <p className={styles.bodyCopy}>Des gammes choisies pour votre clientèle, et un accompagnement adapté à votre officine.</p>
-              <MarketingTrackedLink event="primary_cta_click" href="#contact-pharmacie" properties={{ placement: "pharmacy_section" }} className={styles.pharmacyCta}>Échanger pour mon officine <ArrowUpRight size={18} aria-hidden="true"/></MarketingTrackedLink>
+              <MarketingTrackedLink event="primary_cta_click" href="/pharmacies" properties={{ placement: "pharmacy_section" }} className={styles.pharmacyCta}>Découvrir les marques partenaires <ArrowUpRight size={18} aria-hidden="true"/></MarketingTrackedLink>
             </div>
           </div>
           <div className={styles.pharmacyBenefits}>
