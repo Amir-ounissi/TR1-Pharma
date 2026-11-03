@@ -52,7 +52,7 @@ test("landing desktop, parcours marque/pharmacie et capture des leads", async ({
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1, name: /Du référencement à la vente, votre marque se construit sur le terrain/ })).toBeVisible();
   await expect(page.getByRole("link", { name: "Développer ma marque en pharmacie" }).first()).toBeVisible();
-  await expect(page.getByRole("link", { name: "Échanger pour mon officine" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Découvrir les marques partenaires" })).toBeVisible();
   await expect(page.getByRole("heading", { name: /Quatre leviers pour développer votre marque/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: /Des marques à potentiel/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: /Les bonnes expertises, au bon moment/ })).toBeVisible();
@@ -66,7 +66,7 @@ test("landing desktop, parcours marque/pharmacie et capture des leads", async ({
   await page.screenshot({ path: `${artifacts}/landing-desktop.png`, fullPage: true });
 
   await page.getByRole("link", { name: "Développer ma marque en pharmacie" }).first().click();
-  await expect(page.locator("#contact")).toBeInViewport();
+  await expect(page.locator("#contact-marque")).toBeInViewport();
 
   const brandForm = page.locator("#contact-marque");
   await expect(brandForm.getByLabel("Nom et prénom")).toHaveAttribute("required", "");
@@ -80,15 +80,17 @@ test("landing desktop, parcours marque/pharmacie et capture des leads", async ({
   await expect(page).toHaveURL(/\/merci$/);
   await expect(page.getByRole("heading", { name: "Votre demande a bien été envoyée." })).toBeVisible();
 
-  await page.goto("/");
-  await page.getByText("Vous représentez une pharmacie ? Contactez-nous").click();
-  const pharmacyForm = page.locator("#contact-pharmacie");
+  await page.goto("/pharmacies");
+  await expect(page.getByRole("heading", { name: /Des marques à découvrir/ })).toBeVisible();
+  const pharmacyForm = page.locator("#demande");
+  await expect(pharmacyForm.getByRole("combobox", { name: "Votre demande" })).toHaveValue("implantation");
+  await pharmacyForm.getByRole("combobox", { name: "Votre demande" }).selectOption("reorder");
   await pharmacyForm.getByLabel("Nom et prénom").fill("Claire Dupont");
   await pharmacyForm.getByLabel("Email professionnel").fill(pharmacyLeadEmail.toUpperCase());
   await pharmacyForm.getByLabel("Nom de la pharmacie").fill("Pharmacie du Centre");
   await pharmacyForm.getByLabel("Ville ou code postal").fill("13800");
-  await pharmacyForm.getByLabel("Votre besoin").fill("Former notre équipe");
-  await pharmacyForm.getByRole("button", { name: "Être recontacté" }).click();
+  await pharmacyForm.getByLabel("Produits et quantités souhaités").fill("VK SWISS : Collagène, 12 boîtes");
+  await pharmacyForm.getByRole("button", { name: "Envoyer ma demande de réassort" }).click();
   await expect(page).toHaveURL(/\/merci$/);
   await page.screenshot({ path: `${artifacts}/thank-you-desktop.png`, fullPage: true });
 
@@ -99,7 +101,7 @@ test("landing desktop, parcours marque/pharmacie et capture des leads", async ({
     .order("professional_email");
   expect(error).toBeNull();
   expect(leads).toEqual([
-    { professional_email: pharmacyLeadEmail, status: "new", source: "website_pharmacy", internal_notes: "Demande via le site\nVille ou code postal : 13800\nBesoin exprimé : Former notre équipe" },
+    { professional_email: pharmacyLeadEmail, status: "new", source: "website_pharmacy", internal_notes: "Demande via le site\nType de demande : Réassort à confirmer\nVille ou code postal : 13800\nBesoin exprimé : VK SWISS : Collagène, 12 boîtes" },
     { professional_email: leadEmail, status: "new", source: "website_brand", internal_notes: "Demande via le site\nSite web : https://nova-sante.test\nBesoin exprimé : Développer notre distribution" },
   ]);
 });
@@ -108,14 +110,15 @@ test("landing mobile reste lisible et sans débordement", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1, name: /Du référencement à la vente, votre marque se construit sur le terrain/ })).toBeVisible();
   await expect(page.getByRole("link", { name: "Développer ma marque en pharmacie" }).first()).toBeVisible();
-  await expect(page.getByRole("link", { name: "Échanger pour mon officine" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Découvrir les marques partenaires" })).toBeVisible();
   await expect(page.getByRole("heading", { name: /Un accompagnement ancré dans le terrain/ })).toBeVisible();
   await expect(page.locator("#contact-marque")).toBeVisible();
   await expect(page.getByRole("img", { name: /commercial présente une gamme de produits/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: /Les bonnes expertises, au bon moment/ })).toBeVisible();
   await expect(page.getByRole("img", { name: /Capture réelle de l’interface/ })).toHaveCount(0);
-  await page.getByText("Vous représentez une pharmacie ? Contactez-nous").click();
-  await expect(page.locator("#contact-pharmacie")).toBeVisible();
+  await page.getByRole("link", { name: "Découvrir les marques partenaires" }).click();
+  await expect(page).toHaveURL(/\/pharmacies$/);
+  await expect(page.locator("#demande")).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
   await page.screenshot({ path: `${artifacts}/landing-mobile.png`, fullPage: true });
 });
@@ -136,9 +139,10 @@ test("landing : menu mobile accessible et balisage SEO cohérent", async ({ page
   const details = page.locator("header details");
   await details.locator("summary").click();
   await expect(details).toHaveAttribute("open", "");
-  await details.getByRole("link", { name: "Pharmacies" }).click();
+  await details.getByRole("link", { name: "Pour les pharmacies" }).click();
   await expect(details).not.toHaveAttribute("open", "");
-  await expect(page.locator("#pharmacies")).toBeInViewport();
+  await expect(page).toHaveURL(/\/pharmacies$/);
+  await expect(page.getByRole("heading", { name: /Des marques à découvrir/ })).toBeVisible();
 
   await details.locator("summary").click();
   await expect(details).toHaveAttribute("open", "");
