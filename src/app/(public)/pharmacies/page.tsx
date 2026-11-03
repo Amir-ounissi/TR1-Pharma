@@ -71,7 +71,7 @@ export default function PharmaciesPage() {
             <div className="flex flex-col justify-between gap-8 p-8 sm:p-10">
               <div>
                 <h3 className="text-2xl font-semibold tracking-[-0.035em]">Découvrez la gamme VK SWISS</h3>
-                <p className="mt-4 max-w-xl text-base leading-7 text-[#515d6b]">TR1 PHARMA accompagne le développement commercial de VK SWISS en officine. Nous pouvons vous présenter la gamme, les conditions d'implantation et le dispositif d'accompagnement terrain.</p>
+                <p className="mt-4 max-w-xl text-base leading-7 text-[#515d6b]">TR1 PHARMA accompagne le développement commercial de VK SWISS en officine. Nous pouvons vous présenter la gamme, les conditions d&apos;implantation et le dispositif d&apos;accompagnement terrain.</p>
               </div>
               <MarketingTrackedLink className="inline-flex min-h-11 w-fit items-center gap-2 text-sm font-bold text-[var(--tr1-navy)] underline decoration-[var(--tr1-orange)] decoration-2 underline-offset-8 hover:text-[var(--tr1-orange)]" event="primary_cta_click" href="#demande" properties={{ placement: "pharmacies_vk_swiss" }}>
                 Demander les conditions commerciales <ArrowRight size={16} aria-hidden="true" />
@@ -118,7 +118,7 @@ export default function PharmaciesPage() {
       <section className="border-t border-[var(--tr1-line)] px-[18px] py-8 sm:px-8 lg:px-11">
         <div className="mx-auto flex max-w-[1260px] flex-wrap items-center justify-between gap-4">
           <p className="text-sm text-[#515d6b]">Vous représentez une marque et souhaitez développer sa présence en pharmacie ?</p>
-          <Link href="/#contact-marque" className="inline-flex items-center gap-2 text-sm font-semibold hover:text-[var(--tr1-orange)]">Découvrir l'accompagnement des marques <ArrowUpRight size={16} aria-hidden="true" /></Link>
+          <Link href="/#contact-marque" className="inline-flex items-center gap-2 text-sm font-semibold hover:text-[var(--tr1-orange)]">Découvrir l&apos;accompagnement des marques <ArrowUpRight size={16} aria-hidden="true" /></Link>
         </div>
       </section>
     </main>
