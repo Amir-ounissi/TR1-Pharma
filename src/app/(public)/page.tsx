@@ -80,7 +80,7 @@ export default function LandingPage() {
       <section id="marques" className={styles.missions} aria-labelledby="missions-title">
         <div className={styles.container}>
           <div className={styles.sectionIntro}>
-            <div><p className={styles.eyebrow}>L’ACCOMPAGNEMENT TR1</p><h2 id="missions-title}>Quatre leviers pour <span>développer votre marque.</span></h2></div>
+            <div><p className={styles.eyebrow}>L’ACCOMPAGNEMENT TR1</p><h2 id="missions-title">Quatre leviers pour <span>développer votre marque.</span></h2></div>
             <p>Un accompagnement opérationnel, adapté à vos objectifs et au stade de développement de votre gamme.</p>
           </div>
           <div id="methode" className={styles.serviceGrid}>
@@ -117,7 +117,7 @@ export default function LandingPage() {
 
       <section id="amir" className={styles.founder} aria-labelledby="founder-title">
         <div className={`${styles.container} ${styles.founderGrid}`}>
-          <div><p className={styles.eyebrow}>UNE RELATION DIRECTE</p><h2 id="founder-title}>Un accompagnement <span>ancré dans le terrain.</span></h2></div>
+          <div><p className={styles.eyebrow}>UNE RELATION DIRECTE</p><h2 id="founder-title">Un accompagnement <span>ancré dans le terrain.</span></h2></div>
           <div>
             <p className={styles.founderRole}>Amir Ounissi · Fondateur de TR1 PHARMA</p>
             <p className={styles.bodyCopy}>Mon expérience du développement en pharmacie guide une approche concrète : comprendre les réalités de l’officine, agir sur le terrain et suivre les résultats.</p>
