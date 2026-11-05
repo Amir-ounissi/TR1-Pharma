@@ -44,7 +44,7 @@ test("landing respecte la charte TR1 officielle (logo, couleurs et CTA)", async 
   await expect(logoPaths.first()).toHaveAttribute("fill", "#121e31");
   await expect(logoPaths.last()).toHaveAttribute("fill", "#ea6820");
   await expect(page.getByRole("link", { name: "Développer ma marque en pharmacie" }).first()).toHaveCSS("background-color", "rgb(234, 112, 21)");
-  await expect(page.locator("header")).toHaveCSS("background-color", /244, 240, 231/);
+  await expect(page.locator("header")).toHaveCSS("background-color", "rgb(255, 255, 255)");
 });
 
 
