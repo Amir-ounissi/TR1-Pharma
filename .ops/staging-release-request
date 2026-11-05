@@ -1,7 +1,4 @@
-release=landing-v2-epuree-20261103
+release=landing-lumineuse-20261105
 target=staging
-feature=landing_page_copy_and_layout_cleanup
-approved_feature_commit=d51278965e27291ce5177cc248c2bb0d4995f05b
-safety=ci_green_staging_migrations_and_same_sha_smoke
-request=authorized_user_production_release
-no_production_deploy=true
+scope=public_landing_colors_only
+request=authorized_user_apply_lighter_palette
