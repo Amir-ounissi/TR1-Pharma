@@ -43,15 +43,15 @@ test("landing respecte la charte TR1 officielle (logo, couleurs et CTA)", async 
   await expect(logoPaths).toHaveCount(2);
   await expect(logoPaths.first()).toHaveAttribute("fill", "#121e31");
   await expect(logoPaths.last()).toHaveAttribute("fill", "#ea6820");
-  await expect(page.getByRole("link", { name: "Développer ma marque en pharmacie" }).first()).toHaveCSS("background-color", "rgb(234, 112, 21)");
+  await expect(page.getByRole("link", { name: "Je représente une marque" }).first()).toHaveCSS("background-color", "rgb(234, 112, 21)");
   await expect(page.locator("header")).toHaveCSS("background-color", "rgb(255, 255, 255)");
 });
 
 
 test("landing desktop, parcours marque/pharmacie et capture des leads", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1, name: /Du référencement à la vente, votre marque se construit sur le terrain/ })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Développer ma marque en pharmacie" }).first()).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: /Votre partenaire terrain, du sell-in au sell-out/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Je représente une marque" }).first()).toBeVisible();
   await expect(page.getByRole("link", { name: "Échanger pour mon officine" })).toBeVisible();
   await expect(page.getByRole("heading", { name: /Quatre leviers pour développer votre marque/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: /Des marques à potentiel/ })).toBeVisible();
@@ -65,7 +65,9 @@ test("landing desktop, parcours marque/pharmacie et capture des leads", async ({
   await expect(page.getByRole("heading", { name: /Parlons de votre développement en pharmacie/ })).toBeVisible();
   await page.screenshot({ path: `${artifacts}/landing-desktop.png`, fullPage: true });
 
-  await page.getByRole("link", { name: "Développer ma marque en pharmacie" }).first().click();
+  await page.getByRole("link", { name: "Je représente une marque" }).first().click();
+  await expect(page.locator("#marques")).toBeInViewport();
+  await page.getByRole("link", { name: "Parlons de votre marque", exact: true }).first().click();
   await expect(page.locator("#contact")).toBeInViewport();
 
   const brandForm = page.locator("#contact-marque");
@@ -106,8 +108,8 @@ test("landing desktop, parcours marque/pharmacie et capture des leads", async ({
 test("landing mobile reste lisible et sans débordement", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1, name: /Du référencement à la vente, votre marque se construit sur le terrain/ })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Développer ma marque en pharmacie" }).first()).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: /Votre partenaire terrain, du sell-in au sell-out/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Je représente une marque" }).first()).toBeVisible();
   await expect(page.getByRole("link", { name: "Échanger pour mon officine" })).toBeVisible();
   await expect(page.getByRole("heading", { name: /Un accompagnement ancré dans le terrain/ })).toBeVisible();
   await expect(page.locator("#contact-marque")).toBeVisible();

@@ -33,7 +33,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
         <div className="mx-auto flex max-w-[1260px] flex-col gap-9 md:flex-row md:items-end md:justify-between">
           <div>
             <Tr1BrandLogo className="block h-[58px] w-[96px]" />
-            <p className="mt-4 text-xs leading-6 text-[#515d6b]">Du sell-in au sell-out.<br/>PACA · Gard · Hérault</p>
+            <p className="mt-4 text-xs leading-6 text-[#515d6b]">Votre partenaire terrain, du sell-in au sell-out.<br/>PACA · Gard · Hérault</p>
           </div>
           <div className="flex flex-wrap gap-x-6 gap-y-3 text-xs text-[#515d6b]">
             <Link className="py-2 transition hover:text-[var(--tr1-orange)]" href="/connexion">Connexion</Link>

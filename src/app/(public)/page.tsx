@@ -62,17 +62,17 @@ export default function LandingPage() {
         <div className={`${styles.container} ${styles.heroGrid}`}>
           <div className={styles.heroCopy}>
             <p className={styles.eyebrow}>DÉVELOPPEMENT COMMERCIAL EN PHARMACIE & PARAPHARMACIE</p>
-            <h1 id="hero-title">Du référencement à la vente, <span>votre marque se construit sur le terrain.</span></h1>
-            <p className={styles.heroIntro}>Nous développons votre présence en pharmacie : ouverture de comptes, formation des équipes, animation et suivi des ventes.</p>
+            <h1 id="hero-title">Votre partenaire terrain, <span>du sell-in au sell-out.</span></h1>
+            <p className={styles.heroIntro}>TR1 PHARMA accompagne les marques et les pharmacies pour implanter les gammes, former les équipes et développer les ventes en officine.</p>
             <div className={styles.heroActions}>
-              <MarketingTrackedLink event="primary_cta_click" href="#contact-marque" properties={{ placement: "hero_brand" }} className={styles.primaryCta}>Développer ma marque en pharmacie <ArrowUpRight size={18} aria-hidden="true" /></MarketingTrackedLink>
-              <a className={styles.secondaryCta} href="#marques">Découvrir l’accompagnement <ArrowRight size={17} aria-hidden="true" /></a>
+              <MarketingTrackedLink event="primary_cta_click" href="#marques" properties={{ placement: "hero_brand" }} className={styles.primaryCta}>Je représente une marque <ArrowUpRight size={18} aria-hidden="true" /></MarketingTrackedLink>
+              <a className={styles.secondaryCta} href="#pharmacies">Je suis pharmacien <ArrowRight size={17} aria-hidden="true" /></a>
             </div>
             <p className={styles.heroTerritory}>SUD-EST · PACA · GARD · HÉRAULT</p>
           </div>
           <figure className={styles.heroVisual}>
             <PharmacyIllustration />
-            <figcaption>Votre marque, présente et active en officine.</figcaption>
+            <figcaption>Implantation, formation, animation et suivi des ventes.</figcaption>
           </figure>
         </div>
       </section>
