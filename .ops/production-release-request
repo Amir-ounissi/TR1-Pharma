@@ -1,5 +1,5 @@
-release=remove-network-promise-20261105
+release=landing-sell-in-sell-out-20261105
 target=production_after_ci_staging
-scope=remove_requested_network_promise_block_only
-request=authorized_user_remove_block_and_publish
+scope=approved_hero_slogan_dual_audience_ctas_footer
+request=explicit_user_approval_publish_main_and_production
 safety=existing_ci_automatic_staging_candidate_smoke_and_promotion_gates
