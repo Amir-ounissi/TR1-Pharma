@@ -108,10 +108,6 @@ export default function LandingPage() {
             <article><p className={styles.networkLabel}>TRANSMETTRE</p><h3>Formateurs</h3><p>Connaissance produit et maîtrise des arguments de conseil.</p></article>
             <article><p className={styles.networkLabel}>ACTIVER</p><h3>Animateurs</h3><p>Mise en avant des gammes et temps forts en point de vente.</p></article>
           </div>
-          <div className={styles.networkPromise}>
-            <strong>Un interlocuteur côté marque.</strong>
-            <p>TR1 coordonne les expertises terrain selon vos besoins, votre secteur et vos priorités.</p>
-          </div>
         </div>
       </section>
 
