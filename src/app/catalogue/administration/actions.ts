@@ -11,8 +11,8 @@ const id = z.uuid();
 const nameField = z.string().trim().min(2).max(180);
 
 async function authorizedAdmin() {
-  await requirePlatformAdmin();
-  return createAdminClient();
+  const { supabase } = await requirePlatformAdmin();
+  return supabase;
 }
 
 function finish() {
@@ -102,7 +102,7 @@ export async function setPrivateCatalogueBrandPublished(formData: FormData) {
 }
 
 async function requireAuthorizedProduct(
-  admin: ReturnType<typeof createAdminClient>,
+  admin: Awaited<ReturnType<typeof authorizedAdmin>>,
   pharmacyId: string,
   productId: string,
 ) {
@@ -180,6 +180,11 @@ export async function invitePrivateCatalogueUser(formData: FormData) {
     pharmacy_id: formData.get("pharmacy_id"), email: formData.get("email"),
   });
   const admin = await authorizedAdmin();
+  // Admin Auth invitation API is explicitly disabled until staging service
+  // credentials and Supabase Auth redirects have been verified.
+  if (process.env.PRIVATE_CATALOG_INVITES_ENABLED !== "true") {
+    throw new Error("Invitations indisponibles sur cet environnement de test.");
+  }
   const { data: pharmacy } = await admin.from("private_catalog_pharmacies")
     .select("id").eq("id", input.pharmacy_id).maybeSingle();
   if (!pharmacy) throw new Error("Pharmacie inconnue.");
@@ -188,7 +193,8 @@ export async function invitePrivateCatalogueUser(formData: FormData) {
   if (!origin) throw new Error("URL publique de TR1 PHARMA non configurée.");
   const redirectTo = new URL("/auth/confirm?next=/catalogue/activer", origin).toString();
   // Actual invitation mail is sent only when an administrator explicitly submits this form.
-  const { data, error: inviteError } = await admin.auth.admin.inviteUserByEmail(
+  const privileged = createAdminClient();
+  const { data, error: inviteError } = await privileged.auth.admin.inviteUserByEmail(
     input.email.toLowerCase(), { redirectTo },
   );
   if (inviteError || !data.user) {
