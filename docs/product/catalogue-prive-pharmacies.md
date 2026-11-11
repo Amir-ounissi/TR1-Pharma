@@ -26,7 +26,7 @@ URL provisoire dans l'application : **/catalogue** (acces pharmacie) et **/catal
 - Verification automatique du SIRET/RPPS et des qualifications.
 
 ### A executer avant la demonstration invitee
-1. Appliquer **uniquement sur Supabase staging** la migration \`20261111110000_private_pharmacy_catalog.sql\`. Ne pas toucher a la production sans validation.
+1. Appliquer **uniquement sur Supabase staging** la migration \`20261111100242_private_pharmacy_catalog.sql\`. Ne pas toucher a la production sans validation.
 2. Verifier que Vercel preview utilise exclusivement l'URL et les secrets **staging** de Supabase.
 3. Configurer dans Supabase Auth staging le template d'invitation afin que l'utilisateur arrive sur
    \`/auth/confirm?token_hash={{ .TokenHash }}&type=invite&next=/catalogue/activer\`.
