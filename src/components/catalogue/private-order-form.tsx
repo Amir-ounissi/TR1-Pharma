@@ -2,7 +2,8 @@
 
 import { useActionState } from "react";
 import { sendPrivateCatalogueRequest } from "@/app/catalogue/actions";
-import { euroHT, type CatalogProduct } from "@/lib/private-catalogue";
+import type { CatalogProduct } from "@/lib/private-catalogue";
+import { euroHT } from "@/lib/private-catalogue-format";
 
 export function PrivateOrderForm({ slug, products }: { slug: string; products: CatalogProduct[] }) {
   const [state, action, pending] = useActionState(sendPrivateCatalogueRequest, { error: "" });
