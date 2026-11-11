@@ -3,6 +3,11 @@ import "server-only";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { ContractTier, IndicativeTier } from "@/lib/private-catalogue-format";
+
+export type CataloguePricing =
+  | { mode: "indicative"; tiers: IndicativeTier[] }
+  | { mode: "contractual"; tiers: ContractTier[] };
 
 export type CatalogProduct = {
   id: string;
@@ -13,10 +18,10 @@ export type CatalogProduct = {
   description: string;
   format: string;
   image_url: string | null;
-  price_ht: number;
   vat_rate: number;
   min_quantity: number;
   quantity_step: number;
+  pricing: CataloguePricing;
 };
 
 export type CatalogBrand = {
@@ -40,7 +45,6 @@ export async function requirePharmacyCatalogue() {
     .maybeSingle();
 
   if (membershipError) throw membershipError;
-  // The authorisation is not inferred from the public profile or editable JWT metadata.
   if (!membership?.active || user.email?.toLowerCase() !== membership.invited_email.toLowerCase()) {
     redirect("/catalogue/connexion?erreur=acces");
   }
@@ -74,6 +78,11 @@ export async function getCatalogueBrands(pharmacyId: string, admin: ReturnType<t
   return (data ?? []) as CatalogBrand[];
 }
 
+/**
+ * Les prix internes du produit ne figurent jamais dans l'objet renvoye au client.
+ * La tarification contractuelle requiert une autorisation par pharmacie ET par marque,
+ * puis un prix explicite par produit (ou par palier). Sinon seule la fourchette est renvoyee.
+ */
 export async function getCatalogueBrandForPharmacy(
   pharmacyId: string,
   slug: string,
@@ -83,26 +92,89 @@ export async function getCatalogueBrandForPharmacy(
   const brand = brands.find((item) => item.slug === slug);
   if (!brand) notFound();
 
+  const { data: access, error: permissionError } = await admin.from("private_catalog_access")
+    .select("pricing_mode")
+    .eq("pharmacy_id", pharmacyId)
+    .eq("brand_id", brand.id)
+    .eq("active", true)
+    .maybeSingle();
+  if (permissionError) throw permissionError;
+  if (!access) notFound();
+
   const { data: rows, error } = await admin.from("private_catalog_products")
-    .select("id,brand_id,sku,ean,name,description,format,image_url,price_ht,vat_rate,min_quantity,quantity_step")
+    .select("id,brand_id,sku,ean,name,description,format,image_url,vat_rate,min_quantity,quantity_step")
     .eq("brand_id", brand.id)
     .eq("active", true)
     .order("name");
   if (error) throw error;
-  const products = (rows ?? []) as CatalogProduct[];
-  if (!products.length) return { brand, products };
 
-  const { data: prices, error: priceError } = await admin
-    .from("private_catalog_prices")
-    .select("product_id,price_ht")
-    .eq("pharmacy_id", pharmacyId)
-    .in("product_id", products.map((p) => p.id));
-  if (priceError) throw priceError;
-  const priceByProduct = new Map((prices ?? []).map((p) => [p.product_id as string, Number(p.price_ht)]));
-  return {
-    brand,
-    products: products.map((p) => ({ ...p, price_ht: priceByProduct.get(p.id) ?? Number(p.price_ht) })),
-  };
+  const sourceProducts = rows ?? [];
+  if (!sourceProducts.length) return { brand, products: [] as CatalogProduct[] };
+
+  const productIds = sourceProducts.map((p) => p.id);
+  const [indicative, contractual, legacy] = await Promise.all([
+    admin.from("private_catalog_indicative_tiers")
+      .select("product_id,min_quantity,price_min_ht,price_max_ht").in("product_id", productIds)
+      .order("min_quantity"),
+    // Le client serveur charge ces donnees mais ne les transmet jamais au navigateur
+    // si l'officine n'a pas de contrat autorise.
+    access.pricing_mode === "contractual"
+      ? admin.from("private_catalog_contract_tiers")
+        .select("product_id,min_quantity,price_ht").eq("pharmacy_id", pharmacyId)
+        .in("product_id", productIds).order("min_quantity")
+      : Promise.resolve({ data: [], error: null }),
+    access.pricing_mode === "contractual"
+      ? admin.from("private_catalog_prices")
+        .select("product_id,price_ht").eq("pharmacy_id", pharmacyId).in("product_id", productIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+  if (indicative.error) throw indicative.error;
+  if (contractual.error) throw contractual.error;
+  if (legacy.error) throw legacy.error;
+
+  const indicativeByProduct = new Map<string, IndicativeTier[]>();
+  for (const row of indicative.data ?? []) {
+    const tiers = indicativeByProduct.get(row.product_id) ?? [];
+    tiers.push({
+      min_quantity: Number(row.min_quantity),
+      price_min_ht: Number(row.price_min_ht),
+      price_max_ht: Number(row.price_max_ht),
+    });
+    indicativeByProduct.set(row.product_id, tiers);
+  }
+
+  const contractualByProduct = new Map<string, ContractTier[]>();
+  for (const row of contractual.data ?? []) {
+    const tiers = contractualByProduct.get(row.product_id) ?? [];
+    tiers.push({ min_quantity: Number(row.min_quantity), price_ht: Number(row.price_ht) });
+    contractualByProduct.set(row.product_id, tiers);
+  }
+  const legacyByProduct = new Map(
+    (legacy.data ?? []).map((row) => [row.product_id as string, Number(row.price_ht)]),
+  );
+
+  const products: CatalogProduct[] = sourceProducts.map((product) => {
+    const tiers = contractualByProduct.get(product.id);
+    const flatPrice = legacyByProduct.get(product.id);
+    const contractualTiers = tiers?.length
+      ? tiers
+      : flatPrice == null
+        ? []
+        : [{ min_quantity: product.min_quantity, price_ht: flatPrice }];
+
+    const pricing: CataloguePricing = access.pricing_mode === "contractual" && contractualTiers.length
+      ? { mode: "contractual", tiers: contractualTiers }
+      : { mode: "indicative", tiers: indicativeByProduct.get(product.id) ?? [] };
+
+    return {
+      id: product.id, brand_id: product.brand_id, sku: product.sku, ean: product.ean,
+      name: product.name, description: product.description, format: product.format,
+      image_url: product.image_url, vat_rate: Number(product.vat_rate),
+      min_quantity: Number(product.min_quantity), quantity_step: Number(product.quantity_step),
+      pricing,
+    };
+  });
+  return { brand, products };
 }
 
 export { euroHT, isAllowedQuantity, sumOrderCents } from "@/lib/private-catalogue-format";
