@@ -21,8 +21,8 @@ export default async function PharmacyBrandPage({ params }: { params: Promise<{ 
       </div>
       <div className="space-y-5">
         <div>
-          <h2 className="text-2xl font-extrabold">Produits et demande de réassort</h2>
-          <p className="mt-2 text-sm text-[#69717d]">Sélectionnez les quantités souhaitées. Les montants visibles sont les prix d’achat HT applicables à votre pharmacie.</p>
+          <h2 className="text-2xl font-extrabold">Produits et conditions selon vos volumes</h2>
+          <p className="mt-2 text-sm leading-6 text-[#69717d]">Choisissez vos quantités pour découvrir votre fourchette indicative ou, si vous disposez d’un accord actif sur la référence, votre tarif exact. Les fourchettes ne sont pas des offres fermes : TR1 PHARMA confirme vos conditions avant commande.</p>
         </div>
         <PrivateOrderForm slug={brand.slug} products={products} />
       </div>
