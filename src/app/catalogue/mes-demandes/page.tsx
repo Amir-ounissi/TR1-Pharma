@@ -16,7 +16,7 @@ export default async function PharmacyRequestsPage({
   const { envoyee } = await searchParams;
   const { admin, pharmacy } = await requirePharmacyCatalogue();
   const { data, error } = await admin.from("private_catalog_requests")
-    .select("id,brand_id,total_ht,status,created_at")
+    .select("id,brand_id,total_ht,request_kind,status,created_at")
     .eq("pharmacy_id", pharmacy.id)
     .order("created_at", { ascending: false })
     .limit(100);
@@ -45,9 +45,9 @@ export default async function PharmacyRequestsPage({
                 <div>
                   <p className="font-bold">{names.get(request.brand_id) ?? "Laboratoire"}</p>
                   <p className="mt-1 text-xs text-[#69717d]">{new Date(request.created_at).toLocaleDateString("fr-FR")} · Réf. {request.id.slice(0, 8).toUpperCase()}</p>
-                  <p className="mt-2 text-xs font-bold text-[#69717d]">{labels[request.status] ?? request.status}</p>
+                  <p className="mt-2 text-xs font-bold text-[#69717d]">{request.request_kind === "quote" ? "Demande de conditions · " : "Demande de commande · "}{labels[request.status] ?? request.status}</p>
                 </div>
-                <p className="text-lg font-black">{euroHT(Number(request.total_ht))} HT</p>
+                <p className="text-lg font-black">{request.request_kind === "quote" || request.total_ht === null ? "À chiffrer" : euroHT(Number(request.total_ht)) + " HT"}</p>
               </div>
             ))}
           </div>
