@@ -77,8 +77,12 @@ export async function createPrivateCatalogueProduct(formData: FormData) {
 }
 
 export async function authorizePrivateCatalogueBrand(formData: FormData) {
-  const input = z.object({ pharmacy_id: id, brand_id: id }).parse({
+  const input = z.object({
+    pharmacy_id: id, brand_id: id,
+    pricing_mode: z.enum(["indicative","contractual"]),
+  }).parse({
     pharmacy_id: formData.get("pharmacy_id"), brand_id: formData.get("brand_id"),
+    pricing_mode: formData.get("pricing_mode") ?? "indicative",
   });
   const admin = await authorizedAdmin();
   const { error } = await admin.from("private_catalog_access")
@@ -97,6 +101,61 @@ export async function setPrivateCatalogueBrandPublished(formData: FormData) {
   finish();
 }
 
+async function requireAuthorizedProduct(
+  admin: ReturnType<typeof createAdminClient>,
+  pharmacyId: string,
+  productId: string,
+) {
+  const { data: product, error: productError } = await admin.from("private_catalog_products")
+    .select("brand_id").eq("id", productId).maybeSingle();
+  if (productError || !product) throw new Error("Référence inconnue.");
+  const { data: access, error: accessError } = await admin.from("private_catalog_access")
+    .select("active").eq("pharmacy_id", pharmacyId)
+    .eq("brand_id", product.brand_id).maybeSingle();
+  if (accessError || !access?.active) {
+    throw new Error("Autorisez d'abord cette marque pour la pharmacie.");
+  }
+  return product.brand_id as string;
+}
+
+export async function setPrivateCatalogueIndicativeTier(formData: FormData) {
+  const input = z.object({
+    product_id: id, min_quantity: z.coerce.number().int().min(1).max(5000),
+    price_min_ht: z.coerce.number().min(0).max(999999),
+    price_max_ht: z.coerce.number().min(0).max(999999),
+  }).refine((v) => v.price_min_ht <= v.price_max_ht).parse({
+    product_id: formData.get("product_id"), min_quantity: formData.get("min_quantity"),
+    price_min_ht: formData.get("price_min_ht"), price_max_ht: formData.get("price_max_ht"),
+  });
+  const admin = await authorizedAdmin();
+  const { error } = await admin.from("private_catalog_indicative_tiers")
+    .upsert(input, { onConflict: "product_id,min_quantity" });
+  if (error) throw error;
+  finish();
+}
+
+export async function setPrivateCatalogueContractTier(formData: FormData) {
+  const input = z.object({
+    pharmacy_id: id, product_id: id,
+    min_quantity: z.coerce.number().int().min(1).max(5000),
+    price_ht: z.coerce.number().min(0).max(999999),
+  }).parse({
+    pharmacy_id: formData.get("pharmacy_id"), product_id: formData.get("product_id"),
+    min_quantity: formData.get("min_quantity"), price_ht: formData.get("price_ht"),
+  });
+  const admin = await authorizedAdmin();
+  const brandId = await requireAuthorizedProduct(admin, input.pharmacy_id, input.product_id);
+  const { error } = await admin.from("private_catalog_contract_tiers")
+    .upsert(input, { onConflict: "pharmacy_id,product_id,min_quantity" });
+  if (error) throw error;
+  const { error: modeError } = await admin.from("private_catalog_access")
+    .update({ pricing_mode: "contractual" })
+    .eq("pharmacy_id", input.pharmacy_id).eq("brand_id", brandId);
+  if (modeError) throw modeError;
+  finish();
+}
+
+// Compatibilite avec les prix fixes deja prevus dans l'ancien formulaire.
 export async function setPrivateCataloguePrice(formData: FormData) {
   const input = z.object({
     pharmacy_id: id, product_id: id, price_ht: z.coerce.number().min(0).max(999999),
@@ -105,9 +164,14 @@ export async function setPrivateCataloguePrice(formData: FormData) {
     price_ht: formData.get("price_ht"),
   });
   const admin = await authorizedAdmin();
+  const brandId = await requireAuthorizedProduct(admin, input.pharmacy_id, input.product_id);
   const { error } = await admin.from("private_catalog_prices")
     .upsert(input, { onConflict: "pharmacy_id,product_id" });
   if (error) throw error;
+  const { error: modeError } = await admin.from("private_catalog_access")
+    .update({ pricing_mode: "contractual" })
+    .eq("pharmacy_id", input.pharmacy_id).eq("brand_id", brandId);
+  if (modeError) throw modeError;
   finish();
 }
 
