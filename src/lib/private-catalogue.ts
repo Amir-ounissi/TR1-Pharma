@@ -37,6 +37,19 @@ export async function requirePharmacyCatalogue() {
   const { data: { user }, error } = await supabase.auth.getUser();
   if (error || !user) redirect("/catalogue/connexion");
 
+  // Platform owners are not pharmacy members: send them to their own
+  // administration instead of attempting a privileged pharmacy lookup.
+  const { data: globalAdmin, error: globalAdminError } = await supabase
+    .from("memberships")
+    .select("id,roles!inner(key)")
+    .eq("user_id", user.id)
+    .is("brand_id", null)
+    .eq("status", "active")
+    .eq("roles.key", "super_admin")
+    .maybeSingle();
+  if (globalAdminError) throw globalAdminError;
+  if (globalAdmin) redirect("/catalogue/administration");
+
   const admin = createAdminClient();
   const { data: membership, error: membershipError } = await admin
     .from("private_catalog_memberships")
