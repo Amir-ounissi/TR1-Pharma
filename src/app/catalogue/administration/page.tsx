@@ -1,5 +1,4 @@
 import { requirePlatformAdmin } from "@/lib/auth";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { euroHT } from "@/lib/private-catalogue";
 import {
   authorizePrivateCatalogueBrand,
@@ -26,8 +25,9 @@ const statuses = [
 export default async function CatalogueAdministration({
   searchParams,
 }: { searchParams: Promise<{ succes?: string }> }) {
-  await requirePlatformAdmin();
-  const admin = createAdminClient();
+  // The dashboard uses the authenticated user session plus strict super-admin RLS.
+  // A shared service key must never be required to render this administration.
+  const { supabase: admin } = await requirePlatformAdmin();
   const [
     { data: pharmacies, error: pharmaciesError },
     { data: brands, error: brandsError },
@@ -138,7 +138,8 @@ export default async function CatalogueAdministration({
             <p className="text-xs text-[#69717d]">Ce formulaire enverra réellement un email à l’adresse saisie. Vérifiez d’abord l’identité et l’habilitation du destinataire.</p>
             <div><label htmlFor="invite_pharmacy" className={label}>Pharmacie</label><select id="invite_pharmacy" name="pharmacy_id" required className={field}>{pharmacyRows.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
             <div><label htmlFor="invite_email" className={label}>Email du professionnel</label><input id="invite_email" name="email" type="email" required className={field} /></div>
-            <button type="submit" className={button} disabled={!pharmacyRows.length}>Envoyer l’invitation</button>
+            <button type="submit" className={button} disabled={!pharmacyRows.length || process.env.PRIVATE_CATALOG_INVITES_ENABLED !== "true"}>Envoyer l’invitation</button>
+            {process.env.PRIVATE_CATALOG_INVITES_ENABLED !== "true" ? <p className="text-xs font-semibold text-[#965326]">Invitations désactivées dans cette version de test : la clé serveur Supabase doit d’abord être corrigée.</p> : null}
           </form>
           <form action={setPrivateCataloguePrice} className="space-y-4 rounded-xl border border-[#0e1d31]/10 bg-white p-5">
             <h3 className="text-lg font-extrabold">Prix contractuel fixe (ancien modèle)</h3>
