@@ -156,11 +156,14 @@ export async function getCatalogueBrandForPharmacy(
   const products: CatalogProduct[] = sourceProducts.map((product) => {
     const tiers = contractualByProduct.get(product.id);
     const flatPrice = legacyByProduct.get(product.id);
-    const contractualTiers = tiers?.length
-      ? tiers
-      : flatPrice == null
-        ? []
-        : [{ min_quantity: product.min_quantity, price_ht: flatPrice }];
+    // Un ancien tarif fixe reste applicable au seuil de base, sauf s'il
+    // existe un palier contractuel explicite au meme seuil.
+    const byMinimum = new Map<number, ContractTier>();
+    if (flatPrice !== undefined) {
+      byMinimum.set(product.min_quantity, { min_quantity: product.min_quantity, price_ht: flatPrice });
+    }
+    for (const tier of tiers ?? []) byMinimum.set(tier.min_quantity, tier);
+    const contractualTiers = [...byMinimum.values()].sort((a, b) => a.min_quantity - b.min_quantity);
 
     const pricing: CataloguePricing = access.pricing_mode === "contractual" && contractualTiers.length
       ? { mode: "contractual", tiers: contractualTiers }
