@@ -30,7 +30,7 @@ URL provisoire dans l'application : **/catalogue** (acces pharmacie) et **/catal
 
 ### A executer avant la demonstration invitee
 1. Migrations **appliquees sur Supabase staging uniquement** : \`20261111100242_private_pharmacy_catalog.sql\` et \`20261111143935_private_catalog_pricing_tiers.sql\`. Ne pas toucher a la production sans validation.
-2. **Bloquant connu** : les logs Vercel ont signale \`Invalid API key\`. L'URL et la cle publique Preview pointent bien vers Supabase staging, mais \`SUPABASE_SECRET_KEY\` doit etre configuree avec la cle secrete du projet staging, limitee a la preview/branche. Ne pas remplacer la cle production. Les previews continueront d'echouer pour la page admin tant que ce point n'est pas corrige.
+2. **Correction admin appliquee sur staging** : le back-office catalogue utilise maintenant la session de l'administrateur et des policies RLS strictement limitees au role global \`super_admin\`. L'URL et la cle publique Preview pointent bien vers Supabase staging. **Toujours bloquant pour les parcours pharmacies invitees et les invitations par email** : \`SUPABASE_SECRET_KEY\` est invalide ; il faudra une vraie cle secrete issue de staging, limitee a la branche Preview. Les invitations sont desactivees par defaut avec \`PRIVATE_CATALOG_INVITES_ENABLED\` different de \`true\`. Ne jamais copier la cle production.
 3. Configurer dans Supabase Auth staging le template d'invitation afin que l'utilisateur arrive sur
    \`/auth/confirm?token_hash={{ .TokenHash }}&type=invite&next=/catalogue/activer\`.
    Tester le format effectif de la variable dans le template en contexte Supabase.
@@ -44,7 +44,7 @@ URL provisoire dans l'application : **/catalogue** (acces pharmacie) et **/catal
 ### Points de vigilance
 - Le formulaire d'invitation **envoie immediatement un email** lorsque l'administrateur clique dessus. Aucun envoi n'est effectue par un simple deploy.
 - L'URL de redirection vient de \`resolveAppUrl()\`; confirmer que \`NEXT_PUBLIC_APP_URL\` pointe vers le domaine du bon environnement.
-- L'ensemble des lectures et ecritures du catalogue passe par une connexion \`service_role\` strictement serveur et des controles explicites d'authentification/autorisation. Ne jamais exposer cette cle dans le navigateur.
+- L'administration du catalogue passe par une session Supabase authentifiee avec policies RLS super-admin. Les parcours pharmacie existants passent encore par une connexion \`service_role\` serveur et des controles explicites d'authentification/autorisation. Ne jamais exposer cette cle dans le navigateur.
 - Les tables \`private_catalog_*\` sont RLS et interdites aux roles \`anon\` et \`authenticated\`. Ne pas retirer ces protections pour contourner une erreur de code.
 - Les prix/quantites sont recalcules depuis la base; la page produit n'a aucune autorite sur le tarif.
 - L'application de cette migration a la production est un changement de schema a planifier apres controles et validation.
@@ -57,3 +57,10 @@ URL provisoire dans l'application : **/catalogue** (acces pharmacie) et **/catal
 - \`private_catalog_contract_tiers\` : prix exact selon le volume, limite a une pharmacie et un produit ; l'ancien \`private_catalog_prices\` sert de fallback pour les accords deja renseignes.
 - Pour une demande mixte (un produit sans prix ferme), enregistrer \`request_kind='quote'\`, \`total_ht=NULL\` et des lignes sans montant, plutot que de retourner une somme partielle ou inventee.
 - Les fourchettes ne sont jamais des prix garantis. La saisie par l'administrateur doit etre approuvee par la marque ; ne pas saisir automatiquement les prix planchers reels.
+
+### Correctif du 11 novembre 2026 — acces administration
+- Migration \`20261111150110_private_catalog_platform_admin_rls.sql\` appliquee sur staging seulement, aucune operation en production.
+- Policies \`platform_superadmin_only\` sur les dix tables de catalogue, avec GRANT cible \`authenticated\`, verification du role global via \`private.has_global_role\`. Le role \`anon\` reste interdit.
+- Page \`/catalogue/administration\` et actions de gestion de donnees utilisent la session utilisateur et les RLS, pas de cle service-role. Un super-admin ouvre \`/catalogue\` -> redirection vers sa page d'administration avant la connexion service-role.
+- Invitations par email desactivees et soumises a un flag explicite tant que la cle de staging n'est pas corrigee. Le parcours pharmacie ordinaire a encore besoin d'une cle service-role valide et reste a verifier ; ne pas annoncer de validation bout en bout.
+- Alias de branche de preview : \`tr1-pharma-staging-git-f-729926-amir-ounissis-projects-723e961a.vercel.app\`.
