@@ -145,7 +145,7 @@ export default async function CatalogueAdministration({
             <div><label htmlFor="price_pharmacy" className={label}>Pharmacie</label><select id="price_pharmacy" name="pharmacy_id" required className={field}>{pharmacyRows.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
             <div><label htmlFor="price_product" className={label}>Produit</label><select id="price_product" name="product_id" required className={field}>{productRows.map((p) => <option key={p.id} value={p.id}>{p.name} · {p.sku}</option>)}</select></div>
             <div><label htmlFor="price_override" className={label}>Prix HT personnalisé</label><input id="price_override" name="price_ht" type="number" min="0" step="0.01" required className={field} /></div>
-            <p className="text-xs text-[#69717d]">Ce prix est visible uniquement par l'officine autorisée. Les nouveaux paliers ci-dessous prennent priorité si renseignés.</p>
+            <p className="text-xs text-[#69717d]">Ce prix est visible uniquement par l&apos;officine autorisée. Les nouveaux paliers ci-dessous prennent priorité si renseignés.</p>
             <button type="submit" className={button} disabled={!pharmacyRows.length || !productRows.length}>Appliquer le prix</button>
           </form>
         </div>
@@ -163,7 +163,7 @@ export default async function CatalogueAdministration({
               <div><label htmlFor="band_min" className={label}>Borne basse HT / unité</label><input id="band_min" name="price_min_ht" type="number" min="0" step="0.01" required className={field} /></div>
               <div><label htmlFor="band_max" className={label}>Borne haute HT / unité</label><input id="band_max" name="price_max_ht" type="number" min="0" step="0.01" required className={field} /></div>
             </div>
-            <p className="text-xs text-[#69717d]">Même produit + seuil identique : le palier est mis à jour. Les seuils suivants s'affichent en fonction des quantités sélectionnées.</p>
+            <p className="text-xs text-[#69717d]">Même produit + seuil identique : le palier est mis à jour. Les seuils suivants s&apos;affichent en fonction des quantités sélectionnées.</p>
             <button type="submit" className={button} disabled={!productRows.length}>Enregistrer la fourchette</button>
           </form>
           <form action={setPrivateCatalogueContractTier} className="space-y-4 rounded-xl border border-[#0e1d31]/10 bg-white p-5">
@@ -172,7 +172,7 @@ export default async function CatalogueAdministration({
             <div><label htmlFor="contract_product" className={label}>Référence</label><select id="contract_product" name="product_id" required className={field}>{productRows.map((p) => <option key={p.id} value={p.id}>{p.name} · {p.sku}</option>)}</select></div>
             <div><label htmlFor="contract_quantity" className={label}>À partir de (unités)</label><input id="contract_quantity" name="min_quantity" type="number" min="1" max="5000" defaultValue="12" required className={field} /></div>
             <div><label htmlFor="contract_price" className={label}>Prix contractuel HT / unité</label><input id="contract_price" name="price_ht" type="number" min="0" step="0.01" required className={field} /></div>
-            <p className="text-xs text-[#69717d]">La marque doit d'abord être autorisée pour la pharmacie. Ce prix n'est accessible qu'à son compte et active le mode contractuel pour cette marque.</p>
+            <p className="text-xs text-[#69717d]">La marque doit d&apos;abord être autorisée pour la pharmacie. Ce prix n&apos;est accessible qu&apos;à son compte et active le mode contractuel pour cette marque.</p>
             <button type="submit" className={button} disabled={!pharmacyRows.length || !productRows.length}>Enregistrer le palier contractuel</button>
           </form>
         </div>
