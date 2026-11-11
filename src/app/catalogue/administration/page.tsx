@@ -9,6 +9,8 @@ import {
   invitePrivateCatalogueUser,
   setPrivateCatalogueBrandPublished,
   setPrivateCataloguePrice,
+  setPrivateCatalogueIndicativeTier,
+  setPrivateCatalogueContractTier,
   updatePrivateCatalogueRequestStatus,
 } from "./actions";
 
@@ -32,20 +34,29 @@ export default async function CatalogueAdministration({
     { data: products, error: productsError },
     { data: requests, error: requestsError },
     { data: memberships, error: membershipsError },
+    { data: indicativeTiers, error: indicativeError },
+    { data: contractTiers, error: contractError },
+    { data: brandAccess, error: accessError },
   ] = await Promise.all([
     admin.from("private_catalog_pharmacies").select("id,name,city,contact_email").order("name"),
     admin.from("private_catalog_brands").select("id,name,slug,active").order("name"),
     admin.from("private_catalog_products").select("id,brand_id,name,sku,price_ht").order("name"),
-    admin.from("private_catalog_requests").select("id,pharmacy_id,brand_id,total_ht,status,created_at").order("created_at", { ascending: false }).limit(100),
+    admin.from("private_catalog_requests").select("id,pharmacy_id,brand_id,total_ht,request_kind,status,created_at").order("created_at", { ascending: false }).limit(100),
     admin.from("private_catalog_memberships").select("user_id,pharmacy_id,invited_email,active").limit(200),
+    admin.from("private_catalog_indicative_tiers").select("product_id,min_quantity,price_min_ht,price_max_ht").order("min_quantity"),
+    admin.from("private_catalog_contract_tiers").select("pharmacy_id,product_id,min_quantity,price_ht").order("min_quantity"),
+    admin.from("private_catalog_access").select("pharmacy_id,brand_id,active,pricing_mode"),
   ]);
-  const queryError = pharmaciesError ?? brandsError ?? productsError ?? requestsError ?? membershipsError;
+  const queryError = pharmaciesError ?? brandsError ?? productsError ?? requestsError ?? membershipsError ?? indicativeError ?? contractError ?? accessError;
   if (queryError) throw queryError;
   const pharmacyRows = pharmacies ?? [];
   const brandRows = brands ?? [];
   const productRows = products ?? [];
   const requestRows = requests ?? [];
   const memberRows = memberships ?? [];
+  const indicativeRows = indicativeTiers ?? [];
+  const contractRows = contractTiers ?? [];
+  const accessRows = brandAccess ?? [];
   const { succes } = await searchParams;
 
   return (
@@ -101,11 +112,12 @@ export default async function CatalogueAdministration({
             <div><label htmlFor="product_name" className={label}>Produit</label><input id="product_name" name="name" required className={field} /></div>
             <div><label htmlFor="product_format" className={label}>Format</label><input id="product_format" name="format" className={field} /></div>
             <div className="grid grid-cols-2 gap-3">
-              <div><label htmlFor="product_price" className={label}>Prix HT (€)</label><input id="product_price" name="price_ht" type="number" min="0" step="0.01" required className={field} /></div>
+              <div><label htmlFor="product_price" className={label}>Prix de référence HT (€) · interne</label><input id="product_price" name="price_ht" type="number" min="0" step="0.01" required className={field} /></div>
               <div><label htmlFor="product_vat" className={label}>TVA (%)</label><input id="product_vat" name="vat_rate" type="number" min="0" max="100" step="0.01" required className={field} /></div>
               <div><label htmlFor="product_min" className={label}>Minimum</label><input id="product_min" name="min_quantity" type="number" min="1" defaultValue="1" className={field} /></div>
               <div><label htmlFor="product_step" className={label}>Pas quantité</label><input id="product_step" name="quantity_step" type="number" min="1" defaultValue="1" className={field} /></div>
             </div>
+            <p className="text-xs text-[#69717d]">Ce prix de référence est confidentiel. Il ne sera jamais affiché directement aux pharmacies.</p>
             <button type="submit" className={button} disabled={!brandRows.length}>Ajouter le produit</button>
           </form>
         </div>
@@ -118,6 +130,7 @@ export default async function CatalogueAdministration({
             <h3 className="text-lg font-extrabold">Autoriser une marque</h3>
             <div><label className={label} htmlFor="access_pharmacy">Pharmacie</label><select id="access_pharmacy" name="pharmacy_id" className={field} required>{pharmacyRows.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
             <div><label className={label} htmlFor="access_brand">Marque</label><select id="access_brand" name="brand_id" className={field} required>{brandRows.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</select></div>
+            <div><label className={label} htmlFor="access_mode">Visibilité tarifaire</label><select id="access_mode" name="pricing_mode" className={field}><option value="indicative">Fourchettes indicatives</option><option value="contractual">Accord contractuel (prix exacts configurés uniquement)</option></select></div>
             <button className={button} disabled={!pharmacyRows.length || !brandRows.length}>Donner accès</button>
           </form>
           <form action={invitePrivateCatalogueUser} className="space-y-4 rounded-xl border border-[#0e1d31]/10 bg-white p-5">
@@ -128,17 +141,71 @@ export default async function CatalogueAdministration({
             <button type="submit" className={button} disabled={!pharmacyRows.length}>Envoyer l’invitation</button>
           </form>
           <form action={setPrivateCataloguePrice} className="space-y-4 rounded-xl border border-[#0e1d31]/10 bg-white p-5">
-            <h3 className="text-lg font-extrabold">Prix spécifique</h3>
+            <h3 className="text-lg font-extrabold">Prix contractuel fixe (ancien modèle)</h3>
             <div><label htmlFor="price_pharmacy" className={label}>Pharmacie</label><select id="price_pharmacy" name="pharmacy_id" required className={field}>{pharmacyRows.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
             <div><label htmlFor="price_product" className={label}>Produit</label><select id="price_product" name="product_id" required className={field}>{productRows.map((p) => <option key={p.id} value={p.id}>{p.name} · {p.sku}</option>)}</select></div>
             <div><label htmlFor="price_override" className={label}>Prix HT personnalisé</label><input id="price_override" name="price_ht" type="number" min="0" step="0.01" required className={field} /></div>
+            <p className="text-xs text-[#69717d]">Ce prix est visible uniquement par l'officine autorisée. Les nouveaux paliers ci-dessous prennent priorité si renseignés.</p>
             <button type="submit" className={button} disabled={!pharmacyRows.length || !productRows.length}>Appliquer le prix</button>
           </form>
         </div>
       </section>
 
+      <section aria-labelledby="tiers" className="space-y-5">
+        <h2 id="tiers" className="text-2xl font-black">3. Barèmes par volume</h2>
+        <p className="max-w-3xl text-sm leading-6 text-[#69717d]">Les fourchettes sont des indications commerciales indépendantes des prix de référence. Ne publiez pas un plancher confidentiel : saisissez uniquement les intervalles validés par le laboratoire. Les prix contractuels sont propres à chaque officine et restent invisibles aux autres.</p>
+        <div className="grid gap-5 lg:grid-cols-2">
+          <form action={setPrivateCatalogueIndicativeTier} className="space-y-4 rounded-xl border border-[#0e1d31]/10 bg-white p-5">
+            <h3 className="text-lg font-extrabold">Fourchette indicative · visible aux invités</h3>
+            <div><label htmlFor="band_product" className={label}>Référence</label><select id="band_product" name="product_id" required className={field}>{productRows.map((p) => <option key={p.id} value={p.id}>{p.name} · {p.sku}</option>)}</select></div>
+            <div><label htmlFor="band_quantity" className={label}>À partir de (unités)</label><input id="band_quantity" name="min_quantity" type="number" min="1" max="5000" defaultValue="12" required className={field} /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label htmlFor="band_min" className={label}>Borne basse HT / unité</label><input id="band_min" name="price_min_ht" type="number" min="0" step="0.01" required className={field} /></div>
+              <div><label htmlFor="band_max" className={label}>Borne haute HT / unité</label><input id="band_max" name="price_max_ht" type="number" min="0" step="0.01" required className={field} /></div>
+            </div>
+            <p className="text-xs text-[#69717d]">Même produit + seuil identique : le palier est mis à jour. Les seuils suivants s'affichent en fonction des quantités sélectionnées.</p>
+            <button type="submit" className={button} disabled={!productRows.length}>Enregistrer la fourchette</button>
+          </form>
+          <form action={setPrivateCatalogueContractTier} className="space-y-4 rounded-xl border border-[#0e1d31]/10 bg-white p-5">
+            <h3 className="text-lg font-extrabold">Prix exact · accord officine</h3>
+            <div><label htmlFor="contract_pharmacy" className={label}>Pharmacie</label><select id="contract_pharmacy" name="pharmacy_id" required className={field}>{pharmacyRows.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
+            <div><label htmlFor="contract_product" className={label}>Référence</label><select id="contract_product" name="product_id" required className={field}>{productRows.map((p) => <option key={p.id} value={p.id}>{p.name} · {p.sku}</option>)}</select></div>
+            <div><label htmlFor="contract_quantity" className={label}>À partir de (unités)</label><input id="contract_quantity" name="min_quantity" type="number" min="1" max="5000" defaultValue="12" required className={field} /></div>
+            <div><label htmlFor="contract_price" className={label}>Prix contractuel HT / unité</label><input id="contract_price" name="price_ht" type="number" min="0" step="0.01" required className={field} /></div>
+            <p className="text-xs text-[#69717d]">La marque doit d'abord être autorisée pour la pharmacie. Ce prix n'est accessible qu'à son compte et active le mode contractuel pour cette marque.</p>
+            <button type="submit" className={button} disabled={!pharmacyRows.length || !productRows.length}>Enregistrer le palier contractuel</button>
+          </form>
+        </div>
+        <div className="grid gap-5 lg:grid-cols-2">
+          <div className="rounded-xl border border-[#0e1d31]/10 bg-white p-5">
+            <h3 className="mb-3 text-lg font-extrabold">Fourchettes publiables</h3>
+            {indicativeRows.map((t) => <div key={t.product_id + t.min_quantity} className="flex flex-wrap items-center justify-between gap-2 border-t border-[#0e1d31]/10 py-3 text-sm">
+              <span>{productRows.find((p) => p.id === t.product_id)?.name ?? "Référence"} · dès {t.min_quantity} unités</span>
+              <strong>{euroHT(Number(t.price_min_ht))} – {euroHT(Number(t.price_max_ht))} HT/u.</strong>
+            </div>)}
+            {!indicativeRows.length ? <p className="text-sm text-[#69717d]">Aucune fourchette configurée : les officines verront « Tarif sur demande ».</p> : null}
+          </div>
+          <div className="rounded-xl border border-[#0e1d31]/10 bg-white p-5">
+            <h3 className="mb-3 text-lg font-extrabold">Conditions confidentielles</h3>
+            {contractRows.map((t) => <div key={t.pharmacy_id + t.product_id + t.min_quantity} className="flex flex-wrap items-center justify-between gap-2 border-t border-[#0e1d31]/10 py-3 text-sm">
+              <span>{pharmacyRows.find((p) => p.id === t.pharmacy_id)?.name ?? "Pharmacie"} · {productRows.find((p) => p.id === t.product_id)?.name ?? "Référence"} · dès {t.min_quantity} unités</span>
+              <strong>{euroHT(Number(t.price_ht))} HT/u.</strong>
+            </div>)}
+            {!contractRows.length ? <p className="text-sm text-[#69717d]">Aucun prix contractuel par volume.</p> : null}
+          </div>
+        </div>
+        <div className="rounded-xl border border-[#0e1d31]/10 bg-white p-5">
+          <h3 className="mb-3 text-lg font-extrabold">Visibilité par pharmacie et marque</h3>
+          {accessRows.filter((a) => a.active).map((a) => <div key={a.pharmacy_id + a.brand_id} className="flex flex-wrap items-center justify-between gap-3 border-t border-[#0e1d31]/10 py-3 text-sm">
+            <span>{pharmacyRows.find((p) => p.id === a.pharmacy_id)?.name ?? "Pharmacie"} · {brandRows.find((b) => b.id === a.brand_id)?.name ?? "Marque"}</span>
+            <strong>{a.pricing_mode === "contractual" ? "Contractuelle · si prix renseignés" : "Indicative"}</strong>
+          </div>)}
+          {!accessRows.length ? <p className="text-sm text-[#69717d]">Aucun accès de marque accordé.</p> : null}
+        </div>
+      </section>
+
       <section aria-labelledby="publish" className="space-y-4">
-        <h2 id="publish" className="text-2xl font-black">3. Publication des marques</h2>
+        <h2 id="publish" className="text-2xl font-black">4. Publication des marques</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {brandRows.map((b) => (
             <form key={b.id} action={setPrivateCatalogueBrandPublished} className="flex items-center justify-between gap-3 rounded-xl border border-[#0e1d31]/10 bg-white p-4">
@@ -152,7 +219,7 @@ export default async function CatalogueAdministration({
       </section>
 
       <section aria-labelledby="requests" className="space-y-4">
-        <h2 id="requests" className="text-2xl font-black">4. Demandes des pharmacies</h2>
+        <h2 id="requests" className="text-2xl font-black">5. Demandes des pharmacies</h2>
         <p className="text-sm text-[#69717d]">Ces demandes n’alimentent pas automatiquement les commandes internes ou les laboratoires.</p>
         <div className="space-y-3">
           {requestRows.map((r) => (
@@ -160,7 +227,7 @@ export default async function CatalogueAdministration({
               <div>
                 <p className="text-sm font-bold">{pharmacyRows.find((p) => p.id === r.pharmacy_id)?.name ?? "Pharmacie"} · {brandRows.find((b) => b.id === r.brand_id)?.name ?? "Laboratoire"}</p>
                 <p className="mt-1 text-xs text-[#69717d]">{new Date(r.created_at).toLocaleDateString("fr-FR")} · {r.id.slice(0, 8).toUpperCase()}</p>
-                <p className="mt-1 font-black">{euroHT(Number(r.total_ht))} HT</p>
+                <p className="mt-1 font-black">{r.request_kind === "quote" ? "Demande de conditions · À chiffrer" : r.total_ht === null ? "Montant à confirmer" : euroHT(Number(r.total_ht)) + " HT"}</p>
               </div>
               <input name="request_id" type="hidden" value={r.id} />
               <div className="flex items-center gap-2">
