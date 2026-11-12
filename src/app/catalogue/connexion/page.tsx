@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { connectPharmacyCatalogue } from "@/app/catalogue/actions";
 
 export default async function CatalogueConnexion({
@@ -23,7 +24,10 @@ export default async function CatalogueConnexion({
         {erreur ? <p role="alert" className="rounded-md bg-[#fff1e5] p-3 text-sm text-[#803e0d]">{erreur === "acces" ? "Ce compte n’a pas d’accès actif au catalogue. Contactez TR1 PHARMA." : "Connexion impossible. Vérifiez vos identifiants."}</p> : null}
         <button type="submit" className="w-full rounded-md bg-[#0e1d31] px-5 py-3 font-bold text-white hover:bg-[#162a45]">Accéder au catalogue</button>
       </form>
-      <p className="text-sm text-[#69717d]">Vous n’avez pas reçu d’invitation ? Contactez votre interlocuteur TR1 PHARMA.</p>
+      <div className="space-y-2 text-sm text-[#69717d]">
+        <p>Adresse préautorisée par TR1 PHARMA, mais pas encore de compte ? <Link className="font-extrabold text-[#0e1d31] underline" href="/catalogue/inscription">Activer mon espace</Link>.</p>
+        <p>Vous n&apos;avez pas été invité ? Contactez votre interlocuteur TR1 PHARMA.</p>
+      </div>
     </div>
   );
 }
