@@ -16,28 +16,28 @@ export default async function PharmacyBrandPage({
 
   return (
     <div className="space-y-7">
-      <nav aria-label="Fil d’Ariane" className="flex items-center gap-2 text-xs text-[#799084]">
-        <Link href="/catalogue" className="font-semibold hover:text-[#173d3b]">Catalogue</Link>
+      <nav aria-label="Fil d’Ariane" className="flex items-center gap-2 text-xs text-[#69717d]">
+        <Link href="/catalogue" className="font-semibold hover:text-[#0e1d31]">Catalogue</Link>
         <ChevronRight size={14} aria-hidden="true" />
-        <span className="font-bold text-[#173d3b]">{brand.name}</span>
+        <span className="font-bold text-[#0e1d31]">{brand.name}</span>
       </nav>
-      <section className="flex flex-wrap items-center justify-between gap-5 rounded-[22px] bg-[#173d3b] p-6 text-white sm:p-9">
+      <section className="flex flex-wrap items-center justify-between gap-5 rounded-lg bg-[#0e1d31] p-6 text-white sm:p-9">
         <div className="max-w-2xl">
-          <p className="text-[11px] font-extrabold uppercase tracking-[.2em] text-[#eab68b]">Catalogue professionnel · {brand.name}</p>
+          <p className="text-[11px] font-extrabold uppercase tracking-[.2em] text-[#ffa460]">Catalogue professionnel · {brand.name}</p>
           <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">{brand.name}</h1>
-          {brand.description ? <p className="mt-3 max-w-xl text-sm leading-6 text-[#d0ddd6]">{brand.description}</p> : null}
-          <p className="mt-4 text-xs font-semibold text-[#d8e3da]">{products.length} référence{products.length > 1 ? "s" : ""} disponible{products.length > 1 ? "s" : ""} pour votre officine</p>
+          {brand.description ? <p className="mt-3 max-w-xl text-sm leading-6 text-[#d5dde7]">{brand.description}</p> : null}
+          <p className="mt-4 text-xs font-semibold text-[#d5dde7]">{products.length} référence{products.length > 1 ? "s" : ""} disponible{products.length > 1 ? "s" : ""} pour votre officine</p>
         </div>
-        <div className="flex items-center gap-2 rounded-xl border border-white/25 px-4 py-3 text-xs font-bold text-[#dfede3]">
+        <div className="flex items-center gap-2 rounded-md border border-white/25 px-4 py-3 text-xs font-bold text-[#d5dde7]">
           <LockKeyhole size={16} aria-hidden="true" /> Tarifs professionnels privés
         </div>
       </section>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-widest text-[#ac714b]">Votre sélection</p>
-          <h2 className="mt-1 text-2xl font-black tracking-tight text-[#173d3b]">Choisissez vos produits</h2>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-[#ad4b08]">Votre sélection</p>
+          <h2 className="mt-1 text-2xl font-black tracking-tight text-[#0e1d31]">Choisissez vos produits</h2>
         </div>
-        <Link href="/catalogue/mes-demandes" className="inline-flex items-center gap-2 text-xs font-extrabold text-[#173d3b] underline underline-offset-4">
+        <Link href="/catalogue/mes-demandes" className="inline-flex items-center gap-2 text-xs font-extrabold text-[#0e1d31] underline underline-offset-4">
           <ShoppingBag size={16} aria-hidden="true" /> Mes demandes
         </Link>
       </div>
