@@ -3,8 +3,14 @@ import { ChevronRight, LockKeyhole, ShoppingBag } from "lucide-react";
 import { getCatalogueBrandForPharmacy, requirePharmacyCatalogue } from "@/lib/private-catalogue";
 import { PrivateOrderForm } from "@/components/catalogue/private-order-form";
 
-export default async function PharmacyBrandPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function PharmacyBrandPage({
+  params, searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ produit?: string }>;
+}) {
   const { slug } = await params;
+  const { produit } = await searchParams;
   const { admin, pharmacy } = await requirePharmacyCatalogue();
   const { brand, products } = await getCatalogueBrandForPharmacy(pharmacy.id, slug, admin);
 
@@ -35,7 +41,7 @@ export default async function PharmacyBrandPage({ params }: { params: Promise<{ 
           <ShoppingBag size={16} aria-hidden="true" /> Mes demandes
         </Link>
       </div>
-      <PrivateOrderForm slug={brand.slug} products={products} />
+      <div id="produits"><PrivateOrderForm slug={brand.slug} products={products} initialProductId={produit} /></div>
     </div>
   );
 }
