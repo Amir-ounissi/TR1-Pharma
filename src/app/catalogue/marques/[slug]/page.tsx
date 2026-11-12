@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
+import { ChevronRight, LockKeyhole, ShoppingBag } from "lucide-react";
 import { getCatalogueBrandForPharmacy, requirePharmacyCatalogue } from "@/lib/private-catalogue";
 import { PrivateOrderForm } from "@/components/catalogue/private-order-form";
 
@@ -9,23 +9,33 @@ export default async function PharmacyBrandPage({ params }: { params: Promise<{ 
   const { brand, products } = await getCatalogueBrandForPharmacy(pharmacy.id, slug, admin);
 
   return (
-    <div className="space-y-8">
-      <Link href="/catalogue" className="inline-flex items-center gap-2 text-sm font-semibold text-[#69717d] hover:text-[#ea7015]"><ChevronLeft size={17} /> Toutes les marques</Link>
-      <div className="flex flex-wrap items-start gap-5 rounded-2xl bg-[#0e1d31] p-7 text-white sm:p-9">
-        <div className="flex size-16 shrink-0 items-center justify-center rounded-lg bg-[#ea7015] text-2xl font-black text-[#0e1d31]">{brand.name.slice(0, 2).toUpperCase()}</div>
-        <div>
-          <p className="text-xs font-extrabold uppercase tracking-[.18em] text-[#ffac78]">Marque partenaire · Catalogue privé</p>
-          <h1 className="mt-2 text-4xl font-black tracking-tight">{brand.name}</h1>
-          <p className="mt-3 max-w-2xl text-sm leading-7 text-white/75">{brand.description || "Découvrez les références réservées aux officines partenaires."}</p>
+    <div className="space-y-7">
+      <nav aria-label="Fil d’Ariane" className="flex items-center gap-2 text-xs text-[#799084]">
+        <Link href="/catalogue" className="font-semibold hover:text-[#173d3b]">Catalogue</Link>
+        <ChevronRight size={14} aria-hidden="true" />
+        <span className="font-bold text-[#173d3b]">{brand.name}</span>
+      </nav>
+      <section className="flex flex-wrap items-center justify-between gap-5 rounded-[22px] bg-[#173d3b] p-6 text-white sm:p-9">
+        <div className="max-w-2xl">
+          <p className="text-[11px] font-extrabold uppercase tracking-[.2em] text-[#eab68b]">Catalogue professionnel · {brand.name}</p>
+          <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">{brand.name}</h1>
+          {brand.description ? <p className="mt-3 max-w-xl text-sm leading-6 text-[#d0ddd6]">{brand.description}</p> : null}
+          <p className="mt-4 text-xs font-semibold text-[#d8e3da]">{products.length} référence{products.length > 1 ? "s" : ""} disponible{products.length > 1 ? "s" : ""} pour votre officine</p>
         </div>
-      </div>
-      <div className="space-y-5">
-        <div>
-          <h2 className="text-2xl font-extrabold">Produits et conditions selon vos volumes</h2>
-          <p className="mt-2 text-sm leading-6 text-[#69717d]">Choisissez vos quantités pour découvrir votre fourchette indicative ou, si vous disposez d’un accord actif sur la référence, votre tarif exact. Les fourchettes ne sont pas des offres fermes : TR1 PHARMA confirme vos conditions avant commande.</p>
+        <div className="flex items-center gap-2 rounded-xl border border-white/25 px-4 py-3 text-xs font-bold text-[#dfede3]">
+          <LockKeyhole size={16} aria-hidden="true" /> Tarifs professionnels privés
         </div>
-        <PrivateOrderForm slug={brand.slug} products={products} />
+      </section>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-widest text-[#ac714b]">Votre sélection</p>
+          <h2 className="mt-1 text-2xl font-black tracking-tight text-[#173d3b]">Choisissez vos produits</h2>
+        </div>
+        <Link href="/catalogue/mes-demandes" className="inline-flex items-center gap-2 text-xs font-extrabold text-[#173d3b] underline underline-offset-4">
+          <ShoppingBag size={16} aria-hidden="true" /> Mes demandes
+        </Link>
       </div>
+      <PrivateOrderForm slug={brand.slug} products={products} />
     </div>
   );
 }
