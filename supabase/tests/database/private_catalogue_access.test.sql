@@ -32,7 +32,7 @@ insert into public.private_catalog_invitations(pharmacy_id,email,invited_by)
 values ('f6e20000-0000-4000-8000-000000000010',
  'private-catalogue-test@example.invalid','f6e20000-0000-4000-8000-000000000001');
 
-select plan(13);
+select plan(14);
 select ok(not has_function_privilege('anon','public.catalogue_claim_invitation()','execute'),
  'anonymous clients cannot claim invitations');
 select ok(not has_function_privilege('anon','public.catalogue_my_data(text)','execute'),
