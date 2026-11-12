@@ -101,7 +101,7 @@ export async function sendPrivateCatalogueRequest(
   for (const product of catalog.products) {
     const raw = formData.get("quantity_" + product.id);
     if (raw === null || raw === "" || raw === "0") continue;
-    if (typeof raw !== "string" || !/^[0-9]{1,4}$/.test(raw)) {
+    if (typeof raw !== "string" || !/^[0-9]{1,5}$/.test(raw)) {
       return { error: "Les quantités saisies sont invalides." };
     }
     const quantity = Number(raw);
