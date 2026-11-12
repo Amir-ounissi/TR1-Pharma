@@ -8,9 +8,10 @@ import type { CatalogProduct } from "@/lib/private-catalogue";
 import { euroHT, indicativeRange, isAllowedQuantity, tierForQuantity } from "@/lib/private-catalogue-format";
 
 export function PrivateOrderForm({
-  slug, products, initialProductId,
+  slug, brandName, products, initialProductId,
 }: {
   slug: string;
+  brandName: string;
   products: CatalogProduct[];
   initialProductId?: string;
 }) {
@@ -75,6 +76,11 @@ export function PrivateOrderForm({
         </label>
       </div>
 
+      <a href="#panier" className="flex items-center justify-between rounded-xl bg-[#173d3b] px-4 py-3 text-sm font-extrabold text-white lg:hidden">
+        <span className="inline-flex items-center gap-2"><ShoppingBag size={17} aria-hidden="true" /> Voir mon panier</span>
+        <span>{selected.length} référence{selected.length > 1 ? "s" : ""} · {quantityTotal} u.</span>
+      </a>
+
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="min-w-0 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#77877f]">
@@ -110,7 +116,7 @@ export function PrivateOrderForm({
                   </div>
                   <div className="flex flex-1 flex-col gap-3 px-4 pb-4 pt-4">
                     <div>
-                      <p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-[#ab7049]">{slug.replaceAll("-", " ")}</p>
+                      <p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-[#ab7049]">{brandName}</p>
                       <h3 className="mt-1 text-lg font-black leading-6 text-[#183b36]">{p.name}</h3>
                       <p className="mt-1.5 text-[11px] text-[#89958e]">{p.format || "Complément alimentaire"} · Réf. {p.sku}</p>
                     </div>
@@ -186,7 +192,7 @@ export function PrivateOrderForm({
           {!products.length ? <p className="rounded-xl bg-white p-6 text-sm">Aucune référence disponible pour le moment.</p> : null}
         </div>
 
-        <aside aria-label="Mon panier" className="overflow-hidden rounded-2xl border border-[#dce6de] bg-white shadow-[0_16px_35px_-25px_rgba(20,52,40,.3)] lg:sticky lg:top-6">
+        <aside id="panier" aria-label="Mon panier" className="scroll-mt-6 overflow-hidden rounded-2xl border border-[#dce6de] bg-white shadow-[0_16px_35px_-25px_rgba(20,52,40,.3)] lg:sticky lg:top-6">
           <div className="flex items-center gap-3 bg-[#173d3b] px-5 py-5 text-white">
             <ShoppingBag size={23} aria-hidden="true" />
             <div className="flex-1">
