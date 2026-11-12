@@ -56,20 +56,66 @@ export async function createPrivateCatalogueBrand(formData: FormData) {
 export async function createPrivateCatalogueProduct(formData: FormData) {
   const input = z.object({
     brand_id: id, sku: z.string().trim().min(1).max(80),
-    name: nameField, format: z.string().trim().max(120),
+    name: nameField, description: z.string().trim().max(1800),
+    format: z.string().trim().max(120),
+    ean: z.union([z.string().regex(/^[0-9]{8,14}$/), z.literal("")]),
+    image_url: z.union([z.url(), z.literal("")]),
     price_ht: z.coerce.number().min(0).max(999999),
     vat_rate: z.coerce.number().min(0).max(100),
     min_quantity: z.coerce.number().int().min(1).max(5000),
     quantity_step: z.coerce.number().int().min(1).max(5000),
   }).parse({
     brand_id: formData.get("brand_id"), sku: formData.get("sku"),
-    name: formData.get("name"), format: formData.get("format") ?? "",
+    name: formData.get("name"), description: formData.get("description") ?? "",
+    format: formData.get("format") ?? "",
+    ean: formData.get("ean") ?? "", image_url: formData.get("image_url") ?? "",
     price_ht: formData.get("price_ht"), vat_rate: formData.get("vat_rate"),
     min_quantity: formData.get("min_quantity") ?? "1",
     quantity_step: formData.get("quantity_step") ?? "1",
   });
   const admin = await authorizedAdmin();
-  const { error } = await admin.from("private_catalog_products").insert({ ...input, active: true });
+  const { error } = await admin.from("private_catalog_products").insert({
+    ...input, ean: input.ean || null, image_url: input.image_url || null, active: false,
+  });
+  if (error) throw error;
+  finish();
+}
+
+export async function updatePrivateCatalogueProduct(formData: FormData) {
+  const input = z.object({
+    id, sku: z.string().trim().min(1).max(80), name: nameField,
+    description: z.string().trim().max(1800),
+    format: z.string().trim().max(120),
+    ean: z.union([z.string().regex(/^[0-9]{8,14}$/), z.literal("")]),
+    image_url: z.union([z.url(), z.literal("")]),
+    price_ht: z.coerce.number().min(0).max(999999),
+    vat_rate: z.coerce.number().min(0).max(100),
+    min_quantity: z.coerce.number().int().min(1).max(5000),
+    quantity_step: z.coerce.number().int().min(1).max(5000),
+  }).parse({
+    id: formData.get("id"), sku: formData.get("sku"), name: formData.get("name"),
+    description: formData.get("description") ?? "", format: formData.get("format") ?? "",
+    ean: formData.get("ean") ?? "", image_url: formData.get("image_url") ?? "",
+    price_ht: formData.get("price_ht"), vat_rate: formData.get("vat_rate"),
+    min_quantity: formData.get("min_quantity"),
+    quantity_step: formData.get("quantity_step"),
+  });
+  const admin = await authorizedAdmin();
+  const { id: productId, ...values } = input;
+  const { error } = await admin.from("private_catalog_products")
+    .update({ ...values, ean: input.ean || null, image_url: input.image_url || null })
+    .eq("id", productId);
+  if (error) throw error;
+  finish();
+}
+
+export async function setPrivateCatalogueProductPublished(formData: FormData) {
+  const parsed = z.object({ id, active: z.enum(["true","false"]) }).parse({
+    id: formData.get("id"), active: formData.get("active"),
+  });
+  const admin = await authorizedAdmin();
+  const { error } = await admin.from("private_catalog_products")
+    .update({ active: parsed.active === "true" }).eq("id", parsed.id);
   if (error) throw error;
   finish();
 }
