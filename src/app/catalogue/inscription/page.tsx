@@ -50,7 +50,7 @@ export default async function CatalogueInscription({
               ? "Vérifiez votre adresse et vos deux mots de passe."
               : "Inscription momentanément indisponible. Contactez TR1 PHARMA."}
           </p> : null}
-          <button type="submit" className="w-full rounded-md bg-[#0e1d31] px-4 py-3 font-bold text-white">
+          <button type="submit" className="shop-primary-action w-full px-4 py-3">
             Recevoir mon accès
           </button>
         </form>
