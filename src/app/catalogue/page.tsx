@@ -94,9 +94,9 @@ export default async function PrivateCatalogueHome() {
                         {product.pricing.mode === "contractual" ? "Votre prix HT / unité" : "Fourchette HT / unité"}
                       </p>
                       <p className="mt-1 text-lg font-black text-[#173d3b]">{displayPrice}</p>
-                      <Link href={"/catalogue/marques/" + brand.slug}
+                      <Link href={"/catalogue/marques/" + brand.slug + "?produit=" + product.id + "#produits"}
                         className="mt-3 flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#173d3b] px-3 text-xs font-extrabold text-white hover:bg-[#2a5852] sm:text-sm">
-                        Commander <ShoppingBag size={16} aria-hidden="true" />
+                        Ajouter au panier <ShoppingBag size={16} aria-hidden="true" />
                       </Link>
                     </div>
                   </div>
