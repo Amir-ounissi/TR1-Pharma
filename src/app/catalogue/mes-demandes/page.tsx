@@ -14,19 +14,9 @@ export default async function PharmacyRequestsPage({
   searchParams,
 }: { searchParams: Promise<{ envoyee?: string }> }) {
   const { envoyee } = await searchParams;
-  const { admin, pharmacy } = await requirePharmacyCatalogue();
-  const { data, error } = await admin.from("private_catalog_requests")
-    .select("id,brand_id,total_ht,request_kind,status,created_at")
-    .eq("pharmacy_id", pharmacy.id)
-    .order("created_at", { ascending: false })
-    .limit(100);
-  if (error) throw error;
-  const requests = data ?? [];
-  const ids = [...new Set(requests.map((r) => r.brand_id as string))];
-  const { data: brands } = ids.length
-    ? await admin.from("private_catalog_brands").select("id,name").in("id", ids)
-    : { data: [] };
-  const names = new Map((brands ?? []).map((b) => [b.id as string, b.name as string]));
+  const { pharmacy, catalog } = await requirePharmacyCatalogue();
+  const requests = catalog.requests ?? [];
+  const names = new Map(catalog.brands.map((b) => [b.id, b.name]));
 
   return (
     <div className="space-y-7">
