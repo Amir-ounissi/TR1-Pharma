@@ -2,12 +2,14 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
+import { vkSwissMediaBySku } from "@/lib/catalogue-vk-swiss-media";
 import { ArrowUpRight, LockKeyhole, Package, Search, SlidersHorizontal } from "lucide-react";
 
 type DisplayProduct = { name: string; sku: string; ean: string; brand: string };
 
 // Références vérifiées dans le catalogue TR1, sans prix ni allégation produit.
-// Toutes les photos et conditions commerciales sont à valider avant publication.
+// Packshots issus du site officiel VK SWISS, réservés à la prévisualisation tant que les droits de réutilisation ne sont pas confirmés.
 const products: DisplayProduct[] = [
   { name: "Ashwagandha KSM-66", sku: "6467333", ean: "7629999810969", brand: "VK SWISS" },
   { name: "Bacopa", sku: "6467332", ean: "7629999601949", brand: "VK SWISS" },
@@ -66,16 +68,15 @@ export function PublicProductGrid() {
         <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3">
           {visible.map((product) => (
             <article key={product.sku} className="shop-card group flex h-full min-w-0 flex-col overflow-hidden transition hover:border-[#dce3ea] hover:shadow-[0_12px_28px_-18px_rgba(14,29,49,.2)]">
-              <div className="relative flex h-40 items-center justify-center overflow-hidden bg-[linear-gradient(140deg,#f4f0e7,#fffdf8)] sm:h-56">
-                <div aria-hidden="true" className="absolute -right-12 -top-16 size-44 rounded-full border-[30px] border-white/30" />
-                <div aria-hidden="true" className="flex h-25 w-18 translate-y-2 flex-col items-center justify-center rounded-[8px] border border-[#e9e2d6] bg-[linear-gradient(105deg,#f4f0e7,#fffdf8_50%,#e9e2d6)] shadow-[11px_16px_25px_rgba(37,48,42,.14)] sm:h-32 sm:w-23">
-                  <span className="text-[9px] font-black tracking-[.14em] text-[#515d6b]">VK SWISS</span>
-                  <span className="mx-2 mt-2 max-w-full truncate text-[8px] font-bold text-[#69717d]">{product.name}</span>
-                  <span className="mt-4 h-px w-9 bg-[#b4b8b7]" />
-                </div>
-                <span className="absolute bottom-3 left-3 rounded-full bg-white/85 px-2 py-1 text-[10px] font-semibold text-[#69717d]">
-                  Visuel illustratif
-                </span>
+              <div className="relative flex h-40 items-center justify-center overflow-hidden bg-[#faf9f6] sm:h-56">
+                <Image
+                  src={vkSwissMediaBySku[product.sku].url}
+                  alt={"Boîte VK SWISS " + product.name + " · 30 gélules"}
+                  width={850}
+                  height={440}
+                  unoptimized
+                  className="h-full w-full object-contain p-2 sm:p-4"
+                />
               </div>
               <div className="flex flex-1 flex-col p-3.5 sm:p-5">
                 <p className="text-[10px] font-extrabold uppercase tracking-[.12em] text-[#ad4b08]">{product.brand}</p>
