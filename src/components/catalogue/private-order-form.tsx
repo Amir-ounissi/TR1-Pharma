@@ -7,9 +7,18 @@ import { sendPrivateCatalogueRequest } from "@/app/catalogue/actions";
 import type { CatalogProduct } from "@/lib/private-catalogue";
 import { euroHT, indicativeRange, isAllowedQuantity, tierForQuantity } from "@/lib/private-catalogue-format";
 
-export function PrivateOrderForm({ slug, products }: { slug: string; products: CatalogProduct[] }) {
+export function PrivateOrderForm({
+  slug, products, initialProductId,
+}: {
+  slug: string;
+  products: CatalogProduct[];
+  initialProductId?: string;
+}) {
   const [state, action, pending] = useActionState(sendPrivateCatalogueRequest, { error: "" });
-  const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const [quantities, setQuantities] = useState<Record<string, number>>(() => {
+    const target = products.find((product) => product.id === initialProductId);
+    return target ? { [target.id]: target.min_quantity } : {};
+  });
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("name");
 
