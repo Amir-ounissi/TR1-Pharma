@@ -34,7 +34,7 @@ export default function PharmacieStorefront() {
             Consultez les conditions réservées à votre officine et préparez vos demandes en quelques clics.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
-            <Link href="#produits" className="inline-flex min-h-12 items-center gap-2 rounded-md bg-[#ea7015] px-5 text-sm font-extrabold text-[#0e1d31] transition hover:bg-[#f28331]">
+            <Link href="#produits" className="shop-primary-action inline-flex min-h-12 items-center gap-2 px-5 text-sm">
               Voir les produits <ArrowRight size={17} aria-hidden="true" />
             </Link>
             <Link href="/catalogue/connexion" className="inline-flex min-h-12 items-center gap-2 rounded-md border border-white/35 px-5 text-sm font-bold text-white transition hover:bg-white/10">
@@ -78,7 +78,7 @@ export default function PharmacieStorefront() {
           <p className="mt-2 text-sm text-[#515d6b]">Votre accès est lié aux marques et aux conditions accordées à votre officine.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href="/catalogue/connexion" className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-[#0e1d31] px-5 text-sm font-bold text-white">
+          <Link href="/catalogue/connexion" className="shop-secondary-action inline-flex min-h-11 items-center gap-2 px-5 text-sm">
             Connexion pro <ArrowRight size={16} aria-hidden="true" />
           </Link>
           <Link href="/catalogue/inscription" className="inline-flex min-h-11 items-center rounded-lg border border-[#dce3ea] px-5 text-sm font-bold text-[#0e1d31]">
