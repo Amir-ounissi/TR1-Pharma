@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { LockKeyhole, ShoppingBag, Store } from "lucide-react";
 import { Tr1BrandLogo } from "@/components/brand/tr1-brand-logo";
+import "./catalogue-theme.css";
 
 export const metadata: Metadata = {
   title: "Catalogue professionnel | TR1 PHARMA",
@@ -28,14 +29,14 @@ export default function PrivateCatalogueLayout({ children }: { children: React.R
               <ShoppingBag size={16} aria-hidden="true" /> Mes produits
             </Link>
             <Link href="/catalogue/mes-demandes" className="p-2 hover:text-[#ad4b08]">Mes demandes</Link>
-            <Link href="/catalogue/connexion" className="inline-flex items-center gap-1.5 rounded-md border border-[#dce3ea] px-3 py-2.5 hover:bg-[#edf3ee]">
+            <Link href="/catalogue/connexion" className="inline-flex items-center gap-1.5 rounded-md border border-[#dce3ea] px-3 py-2.5 hover:bg-[#fff1e6]">
               <LockKeyhole size={15} aria-hidden="true" /> Connexion pro
             </Link>
           </nav>
         </div>
       </header>
       <main id="contenu" className="mx-auto max-w-7xl px-5 py-8 sm:px-8 sm:py-12">{children}</main>
-      <footer className="mx-auto mt-10 flex max-w-7xl flex-wrap justify-between gap-3 border-t border-[#e2e7ec] px-5 py-7 text-xs text-[#78877d] sm:px-8">
+      <footer className="mx-auto mt-10 flex max-w-7xl flex-wrap justify-between gap-3 border-t border-[#e2e7ec] px-5 py-7 text-xs text-[#69717d] sm:px-8">
         <p className="font-bold text-[#0e1d31]">TR1 PHARMA · Catalogue professionnel</p>
         <p>Produits réservés aux pharmacies et parapharmacies · Prix exprimés en HT</p>
       </footer>
