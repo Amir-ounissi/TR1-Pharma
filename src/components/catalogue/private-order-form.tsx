@@ -1,6 +1,8 @@
 "use client";
 
 import { useActionState, useMemo, useState } from "react";
+import Image from "next/image";
+import { Package } from "lucide-react";
 import { sendPrivateCatalogueRequest } from "@/app/catalogue/actions";
 import type { CatalogProduct } from "@/lib/private-catalogue";
 import { euroHT, indicativeRange, isAllowedQuantity, tierForQuantity } from "@/lib/private-catalogue-format";
@@ -40,11 +42,19 @@ export function PrivateOrderForm({ slug, products }: { slug: string; products: C
 
           return (
             <article key={p.id} className="flex flex-col justify-between gap-5 rounded-xl border border-[#0e1d31]/10 bg-white p-5">
-              <div className="space-y-2">
+              <div className="space-y-3">
+                <div className="flex h-44 items-center justify-center overflow-hidden rounded-lg bg-[#f3f4f5]">
+                  {p.image_url ? (
+                    <Image src={p.image_url} alt={p.name} width={560} height={320}
+                      unoptimized className="h-full w-full object-contain p-3" />
+                  ) : <Package size={42} className="text-[#b0bdc9]" aria-hidden="true" />}
+                </div>
+                <div className="space-y-2">
                 <p className="text-xs font-bold uppercase tracking-[.12em] text-[#ea7015]">{p.sku}</p>
                 <h3 className="text-xl font-extrabold tracking-tight">{p.name}</h3>
                 {p.description ? <p className="text-sm leading-6 text-[#69717d]">{p.description}</p> : null}
                 <p className="text-xs text-[#69717d]">{[p.format, p.ean ? "EAN " + p.ean : ""].filter(Boolean).join(" · ")}</p>
+                </div>
               </div>
               <div className="space-y-3 border-t border-[#0e1d31]/10 pt-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
