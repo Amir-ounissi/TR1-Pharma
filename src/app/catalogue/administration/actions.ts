@@ -4,8 +4,6 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requirePlatformAdmin } from "@/lib/auth";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { resolveAppUrl } from "@/lib/runtime-environment";
 
 const id = z.uuid();
 const nameField = z.string().trim().min(2).max(180);
@@ -176,35 +174,34 @@ export async function setPrivateCataloguePrice(formData: FormData) {
 }
 
 export async function invitePrivateCatalogueUser(formData: FormData) {
-  const input = z.object({ pharmacy_id: id, email: z.email() }).parse({
+  const parsed = z.object({
+    pharmacy_id: id,
+    email: z.email().transform((value) => value.trim().toLowerCase()),
+  }).safeParse({
     pharmacy_id: formData.get("pharmacy_id"), email: formData.get("email"),
   });
-  const admin = await authorizedAdmin();
-  // Admin Auth invitation API is explicitly disabled until staging service
-  // credentials and Supabase Auth redirects have been verified.
-  if (process.env.PRIVATE_CATALOG_INVITES_ENABLED !== "true") {
-    throw new Error("Invitations indisponibles sur cet environnement de test.");
-  }
-  const { data: pharmacy } = await admin.from("private_catalog_pharmacies")
-    .select("id").eq("id", input.pharmacy_id).maybeSingle();
-  if (!pharmacy) throw new Error("Pharmacie inconnue.");
+  if (!parsed.success) throw new Error("Informations d'invitation invalides.");
 
-  const origin = resolveAppUrl();
-  if (!origin) throw new Error("URL publique de TR1 PHARMA non configurée.");
-  const redirectTo = new URL("/auth/confirm?next=/catalogue/activer", origin).toString();
-  // Actual invitation mail is sent only when an administrator explicitly submits this form.
-  const privileged = createAdminClient();
-  const { data, error: inviteError } = await privileged.auth.admin.inviteUserByEmail(
-    input.email.toLowerCase(), { redirectTo },
-  );
-  if (inviteError || !data.user) {
-    throw new Error("Invitation impossible : vérifiez si cette adresse possède déjà un compte.");
+  const { supabase: admin, userId } = await requirePlatformAdmin();
+  const { data: pharmacy, error: pharmacyError } = await admin
+    .from("private_catalog_pharmacies").select("id")
+    .eq("id", parsed.data.pharmacy_id).maybeSingle();
+  if (pharmacyError || !pharmacy) throw new Error("Pharmacie inconnue.");
+
+  // Préautorisation : n'envoie aucun email et ne crée aucun compte.
+  // Après vérification de son email par Supabase Auth, le professionnel
+  // sera automatiquement rattaché à l'officine invitante par RPC.
+  const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  const { error } = await admin.from("private_catalog_invitations").insert({
+    pharmacy_id: parsed.data.pharmacy_id,
+    email: parsed.data.email,
+    invited_by: userId,
+    expires_at: expiresAt,
+    active: true,
+  });
+  if (error) {
+    throw new Error("Impossible de préparer l'invitation. Vérifiez si cet email possède déjà une invitation active.");
   }
-  const { error } = await admin.from("private_catalog_memberships").upsert({
-    user_id: data.user.id, pharmacy_id: input.pharmacy_id,
-    invited_email: input.email.toLowerCase(), active: true, role: "pharmacien",
-  }, { onConflict: "user_id" });
-  if (error) throw error;
   finish();
 }
 
