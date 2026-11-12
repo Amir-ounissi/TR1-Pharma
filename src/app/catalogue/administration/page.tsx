@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requirePlatformAdmin } from "@/lib/auth";
 import { euroHT } from "@/lib/private-catalogue";
 import {
@@ -37,6 +38,7 @@ export default async function CatalogueAdministration({
     { data: indicativeTiers, error: indicativeError },
     { data: contractTiers, error: contractError },
     { data: brandAccess, error: accessError },
+    { data: invitations, error: invitationsError },
   ] = await Promise.all([
     admin.from("private_catalog_pharmacies").select("id,name,city,contact_email").order("name"),
     admin.from("private_catalog_brands").select("id,name,slug,active").order("name"),
@@ -46,8 +48,9 @@ export default async function CatalogueAdministration({
     admin.from("private_catalog_indicative_tiers").select("product_id,min_quantity,price_min_ht,price_max_ht").order("min_quantity"),
     admin.from("private_catalog_contract_tiers").select("pharmacy_id,product_id,min_quantity,price_ht").order("min_quantity"),
     admin.from("private_catalog_access").select("pharmacy_id,brand_id,active,pricing_mode"),
+    admin.from("private_catalog_invitations").select("id,pharmacy_id,email,created_at,expires_at,claimed_at,active").order("created_at", { ascending: false }).limit(200),
   ]);
-  const queryError = pharmaciesError ?? brandsError ?? productsError ?? requestsError ?? membershipsError ?? indicativeError ?? contractError ?? accessError;
+  const queryError = pharmaciesError ?? brandsError ?? productsError ?? requestsError ?? membershipsError ?? indicativeError ?? contractError ?? accessError ?? invitationsError;
   if (queryError) throw queryError;
   const pharmacyRows = pharmacies ?? [];
   const brandRows = brands ?? [];
@@ -57,6 +60,7 @@ export default async function CatalogueAdministration({
   const indicativeRows = indicativeTiers ?? [];
   const contractRows = contractTiers ?? [];
   const accessRows = brandAccess ?? [];
+  const invitationRows = invitations ?? [];
   const { succes } = await searchParams;
 
   return (
@@ -134,12 +138,12 @@ export default async function CatalogueAdministration({
             <button className={button} disabled={!pharmacyRows.length || !brandRows.length}>Donner accès</button>
           </form>
           <form action={invitePrivateCatalogueUser} className="space-y-4 rounded-xl border border-[#0e1d31]/10 bg-white p-5">
-            <h3 className="text-lg font-extrabold">Inviter un professionnel</h3>
-            <p className="text-xs text-[#69717d]">Ce formulaire enverra réellement un email à l’adresse saisie. Vérifiez d’abord l’identité et l’habilitation du destinataire.</p>
+            <h3 className="text-lg font-extrabold">Préparer une invitation</h3>
+            <p className="text-xs leading-5 text-[#69717d]">Autorisez l’adresse professionnelle d’une officine pendant 30 jours. Aucun email n’est envoyé depuis ce formulaire : communiquez ensuite le lien d’inscription à votre contact.</p>
             <div><label htmlFor="invite_pharmacy" className={label}>Pharmacie</label><select id="invite_pharmacy" name="pharmacy_id" required className={field}>{pharmacyRows.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
             <div><label htmlFor="invite_email" className={label}>Email du professionnel</label><input id="invite_email" name="email" type="email" required className={field} /></div>
-            <button type="submit" className={button} disabled={!pharmacyRows.length || process.env.PRIVATE_CATALOG_INVITES_ENABLED !== "true"}>Envoyer l’invitation</button>
-            {process.env.PRIVATE_CATALOG_INVITES_ENABLED !== "true" ? <p className="text-xs font-semibold text-[#965326]">Invitations désactivées dans cette version de test : la clé serveur Supabase doit d’abord être corrigée.</p> : null}
+            <button type="submit" className={button} disabled={!pharmacyRows.length}>Préautoriser cette adresse</button>
+            <Link href="/catalogue/inscription" target="_blank" rel="noopener noreferrer" className="block text-sm font-bold text-[#0e1d31] underline">Ouvrir le lien d’inscription à transmettre</Link>
           </form>
           <form action={setPrivateCataloguePrice} className="space-y-4 rounded-xl border border-[#0e1d31]/10 bg-white p-5">
             <h3 className="text-lg font-extrabold">Prix contractuel fixe (ancien modèle)</h3>
@@ -149,6 +153,26 @@ export default async function CatalogueAdministration({
             <p className="text-xs text-[#69717d]">Ce prix est visible uniquement par l&apos;officine autorisée. Les nouveaux paliers ci-dessous prennent priorité si renseignés.</p>
             <button type="submit" className={button} disabled={!pharmacyRows.length || !productRows.length}>Appliquer le prix</button>
           </form>
+        </div>
+      </section>
+
+      <section aria-labelledby="invitations" className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 id="invitations" className="text-2xl font-black">Invitations préparées</h2>
+          <p className="text-xs text-[#69717d]">Aucun email automatiquement envoyé</p>
+        </div>
+        <div className="divide-y divide-[#0e1d31]/10 overflow-hidden rounded-xl border border-[#0e1d31]/10 bg-white">
+          {invitationRows.length ? invitationRows.map((invitation) => (
+            <div key={invitation.id} className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm">
+              <div>
+                <p className="font-bold">{invitation.email}</p>
+                <p className="mt-1 text-xs text-[#69717d]">{pharmacyRows.find((p) => p.id === invitation.pharmacy_id)?.name ?? "Pharmacie"} · expiration {new Date(invitation.expires_at).toLocaleDateString("fr-FR")}</p>
+              </div>
+              <span className="rounded-full bg-[#f5f6f8] px-3 py-1 text-xs font-bold">
+                {invitation.claimed_at ? "Accès activé" : !invitation.active || new Date(invitation.expires_at) <= new Date() ? "Expirée" : "À activer"}
+              </span>
+            </div>
+          )) : <p className="p-5 text-sm text-[#69717d]">Aucune invitation préparée.</p>}
         </div>
       </section>
 
