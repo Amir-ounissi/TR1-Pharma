@@ -68,6 +68,7 @@ La table `private_catalog_invitations` et les RPC `catalogue_claim_invitation`,
 
 ## Contenus en staging
 
-- Marque `VK SWISS` créée **en brouillon** ; aucune fiche ni aucun tarif réel inventé.
+- Marque `VK SWISS` en **brouillon non publié**, avec **six références importées de TR1 PHARMA Production** (nom, SKU, EAN, TVA, prix de référence HT interne). Les produits restent tous `active=false` : aucune fiche ni aucun montant visible aux pharmacies.
+- Les six minimums et pas de commande ont la valeur de travail `1` : **à confirmer avec le laboratoire avant toute publication** ; la description, les visuels et les fourchettes B2B doivent également être validés et saisis.
 - Aucune pharmacie réelle invitée ; aucun email commercial envoyé.
 - La démonstration publique reste : https://tr1-pharma-catalogue-demo.vercel.app/
