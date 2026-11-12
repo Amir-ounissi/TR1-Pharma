@@ -64,7 +64,7 @@ export function PublicProductGrid() {
 
       {visible.length > 0 ? (
         <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3">
-          {visible.map((product, index) => (
+          {visible.map((product) => (
             <article key={product.sku} className="group flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-[#e5e9e8] bg-white transition hover:border-[#c6d4d0] hover:shadow-[0_18px_45px_-24px_rgba(20,42,53,.25)]">
               <div className="relative flex h-40 items-center justify-center overflow-hidden bg-[linear-gradient(140deg,#e9f0eb,#f5f3ee)] sm:h-56">
                 <div aria-hidden="true" className="absolute -right-12 -top-16 size-44 rounded-full border-[30px] border-white/30" />
