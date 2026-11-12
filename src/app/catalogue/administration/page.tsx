@@ -44,7 +44,7 @@ export default async function CatalogueAdministration({
   ] = await Promise.all([
     admin.from("private_catalog_pharmacies").select("id,name,city,contact_email").order("name"),
     admin.from("private_catalog_brands").select("id,name,slug,active").order("name"),
-    admin.from("private_catalog_products").select("id,brand_id,name,sku,description,format,ean,image_url,price_ht,vat_rate,min_quantity,quantity_step,active").order("name"),
+    admin.from("private_catalog_products").select("id,brand_id,name,sku,category,description,format,ean,image_url,price_ht,vat_rate,min_quantity,quantity_step,active,requires_review").order("name"),
     admin.from("private_catalog_requests").select("id,pharmacy_id,brand_id,total_ht,request_kind,status,created_at").order("created_at", { ascending: false }).limit(100),
     admin.from("private_catalog_memberships").select("user_id,pharmacy_id,invited_email,active").limit(200),
     admin.from("private_catalog_indicative_tiers").select("product_id,min_quantity,price_min_ht,price_max_ht").order("min_quantity"),
@@ -72,6 +72,16 @@ export default async function CatalogueAdministration({
         <h1 className="mt-3 text-4xl font-black tracking-tight">Piloter le catalogue privé.</h1>
         <p className="mt-3 max-w-2xl text-sm leading-7 text-white/70">Publiez les marques, invitez les officines et contrôlez leurs demandes. Ces données restent séparées du CRM et des commandes existantes.</p>
       </header>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#e2e7ec] bg-white p-4">
+        <div>
+          <p className="text-sm font-extrabold">Catalogues importés : MS ONLINE et NYM</p>
+          <p className="mt-1 text-xs text-[#69717d]">Références, EAN, TVA à vérifier et paliers confidentiels disponibles dans l'audit.</p>
+        </div>
+        <Link href="/catalogue/administration/imports"
+          className="rounded-md bg-[#ea7015] px-4 py-2.5 text-sm font-extrabold text-[#0e1d31]">
+          Consulter les imports
+        </Link>
+      </div>
       {succes === "1" ? <div role="status" className="rounded-lg border border-[#4f7a58]/30 bg-[#edf7ee] p-4 text-sm font-semibold text-[#315638]">Action enregistrée.</div> : null}
 
       <div className="grid gap-3 sm:grid-cols-4">
@@ -145,14 +155,18 @@ export default async function CatalogueAdministration({
                   <div>
                     <p className="text-xs font-bold text-[#b66635]">{brandRows.find((b) => b.id === product.brand_id)?.name ?? "Marque"} · {product.sku}</p>
                     <h3 className="mt-1 text-lg font-extrabold">{product.name}</h3>
-                    <p className="text-xs text-[#69717d]">{product.format} · Prix référence interne {euroHT(Number(product.price_ht))}</p>
+                    <p className="text-xs text-[#69717d]">{product.format} · Prix référence interne {Number(product.price_ht).toLocaleString("fr-FR", {minimumFractionDigits:2,maximumFractionDigits:4})} € HT</p>
+                    {product.requires_review ? <p className="mt-1 text-xs font-bold text-[#ad4b08]">Import en attente de validation</p> : null}
                   </div>
                   <form action={setPrivateCatalogueProductPublished}>
                     <input type="hidden" name="id" value={product.id} />
                     <input type="hidden" name="active" value={product.active ? "false" : "true"} />
-                    <button className={product.active
+                    <button disabled={!product.active && (product.requires_review || product.vat_rate === null)}
+                      title={!product.active && (product.requires_review || product.vat_rate === null)
+                        ? "Valider les conditions, les EAN et la TVA avant publication" : undefined}
+                      className={product.active
                       ? "rounded-md border border-[#c9d4dc] bg-white px-3 py-2 text-xs font-bold"
-                      : "rounded-md bg-[#0e1d31] px-3 py-2 text-xs font-bold text-white"}>
+                      : "rounded-md bg-[#0e1d31] px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"}>
                       {product.active ? "Masquer" : "Activer"}
                     </button>
                   </form>
@@ -165,6 +179,7 @@ export default async function CatalogueAdministration({
                       <div><label className={label}>Référence SKU</label><input name="sku" required defaultValue={product.sku} className={field} /></div>
                       <div><label className={label}>Nom du produit</label><input name="name" required defaultValue={product.name} className={field} /></div>
                     </div>
+                    <div><label className={label}>Catégorie</label><input name="category" defaultValue={product.category ?? ""} maxLength={160} className={field} /></div>
                     <div><label className={label}>Description</label><textarea name="description" defaultValue={product.description} rows={3} maxLength={1800} className={field} /></div>
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div><label className={label}>Format</label><input name="format" defaultValue={product.format} className={field} /></div>
@@ -172,8 +187,8 @@ export default async function CatalogueAdministration({
                     </div>
                     <div><label className={label}>URL image</label><input name="image_url" type="url" defaultValue={product.image_url ?? ""} className={field} /></div>
                     <div className="grid gap-3 sm:grid-cols-2">
-                      <div><label className={label}>Prix référence HT (confidentiel)</label><input name="price_ht" type="number" min="0" step="0.01" required defaultValue={Number(product.price_ht)} className={field} /></div>
-                      <div><label className={label}>TVA (%)</label><input name="vat_rate" type="number" min="0" max="100" step="0.01" required defaultValue={Number(product.vat_rate)} className={field} /></div>
+                      <div><label className={label}>Prix référence HT (confidentiel)</label><input name="price_ht" type="number" min="0" step="0.0001" required defaultValue={Number(product.price_ht)} className={field} /></div>
+                      <div><label className={label}>TVA (%)</label><input name="vat_rate" type="number" min="0" max="100" step="0.01" required defaultValue={product.vat_rate === null ? "" : Number(product.vat_rate)} className={field} /></div>
                       <div><label className={label}>Minimum unités</label><input name="min_quantity" type="number" min="1" max="5000" required defaultValue={product.min_quantity} className={field} /></div>
                       <div><label className={label}>Pas de quantité</label><input name="quantity_step" type="number" min="1" max="5000" required defaultValue={product.quantity_step} className={field} /></div>
                     </div>
