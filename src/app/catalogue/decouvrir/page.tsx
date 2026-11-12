@@ -21,7 +21,7 @@ export default function PharmacieStorefront() {
       </div>
 
       <section className="relative overflow-hidden rounded-lg bg-[#0e1d31] px-6 py-8 text-white sm:px-10 sm:py-10 lg:px-12">
-        <div aria-hidden="true" className="pointer-events-none absolute -right-15 -top-25 size-100 rounded-md border-[45px] border-white/5" />
+        <div aria-hidden="true" className="pointer-events-none absolute -right-15 -top-25 size-100 rounded-full border-[45px] border-white/5" />
         <div className="relative max-w-[660px]">
           <p className="text-[11px] font-extrabold uppercase tracking-[.24em] text-[#ffa460]">
             Catalogue B2B · Pharmacies & parapharmacies
@@ -71,7 +71,7 @@ export default function PharmacieStorefront() {
         ))}
       </section>
 
-      <section className="flex flex-wrap items-center justify-between gap-5 rounded-[22px] bg-[#f4f0e7] px-6 py-8 sm:px-9">
+      <section className="flex flex-wrap items-center justify-between gap-5 rounded-lg bg-[#f4f0e7] px-6 py-8 sm:px-9">
         <div>
           <p className="text-xs font-black uppercase tracking-widest text-[#515d6b]">Votre espace pharmacie</p>
           <h2 className="mt-2 text-2xl font-black tracking-tight text-[#0e1d31]">Connectez-vous pour consulter vos tarifs.</h2>
