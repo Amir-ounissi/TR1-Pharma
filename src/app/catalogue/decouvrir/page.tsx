@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, Building2, ClipboardList, LockKeyhole, Search, ShoppingBasket, Truck } from "lucide-react";
+import { ArrowRight, BadgeCheck, Building2, ClipboardList, LockKeyhole, ShoppingBasket, Truck } from "lucide-react";
 import { PublicProductGrid } from "@/components/catalogue/public-product-grid";
 
 export const metadata: Metadata = {
