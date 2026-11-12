@@ -81,7 +81,7 @@ export default async function PrivateCatalogueHome() {
                 })()
                 : indicativeRange(tierForQuantity(product.pricing.tiers, product.min_quantity));
               return (
-                <article key={product.id} className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-[#e2e7ec] bg-white">
+                <article key={product.id} className="shop-card flex min-w-0 flex-col overflow-hidden">
                   <div className="flex h-36 items-center justify-center bg-[#f4f0e7] sm:h-52">
                     {product.image_url ? (
                       <Image src={product.image_url} alt={product.name} width={440} height={440} unoptimized className="h-full w-full object-contain p-4" />
@@ -97,7 +97,7 @@ export default async function PrivateCatalogueHome() {
                       </p>
                       <p className="mt-1 text-lg font-black text-[#0e1d31]">{displayPrice}</p>
                       <Link href={"/catalogue/marques/" + brand.slug + "?produit=" + product.id + "#produits"}
-                        className="mt-3 flex min-h-10 items-center justify-center gap-2 rounded-lg bg-[#0e1d31] px-3 text-xs font-extrabold text-white hover:bg-[#162a45] sm:text-sm">
+                        className="shop-primary-action mt-3 flex min-h-10 items-center justify-center gap-2 px-3 text-xs sm:text-sm">
                         Ajouter au panier <ShoppingBag size={16} aria-hidden="true" />
                       </Link>
                     </div>
