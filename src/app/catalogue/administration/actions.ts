@@ -16,6 +16,7 @@ async function authorizedAdmin() {
 
 function finish() {
   revalidatePath("/catalogue/administration");
+  revalidatePath("/catalogue/administration/imports");
   revalidatePath("/catalogue");
   redirect("/catalogue/administration?succes=1");
 }
@@ -58,6 +59,7 @@ export async function createPrivateCatalogueProduct(formData: FormData) {
   const input = z.object({
     brand_id: id, sku: z.string().trim().min(1).max(80),
     name: nameField, description: z.string().trim().max(1800),
+    category: z.string().trim().max(160),
     format: z.string().trim().max(120),
     ean: z.union([z.string().regex(/^[0-9]{8,14}$/), z.literal("")]),
     image_url: safeImageUrl,
@@ -68,6 +70,7 @@ export async function createPrivateCatalogueProduct(formData: FormData) {
   }).parse({
     brand_id: formData.get("brand_id"), sku: formData.get("sku"),
     name: formData.get("name"), description: formData.get("description") ?? "",
+    category: formData.get("category") ?? "",
     format: formData.get("format") ?? "",
     ean: formData.get("ean") ?? "", image_url: formData.get("image_url") ?? "",
     price_ht: formData.get("price_ht"), vat_rate: formData.get("vat_rate"),
@@ -86,6 +89,7 @@ export async function updatePrivateCatalogueProduct(formData: FormData) {
   const input = z.object({
     id, sku: z.string().trim().min(1).max(80), name: nameField,
     description: z.string().trim().max(1800),
+    category: z.string().trim().max(160),
     format: z.string().trim().max(120),
     ean: z.union([z.string().regex(/^[0-9]{8,14}$/), z.literal("")]),
     image_url: safeImageUrl,
@@ -95,7 +99,7 @@ export async function updatePrivateCatalogueProduct(formData: FormData) {
     quantity_step: z.coerce.number().int().min(1).max(5000),
   }).parse({
     id: formData.get("id"), sku: formData.get("sku"), name: formData.get("name"),
-    description: formData.get("description") ?? "", format: formData.get("format") ?? "",
+    description: formData.get("description") ?? "", category: formData.get("category") ?? "", format: formData.get("format") ?? "",
     ean: formData.get("ean") ?? "", image_url: formData.get("image_url") ?? "",
     price_ht: formData.get("price_ht"), vat_rate: formData.get("vat_rate"),
     min_quantity: formData.get("min_quantity"),
