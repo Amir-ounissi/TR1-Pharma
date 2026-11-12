@@ -75,7 +75,7 @@ export default async function CatalogueAdministration({
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#e2e7ec] bg-white p-4">
         <div>
           <p className="text-sm font-extrabold">Catalogues importés : MS ONLINE et NYM</p>
-          <p className="mt-1 text-xs text-[#69717d]">Références, EAN, TVA à vérifier et paliers confidentiels disponibles dans l'audit.</p>
+          <p className="mt-1 text-xs text-[#69717d]">Références, EAN, TVA à vérifier et paliers confidentiels disponibles dans le contrôle des imports.</p>
         </div>
         <Link href="/catalogue/administration/imports"
           className="rounded-md bg-[#ea7015] px-4 py-2.5 text-sm font-extrabold text-[#0e1d31]">
