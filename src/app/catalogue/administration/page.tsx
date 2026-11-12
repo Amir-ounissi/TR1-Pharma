@@ -6,6 +6,8 @@ import {
   createPrivateCatalogueBrand,
   createPrivateCataloguePharmacy,
   createPrivateCatalogueProduct,
+  updatePrivateCatalogueProduct,
+  setPrivateCatalogueProductPublished,
   invitePrivateCatalogueUser,
   setPrivateCatalogueBrandPublished,
   setPrivateCataloguePrice,
@@ -42,7 +44,7 @@ export default async function CatalogueAdministration({
   ] = await Promise.all([
     admin.from("private_catalog_pharmacies").select("id,name,city,contact_email").order("name"),
     admin.from("private_catalog_brands").select("id,name,slug,active").order("name"),
-    admin.from("private_catalog_products").select("id,brand_id,name,sku,price_ht").order("name"),
+    admin.from("private_catalog_products").select("id,brand_id,name,sku,description,format,ean,image_url,price_ht,vat_rate,min_quantity,quantity_step,active").order("name"),
     admin.from("private_catalog_requests").select("id,pharmacy_id,brand_id,total_ht,request_kind,status,created_at").order("created_at", { ascending: false }).limit(100),
     admin.from("private_catalog_memberships").select("user_id,pharmacy_id,invited_email,active").limit(200),
     admin.from("private_catalog_indicative_tiers").select("product_id,min_quantity,price_min_ht,price_max_ht").order("min_quantity"),
@@ -115,6 +117,9 @@ export default async function CatalogueAdministration({
             <div><label htmlFor="product_sku" className={label}>Référence SKU</label><input id="product_sku" name="sku" required className={field} /></div>
             <div><label htmlFor="product_name" className={label}>Produit</label><input id="product_name" name="name" required className={field} /></div>
             <div><label htmlFor="product_format" className={label}>Format</label><input id="product_format" name="format" className={field} /></div>
+            <div><label htmlFor="product_description" className={label}>Présentation du produit</label><textarea id="product_description" name="description" rows={2} maxLength={1800} className={field} /></div>
+            <div><label htmlFor="product_ean" className={label}>Code EAN (facultatif)</label><input id="product_ean" name="ean" pattern="[0-9]{8,14}" className={field} /></div>
+            <div><label htmlFor="product_image" className={label}>URL image (facultative)</label><input id="product_image" name="image_url" type="url" className={field} /></div>
             <div className="grid grid-cols-2 gap-3">
               <div><label htmlFor="product_price" className={label}>Prix de référence HT (€) · interne</label><input id="product_price" name="price_ht" type="number" min="0" step="0.01" required className={field} /></div>
               <div><label htmlFor="product_vat" className={label}>TVA (%)</label><input id="product_vat" name="vat_rate" type="number" min="0" max="100" step="0.01" required className={field} /></div>
@@ -122,9 +127,63 @@ export default async function CatalogueAdministration({
               <div><label htmlFor="product_step" className={label}>Pas quantité</label><input id="product_step" name="quantity_step" type="number" min="1" defaultValue="1" className={field} /></div>
             </div>
             <p className="text-xs text-[#69717d]">Ce prix de référence est confidentiel. Il ne sera jamais affiché directement aux pharmacies.</p>
-            <button type="submit" className={button} disabled={!brandRows.length}>Ajouter le produit</button>
+            <button type="submit" className={button} disabled={!brandRows.length}>Créer la fiche en brouillon</button>
           </form>
         </div>
+      </section>
+
+      <section aria-labelledby="edit-products" className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 id="edit-products" className="text-2xl font-black">Fiches produits et publication</h2>
+          <span className="text-xs text-[#69717d]">{productRows.filter((p) => p.active).length} références actives</span>
+        </div>
+        {productRows.length ? (
+          <div className="grid gap-4 lg:grid-cols-2">
+            {productRows.map((product) => (
+              <div key={product.id} className="space-y-4 rounded-xl border border-[#0e1d31]/10 bg-white p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-bold text-[#b66635]">{brandRows.find((b) => b.id === product.brand_id)?.name ?? "Marque"} · {product.sku}</p>
+                    <h3 className="mt-1 text-lg font-extrabold">{product.name}</h3>
+                    <p className="text-xs text-[#69717d]">{product.format} · Prix référence interne {euroHT(Number(product.price_ht))}</p>
+                  </div>
+                  <form action={setPrivateCatalogueProductPublished}>
+                    <input type="hidden" name="id" value={product.id} />
+                    <input type="hidden" name="active" value={product.active ? "false" : "true"} />
+                    <button className={product.active
+                      ? "rounded-md border border-[#c9d4dc] bg-white px-3 py-2 text-xs font-bold"
+                      : "rounded-md bg-[#0e1d31] px-3 py-2 text-xs font-bold text-white"}>
+                      {product.active ? "Masquer" : "Activer"}
+                    </button>
+                  </form>
+                </div>
+                <details className="rounded-lg border border-[#0e1d31]/10 p-3">
+                  <summary className="cursor-pointer text-sm font-extrabold">Modifier la fiche et ses conditions de base</summary>
+                  <form action={updatePrivateCatalogueProduct} className="mt-4 space-y-3">
+                    <input type="hidden" name="id" value={product.id} />
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div><label className={label}>Référence SKU</label><input name="sku" required defaultValue={product.sku} className={field} /></div>
+                      <div><label className={label}>Nom du produit</label><input name="name" required defaultValue={product.name} className={field} /></div>
+                    </div>
+                    <div><label className={label}>Description</label><textarea name="description" defaultValue={product.description} rows={3} maxLength={1800} className={field} /></div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div><label className={label}>Format</label><input name="format" defaultValue={product.format} className={field} /></div>
+                      <div><label className={label}>EAN</label><input name="ean" pattern="[0-9]{8,14}" defaultValue={product.ean ?? ""} className={field} /></div>
+                    </div>
+                    <div><label className={label}>URL image</label><input name="image_url" type="url" defaultValue={product.image_url ?? ""} className={field} /></div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div><label className={label}>Prix référence HT (confidentiel)</label><input name="price_ht" type="number" min="0" step="0.01" required defaultValue={Number(product.price_ht)} className={field} /></div>
+                      <div><label className={label}>TVA (%)</label><input name="vat_rate" type="number" min="0" max="100" step="0.01" required defaultValue={Number(product.vat_rate)} className={field} /></div>
+                      <div><label className={label}>Minimum unités</label><input name="min_quantity" type="number" min="1" max="5000" required defaultValue={product.min_quantity} className={field} /></div>
+                      <div><label className={label}>Pas de quantité</label><input name="quantity_step" type="number" min="1" max="5000" required defaultValue={product.quantity_step} className={field} /></div>
+                    </div>
+                    <button type="submit" className={button}>Enregistrer les modifications</button>
+                  </form>
+                </details>
+              </div>
+            ))}
+          </div>
+        ) : <p className="rounded-xl border border-dashed border-[#0e1d31]/15 bg-white p-7 text-sm text-[#69717d]">Aucune fiche produit créée. Utilisez le formulaire ci-dessus pour préparer les références.</p>}
       </section>
 
       <section aria-labelledby="rights" className="space-y-5">
