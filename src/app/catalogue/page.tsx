@@ -74,10 +74,12 @@ export default async function PrivateCatalogueHome() {
           </div>
           <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3">
             {groups.flatMap(({ brand, products }) => products.map((product) => {
-              const tier = tierForQuantity(product.pricing.tiers, product.min_quantity);
               const displayPrice = product.pricing.mode === "contractual"
-                ? tier && "price_ht" in tier ? euroHT(tier.price_ht) : "Prix sur demande"
-                : indicativeRange(tier && "price_min_ht" in tier ? tier : null);
+                ? (() => {
+                  const tier = tierForQuantity(product.pricing.tiers, product.min_quantity);
+                  return tier ? euroHT(tier.price_ht) : "Prix sur demande";
+                })()
+                : indicativeRange(tierForQuantity(product.pricing.tiers, product.min_quantity));
               return (
                 <article key={product.id} className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-[#e1e9e3] bg-white">
                   <div className="flex h-36 items-center justify-center bg-[#eef3ee] sm:h-52">
