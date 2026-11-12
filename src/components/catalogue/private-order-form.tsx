@@ -99,7 +99,7 @@ export function PrivateOrderForm({
               const selectedInvalid = qty > 0 && !isAllowedQuantity(qty, p.min_quantity, p.quantity_step);
 
               return (
-                <article key={p.id} className="flex min-w-0 flex-col overflow-hidden rounded-lg border border-[#e2e7ec] bg-white transition hover:border-[#dce3ea] hover:shadow-md">
+                <article key={p.id} className="shop-card flex min-w-0 flex-col overflow-hidden transition hover:border-[#dce3ea] hover:shadow-md">
                   <div className="relative flex h-47 items-center justify-center overflow-hidden bg-[#f4f0e7] sm:h-52">
                     {p.image_url ? (
                       <Image src={p.image_url} width={440} height={440} unoptimized alt={p.name}
@@ -155,7 +155,7 @@ export function PrivateOrderForm({
                     <div className="flex items-center gap-2">
                       {qty === 0 ? (
                         <button type="button" onClick={() => add(p)}
-                          className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-[#0e1d31] px-3 text-sm font-extrabold text-white hover:bg-[#162a45]">
+                          className="shop-primary-action inline-flex min-h-11 flex-1 items-center justify-center gap-2 px-3 text-sm">
                           <Plus size={17} aria-hidden="true" /> Ajouter au panier
                         </button>
                       ) : (
@@ -238,7 +238,7 @@ export function PrivateOrderForm({
             </div>
             {state.error ? <p role="alert" className="rounded-lg bg-[#fff0e4] p-3 text-xs font-semibold text-[#884c2b]">{state.error}</p> : null}
             <button type="submit" disabled={pending || !selected.length || !valid}
-              className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-[#ea7015] px-4 text-sm font-black text-[#0e1d31] transition hover:bg-[#f28331] disabled:cursor-not-allowed disabled:opacity-50">
+              className="shop-primary-action inline-flex min-h-12 w-full items-center justify-center gap-2 px-4 text-sm">
               {pending ? "Envoi en cours…" : allContractual ? "Envoyer ma commande" : "Demander mon devis"}
               {!pending && <ShoppingBag size={17} aria-hidden="true" />}
             </button>
