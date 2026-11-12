@@ -7,6 +7,7 @@ import { requirePlatformAdmin } from "@/lib/auth";
 
 const id = z.uuid();
 const nameField = z.string().trim().min(2).max(180);
+const safeImageUrl = z.union([z.url(), z.literal("")]).refine((value) => !value || new URL(value).protocol === "https:");
 
 async function authorizedAdmin() {
   const { supabase } = await requirePlatformAdmin();
@@ -59,7 +60,7 @@ export async function createPrivateCatalogueProduct(formData: FormData) {
     name: nameField, description: z.string().trim().max(1800),
     format: z.string().trim().max(120),
     ean: z.union([z.string().regex(/^[0-9]{8,14}$/), z.literal("")]),
-    image_url: z.union([z.url(), z.literal("")]),
+    image_url: safeImageUrl,
     price_ht: z.coerce.number().min(0).max(999999),
     vat_rate: z.coerce.number().min(0).max(100),
     min_quantity: z.coerce.number().int().min(1).max(5000),
@@ -87,7 +88,7 @@ export async function updatePrivateCatalogueProduct(formData: FormData) {
     description: z.string().trim().max(1800),
     format: z.string().trim().max(120),
     ean: z.union([z.string().regex(/^[0-9]{8,14}$/), z.literal("")]),
-    image_url: z.union([z.url(), z.literal("")]),
+    image_url: safeImageUrl,
     price_ht: z.coerce.number().min(0).max(999999),
     vat_rate: z.coerce.number().min(0).max(100),
     min_quantity: z.coerce.number().int().min(1).max(5000),
