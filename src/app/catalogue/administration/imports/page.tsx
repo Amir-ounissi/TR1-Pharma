@@ -55,10 +55,19 @@ export default async function ImportedCataloguePage() {
       tiers: tiersByProduct.get(p.id) ?? [],
     }));
 
-  const msCount = imported.filter((p) => p.brand === "MS ONLINE").length;
-  const nymCount = imported.filter((p) => p.brand === "Laboratoires NYM").length;
+  const brandCounts = [...new Set(imported.map((p) => p.brand))]
+    .sort((a, b) => a.localeCompare(b, "fr"))
+    .map((name) => ({
+      label: name,
+      value: imported.filter((p) => p.brand === name).length,
+    }));
   const reviewCount = imported.filter((p) => p.needsReview).length;
   const pricedTiers = imported.reduce((sum, p) => sum + p.tiers.length, 0);
+  const summaryCards = [
+    ...brandCounts,
+    { label: "Paliers fournisseurs", value: pricedTiers },
+    { label: "À vérifier", value: reviewCount },
+  ];
 
   return (
     <div className="space-y-7">
@@ -79,13 +88,8 @@ export default async function ImportedCataloguePage() {
           <LockKeyhole size={15} aria-hidden="true" /> Accès super-administrateur TR1 PHARMA uniquement
         </p>
       </header>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        {[
-          ["MS ONLINE", msCount],
-          ["NYM", nymCount],
-          ["Paliers fournisseurs", pricedTiers],
-          ["À vérifier", reviewCount],
-        ].map(([label, value]) => (
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+        {summaryCards.map(({ label, value }) => (
           <div key={label} className="rounded-lg border border-[#e2e7ec] bg-white p-5">
             <p className="text-xs font-bold text-[#69717d]">{label}</p>
             <p className="mt-2 text-3xl font-black tabular-nums text-[#0e1d31]">{value}</p>
@@ -93,9 +97,8 @@ export default async function ImportedCataloguePage() {
         ))}
       </div>
       <div className="rounded-lg border border-[#f0d7c7] bg-[#fff5ec] px-5 py-4 text-xs leading-6 text-[#804316]">
-        <strong>Publication désactivée :</strong> les deux marques et toutes leurs références sont
-        en brouillon. Les TVA, colisages, EAN litigieux et conditions de distribution doivent
-        être validés avant toute mise en vente.
+        <strong>Publication désactivée :</strong> les marques importées et leurs références restent en brouillon.
+        Les TVA, EAN, conditionnements, visuels et conditions commerciales doivent être validés avant toute publication.
       </div>
       <ImportedProductsBrowser products={imported} />
     </div>
