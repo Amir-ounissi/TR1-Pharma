@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Image from "next/image";
-import { Check, ChevronLeft, ChevronRight, Eye, EyeOff, Grid2X2, List, Search, SlidersHorizontal } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Eye, EyeOff, Grid2X2, List, Search } from "lucide-react";
 
 export type ImportedProduct = {
   id: string;
