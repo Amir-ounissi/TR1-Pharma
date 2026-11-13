@@ -1,0 +1,83 @@
+/*
+ * Boutique B2B — identité visuelle TR1 PHARMA.
+ * Les couleurs proviennent du site éditorial et des variables officielles
+ * de src/app/globals.css. Ce fichier s'applique au catalogue uniquement.
+ * Ne pas changer les logiques de prix, de panier ni les autorisations.
+ */
+.tr1-catalogue {
+  --shop-navy: var(--tr1-navy, #0e1d31);
+  --shop-orange: var(--tr1-orange, #ea7015);
+  --shop-ivory: var(--tr1-ivory, #f4f0e7);
+  --shop-paper: #faf9f6;
+  --shop-ink: #0e1d31;
+  --shop-muted: #515d6b;
+  --shop-line: #e2e7ec;
+  font-family: var(--font-sans, "Geist", ui-sans-serif, system-ui, sans-serif);
+  color: var(--shop-ink);
+  background: var(--shop-paper);
+  min-height: 100vh;
+}
+
+.tr1-catalogue h1,
+.tr1-catalogue h2,
+.tr1-catalogue h3 {
+  font-family: var(--font-sans, "Geist", ui-sans-serif, system-ui, sans-serif);
+  letter-spacing: -0.035em;
+}
+
+.tr1-catalogue :is(a, button, input, select, textarea, summary):focus-visible {
+  outline: 3px solid var(--shop-orange);
+  outline-offset: 3px;
+}
+
+.tr1-catalogue input,
+.tr1-catalogue select,
+.tr1-catalogue textarea {
+  accent-color: var(--shop-orange);
+}
+
+.tr1-catalogue :is(button, a) {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tr1-catalogue .shop-primary-action {
+  color: var(--shop-navy);
+  background-color: var(--shop-orange);
+  border-radius: 5px;
+  font-weight: 750;
+  transition: background-color 160ms ease;
+}
+.tr1-catalogue .shop-primary-action:hover {
+  background-color: #f28331;
+}
+.tr1-catalogue .shop-primary-action:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+.tr1-catalogue .shop-secondary-action {
+  color: white;
+  background-color: var(--shop-navy);
+  border-radius: 5px;
+  font-weight: 750;
+  transition: background-color 160ms ease;
+}
+.tr1-catalogue .shop-secondary-action:hover {
+  background-color: var(--tr1-navy-soft, #162a45);
+}
+.tr1-catalogue .shop-card {
+  border: 1px solid var(--shop-line);
+  border-radius: 7px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(14, 29, 49, .03);
+}
+.tr1-catalogue .shop-eyebrow {
+  color: #ad4b08;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: .10em;
+  text-transform: uppercase;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tr1-catalogue :is(button, a) { transition: none; }
+}
