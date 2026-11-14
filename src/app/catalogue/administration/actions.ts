@@ -267,3 +267,89 @@ export async function updatePrivateCatalogueRequestStatus(formData: FormData) {
   if (error) throw error;
   finish();
 }
+
+
+function returnCommercialConditions() {
+  revalidatePath("/catalogue/administration/conditions");
+  revalidatePath("/catalogue");
+  redirect("/catalogue/administration/conditions?enregistre=1");
+}
+
+const numericOptional = (raw: FormDataEntryValue | null) => {
+  const value = typeof raw === "string" ? raw.trim().replace(",", ".") : "";
+  if (!value) return null;
+  const amount = Number(value);
+  if (!Number.isFinite(amount) || amount < 0 || amount > 1000000) {
+    throw new Error("Le seuil doit être un montant positif.");
+  }
+  return amount;
+};
+
+export async function createCommercialSupplier(formData: FormData) {
+  const name = z.string().trim().min(2).max(180).parse(formData.get("display_name"));
+  const admin = await authorizedAdmin();
+  const { error } = await admin.from("private_catalog_suppliers").insert({
+    display_name: name,
+    active: true,
+  });
+  if (error) throw error;
+  returnCommercialConditions();
+}
+
+export async function linkSupplierToBrand(formData: FormData) {
+  const brandId = id.parse(formData.get("brand_id"));
+  const supplierInput = String(formData.get("supplier_id") ?? "");
+  const admin = await authorizedAdmin();
+  if (supplierInput === "__none") {
+    const { error } = await admin.from("private_catalog_supplier_brands")
+      .delete().eq("brand_id", brandId);
+    if (error) throw error;
+  } else {
+    const supplierId = id.parse(supplierInput);
+    const { error } = await admin.from("private_catalog_supplier_brands")
+      .upsert({ brand_id: brandId, supplier_id: supplierId }, { onConflict: "brand_id" });
+    if (error) throw error;
+  }
+  returnCommercialConditions();
+}
+
+export async function saveCommercialSupplierTerms(formData: FormData) {
+  const supplierId = id.parse(formData.get("supplier_id"));
+  const sourceNote = z.string().trim().max(1000).parse(formData.get("source_note") ?? "");
+  const active = formData.get("active") === "true";
+  if (active && sourceNote.length < 10) {
+    throw new Error("Précisez la source des conditions validées avant de les publier.");
+  }
+  const minimumOrderUnitsValue = numericOptional(formData.get("minimum_order_units"));
+  if (minimumOrderUnitsValue !== null && (!Number.isInteger(minimumOrderUnitsValue)
+    || minimumOrderUnitsValue < 1 || minimumOrderUnitsValue > 100000)) {
+    throw new Error("Le minimum en unités doit être un entier strictement positif.");
+  }
+  const rawGiftRules = String(formData.get("gift_rules") ?? "[]").trim();
+  let parsedGiftRules: unknown;
+  try {
+    parsedGiftRules = JSON.parse(rawGiftRules || "[]");
+  } catch {
+    throw new Error("Les gratuités doivent être décrites dans un tableau JSON valide.");
+  }
+  const giftRules = z.array(z.object({
+    minimum_order_units: z.number().int().min(1).max(100000),
+    free_units: z.number().int().min(1).max(100000),
+    description: z.string().trim().max(150).optional(),
+  }).strict()).max(20).parse(parsedGiftRules);
+  const admin = await authorizedAdmin();
+  const { error } = await admin.from("private_catalog_supplier_terms").upsert({
+    supplier_id: supplierId,
+    active,
+    verified_at: active ? new Date().toISOString() : null,
+    source_note: sourceNote,
+    minimum_order_units: minimumOrderUnitsValue,
+    minimum_order_ht: numericOptional(formData.get("minimum_order_ht")),
+    shipping_fee_ht: numericOptional(formData.get("shipping_fee_ht")),
+    free_shipping_from_ht: numericOptional(formData.get("free_shipping_from_ht")),
+    gift_rules: giftRules,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: "supplier_id" });
+  if (error) throw error;
+  returnCommercialConditions();
+}
