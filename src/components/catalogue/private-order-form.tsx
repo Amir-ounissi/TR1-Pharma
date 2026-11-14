@@ -85,7 +85,7 @@ export function PrivateOrderForm({
         <div className="min-w-0 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#69717d]">
             <p className="font-semibold">{visible.length} produit{visible.length > 1 ? "s" : ""}</p>
-            <p>Prix HT · Minimum et paliers par référence</p>
+            <p>Tarifs HT indicatifs · Paliers fournisseurs par référence</p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             {visible.map((p) => {
@@ -123,7 +123,7 @@ export function PrivateOrderForm({
                     {p.description ? <p className="line-clamp-2 text-xs leading-5 text-[#69717d]">{p.description}</p> : null}
                     <div className="mt-auto border-t border-[#e2e7ec] pt-3">
                       <p className="text-[11px] font-bold text-[#69717d]">
-                        {p.pricing.mode === "contractual" ? "Votre prix unitaire" : "Fourchette HT / unité"}
+                        {p.pricing.mode === "contractual" ? "Votre prix unitaire" : "Tarif indicatif HT / unité"}
                       </p>
                       <p className="mt-1 text-[19px] font-black tracking-tight text-[#0e1d31]">{price}</p>
                       <p className="mt-1 text-[11px] text-[#69717d]">
@@ -151,7 +151,7 @@ export function PrivateOrderForm({
                       </details>
                     ) : null}
 
-                    <p className="text-[11px] text-[#69717d]">Minimum {p.min_quantity} u. · Pas de {p.quantity_step} · TVA {p.vat_rate} %</p>
+                    <p className="text-[11px] text-[#69717d]">{p.min_quantity > 1 || p.quantity_step > 1 ? `Minimum ${p.min_quantity} u. · Pas de ${p.quantity_step} · TVA ${p.vat_rate} %` : `Quantité minimale à confirmer sur devis · TVA ${p.vat_rate} %`}</p>
                     <div className="flex items-center gap-2">
                       {qty === 0 ? (
                         <button type="button" onClick={() => add(p)}
