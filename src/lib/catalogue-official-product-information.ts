@@ -917,3 +917,233 @@ export const officialBeautyOfJoseonByEan: Record<string,OfficialEducation> = {
     "sourceName": "Beauty of Joseon (fabricant)"
   }
 };
+
+// Fiches Dr. Althea rapprochées de sa documentation fabricant.
+export const officialDrAltheaByEan: Record<string,OfficialEducation> = {
+  "8809447256221": {
+    "description": "Crème apaisante à texture légère, destinée aux peaux en recherche d’hydratation et de confort, notamment après les imperfections.",
+    "benefits": [
+      "Hydratation",
+      "Confort",
+      "Soutien de la barrière cutanée"
+    ],
+    "keyIngredients": [
+      "Céramide NP",
+      "Panthénol",
+      "Niacinamide",
+      "Eau de tea tree"
+    ],
+    "sourceUrl": "https://doctoraltheaglobal.com/products/best-selling-recovery-duo",
+    "sourceName": "Dr. Althea (fabricant)",
+    "usage": "Appliquer en dernière étape de soin et terminer par une protection solaire le matin."
+  },
+  "8809447256795": {
+    "description": "Crème riche pour renforcer le confort des peaux sèches et soutenir la fonction barrière.",
+    "benefits": [
+      "Confort",
+      "Hydratation",
+      "Peau d’apparence plus souple"
+    ],
+    "keyIngredients": [
+      "Ectoïne",
+      "Bétaïne",
+      "Bêta-glucane",
+      "Acide hyaluronique",
+      "Guaiazulène"
+    ],
+    "sourceUrl": "https://doctoraltheaglobal.com/products/dual-cream-set-345-relief-cream-147-barrier-cream",
+    "sourceName": "Dr. Althea (fabricant)",
+    "usage": "Appliquer après le sérum, notamment dans la routine du soir."
+  },
+  "8809447256115": {
+    "description": "Brume biphasée destinée à apporter de l’hydratation et du confort au cours de la journée.",
+    "benefits": [
+      "Hydratation",
+      "Confort",
+      "Rafraîchissement"
+    ],
+    "keyIngredients": [
+      "Eau de son de riz",
+      "Panthénol",
+      "Acide hyaluronique",
+      "Centella asiatica",
+      "Madécassoside"
+    ],
+    "sourceUrl": "https://doctoraltheaglobal.com/products/345-relief-cream-duo",
+    "sourceName": "Dr. Althea (fabricant)",
+    "usage": "Agiter pour mélanger les deux phases, fermer yeux et bouche puis vaporiser uniformément."
+  },
+  "8809447256122": {
+    "description": "Brume biphasée destinée à apporter de l’hydratation et du confort au cours de la journée.",
+    "benefits": [
+      "Hydratation",
+      "Confort",
+      "Rafraîchissement"
+    ],
+    "keyIngredients": [
+      "Eau de son de riz",
+      "Panthénol",
+      "Acide hyaluronique",
+      "Centella asiatica",
+      "Madécassoside"
+    ],
+    "sourceUrl": "https://doctoraltheaglobal.com/products/345-relief-cream-duo",
+    "sourceName": "Dr. Althea (fabricant)",
+    "usage": "Agiter pour mélanger les deux phases, fermer yeux et bouche puis vaporiser uniformément."
+  },
+  "8809447256191": {
+    "description": "Sérum léger destiné aux peaux déshydratées, conçu pour un fini lumineux sans effet gras.",
+    "benefits": [
+      "Hydratation",
+      "Confort",
+      "Éclat"
+    ],
+    "keyIngredients": [
+      "Eau de bambou",
+      "Panthénol",
+      "Guaiazulène",
+      "PDRN d’origine végétale"
+    ],
+    "sourceUrl": "https://doctoraltheaglobal.com/products/aqua-deep-hydration-duo",
+    "sourceName": "Dr. Althea (fabricant)",
+    "usage": "Appliquer après le nettoyage et avant la crème."
+  },
+  "8809447256085": {
+    "description": "Crème hydratante à texture aqueuse, pensée pour apporter du confort sans sensation de lourdeur.",
+    "benefits": [
+      "Hydratation",
+      "Confort",
+      "Fini léger"
+    ],
+    "keyIngredients": [
+      "Eau de bambou",
+      "Panthénol",
+      "Guaiazulène"
+    ],
+    "sourceUrl": "https://doctoraltheaglobal.com/products/aqua-deep-hydration-duo",
+    "sourceName": "Dr. Althea (fabricant)",
+    "usage": "Appliquer après le sérum sur visage et cou."
+  },
+  "8809447256412": {
+    "description": "Crème hydratante au PDRN d’origine fermentaire destinée au confort des peaux sèches et ternes.",
+    "benefits": [
+      "Hydratation",
+      "Éclat",
+      "Confort"
+    ],
+    "keyIngredients": [
+      "PDRN vegan 5 000 ppm (Sodium DNA)",
+      "Panthénol",
+      "Eau de centella asiatica"
+    ],
+    "sourceUrl": "https://doctoraltheaglobal.com/products/pdrn-reju-5000-cream",
+    "sourceName": "Dr. Althea (fabricant)",
+    "usage": "Appliquer après le sérum, adapter la quantité aux zones sèches."
+  },
+  "8809447254609": {
+    "description": "Sérum concentré destiné aux utilisateurs habitués à la niacinamide et recherchant un effet sur la brillance.",
+    "benefits": [
+      "Aspect du sébum",
+      "Aspect des pores",
+      "Uniformité du teint"
+    ],
+    "keyIngredients": [
+      "Niacinamide 15 %",
+      "Zinc PCA"
+    ],
+    "sourceUrl": "https://doctoraltheaglobal.com/products/15-niacinamide-purity-serum",
+    "sourceName": "Dr. Althea (fabricant)"
+  },
+  "8809447255101": {
+    "description": "Sérum éclat à la vitamine C stabilisée, à texture légère et non collante.",
+    "benefits": [
+      "Éclat",
+      "Teint visuellement homogène",
+      "Confort"
+    ],
+    "keyIngredients": [
+      "Vitamine C stabilisée (3-O-ethyl ascorbic acid)",
+      "Eau d’argousier",
+      "Niacinamide"
+    ],
+    "sourceUrl": "https://doctoraltheaglobal.com/products/gentle-vitamin-c-serum",
+    "sourceName": "Dr. Althea (fabricant)",
+    "usage": "Introduire progressivement selon la tolérance ; en journée, terminer par une protection solaire."
+  },
+  "8809447256238": {
+    "description": "Sérum à texture mousse qui se transforme en fluide léger lors de l’application.",
+    "benefits": [
+      "Hydratation",
+      "Éclat",
+      "Préparation au maquillage"
+    ],
+    "keyIngredients": [
+      "Eau de collagène",
+      "Argousier",
+      "Bakuchiol"
+    ],
+    "sourceUrl": "https://doctoraltheaglobal.com/products/abc-glow-whipped-serum",
+    "sourceName": "Dr. Althea (fabricant)",
+    "usage": "Après le nettoyage, répartir 1 à 2 pressions, puis appliquer la crème."
+  },
+  "8809447255620": {
+    "description": "Baume nettoyant à distributeur mécanique qui dissout maquillage, filtres solaires et sébum de surface.",
+    "benefits": [
+      "Démaquillage",
+      "Nettoyage",
+      "Confort"
+    ],
+    "keyIngredients": [
+      "Huile de son de riz",
+      "Thé vert",
+      "Huile de jojoba"
+    ],
+    "sourceUrl": "https://doctoraltheaglobal.com/products/pore-refresh-grinding-cleansing-balm",
+    "sourceName": "Dr. Althea (fabricant)",
+    "usage": "Tourner le distributeur, masser sur peau sèche, émulsionner avec de l’eau puis rincer."
+  },
+  "8809447256658": {
+    "description": "Sérum contour des yeux avec applicateur masseur conçu pour rafraîchir et améliorer l’aspect des ridules.",
+    "benefits": [
+      "Hydratation du regard",
+      "Aspect des ridules",
+      "Massage rafraîchissant"
+    ],
+    "keyIngredients": [
+      "Rétinol",
+      "Bakuchiol",
+      "Panthénol",
+      "Céramide NP"
+    ],
+    "sourceUrl": "https://doctoraltheaglobal.com/products/retinol-flat-iron-eye-roller",
+    "sourceName": "Dr. Althea (fabricant)",
+    "usage": "Utiliser le soir, sans contact direct avec les yeux, en introduisant progressivement le produit."
+  },
+  "8809447257068": {
+    "description": "Crème visage contenant du rétinol, destinée aux soins de la texture et de l’aspect des ridules.",
+    "benefits": [
+      "Grain de peau",
+      "Aspect des ridules",
+      "Souplesse"
+    ],
+    "keyIngredients": [
+      "Rétinol 0,15 %"
+    ],
+    "sourceUrl": "https://doctoraltheaglobal.com/collections/cream",
+    "sourceName": "Dr. Althea (fabricant)",
+    "usage": "Introduire progressivement selon la tolérance et appliquer un SPF dans la journée."
+  },
+  "8809447255583": {
+    "description": "Huile nettoyante douce, première étape du double nettoyage pour retirer maquillage et filtres solaires.",
+    "benefits": [
+      "Démaquillage",
+      "Nettoyage",
+      "Confort"
+    ],
+    "keyIngredients": [
+      "Huiles émollientes végétales"
+    ],
+    "sourceUrl": "https://doctoraltheaglobal.com/collections/cleanser",
+    "sourceName": "Dr. Althea (fabricant)"
+  }
+};
