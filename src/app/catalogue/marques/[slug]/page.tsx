@@ -55,7 +55,7 @@ export default async function PharmacyBrandPage({
           <ShoppingBag size={16} aria-hidden="true" /> Mes demandes
         </Link>
       </div>
-      <div id="produits"><PrivateMultiBrandOrderForm products={orderProducts} initialBrandSlug={brand.slug} initialProductId={produit} /></div>
+      <div id="produits"><PrivateMultiBrandOrderForm key={brand.slug} products={orderProducts} initialBrandSlug={brand.slug} initialProductId={produit} /></div>
     </div>
   );
 }
