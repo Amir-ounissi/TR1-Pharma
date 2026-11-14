@@ -1,5 +1,5 @@
 import { publicPreviewProducts, type PublicPreviewProduct } from "@/lib/catalogue-public-preview";
-import { productPhotoByEan, productGalleryByEan, biodancePhotoByName } from "@/lib/catalogue-product-photos";
+import { productPhotoByEan, productGalleryByEan, productGalleryByName, biodancePhotoByName } from "@/lib/catalogue-product-photos";
 import { vkSwissMediaBySku } from "@/lib/catalogue-vk-swiss-media";
 
 export type PublicCatalogueProduct = PublicPreviewProduct & { sku?: string };
@@ -57,10 +57,11 @@ export function publicProductImage(p: PublicCatalogueProduct): {url:string; sour
 }
 
 export function publicProductImages(p: PublicCatalogueProduct): string[] {
-  const gallery = p.ean ? productGalleryByEan[p.ean] ?? [] : [];
-  if (gallery.length > 0) return [...new Set(gallery)];
+  const gallery = p.ean
+    ? productGalleryByEan[p.ean] ?? []
+    : p.brand === "Biodance" ? productGalleryByName[p.name] ?? [] : [];
   const primary = publicProductImage(p);
-  return primary ? [primary.url] : [];
+  return [...new Set([...(primary ? [primary.url] : []), ...gallery])];
 }
 
 export function publicProductFamily(p: PublicCatalogueProduct) {
