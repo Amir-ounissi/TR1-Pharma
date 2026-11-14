@@ -19,7 +19,7 @@ insert into public.private_catalog_brands(id,slug,name,active)
 values ('f6e20000-0000-4000-8000-000000000020','test-private-catalogue','Marque de test',true);
 insert into public.private_catalog_products(id,brand_id,sku,name,price_ht,vat_rate,min_quantity,quantity_step,active)
 values ('f6e20000-0000-4000-8000-000000000030',
- 'f6e20000-0000-4000-8000-000000000020','TEST-001','Sérum fictif',999.99,5.5,12,12,true);
+ 'f6e20000-0000-4000-8000-000000000020','TEST-001','Sérum fictif',999.99,5.5,12,1,true);
 insert into public.private_catalog_access(pharmacy_id,brand_id,active,pricing_mode)
 values ('f6e20000-0000-4000-8000-000000000010',
  'f6e20000-0000-4000-8000-000000000020',true,'indicative');
