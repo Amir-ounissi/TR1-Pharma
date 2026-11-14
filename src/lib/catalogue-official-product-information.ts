@@ -1001,22 +1001,44 @@ export const officialDrAltheaByEan: Record<string,OfficialEducation> = {
     "usage": "Agiter pour mélanger les deux phases, fermer yeux et bouche puis vaporiser uniformément."
   },
   "8809447256122": {
-    "description": "Brume biphasée destinée à apporter de l’hydratation et du confort au cours de la journée.",
+    "description": "Brume visage biphasée associant une phase aqueuse rafraîchissante et une phase crème légère. Elle apporte une hydratation rapide, aide à apaiser les sensations d’inconfort et laisse la peau douce et souple. Son format spray permet de l’utiliser après le nettoyage, entre les étapes de soin ou au cours de la journée, y compris par-dessus le maquillage.",
     "benefits": [
-      "Hydratation",
-      "Confort",
-      "Rafraîchissement"
+      "Hydratation et confort immédiats",
+      "Association de deux phases : essence aqueuse et crème légère",
+      "Aide à apaiser les sensations de tiraillement",
+      "Texture légère et diffusion fine et homogène",
+      "Peut s’utiliser avant ou après le maquillage",
+      "Format nomade de 60 ml"
     ],
     "keyIngredients": [
-      "Eau de son de riz",
-      "Panthénol",
-      "Acide hyaluronique",
-      "Centella asiatica",
-      "Madécassoside"
+      "Eau de son de riz : base hydratante de la formule",
+      "Panthénol : contribue à hydrater et apaiser",
+      "Acide hyaluronique et acide hyaluronique hydrolysé : agents hydratants",
+      "Madécassoside et Centella asiatica : actifs apaisants",
+      "Aloe vera et Houttuynia cordata : extraits végétaux de confort",
+      "Ferments de Lactobacillus, Bifida et Aspergillus"
     ],
-    "sourceUrl": "https://doctoraltheaglobal.com/products/345-relief-cream-duo",
-    "sourceName": "Dr. Althea (fabricant)",
-    "usage": "Agiter pour mélanger les deux phases, fermer yeux et bouche puis vaporiser uniformément."
+    "sourceUrl": "https://doctoraltheaglobal.com/products/345-relief-cream-mist",
+    "sourceName": "Dr. Althea — fabricant",
+    "usage": "Agiter pour mélanger les deux phases, puis vaporiser uniformément à environ 20 cm du visage.",
+    "skinTypes": [
+      "Tous types de peau",
+      "Peaux déshydratées",
+      "Peaux sujettes aux tiraillements ou à l’inconfort"
+    ],
+    "usageSteps": [
+      "Agiter soigneusement le flacon afin de mélanger les phases crème et essence.",
+      "Fermer les yeux et la bouche.",
+      "Tenir le flacon à environ 20 cm du visage et vaporiser uniformément.",
+      "Tapoter délicatement pour favoriser l’absorption ou laisser la brume se déposer.",
+      "Utiliser après le nettoyage, entre les étapes de soin, avant ou après le maquillage, ou dès que la peau a besoin d’un apport d’hydratation."
+    ],
+    "precautions": [
+      "Éviter de vaporiser directement dans les yeux ou la bouche."
+    ],
+    "inci": "Oryza Sativa (Rice) Bran Water, 1,2-Hexanediol, Triethylhexanoin, Glycerin, Hydrogenated Poly(C6-14 Olefin), Tocopherol, Water, Butylene Glycol, Methylpropanediol, Pentylene Glycol, Streptococcus Thermophilus Ferment, Pyrus Malus (Apple) Juice, Panthenol, Hydrolyzed Hyaluronic Acid, Polyquaternium-51, Betaine, Trilaurate-4 Phosphate, Cynanchum Atratum Extract, Althaea Rosea Flower Extract, Oryza Sativa (Rice) Extract, Sea Salt, Aspergillus Ferment, Sodium Phytate, Citric Acid, Madecassoside, Hydroxypropyltrimonium Hyaluronate, Centella Asiatica Leaf Extract, Houttuynia Cordata Extract, Aloe Barbadensis Leaf Water, Bifida Ferment Extract, Hyaluronic Acid, Silanetriol, Avena Sativa (Oat) Kernel Extract, Lactobacillus Ferment, Hydrolyzed Rice Protein, Rice Amino Acids",
+    "packaging": "Flacon spray biphasé — 60 ml",
+    "origin": "Corée du Sud"
   },
   "8809447256191": {
     "description": "Sérum léger destiné aux peaux déshydratées, conçu pour un fini lumineux sans effet gras.",
