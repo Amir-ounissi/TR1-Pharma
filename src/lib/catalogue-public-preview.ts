@@ -474,8 +474,8 @@ export const publicPreviewProducts: PublicPreviewProduct[] = [
     "brand": "Biodance",
     "name": "Rejuvenating Caviar PDRN Real Deep Mask",
     "category": "Masques hydrogel",
-    "format": "1 masque",
-    "ean": "8809891184613"
+    "format": "1 masque (34 g)",
+    "ean": "8809891184606"
   },
   {
     "brand": "Biodance",
