@@ -57,8 +57,8 @@ select set_config('request.jwt.claims','{"sub":"f6e20000-0000-4000-8000-00000000
 select set_config('request.jwt.claim.sub','f6e20000-0000-4000-8000-000000000001',true);
 select is(public.catalogue_claim_invitation(),true,'verified invited pharmacist can claim');
 select throws_ok(
-  $select public.catalogue_submit_request('test-private-catalogue',
-    '[{"product_id":"f6e20000-0000-4000-8000-000000000030","quantity":11}]'::jsonb)$,
+  'select public.catalogue_submit_request(''test-private-catalogue'',
+    ''[{"product_id":"f6e20000-0000-4000-8000-000000000030","quantity":11}]''::jsonb)',
   '22023',
   'Minimum de commande non respecte: 12 unites minimum',
   'the minimum remains enforced');
