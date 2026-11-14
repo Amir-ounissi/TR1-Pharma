@@ -6,7 +6,7 @@ import { Tr1BrandLogo } from "@/components/brand/tr1-brand-logo";
 
 export const metadata: Metadata = {
   title: "Catalogue professionnel multimarque | TR1 PHARMA",
-  description: "Explorez les gammes Beauty of Joseon, Dr. Althea, Biodance et VK SWISS dans le catalogue professionnel TR1 PHARMA.",
+  description: "Explorez les gammes Beauty of Joseon, Dr. Althea et Biodance dans le catalogue professionnel TR1 PHARMA.",
   robots: { index: false, follow: false },
 };
 
@@ -30,7 +30,7 @@ export default function PharmacieStorefront() {
             Découvrez notre sélection multimarque.
           </h1>
           <p className="mt-5 max-w-xl text-sm leading-7 text-[#d5dde7] sm:text-base">
-            Explorez les gammes Dr. Althea, Beauty of Joseon, Biodance et VK SWISS.
+            Explorez les gammes Dr. Althea, Beauty of Joseon et Biodance.
             Les prix et conditions commerciales sont réservés aux pharmacies autorisées.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
@@ -80,9 +80,6 @@ export default function PharmacieStorefront() {
         </div>
       </section>
 
-      <p className="text-center text-[11px] text-[#69717d]">
-        Aperçu en cours de validation commerciale et réglementaire. Aucun prix d’achat fournisseur n’est diffusé publiquement.
-      </p>
     </div>
   );
 }
