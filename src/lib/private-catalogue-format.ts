@@ -69,3 +69,43 @@ export function tierSavingsCents(
   if (baseline === null || actual === null || actual > baseline || baseline < 0 || actual < 0) return null;
   return (baseline - actual) * quantity;
 }
+
+/**
+ * Gain sur le volume FUTUR à prix inchangé vs le tarif qui s'appliquerait
+ * à ce même volume au prochain palier. N'intègre jamais les unités ajoutées
+ * comme une économie, ni des fourchettes de prix non fiables.
+ */
+export function nextTierDiscountCents(
+  lines: readonly {
+    tiers: readonly (IndicativeTier | ContractTier)[];
+    quantity: number;
+    addedQuantity: number;
+  }[],
+  currentVolume: number,
+  futureVolume: number,
+): number | null {
+  if (!Number.isSafeInteger(currentVolume) || currentVolume < 1
+    || !Number.isSafeInteger(futureVolume) || futureVolume <= currentVolume
+    || lines.length === 0) return null;
+
+  const cents = (tier: IndicativeTier | ContractTier): number | null => {
+    const min = "price_ht" in tier ? Number(tier.price_ht) : Number(tier.price_min_ht);
+    const max = "price_ht" in tier ? Number(tier.price_ht) : Number(tier.price_max_ht);
+    if (!Number.isFinite(min) || !Number.isFinite(max) || min < 0
+      || Math.round(min * 100) !== Math.round(max * 100)) return null;
+    return Math.round(min * 100);
+  };
+  let gain = 0;
+  for (const line of lines) {
+    if (!Number.isSafeInteger(line.quantity) || line.quantity < 1
+      || !Number.isSafeInteger(line.addedQuantity) || line.addedQuantity < 0) return null;
+    const current = tierForQuantity(line.tiers, currentVolume);
+    const future = tierForQuantity(line.tiers, futureVolume);
+    if (!current || !future) return null;
+    const currentCents = cents(current);
+    const futureCents = cents(future);
+    if (currentCents === null || futureCents === null || futureCents > currentCents) return null;
+    gain += (currentCents - futureCents) * (line.quantity + line.addedQuantity);
+  }
+  return gain > 0 ? gain : null;
+}
