@@ -8,6 +8,13 @@ export type FaireProductInformation = {
   origin: string;
   sourceUrl: string;
   sourceSeller: string;
+  usage?: string;
+  skinTypes?: string[];
+  usageSteps?: string[];
+  precautions?: string[];
+  inci?: string;
+  packaging?: string;
+  alternateName?: string;
 };
 
 export const faireProductInformationByEan: Record<string, FaireProductInformation> = {
