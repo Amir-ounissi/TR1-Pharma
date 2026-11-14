@@ -117,8 +117,8 @@ export async function sendPrivateCatalogueRequest(
 
   // La transaction Postgres refait l'intégralité des contrôles et recalcule
   // les prix depuis les accords réels, sans jamais accepter de total du client.
-  const { error } = await admin.rpc("catalogue_submit_request", {
-    p_slug: slug.data, p_lines: lines,
+  const { error } = await admin.rpc("catalogue_submit_multibrand_request", {
+    p_groups: [{ slug: slug.data, lines }],
   });
   if (error) return { error: "La demande n'a pas pu être enregistrée. Vérifiez votre accès et réessayez." };
 
