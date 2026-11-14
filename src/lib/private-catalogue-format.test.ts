@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { indicativeRange, isAllowedQuantity, sumOrderCents, tierForQuantity, tierSavingsCents } from "@/lib/private-catalogue-format";
+import { indicativeRange, isAllowedQuantity, sumOrderCents, tierForQuantity, tierSavingsCents, nextTierDiscountCents } from "@/lib/private-catalogue-format";
 
 describe("catalogue prive - contraintes des demandes", () => {
   it("autorise les commandes à l'unité tout en respectant le minimum", () => {
@@ -53,6 +53,37 @@ describe("catalogue prive - contraintes des demandes", () => {
     expect(tierSavingsCents([{ min_quantity: 1, price_ht: 10 }], null, 2)).toBeNull();
     expect(tierSavingsCents([{ min_quantity: 1, price_ht: 10 }, { min_quantity: 24, price_ht: 11 }], { min_quantity: 24, price_ht: 11 }, 24)).toBeNull();
     expect(tierSavingsCents([{ min_quantity: 1, price_ht: 10 }], { min_quantity: 1, price_ht: 10 }, 1.5)).toBeNull();
+  });
+
+
+  it("calcule le gain du futur palier sur le volume final, sans compter les unites ajoutees comme une economie", () => {
+    const maskTiers = [
+      { min_quantity: 12, price_min_ht: 3.85, price_max_ht: 3.85 },
+      { min_quantity: 24, price_min_ht: 3.52, price_max_ht: 3.52 },
+      { min_quantity: 40, price_min_ht: 3.41, price_max_ht: 3.41 },
+    ];
+    // 12 masques A + 12 masques B, ajout de 16 sur A.
+    // 40 x (3,52 - 3,41) = 4,40 EUR de remise supplementaire.
+    expect(nextTierDiscountCents([
+      { tiers: maskTiers, quantity: 12, addedQuantity: 16 },
+      { tiers: maskTiers, quantity: 12, addedQuantity: 0 },
+    ], 24, 40)).toBe(440);
+    expect(nextTierDiscountCents([
+      { tiers: maskTiers, quantity: 24, addedQuantity: 16 },
+    ], 24, 40)).toBe(440);
+  });
+
+  it("n'invente pas une economie si le palier futur est plus cher, non renseigne ou variable", () => {
+    expect(nextTierDiscountCents([{
+      tiers: [{ min_quantity: 1, price_ht: 10 }, { min_quantity: 12, price_ht: 12 }],
+      quantity: 6, addedQuantity: 6,
+    }], 6, 12)).toBeNull();
+    expect(nextTierDiscountCents([{
+      tiers: [{ min_quantity: 1, price_min_ht: 10, price_max_ht: 11 }, { min_quantity: 12, price_min_ht: 9, price_max_ht: 9 }],
+      quantity: 6, addedQuantity: 6,
+    }], 6, 12)).toBeNull();
+    expect(nextTierDiscountCents([], 12, 24)).toBeNull();
+    expect(nextTierDiscountCents([{ tiers: [{ min_quantity: 12, price_ht: 3.85 }], quantity: 12, addedQuantity: 0 }], 12, 12)).toBeNull();
   });
 
   it("ne transforme pas un prix indicatif absent en tarif ferme", () => {
