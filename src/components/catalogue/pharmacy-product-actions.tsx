@@ -94,7 +94,7 @@ export function PharmacyProductActions({
         <p className="text-[11px] text-[#c1cdd8]">
           Minimum {collectiveMinimum} unités sur toute la gamme concernée,
           {collectiveQuantityMultiple ? ` total multiple de ${collectiveQuantityMultiple}` : " selon le colisage fournisseur"}.
-          Vous pouvez répartir librement les quantités entre références : la règle s'applique au total du panier.
+          Vous pouvez répartir librement les quantités entre références : la règle s&apos;applique au total du panier.
         </p>
       ) : null}
       {!valid ? <p role="alert" className="text-xs font-bold text-[#ffc1ad]">Minimum {minQuantity} unités, par multiples de {quantityStep} (maximum 5 000).</p> : null}
