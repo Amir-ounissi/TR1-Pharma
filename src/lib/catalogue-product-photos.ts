@@ -258,6 +258,14 @@ export const productPhotoByEan: Record<string, ProductPhoto> = {
   "8809968130888": {
     "url": "https://kkumida.ch/cdn/shop/files/Revive_Serum_Ginseng_Snail_Mucin.png?v=1770165057&width=1500",
     "source": "KKUMIDA"
+  },
+  "8809968130918": {
+    "url": "https://s4.thcdn.com/productimg/1600/1600/17535644-1045285001685374.jpg",
+    "source": "LOOKFANTASTIC 60 ml"
+  },
+  "8809968132172": {
+    "url": "https://static.thcdn.com/productimg/original/17535647-1245285002034043.jpg",
+    "source": "LOOKFANTASTIC 200 ml"
   }
 };
 
