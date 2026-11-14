@@ -637,20 +637,43 @@ export const officialBeautyOfJoseonByEan: Record<string,OfficialEducation> = {
     "usage": "Agiter pour mélanger les deux phases. Appliquer après le nettoyage, avec les mains ou un coton."
   },
   "8809657114960": {
-    "description": "Sérum visage à la propolis et à la niacinamide, destiné à améliorer l’apparence des pores et l’éclat.",
+    "description": "Sérum visage à la texture onctueuse et légèrement miellée, associant propolis, niacinamide et BHA. Il aide à maintenir l’équilibre entre sébum et hydratation, à améliorer l’apparence des pores et du grain de peau, et à apporter confort et éclat. Sa texture pénètre sans laisser de résidu collant.",
     "benefits": [
-      "Confort",
-      "Éclat",
-      "Aspect des pores"
+      "Hydrate et apaise la peau",
+      "Aide à équilibrer l’apparence du sébum et de l’hydratation",
+      "Contribue à affiner visuellement le grain de peau et l’apparence des pores",
+      "Exfolie en douceur grâce au BHA",
+      "Aide à raviver l’éclat du teint",
+      "Texture onctueuse, absorption sans film collant"
     ],
     "keyIngredients": [
-      "Propolis 60 %",
-      "Niacinamide 2 %",
-      "BHA"
+      "Propolis 60 % : aide à hydrater et apaiser la peau",
+      "Niacinamide 2 % : contribue à équilibrer le sébum et l’hydratation",
+      "BHA (Betaine Salicylate) : exfolie en douceur et aide à désobstruer l’apparence des pores",
+      "Acide hyaluronique : contribue à maintenir l’hydratation",
+      "Centella asiatica et Tea Tree : extraits végétaux associés au confort cutané"
     ],
-    "sourceUrl": "https://beautyofjoseon.com/products/glow-serum-propolis-niacinamide",
-    "sourceName": "Beauty of Joseon (fabricant)",
-    "usage": "Appliquer 2 à 3 gouttes sur le visage, puis tapoter jusqu’à absorption."
+    "sourceUrl": "https://fr.beautyofjoseon.com/products/glow-serum-propolis-niacinamide",
+    "sourceName": "Beauty of Joseon — fabricant",
+    "usage": "Appliquer 2 à 3 gouttes sur le visage et le cou, puis tapoter jusqu’à absorption.",
+    "skinTypes": [
+      "Tous types de peau",
+      "Peaux présentant des pores visibles",
+      "Peaux réactives ou sujettes à l’excès de sébum"
+    ],
+    "usageSteps": [
+      "Après le nettoyage et le toner, déposer 2 à 3 gouttes dans la paume de la main.",
+      "Appliquer délicatement sur le visage et le cou, en insistant sur les zones qui nécessitent davantage d’hydratation ou d’éclat.",
+      "Tapoter du bout des doigts jusqu’à absorption complète.",
+      "Peut être utilisé le matin et le soir."
+    ],
+    "precautions": [
+      "En cas de peau sensible ou d’allergie connue à la niacinamide, effectuer un test sur une petite zone avant une utilisation régulière.",
+      "Le sérum contient du BHA : utiliser une protection solaire pendant la journée."
+    ],
+    "inci": "Aqua, Dipropylene Glycol, Glycerin, Butylene Glycol, Propolis Extract, Niacinamide, 1,2-Hexanediol, Betaine Salicylate, Sodium Polyacryloyldimethyl Taurate, Tromethamine, Polyglyceryl-10 Laurate, Xanthan Gum, Caprylyl Glycol, Carbomer, Ethylhexylglycerin, Melia Azadirachta Flower Extract, Ocimum Sanctum Leaf Extract, Melia Azadirachta Leaf Extract, Sodium Hyaluronate, Curcuma Longa (Turmeric) Root Extract, Dextrin, Theobroma Cacao (Cocoa) Extract, Corallina Officinalis Extract, Melaleuca Alternifolia (Tea Tree) Extract, Centella Asiatica Extract, Methylpropanediol, Lotus Corniculatus Seed Extract, Pentylene Glycol, Octanediol, Calophyllum Inophyllum Seed Oil, Tocopherol",
+    "packaging": "Flacon compte-gouttes — 30 ml",
+    "origin": "Corée du Sud"
   },
   "8809968130895": {
     "description": "Sérum visage à la propolis et à la niacinamide, destiné à améliorer l’apparence des pores et l’éclat.",
