@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { LayoutGrid, List, Minus, Package, Plus, Search, ShoppingBag, ShoppingCart, SlidersHorizontal, Trash2 } from "lucide-react";
-import { sendMultiBrandCatalogueRequest } from "@/app/catalogue/actions";
+import { ArrowRight, Check, LayoutGrid, List, Minus, Package, Plus, RotateCcw, Search, ShoppingBag, ShoppingCart, SlidersHorizontal, Trash2 } from "lucide-react";
+import { savePharmacyCart, sendMultiBrandCatalogueRequest } from "@/app/catalogue/actions";
+import type { ReorderRequest, SavedCartLine } from "@/lib/catalogue-buyer-workspace";
 import type { CatalogProduct } from "@/lib/private-catalogue";
 import type { PharmacyProductWithVisuals } from "@/lib/catalogue-private-product-visuals";
 import { euroHT, indicativeRange, isAllowedQuantity } from "@/lib/private-catalogue-format";
@@ -104,20 +105,71 @@ export function PrivateMultiBrandOrderForm({
   products,
   initialBrandSlug,
   initialProductId,
+  initialCartLines = [],
+  reorderHistory = [],
+  initialReorderId,
 }: {
   products: PrivateMultiBrandProduct[];
   initialBrandSlug?: string;
   initialProductId?: string;
+  initialCartLines?: SavedCartLine[];
+  reorderHistory?: ReorderRequest[];
+  initialReorderId?: string;
 }) {
   const [state, action, pending] = useActionState(sendMultiBrandCatalogueRequest, { error: "" });
   const [quantities, setQuantities] = useState<Record<string, number>>(() => {
-    const target = products.find((product) => product.id === initialProductId);
-    return target ? { [target.id]: target.min_quantity } : {};
+    const allowed = new Map(products.map((product) => [product.id, product]));
+    const restored: Record<string, number> = {};
+    for (const line of initialCartLines.slice(0, 40)) {
+      const product = allowed.get(line.product_id);
+      if (product && Number.isSafeInteger(line.quantity) && line.quantity > 0 && line.quantity <= 5000) {
+        restored[product.id] = line.quantity;
+      }
+    }
+    const restoreRequest = reorderHistory.find((request) => request.id === initialReorderId);
+    for (const line of restoreRequest?.items ?? []) {
+      const product = allowed.get(line.product_id);
+      if (product && Number.isSafeInteger(line.quantity) && line.quantity > 0
+        && (restored[product.id] || Object.keys(restored).length < 40)) {
+        restored[product.id] = Math.max(product.min_quantity, Math.min(5000, line.quantity));
+      }
+    }
+    const target = allowed.get(initialProductId ?? "");
+    if (target && (restored[target.id] || Object.keys(restored).length < 40)) {
+      restored[target.id] = restored[target.id] || target.min_quantity;
+    }
+    return restored;
   });
   const [query, setQuery] = useState("");
   const [brandFilter, setBrandFilter] = useState(initialBrandSlug ?? "all");
   const [sort, setSort] = useState("brand");
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
+  const [buyerView, setBuyerView] = useState<"reorder" | "catalogue">(
+    reorderHistory.length && !initialProductId && !initialReorderId ? "reorder" : "catalogue",
+  );
+  const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "error">("saved");
+  const [reorderMessage, setReorderMessage] = useState("");
+  const didMount = useRef(false);
+
+  // Persistance cote serveur entre les pages, appareils et sessions.
+  // Debounce pour ne pas declencher un appel reseau a chaque clic +/−.
+  useEffect(() => {
+    if (!didMount.current) {
+      didMount.current = true;
+      // La reprise depuis un lien d'historique ajoute des lignes au panier initial.
+      if (!initialReorderId) return;
+    }
+    if (pending) return;
+    let cancelled = false;
+    const timeout = window.setTimeout(async () => {
+      const lines = Object.entries(quantities)
+        .filter(([, quantity]) => Number.isSafeInteger(quantity) && quantity > 0)
+        .map(([product_id, quantity]) => ({ product_id, quantity }));
+      const result = await savePharmacyCart(lines);
+      if (!cancelled) setSaveStatus(result.saved ? "saved" : "error");
+    }, 700);
+    return () => { cancelled = true; window.clearTimeout(timeout); };
+  }, [quantities, pending, initialReorderId]);
 
   const brandOptions = useMemo(() => {
     const unique = new Map<string, string>();
@@ -203,7 +255,31 @@ export function PrivateMultiBrandOrderForm({
 
   const setQuantity = (product: PrivateMultiBrandProduct, next: number) => {
     const safeNext = Number.isFinite(next) ? Math.max(0, Math.min(5000, next)) : 0;
+    setSaveStatus("saving");
     setQuantities((previous) => ({ ...previous, [product.id]: safeNext }));
+  };
+
+  const reorder = (request: ReorderRequest) => {
+    const allowed = new Map(products.map((product) => [product.id, product]));
+    const next = { ...quantities };
+    let eligible = 0;
+    for (const line of request.items) {
+      const product = allowed.get(line.product_id);
+      if (!product || !Number.isSafeInteger(line.quantity) || line.quantity < 1) continue;
+      if (!next[product.id] && Object.values(next).filter((v) => v > 0).length >= 40) {
+        setReorderMessage("Le panier est limité à 40 références. Retirez des produits avant ce réassort.");
+        return;
+      }
+      next[product.id] = Math.max(product.min_quantity, Math.min(5000, line.quantity));
+      eligible++;
+    }
+    if (!eligible) {
+      setReorderMessage("Aucune référence de cette demande n'est encore disponible.");
+      return;
+    }
+    setQuantities(next);
+    setSaveStatus("saving");
+    setReorderMessage(`${eligible} référence${eligible > 1 ? "s" : ""} reprise${eligible > 1 ? "s" : ""} dans le panier. Les tarifs actuels ont été recalculés.`);
   };
 
   const add = (product: PrivateMultiBrandProduct) => {
