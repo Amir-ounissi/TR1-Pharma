@@ -630,4 +630,36 @@ export const productGalleryByEan: Record<string, string[]> = {
       "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/13_e5dd42bb-9b08-4d15-a2b0-926ebf5898b7.png?v=1746669943",
       "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/14_76953cde-da00-4293-bcaa-83d6b2f5e66d.png?v=1746669943"
   ]
+  "8809447255583": [
+      "https://doctoraltheaglobal.com/cdn/shop/files/gentlevegancleansingoil.jpg?v=1756370215&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/251212.jpg?v=1765936502&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/251209______1200_-9.jpg?v=1765936502&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/251209______1200_-2_b4202ad1-0447-450a-b980-44b65f108ea5.jpg?v=1765936502&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/251209______1200_-3_49f79ade-9d7f-40d1-baac-4af7859886c2.jpg?v=1765936502&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/251209______1200_-4_d3a9f91c-5e5b-4511-9802-3ad4673dbb7f.jpg?v=1765936502&width=200"
+  ],
+  "8809447256238": [
+      "https://doctoraltheaglobal.com/cdn/shop/files/nonilotion_b824e111-9af1-49b3-96ab-99e2abf36b66.jpg?v=1768975145&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260119___ABC___-02.jpg?v=1769734822&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260119___ABC___-03.jpg?v=1769734822&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260119___ABC___-04.jpg?v=1769734823&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260119___ABC___-05.jpg?v=1769734823&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260119___ABC___-06.jpg?v=1769734823&width=200"
+  ],
+  "8809447255620": [
+      "https://doctoraltheaglobal.com/cdn/shop/files/e4a48409e86c966cf12a608391940024.jpg?v=1786083592&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260331______1200_-1_054d1db2-b7db-4979-a86d-e43d172b9c73.jpg?v=1782882218&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260331______1200_-2_968247f1-cfaa-445d-81bc-21a4940dc224.jpg?v=1782882218&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260331______1200_-3_2bd1b145-eb63-4d0b-b5eb-ddf9a9d8d1f2.jpg?v=1782882218&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260331______1200_-4_7f2c5c97-b1c6-419f-86b2-6cf155111e34.jpg?v=1782882218&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260331______1200_-5_116bf846-fb88-4f3d-8322-bda98623bf03.jpg?v=1782882218&width=200"
+  ],
+  "8809447256658": [
+      "https://doctoraltheaglobal.com/cdn/shop/files/93b17f9bdd8afe7e84f62fe18243112f.jpg?v=1786083592&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/251219______1200_-02_jpg.jpg?v=1782876330&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/251219______1200_-03_jpg.jpg?v=1782876330&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/251219______1200_-04_jpg.jpg?v=1782876330&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/251219______1200_-05_jpg.jpg?v=1782876330&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260430______1200_-08.jpg?v=1782876329&width=200"
+  ]
 };
