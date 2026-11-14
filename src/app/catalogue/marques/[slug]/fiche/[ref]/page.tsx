@@ -168,6 +168,7 @@ export default async function PharmacyCatalogueProductPage({ params }: ProductPa
               minQuantity={privateProduct.min_quantity}
               quantityStep={privateProduct.quantity_step}
               collectiveMinimum={quantityGroup?.minimum_total_units ?? null}
+              collectiveQuantityMultiple={quantityGroup?.quantity_multiple ?? null}
               initialFavorite={initialFavorite}
             />
           </section>
