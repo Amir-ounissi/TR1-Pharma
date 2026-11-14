@@ -9,7 +9,7 @@ import type { ReorderRequest, SavedCartLine } from "@/lib/catalogue-buyer-worksp
 import type { CatalogProduct } from "@/lib/private-catalogue";
 import type { PharmacyProductWithVisuals } from "@/lib/catalogue-private-product-visuals";
 import type { CommercialContext, CommercialQuantityGroup } from "@/lib/catalogue-commercial";
-import { euroHT, indicativeRange, isAllowedQuantity, tierSavingsCents, nextTierDiscountCents, firstOrderQuantity, steppedOrderQuantity } from "@/lib/private-catalogue-format";
+import { euroHT, indicativeRange, isAllowedQuantity, tierSavingsCents, nextTierDiscountCents, firstOrderQuantity, steppedOrderQuantity, collectiveTierTopUp } from "@/lib/private-catalogue-format";
 import { KOREAN_FRANCO, koreanFrancoProgress } from "@/lib/catalogue-shipping";
 
 export type PrivateMultiBrandProduct = PharmacyProductWithVisuals;
@@ -357,17 +357,18 @@ export function PrivateMultiBrandOrderForm({
       target = volume + 1;
     }
     if (target !== null) {
-      const step = group?.quantity_multiple ?? product.quantity_step;
-      missingUnits = Math.ceil(Math.max(1, target - volume) / step) * step;
-      while (group && (volume + missingUnits) % group.quantity_multiple !== 0
-        && quantity + missingUnits <= 5000) {
-        missingUnits += step;
-      }
-      if (quantity + missingUnits > 5000) {
-        target = null;
-        missingUnits = 0;
+      if (group) {
+        const topUp = collectiveTierTopUp(
+          volume, target, group.quantity_multiple, quantity,
+          product.min_quantity, product.quantity_step,
+        );
+        target = topUp?.total ?? null;
+        missingUnits = topUp?.additional ?? 0;
       } else {
-        target = volume + missingUnits;
+        const step = product.quantity_step;
+        missingUnits = Math.ceil(Math.max(1, target - volume) / step) * step;
+        target = quantity + missingUnits <= 5000 ? volume + missingUnits : null;
+        if (target === null) missingUnits = 0;
       }
     }
 
