@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { indicativeRange, isAllowedQuantity, sumOrderCents, tierForQuantity, tierSavingsCents, nextTierDiscountCents, firstOrderQuantity, steppedOrderQuantity, collectiveTierTopUp, DEFAULT_QUANTITY_STEP } from "@/lib/private-catalogue-format";
+import { indicativeRange, isAllowedQuantity, sumOrderCents, tierForQuantity, tierSavingsCents, nextTierDiscountCents, firstOrderQuantity, steppedOrderQuantity, collectiveTierTopUp, DEFAULT_QUANTITY_STEP, orderablePricingThreshold, orderablePricingTiers, catalogueQuantityPricingLabel } from "@/lib/private-catalogue-format";
 
 describe("catalogue prive - contraintes des demandes", () => {
   it("applique six par défaut, et permet un pas personnalisé par produit", () => {
@@ -50,6 +50,50 @@ describe("catalogue prive - contraintes des demandes", () => {
     expect(collectiveTierTopUp(24, 40, 4, 6, 6, 6))
       .toEqual({ additional: 24, total: 48 });
     expect(collectiveTierTopUp(20, 24, 0, 8, 1, 1)).toBeNull();
+  });
+
+  it("affiche le palier à la première quantité réellement commandable", () => {
+    expect(orderablePricingThreshold(1, 6, 6)).toBe(6);
+    expect(orderablePricingThreshold(1, 12, 6)).toBe(12);
+    expect(orderablePricingThreshold(7, 6, 6)).toBe(12);
+    expect(orderablePricingThreshold(24, 6, 6)).toBe(24);
+    expect(catalogueQuantityPricingLabel(6, 6, 1))
+      .toBe("Commande par 6 unités · Tarif HT applicable dès 6 unités");
+    expect(catalogueQuantityPricingLabel(6, 6, 12))
+      .toBe("Commande par 6 unités · Tarif HT applicable dès 12 unités");
+    expect(catalogueQuantityPricingLabel(6, 6, null))
+      .toContain("Tarif à confirmer");
+  });
+
+  it("regroupe les paliers non commandables sans changer le prix applicable", () => {
+    const tiers = [
+      { min_quantity: 12, price_ht: 8 },
+      { min_quantity: 1, price_ht: 11 },
+      { min_quantity: 4, price_ht: 10 },
+      { min_quantity: 24, price_ht: 7 },
+    ];
+    expect(orderablePricingTiers(tiers, 6, 6)).toEqual([
+      { threshold: 6, tier: tiers[2] },
+      { threshold: 12, tier: tiers[0] },
+      { threshold: 24, tier: tiers[3] },
+    ]);
+    // La structure originale (tarifs et quantités) n'est pas modifiée.
+    expect(tiers[1].min_quantity).toBe(1);
+    expect(tiers[1].price_ht).toBe(11);
+  });
+
+  it("préserve les paliers et le minimum collectif Biodance", () => {
+    const group = { minimum_total_units: 12, quantity_multiple: 4 };
+    expect(orderablePricingThreshold(1, 1, 1, group)).toBe(12);
+    expect(orderablePricingThreshold(14, 1, 1, group)).toBe(16);
+    expect(catalogueQuantityPricingLabel(1, 1, 1, group))
+      .toBe("Minimum 12 masques cumulés · Total par multiples de 4 · Tarif HT dès 12 masques cumulés");
+    expect(orderablePricingTiers([
+      { min_quantity: 1, price_ht: 4 },
+      { min_quantity: 12, price_ht: 3.8 },
+      { min_quantity: 24, price_ht: 3.6 },
+      { min_quantity: 40, price_ht: 3.3 },
+    ], 1, 1, group).map((item) => item.threshold)).toEqual([12, 24, 40]);
   });
 
   it("rejette les quantites falsifiees ou excessives", () => {
