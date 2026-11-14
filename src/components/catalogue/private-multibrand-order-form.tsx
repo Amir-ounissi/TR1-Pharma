@@ -290,6 +290,60 @@ export function PrivateMultiBrandOrderForm({
     [products, quantities],
   );
 
+  // L'incitation concerne seulement les produits disposant de plusieurs paliers.
+  // Sur une gamme mutualisee (Biodance), le seuil et le gain portent sur tout le
+  // groupe ; le bouton ajoute les unites a la seule reference choisie.
+  const tierOfferForProduct = (product: PrivateMultiBrandProduct, quantity: number): TierUpsellOffer | null => {
+    if (!Number.isSafeInteger(quantity) || quantity <= 0 || product.pricing.tiers.length < 2) return null;
+    const group = groupByProduct.get(product.id);
+    const volume = group ? groupTotals.get(group.id) ?? 0 : quantity;
+    const minimum = group ? group.minimum_total_units : product.min_quantity;
+    const minimumToReach = volume < minimum;
+    const needsPackingMultiple = Boolean(group && volume >= minimum && volume % group.quantity_multiple !== 0);
+    const nextTier = nextTierForQuantity(product.pricing.tiers, volume);
+    let target = minimumToReach ? minimum : nextTier?.min_quantity ?? null;
+
+    // Si le dernier palier est atteint, guider vers le prochain multiple valide
+    // sans inventer une nouvelle remise.
+    if (target === null && needsPackingMultiple && group) {
+      target = Math.ceil(volume / group.quantity_multiple) * group.quantity_multiple;
+    }
+    if (target !== null && group) {
+      target = Math.ceil(target / group.quantity_multiple) * group.quantity_multiple;
+    }
+    const missingUnits = target === null ? 0 : target - volume;
+    if (target !== null && (missingUnits < 1 || quantity + missingUnits > 5000)) {
+      target = null;
+    }
+
+    const currentTier = findTierForQuantity(product.pricing.tiers, volume);
+    const currentSavingsCents = savingsForProduct(product, quantity, currentTier);
+    const nextPrice = target === null ? null :
+      priceRangeForTier(findTierForQuantity(product.pricing.tiers, target));
+    const extraSavingEligible = target !== null && !minimumToReach && !needsPackingMultiple;
+    const relevantProducts = group
+      ? selected.filter((line) => group.product_ids.includes(line.id))
+      : [product];
+    const nextDiscountCents = extraSavingEligible && target !== null
+      ? nextTierDiscountCents(relevantProducts.map((line) => ({
+          tiers: line.pricing.tiers,
+          quantity: quantities[line.id] ?? 0,
+          addedQuantity: line.id === product.id ? missingUnits : 0,
+        })), volume, target)
+      : null;
+
+    return {
+      missingUnits: target === null ? 0 : target - volume,
+      targetQuantity: target,
+      nextUnitPrice: nextPrice ? formatPriceRange(nextPrice.min, nextPrice.max) : null,
+      currentSavingsCents,
+      nextDiscountCents,
+      grouped: Boolean(group),
+      minimumToReach,
+      needsPackingMultiple,
+    };
+  };
+
   const visible = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase("fr");
     return products
