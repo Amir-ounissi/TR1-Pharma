@@ -13,7 +13,16 @@ const vkProducts: PublicCatalogueProduct[] = [
   { brand: "VK SWISS", name: "Tribulus", sku: "6467329", ean: "7629999149366", format: "30 gélules", category: "Compléments alimentaires" },
 ];
 
-export const publicCatalogueProducts: PublicCatalogueProduct[] = [...publicPreviewProducts, ...vkProducts];
+// Deux références dont le conditionnement ou le packshot ne sont pas cohérents avec la source
+// restent disponibles en administration mais sont écartées de la galerie publique.
+const pendingVisualAudit = new Set(["8809968132714"]);
+export const publicCatalogueProducts: PublicCatalogueProduct[] = [
+  ...publicPreviewProducts.filter((p) =>
+    !pendingVisualAudit.has(p.ean) &&
+    !(p.brand === "Biodance" && p.name === "Caviar PDRN Dual Gel Toner Pads")
+  ),
+  ...vkProducts,
+];
 
 function slug(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
