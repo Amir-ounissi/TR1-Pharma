@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowUpRight, Barcode, Building2, Check, ClipboardList, LockKeyhole, PackageSearch } from "lucide-react";
 import { Ean13Barcode } from "@/components/catalogue/ean13-barcode";
 import { ProductImageGallery } from "@/components/catalogue/product-image-gallery";
+import { ExternalCompositionAnalysis } from "@/components/catalogue/external-composition-analysis";
 import { isValidEan13 } from "@/lib/ean13";
 import { faireProductInformationByEan } from "@/lib/catalogue-faire-product-information";
 import { officialBiodanceByName, officialBeautyOfJoseonByEan, officialDrAltheaByEan, additionalBeautyOfJoseonByEan, additionalDrAltheaByEan } from "@/lib/catalogue-official-product-information";
@@ -175,6 +176,10 @@ export default async function PublicCatalogueProductPage({ params }: ProductPara
           )}
         </section>
       )}
+      {cosmetics && eanIsValid && product.ean ? (
+        <ExternalCompositionAnalysis ean={product.ean} />
+      ) : null}
+
 
       <div className="grid gap-5 lg:grid-cols-2">
         <section className="rounded-2xl border border-[#e5e9eb] bg-white p-5 sm:p-7">
