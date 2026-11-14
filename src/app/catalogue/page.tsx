@@ -4,6 +4,7 @@ import { getCatalogueBrands, getCatalogueBrandForPharmacy, requirePharmacyCatalo
 import { disconnectPharmacyCatalogue } from "@/app/catalogue/actions";
 import { PrivateMultiBrandOrderForm } from "@/components/catalogue/private-multibrand-order-form";
 import { withPharmacyProductVisuals } from "@/lib/catalogue-private-product-visuals";
+import { getCommercialContext } from "@/lib/catalogue-commercial";
 import { getBuyerWorkspace } from "@/lib/catalogue-buyer-workspace";
 
 export default async function PrivateCatalogueHome({
@@ -11,6 +12,7 @@ export default async function PrivateCatalogueHome({
 }: { searchParams: Promise<{ reprendre?: string }> }) {
   const { reprendre } = await searchParams;
   const { admin, pharmacy } = await requirePharmacyCatalogue();
+  const commercialConditions = await getCommercialContext(admin);
   const workspace = await getBuyerWorkspace(admin);
   const brands = await getCatalogueBrands(pharmacy.id, admin);
   const groups = await Promise.all(brands.map(async (brand) => {
@@ -52,7 +54,7 @@ export default async function PrivateCatalogueHome({
         </div>
       </section>
 
-      <PrivateMultiBrandOrderForm key={reprendre ?? "catalogue"} products={orderProducts} initialCartLines={workspace.lines} reorderHistory={workspace.recent_requests} initialReorderId={reprendre} />
+      <PrivateMultiBrandOrderForm key={reprendre ?? "catalogue"} products={orderProducts} commercialConditions={commercialConditions} initialCartLines={workspace.lines} reorderHistory={workspace.recent_requests} initialReorderId={reprendre} />
     </div>
   );
 }
