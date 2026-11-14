@@ -370,16 +370,16 @@ export const biodancePhotoByName: Record<string, ProductPhoto> = {
 export const productGalleryByEan: Record<string, string[]> = {
   "8809447256221": [
     "https://cdn.shopify.com/s/files/1/0568/9802/7638/files/Dr.Althea_345ReliefCream_Packshot.jpg?v=1772629511",
-    "https://cdn.shopify.com/s/files/1/0568/9802/7638/files/Dr.Althea_345ReliefCream_Photo2.jpg?v=1772629511",
-    "https://cdn.shopify.com/s/files/1/0568/9802/7638/files/Dr.Althea_345ReliefCream_Photo3.jpg?v=1772629511",
-    "https://cdn.shopify.com/s/files/1/0568/9802/7638/files/Dr.Althea_345ReliefCream_Photo4.jpg?v=1772629511",
-    "https://cdn.shopify.com/s/files/1/0568/9802/7638/files/Dr.Althea_345ReliefCream_Photo5.jpg?v=1772629511"
+    "https://b2b.glowberry.gr/cdn/shop/files/61oEXw09QEL__SL1080_jpg.webp?v=1732628466&width=1946",
+    "https://cdn.hstatic.net/products/200000385549/598952377_1318055747016870_4925244616297041407_n_a0155e25e01c4ac7878d52c6d9a62b6f.jpg",
+    "https://cosmeticworld.ca/cdn/shop/files/dr-althea-345-relief-cream-cosmetic-world-8304774_1280x.png?v=1776192500",
+    "https://www.koolseoul.com/cdn/shop/files/DR-ALTHEA-345-Relief-Cream-available-on-Koolseoul.jpg?crop=center&format=pjpg&height=952&v=1775796208&width=794"
   ],
   "8809447256122": [
-    "https://cdn.faire.com/fastly/449bb4fc43a233627b07fa54f0deecfd9d9ce9f05f9ba027573f80a4c125f2db.jpeg?bg-color=FFFFFF&format=jpg&precrop=72.33p%2C72.33p%2Cx13.78p%2Cy24.48p&width=720",
-    "https://cdn.faire.com/fastly/43fff981e77e119c49eb61411fd4c3f091b7c89b98bbb3eb56a5e0c157f6fd6b.jpeg?format=jpg&precrop=1%3A1&width=720",
-    "https://cdn.faire.com/fastly/a2247c1665a65f8516fc0867820f2052c6a1d7521be38d4c9595905e544e820e.jpeg?format=jpg&precrop=1%3A1&width=720",
-    "https://cdn.faire.com/fastly/bda7ee4f6a829a992840d6df49806744134ffd98b4c99fdefdddb9df4a1544c0.jpeg?format=jpg&precrop=1%3A1&width=720"
+    "https://tshop.r10s.jp/dralthea/cabinet/12738430/12943525/imgrc0110862102.jpg?fitin=720%3A720",
+    "https://www.skincupid.us/cdn/shop/files/Dr._Althea_345_Relief_Cream_Mist_60ml_Skin_Cupid_MOOD_SHOT.jpg?v=1782558515",
+    "https://lacosmetique.com.au/cdn/shop/files/149_d5bce71e-3b5a-4b94-bde9-e4413ce0303b.png?v=1763617561&width=1500",
+    "https://cdn.faire.com/fastly/449bb4fc43a233627b07fa54f0deecfd9d9ce9f05f9ba027573f80a4c125f2db.jpeg?bg-color=FFFFFF&format=jpg&precrop=72.33p%2C72.33p%2Cx13.78p%2Cy24.48p&width=720"
   ],
   "8809782555508": [
     "https://fr.beautyofjoseon.com/cdn/shop/files/04_0805_Relief_sun_EU_UK_d87a9756-3bcb-4c1f-a487-1d1b900b0f2e.jpg?v=1787222280&width=1800",
