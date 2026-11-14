@@ -89,6 +89,7 @@ export function PrivateMultiBrandOrderForm({
     let minCents = 0;
     let maxCents = 0;
     let unpriced = 0;
+    let priced = 0;
     for (const product of selected) {
       const quantity = quantities[product.id] ?? 0;
       const tier = tierForQuantity(product.pricing.tiers, quantity);
@@ -97,10 +98,11 @@ export function PrivateMultiBrandOrderForm({
         unpriced += 1;
         continue;
       }
+      priced += 1;
       minCents += Math.round(range.min * 100) * quantity;
       maxCents += Math.round(range.max * 100) * quantity;
     }
-    return { minCents, maxCents, unpriced };
+    return { minCents, maxCents, unpriced, priced };
   }, [selected, quantities]);
 
   const selectedByBrand = useMemo(() => {
@@ -125,7 +127,7 @@ export function PrivateMultiBrandOrderForm({
     : allContractual ? "Total HT" : "Estimation HT";
   const priceSummaryValue = selected.length === 0
     ? "—"
-    : priceSummary.minCents > 0 || priceSummary.maxCents > 0
+    : priceSummary.priced > 0
       ? `${formatPriceRange(priceSummary.minCents / 100, priceSummary.maxCents / 100)} HT${priceSummary.unpriced > 0 ? ` + ${priceSummary.unpriced} référence(s) à chiffrer` : ""}`
       : "À chiffrer";
 
