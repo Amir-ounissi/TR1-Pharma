@@ -155,6 +155,12 @@ export default async function CatalogueAdministration({
       <section aria-labelledby="edit-products" className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 id="edit-products" className="text-2xl font-black">Fiches produits et publication</h2>
+          <p className="text-xs leading-5 text-[#576879]">
+            Défaut : minimum 6 unités, boutons +6/−6. Exception fournisseur :
+            les masques hydrogel Biodance sont commandables librement par référence,
+            avec boutons +4/−4 et un minimum de 12 masques cumulés, total par multiples de 4.
+            Le minimum et le pas individuel de validation restent configurables par fiche.
+          </p>
           <span className="text-xs text-[#69717d]">{productRows.filter((p) => p.active).length} références actives</span>
         </div>
         {productRows.length ? (
@@ -200,7 +206,7 @@ export default async function CatalogueAdministration({
                       <div><label className={label}>Prix référence HT (confidentiel)</label><input name="price_ht" type="number" min="0" step="0.0001" required defaultValue={Number(product.price_ht)} className={field} /></div>
                       <div><label className={label}>TVA (%)</label><input name="vat_rate" type="number" min="0" max="100" step="0.01" required defaultValue={product.vat_rate === null ? "" : Number(product.vat_rate)} className={field} /></div>
                       <div><label className={label}>Minimum unités</label><input name="min_quantity" type="number" min="1" max="5000" required defaultValue={product.min_quantity} className={field} /></div>
-                      <div><label className={label}>Pas des boutons + / − (u.) · défaut 6</label><input name="quantity_step" type="number" min="1" max="5000" required defaultValue={product.quantity_step} className={field} /><p className="mt-1 text-[11px] text-[#69717d]">Actuellement {product.quantity_step} u./clic. Premier ajout arrondi au multiple supérieur du minimum.</p></div>
+                      <div><label className={label}>Pas individuel de commande (u.) · défaut 6</label><input name="quantity_step" type="number" min="1" max="5000" required defaultValue={product.quantity_step} className={field} /><p className="mt-1 text-[11px] text-[#69717d]">Pas individuel actuel : {product.quantity_step} u. Les groupes fournisseurs peuvent proposer un pas de boutons différent (ex. Biodance +4/−4 collectif).</p></div>
                     </div>
                     <button type="submit" className={button}>Enregistrer les modifications</button>
                   </form>
