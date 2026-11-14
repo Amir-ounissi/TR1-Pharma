@@ -528,4 +528,28 @@ export const productGalleryByEan: Record<string, string[]> = {
   "8809891184569": [
       "https://koreanskincare.nl/cdn/shop/files/Biodance_RefreshingSeaKelpRealDeepMask_Packshot.jpg?v=1762264118"
   ]
+  "8809447256191": [
+      "https://doctoraltheaglobal.com/cdn/shop/files/96204d86ca6d59a298bba98c5274001d.jpg?v=1786083592&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260223______1200_-02_673c3ff5-c0c3-41ac-add5-5caee2821206.jpg?v=1782881909&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260223______1200_-03_2c2ca786-4e16-41f5-9e7e-40ae3d4c99dd.jpg?v=1782881909&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260223______1200_-04_f6024a79-7a3e-40c4-b781-9fb09c29ffa9.jpg?v=1782881910&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260223______1200_-05_02635391-5110-4b0c-86ca-0381359ac230.jpg?v=1782881909&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260223______1200_-06_0ce4a50e-71e5-4918-9291-fd30479e2233.jpg?v=1782881909&width=200"
+  ],
+  "8809447255101": [
+      "https://doctoraltheaglobal.com/cdn/shop/files/1a1996553c21e3da711f2f949009c205.jpg?v=1786083592&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260210______-01_463dbc6d-fbc1-4c89-8188-dd1972e41628.jpg?v=1782872365&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260210______-02_fb308632-11d2-4cf7-92c6-cece33b0f353.jpg?v=1782872365&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260210______-03_a6307d3a-223e-4e18-abe6-79818296b381.jpg?v=1782872365&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260210______-04_9ea4310f-7807-4c41-9f2c-e9b0a201e2ff.jpg?v=1782872365&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260210______-05_95adb069-75cd-4eef-b65e-fc760af46fbd.jpg?v=1782872365&width=200"
+  ],
+  "8809447254609": [
+      "https://doctoraltheaglobal.com/cdn/shop/files/15_02a671b9-62e7-459d-ba55-6bb5b0bc2722.jpg?v=1786083592&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/15_NiacinamidePuritySerum02.jpg?v=1782882012&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/15_NiacinamidePuritySerum03.jpg?v=1782882013&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/15_NiacinamidePuritySerum04.jpg?v=1782882013&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/15_NiacinamidePuritySerum05.jpg?v=1782882013&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/15_NiacinamidePuritySerum06.jpg?v=1782882013&width=200"
+  ]
 };
