@@ -18,6 +18,15 @@ function formatPriceRange(min: number, max: number) {
   const high = euroHT(max);
   return low === high ? low : `${low} – ${high}`;
 }
+function findTierForQuantity(tiers: readonly ProductTier[], quantity: number): ProductTier | null {
+  if (!Number.isSafeInteger(quantity) || quantity < 1) return null;
+  return tiers.reduce<ProductTier | null>(
+    (selected, tier) =>
+      tier.min_quantity <= quantity && (!selected || tier.min_quantity > selected.min_quantity)
+        ? tier : selected,
+    null,
+  );
+}
 function nextTierForQuantity(tiers: readonly ProductTier[], quantity: number) {
   return [...tiers].filter((tier) => tier.min_quantity > quantity)
     .sort((a, b) => a.min_quantity - b.min_quantity)[0] ?? null;
@@ -57,7 +66,7 @@ export function PrivateOrderForm({
     let unpriced = 0;
     for (const product of selected) {
       const quantity = quantities[product.id] ?? 0;
-      const tier = tierForQuantity(product.pricing.tiers, quantity);
+      const tier = findTierForQuantity(product.pricing.tiers, quantity);
       const range = priceRangeForTier(tier);
       if (!range) {
         unpriced += 1;
@@ -261,7 +270,7 @@ export function PrivateOrderForm({
               <div className="max-h-78 space-y-3 overflow-auto">
                 {selected.map((p) => {
                   const quantity = quantities[p.id];
-                  const tier = tierForQuantity(p.pricing.tiers, quantity);
+                  const tier = findTierForQuantity(p.pricing.tiers, quantity);
                   const range = priceRangeForTier(tier);
                   const nextTier = nextTierForQuantity(p.pricing.tiers, quantity);
                   return (
