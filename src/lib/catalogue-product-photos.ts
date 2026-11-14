@@ -320,7 +320,7 @@ export const productGalleryByName: Record<string, string[]> = {
     "https://assets.digitalcontent.marksandspencer.app/images/w_2560%2Cq_auto%2Cf_auto/MS_07_T23_3128F_NC_X_EC_5/Collagen-Peptide-Eye-Patches-30-pairs",
     "https://assets.digitalcontent.marksandspencer.app/images/w_2560%2Cq_auto%2Cf_auto/MS_07_T23_3128F_NC_X_EC_6/Collagen-Peptide-Eye-Patches-30-pairs"
   ],
-  Caviar PDRN Eye Patches": [
+  "Caviar PDRN Eye Patches": [
       "https://cdn.shopify.com/s/files/1/0887/1067/6791/files/eyepatch_pdrn_d2-1_img.jpg?v=1769497348",
       "https://cdn.shopify.com/s/files/1/0887/1067/6791/files/eyepatch_pdrn_d2-2_img.jpg?v=1769497348",
       "https://cdn.shopify.com/s/files/1/0887/1067/6791/files/eyepatch_pdrn_d2-3_img.gif?v=1769499176",
@@ -353,7 +353,7 @@ export const productGalleryByName: Record<string, string[]> = {
   "Hydro Ceramide Cleansing Powder": [
       "https://ie.facethefuture.store/cdn/shop/files/Product-page-sizes_272e1e74-f52b-43bf-9270-5b210cb223e5.jpg?v=1748444845"
   ],
-  Caviar PDRN Dual Gel Toner Pads": [
+  "Caviar PDRN Dual Gel Toner Pads": [
       "https://cdn-image.oliveyoung.com/prdtImg/1505/28cfd091-b99f-4a16-a74c-8299da911f5d.jpg?AR=0&QT=80&RS=1500x1500"
   ],
   "Pore Perfecting Collagen Peptide Cream": [
@@ -570,7 +570,7 @@ export const productGalleryByEan: Record<string, string[]> = {
       "https://fr.beautyofjoseon.com/cdn/shop/files/3_71364279-b67b-4bba-b24a-1c60b7b5e410.png?v=1745835451&width=800",
       "https://fr.beautyofjoseon.com/cdn/shop/files/Untitled_design_-_2025-04-28T173106.372_61d6cf83-e4d7-4fbf-8c55-8c62304642ff.png?v=1777588874&width=2200"
   ],
-  8809937361718": [
+  "8809937361718": [
       "https://cdn.shop-apotheke.com/images/mp/prod/b9a5eb02a3294257a9d604a3cf50934f",
       "https://cdn.shop-apotheke.com/images/mp/prod/b1a23360ff3f41598e66a0f9975c62b7",
       "https://cdn.shop-apotheke.com/images/mp/prod/392c79096f0b43318efde33147c112bd",
@@ -587,7 +587,7 @@ export const productGalleryByEan: Record<string, string[]> = {
       "https://lilabeauty.com.au/cdn/shop/files/buy-biodance-refreshing-sea-scalp-real-deep-mask-34g-at-lila-beauty-korean-and-japanese-beauty-skin-care-868247_800x.jpg?v=1747441936",
       "https://www.tjhughes.co.uk/cdn/shop/files/10060773.jpg?v=1777380177"
   ],
-  8809447256191": [
+  "8809447256191": [
       "https://doctoraltheaglobal.com/cdn/shop/files/96204d86ca6d59a298bba98c5274001d.jpg?v=1786083592&width=200",
       "https://doctoraltheaglobal.com/cdn/shop/files/260223______1200_-02_673c3ff5-c0c3-41ac-add5-5caee2821206.jpg?v=1782881909&width=200",
       "https://doctoraltheaglobal.com/cdn/shop/files/260223______1200_-03_2c2ca786-4e16-41f5-9e7e-40ae3d4c99dd.jpg?v=1782881909&width=200",
@@ -611,7 +611,7 @@ export const productGalleryByEan: Record<string, string[]> = {
       "https://doctoraltheaglobal.com/cdn/shop/files/15_NiacinamidePuritySerum05.jpg?v=1782882013&width=200",
       "https://doctoraltheaglobal.com/cdn/shop/files/15_NiacinamidePuritySerum06.jpg?v=1782882013&width=200"
   ],
-  8809968130130": [
+  "8809968130130": [
       "https://fr.beautyofjoseon.com/cdn/shop/files/5_fa4a5b2f-b344-4146-8e17-59834b8b1090.png?v=1745921857&width=1800",
       "https://fr.beautyofjoseon.com/cdn/shop/files/8_56449e91-6dbf-44f2-b026-c191ee74ee33.png?v=1745921852&width=800",
       "https://fr.beautyofjoseon.com/cdn/shop/files/9_8a10661f-7025-45e5-836b-ea0b3071dc1e.png?v=1745921852&width=800",
@@ -647,7 +647,7 @@ export const productGalleryByEan: Record<string, string[]> = {
       "https://fr.beautyofjoseon.com/cdn/shop/files/Untitled_design_-_2025-05-29T162038.489.png?v=1748506534&width=1800",
       "https://fr.beautyofjoseon.com/cdn/shop/files/Step2_Toner_1080_x_1500_px_1080_x_1500_px_10.png?v=1748506525&width=1200"
   ],
-  8809447256085": [
+  "8809447256085": [
       "https://doctoraltheaglobal.com/cdn/shop/files/58b77213f54ca4e87270df838130b479.jpg?v=1786083592&width=200",
       "https://doctoraltheaglobal.com/cdn/shop/files/260224______1200_-02_1905de1a-846a-48dc-a214-ce88585409b9.jpg?v=1782881657&width=200",
       "https://doctoraltheaglobal.com/cdn/shop/files/260224______1200_-03_9febacd1-65d7-4e77-bd9c-118dd54b928b.jpg?v=1782881657&width=200",
@@ -656,7 +656,7 @@ export const productGalleryByEan: Record<string, string[]> = {
       "https://doctoraltheaglobal.com/cdn/shop/files/260224______1200_-06_8a0e1e4f-15e5-4d45-8cf7-875ef6efa024.jpg?v=1782881657&width=200",
       "https://doctoraltheaglobal.com/cdn/shop/files/260223______1200_-07_7f272ba4-cf57-44d3-9a2e-ec67d2f2d514.jpg?v=1782881657&width=200"
   ],
-  8809738312872": [
+  "8809738312872": [
       "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/Untitled_design_-_2025-06-11T151225.534.png?v=1749622353",
       "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/46.png?v=1749622557",
       "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/48.png?v=1749622557"
@@ -689,7 +689,7 @@ export const productGalleryByEan: Record<string, string[]> = {
       "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/13_e5dd42bb-9b08-4d15-a2b0-926ebf5898b7.png?v=1746669943",
       "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/14_76953cde-da00-4293-bcaa-83d6b2f5e66d.png?v=1746669943"
   ],
-  8809447255583": [
+  "8809447255583": [
       "https://doctoraltheaglobal.com/cdn/shop/files/gentlevegancleansingoil.jpg?v=1756370215&width=200",
       "https://doctoraltheaglobal.com/cdn/shop/files/251212.jpg?v=1765936502&width=200",
       "https://doctoraltheaglobal.com/cdn/shop/files/251209______1200_-9.jpg?v=1765936502&width=200",
@@ -721,7 +721,7 @@ export const productGalleryByEan: Record<string, string[]> = {
       "https://doctoraltheaglobal.com/cdn/shop/files/251219______1200_-05_jpg.jpg?v=1782876330&width=200",
       "https://doctoraltheaglobal.com/cdn/shop/files/260430______1200_-08.jpg?v=1782876329&width=200"
   ],
-  8809447255743": [
+  "8809447255743": [
       "https://doctoraltheaglobal.com/cdn/shop/files/190152587c4378477e309fce268edbea.jpg?v=1786083592&width=200",
       "https://doctoraltheaglobal.com/cdn/shop/files/260515______1200_-1_73b7dd9a-170c-41a0-b40a-e3f4fc136ef8.jpg?v=1782883199&width=200",
       "https://doctoraltheaglobal.com/cdn/shop/files/260515______1200_-2_786d029e-b45c-4060-914e-a18020fc426e.jpg?v=1782883199&width=200",
@@ -741,7 +741,7 @@ export const productGalleryByEan: Record<string, string[]> = {
       "https://doctoraltheaglobal.com/cdn/shop/files/260515______1200_-6_182742fd-a510-40b8-89b7-552f796de9da.jpg?v=1782883392&width=200",
       "https://doctoraltheaglobal.com/cdn/shop/files/260515______1200_-7_b3dc753b-34c5-43d7-9f96-88aa42b2b650.jpg?v=1782883392&width=200"
   ],
-  8809447257068": [
+  "8809447257068": [
       "https://doctoraltheaglobal.com/cdn/shop/files/0.15.jpg?v=1786083592&width=200",
       "https://doctoraltheaglobal.com/cdn/shop/files/260508____0.15___1200_-1_ebf60378-c55e-4ef8-9e77-f39019867272.jpg?v=1782881083&width=200",
       "https://doctoraltheaglobal.com/cdn/shop/files/260508____0.15___1200_-2_45291e1a-3b46-40d8-a1ce-fc15ed27c0eb.jpg?v=1782881082&width=200",
@@ -751,7 +751,7 @@ export const productGalleryByEan: Record<string, string[]> = {
       "https://doctoraltheaglobal.com/cdn/shop/files/260508____0.15___1200_-5_e2c1414c-ece3-48ad-870a-7a32890e1a2d.jpg?v=1782881082&width=200",
       "https://doctoraltheaglobal.com/cdn/shop/files/260508____0.15___1200_-6_6b4db2b9-f90b-4dff-8a65-7470bf24321c.jpg?v=1782881082&width=200"
   ],
-  8809864766884": [
+  "8809864766884": [
       "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/Untitled_design_-_2025-06-18T135921.466.png?v=1750222769",
       "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/58.png?v=1750222946",
       "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/59.png?v=1750222946",
@@ -767,7 +767,7 @@ export const productGalleryByEan: Record<string, string[]> = {
       "https://fr.beautyofjoseon.com/cdn/shop/files/Untitled_design_-_2025-04-29T191109.529_14a34240-d3ba-47df-9b40-2fb75e3af7a6.png?v=1776932264&width=2200",
       "https://fr.beautyofjoseon.com/cdn/shop/files/optimized_6a2233336da2d7.43783369_14.jpg?v=1780632046&width=2200"
   ],
-  8809738316139": [
+  "8809738316139": [
       "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/Untitled_design_-_2025-06-09T112913.685.png?v=1749436197",
       "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/31.png?v=1749436470",
       "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/33_0a814389-bea1-4063-b03f-6072b6139087.png?v=1749436471",
@@ -797,7 +797,7 @@ export const productGalleryByEan: Record<string, string[]> = {
       "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/v1_J0712.jpg?v=1775056718",
       "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/v1_J0821.jpg?v=1775059860"
   ],
-  8809447251998": [
+  "8809447251998": [
       "https://doctoraltheaglobal.com/cdn/shop/files/antiblemishmask_2.jpg?v=1756433779&width=200",
       "https://doctoraltheaglobal.com/cdn/shop/products/0726______1080_-2.jpg?v=1756433779&width=1080",
       "https://doctoraltheaglobal.com/cdn/shop/products/0726______1080_-3.jpg?v=1756433779&width=1080",
@@ -821,7 +821,7 @@ export const productGalleryByEan: Record<string, string[]> = {
       "https://theskincarelibrary.com/cdn/shop/files/Dr._Althea_Niathione_Cream_TSCL_Photo1_1600x.png?v=1771853415",
       "https://www.dodoskin.com/cdn/shop/files/Dr.AltheaNiathioneCream30ml-4.jpg?v=1746669799&width=1200"
   ],
-  8809968135562": [
+  "8809968135562": [
       "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/260415_BOJ-11870_R01__1778507316.jpg?v=1778515454",
       "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/260415_BOJ-11757_R01__1778507334_8a2ae7b2-aa8b-4607-9134-39cd9a394088.jpg?v=1779339272",
       "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/JO03_0707_compressed_1778507458_14c4ac31-47c7-4ed1-b387-5527f4f0e53c.jpg?v=1779371858",
@@ -838,7 +838,7 @@ export const productGalleryByEan: Record<string, string[]> = {
       "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/40.png?v=1749456602",
       "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/42.png?v=1749456602"
   ],
-  8809968130383": [
+  "8809968130383": [
       "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/Untitled_design_-_2025-06-18T135921.466.png?v=1750222769",
       "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/58.png?v=1750222946",
       "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/59.png?v=1750222946",
@@ -876,7 +876,7 @@ export const productGalleryByEan: Record<string, string[]> = {
       "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/97.png?v=1760337400",
       "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/optimized_6a5c313c500597.67139900_250703_BOJ_-_-_5.jpg?v=1784429371"
   ],
-  8809968136026": [
+  "8809968136026": [
       "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/260402_BOJ-10925_R01__1776917318_e2f9ca16-f38e-4eab-9eea-988276323ef8.jpg?v=1777818082",
       "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/260402_BOJ-11012_R01__1776995510.jpg?v=1776995661",
       "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/260402_BOJ-11403__1776917451.jpg?v=1776917538",
