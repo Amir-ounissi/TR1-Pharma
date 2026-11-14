@@ -795,4 +795,28 @@ export const productGalleryByEan: Record<string, string[]> = {
       "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/v1_J0712.jpg?v=1775056718",
       "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/v1_J0821.jpg?v=1775059860"
   ]
+  "8809447251998": [
+      "https://doctoraltheaglobal.com/cdn/shop/files/antiblemishmask_2.jpg?v=1756433779&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/products/0726______1080_-2.jpg?v=1756433779&width=1080",
+      "https://doctoraltheaglobal.com/cdn/shop/products/0726______1080_-3.jpg?v=1756433779&width=1080",
+      "https://doctoraltheaglobal.com/cdn/shop/products/0726______1080_-4.jpg?v=1756433779&width=1080",
+      "https://doctoraltheaglobal.com/cdn/shop/products/0726______1080_-5.jpg?v=1756433779&width=1080",
+      "https://doctoraltheaglobal.com/cdn/shop/products/0726______1080_-6.jpg?v=1756433779&width=1080"
+  ],
+  "8809447255828": [
+      "https://koreanskincare.pt/cdn/shop/files/Dr.Althea_AquaGlowingSunscreen_Packshot.jpg?v=1759388711",
+      "https://koreanskincare.pt/cdn/shop/files/Dr.Althea_AquaGlowingSunscreen_Photo1.jpg?v=1759388711",
+      "https://koreanskincare.pt/cdn/shop/files/Dr.Althea_AquaGlowingSunscreen_Photo5.jpg?v=1759388710",
+      "https://koreanskincare.pt/cdn/shop/files/Dr.Althea_AquaGlowingSunscreen_Photo2.jpg?v=1759388711",
+      "https://koreanskincare.pt/cdn/shop/files/Dr.Althea_AquaGlowingSunscreen_Photo3.jpg?v=1759388711"
+  ],
+  "8809447255989": [
+      "https://cdn.cosmy.com.ua/image/cache/catalog/DrAlthea/soncezahisnij-krem-iz-ekstraktom-zelenogo-chaju-dr-althea-green-tea-fresh-sunscreen-spf-50-pa-1-1000x1000.png",
+      "https://beauty-garden.hr/cdn/shop/files/22_196d050e-9da0-438b-b500-d4b3eec07a70.png?v=1757420685&width=1500"
+  ],
+  "8809447255040": [
+      "https://www.dodoskin.com/cdn/shop/files/Dr.AltheaNiathioneCream30ml-1.jpg?v=1746669799",
+      "https://theskincarelibrary.com/cdn/shop/files/Dr._Althea_Niathione_Cream_TSCL_Photo1_1600x.png?v=1771853415",
+      "https://www.dodoskin.com/cdn/shop/files/Dr.AltheaNiathioneCream30ml-4.jpg?v=1746669799&width=1200"
+  ]
 };
