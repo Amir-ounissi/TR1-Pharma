@@ -12,7 +12,7 @@ import { faireProductInformationByEan } from "@/lib/catalogue-faire-product-info
 import { officialBiodanceByName, officialBeautyOfJoseonByEan, officialDrAltheaByEan, additionalBeautyOfJoseonByEan, additionalDrAltheaByEan } from "@/lib/catalogue-official-product-information";
 import { findPublicProduct, publicProductFamily, publicProductImages } from "@/lib/catalogue-products";
 import { getCatalogueBrandForPharmacy, requirePharmacyCatalogue, type CatalogProduct } from "@/lib/private-catalogue";
-import { euroHT } from "@/lib/private-catalogue-format";
+import { euroHT, orderablePricingTiers, firstOrderQuantity } from "@/lib/private-catalogue-format";
 import { getCommercialContext } from "@/lib/catalogue-commercial";
 
 type ProductParams = { params: Promise<{ slug: string; ref: string }> };
@@ -67,6 +67,12 @@ export default async function PharmacyCatalogueProductPage({ params }: ProductPa
   if (favoriteError) throw favoriteError;
   const initialFavorite = ((favoriteIds ?? []) as string[]).includes(privateProduct.id);
   const quantityGroup = commercial.quantity_groups.find((group) => group.product_ids.includes(privateProduct.id));
+  const visiblePriceTiers = orderablePricingTiers(
+    privateProduct.pricing.tiers,
+    privateProduct.min_quantity,
+    privateProduct.quantity_step,
+    quantityGroup,
+  );
   const officialInfo = product.brand === "Biodance"
     ? officialBiodanceByName[product.name]
     : product.brand === "Beauty of Joseon"
@@ -123,12 +129,14 @@ export default async function PharmacyCatalogueProductPage({ params }: ProductPa
               <div className="rounded-xl bg-white/10 p-3">
                 <p className="text-[10px] font-bold uppercase tracking-wide text-[#c1cdd8]">Minimum de commande</p>
                 <p className="mt-1 text-lg font-black">
-                  {quantityGroup ? quantityGroup.minimum_total_units : privateProduct.min_quantity}
-                  {" "}unité{(quantityGroup?.minimum_total_units ?? privateProduct.min_quantity)>1 ? "s" : ""}
+                  {quantityGroup ? quantityGroup.minimum_total_units : firstOrderQuantity(privateProduct.min_quantity, privateProduct.quantity_step)}
+                  {" "}unité{(quantityGroup?.minimum_total_units ?? firstOrderQuantity(privateProduct.min_quantity, privateProduct.quantity_step)) > 1 ? "s" : ""}
                 </p>
                 {quantityGroup ? <p className="mt-1 text-[10px] leading-4 text-[#c1cdd8]">
                   Minimum sur les cinq masques cumulés, commandes par multiples de {quantityGroup.quantity_multiple}.
-                </p> : null}
+                </p> : <p className="mt-1 text-[10px] leading-4 text-[#c1cdd8]">
+                  Commande par multiples de {privateProduct.quantity_step} unité{privateProduct.quantity_step > 1 ? "s" : ""}.
+                </p>}
               </div>
               <div className="rounded-xl bg-white/10 p-3">
                 <p className="text-[10px] font-bold uppercase tracking-wide text-[#c1cdd8]">TVA</p>
@@ -139,11 +147,11 @@ export default async function PharmacyCatalogueProductPage({ params }: ProductPa
               <p className="text-[10px] font-bold uppercase tracking-wide text-[#c1cdd8]">
                 {privateProduct.pricing.mode === "contractual" ? "Votre tarif HT par unité" : "Tarifs professionnels indicatifs HT"}
               </p>
-              {privateProduct.pricing.tiers.length > 0 ? (
+              {visiblePriceTiers.length > 0 ? (
                 <div className="mt-2 divide-y divide-white/15 rounded-xl border border-white/15">
-                  {privateProduct.pricing.tiers.map((tier) => (
-                    <div key={tier.min_quantity} className="flex items-center justify-between gap-3 px-3 py-3 text-xs">
-                      <span>Dès {tier.min_quantity} {quantityGroup ? "masques cumulés" : tier.min_quantity > 1 ? "unités" : "unité"}</span>
+                  {visiblePriceTiers.map(({ threshold, tier }) => (
+                    <div key={threshold} className="flex items-center justify-between gap-3 px-3 py-3 text-xs">
+                      <span>Dès {threshold} {quantityGroup ? "masques cumulés" : threshold > 1 ? "unités" : "unité"}</span>
                       <strong className="text-right">{tierPrice(privateProduct.pricing, tier)}</strong>
                     </div>
                   ))}
