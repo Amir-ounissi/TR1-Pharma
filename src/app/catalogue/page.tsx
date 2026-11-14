@@ -1,13 +1,14 @@
 import Link from "next/link";
-import { ArrowRight, Building2, Clock3 } from "lucide-react";
+import { Building2, Clock3, ShoppingBasket } from "lucide-react";
 import { getCatalogueBrands, getCatalogueBrandForPharmacy, requirePharmacyCatalogue } from "@/lib/private-catalogue";
 import { disconnectPharmacyCatalogue } from "@/app/catalogue/actions";
 import { PrivateMultiBrandOrderForm } from "@/components/catalogue/private-multibrand-order-form";
 import { withPharmacyProductVisuals } from "@/lib/catalogue-private-product-visuals";
-import { Tr1BrandLogo } from "@/components/brand/tr1-brand-logo";
+import { getBuyerWorkspace } from "@/lib/catalogue-buyer-workspace";
 
 export default async function PrivateCatalogueHome() {
   const { admin, pharmacy } = await requirePharmacyCatalogue();
+  const workspace = await getBuyerWorkspace(admin);
   const brands = await getCatalogueBrands(pharmacy.id, admin);
   const groups = await Promise.all(brands.map(async (brand) => {
     const result = await getCatalogueBrandForPharmacy(pharmacy.id, brand.slug, admin);
@@ -30,34 +31,25 @@ export default async function PrivateCatalogueHome() {
         </form>
       </div>
 
-      <section className="relative overflow-hidden rounded-lg bg-[#0e1d31] px-6 py-8 text-white sm:px-10 sm:py-10 lg:px-12">
-        <div aria-hidden="true" className="pointer-events-none absolute -right-15 -top-25 size-100 rounded-full border-[45px] border-white/5" />
-        <div className="relative max-w-[660px]">
-          <p className="text-[11px] font-extrabold uppercase tracking-[.24em] text-[#ffa460]">
-            TR1 PHARMA · Espace pharmacie
+      <section className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[#dce3e5] bg-white px-5 py-5 sm:px-7 sm:py-6">
+        <div>
+          <p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-[#ad4b08]">TR1 PHARMA · Approvisionnement</p>
+          <h1 className="mt-1 text-2xl font-black tracking-tight text-[#0e1d31] sm:text-3xl">Mon espace achats</h1>
+          <p className="mt-2 text-xs leading-5 text-[#69717d] sm:text-sm">
+            Reprenez un réassort ou ajoutez des produits de plusieurs marques dans un panier commun.
           </p>
-          <h1 className="mt-4 text-[32px] font-black leading-[1.08] tracking-[-.045em] sm:text-5xl lg:text-[56px]">
-            Préparez votre réassort en quelques clics.
-          </h1>
-          <p className="mt-5 max-w-xl text-sm leading-7 text-[#d5dde7] sm:text-base">
-            Vos références et tarifs HT sont réunis dans un seul panier. Mélangez plusieurs marques, puis transmettez votre sélection en une fois.
-          </p>
-          <div className="mt-7 flex flex-wrap gap-3">
-            <Link href="#produits" className="shop-primary-action inline-flex min-h-12 items-center gap-2 px-5 text-sm">
-              Accéder aux produits <ArrowRight size={17} aria-hidden="true" />
-            </Link>
-            <Link href="/catalogue/mes-demandes" className="inline-flex min-h-12 items-center gap-2 rounded-md border border-white/35 px-5 text-sm font-bold text-white transition hover:bg-white/10">
-              <Clock3 size={16} aria-hidden="true" /> Mes demandes
-            </Link>
-          </div>
         </div>
-        <div className="pointer-events-none absolute bottom-0 right-3 hidden w-60 rotate-[-8deg] rounded-md border border-white/15 bg-white/[.05] p-6 lg:block" aria-hidden="true">
-          <Tr1BrandLogo className="h-25 w-full" primaryColor="#fffdf8" accentColor="#ea7015" />
-          <div className="mt-4 border-t border-white/20 pt-3 text-center text-[10px] font-bold tracking-[.19em] text-white/75">CATALOGUE PROFESSIONNEL</div>
+        <div className="flex gap-2">
+          <Link href="#reassort" className="shop-primary-action inline-flex min-h-11 items-center gap-2 px-3 text-xs font-bold sm:px-4">
+            <ShoppingBasket size={17} aria-hidden="true" /> Réassort express
+          </Link>
+          <Link href="/catalogue/mes-demandes" className="inline-flex min-h-11 items-center gap-2 rounded-md border border-[#dce3e5] px-3 text-xs font-bold text-[#142941] sm:px-4">
+            <Clock3 size={16} aria-hidden="true" /> Mes demandes
+          </Link>
         </div>
       </section>
 
-      <PrivateMultiBrandOrderForm products={orderProducts} />
+      <PrivateMultiBrandOrderForm products={orderProducts} initialCartLines={workspace.lines} reorderHistory={workspace.recent_requests} />
     </div>
   );
 }
