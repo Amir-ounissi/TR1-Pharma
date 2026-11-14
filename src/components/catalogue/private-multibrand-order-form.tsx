@@ -2,7 +2,7 @@
 
 import { useActionState, useMemo, useState } from "react";
 import Image from "next/image";
-import { Minus, Package, Plus, Search, ShoppingBag, ShoppingCart, SlidersHorizontal, Trash2 } from "lucide-react";
+import { LayoutGrid, List, Minus, Package, Plus, Search, ShoppingBag, ShoppingCart, SlidersHorizontal, Trash2 } from "lucide-react";
 import { sendMultiBrandCatalogueRequest } from "@/app/catalogue/actions";
 import type { CatalogProduct } from "@/lib/private-catalogue";
 import { euroHT, indicativeRange, isAllowedQuantity } from "@/lib/private-catalogue-format";
@@ -41,6 +41,66 @@ function nextTierForQuantity(tiers: readonly ProductTier[], quantity: number) {
     .sort((a, b) => a.min_quantity - b.min_quantity)[0] ?? null;
 }
 
+function ProductQuantityControl({
+  product,
+  quantity,
+  maxReferencesReached,
+  compact = false,
+  onAdd,
+  onSubtract,
+  onSetQuantity,
+}: {
+  product: PrivateMultiBrandProduct;
+  quantity: number;
+  maxReferencesReached: boolean;
+  compact?: boolean;
+  onAdd: () => void;
+  onSubtract: () => void;
+  onSetQuantity: (next: number) => void;
+}) {
+  const invalid = quantity > 0 && !isAllowedQuantity(quantity, product.min_quantity);
+  return (
+    <>
+      <div className={`flex items-center gap-2 ${compact ? "justify-end" : "w-full"}`}>
+        {quantity === 0 ? (
+          <button type="button" onClick={onAdd} disabled={maxReferencesReached}
+            className={`shop-primary-action inline-flex min-h-10 items-center justify-center gap-2 px-3 text-xs disabled:cursor-not-allowed disabled:opacity-40 ${compact ? "w-auto min-w-[112px]" : "w-full"}`}>
+            <Plus size={15} aria-hidden="true" /> {maxReferencesReached ? "Limite atteinte" : "Ajouter"}
+            {!maxReferencesReached && <span className="font-medium opacity-80">· {product.min_quantity} u.</span>}
+          </button>
+        ) : (
+          <div className="flex min-h-10 items-center overflow-hidden rounded-lg border border-[#dce3ea]">
+            <button type="button" onClick={onSubtract} aria-label={"Diminuer " + product.name}
+              className="flex h-10 w-9 items-center justify-center text-[#162a45] hover:bg-[#fff1e6]">
+              <Minus size={16} />
+            </button>
+            <input type="number" inputMode="numeric" name={"quantity_" + product.id}
+              min={0} max={5000} step={1} value={quantity}
+              aria-label={"Quantité pour " + product.name}
+              onChange={(event) => onSetQuantity(event.target.value === "" ? 0 : Number(event.target.value))}
+              className="h-10 w-14 border-x border-[#e8ecee] text-center text-sm font-extrabold text-[#0e1d31] outline-none" />
+            <button type="button" onClick={onAdd} aria-label={"Augmenter " + product.name}
+              disabled={quantity >= 5000}
+              className="flex h-10 w-9 items-center justify-center text-[#162a45] hover:bg-[#fff1e6] disabled:opacity-30">
+              <Plus size={16} />
+            </button>
+          </div>
+        )}
+        {quantity === 0 ? <input type="hidden" name={"quantity_" + product.id} value="0" /> : null}
+      </div>
+      {invalid ? (
+        <p role="alert" className="mt-2 text-[11px] font-bold text-red-700">
+          {!Number.isSafeInteger(quantity)
+            ? "Saisissez un nombre entier."
+            : quantity < product.min_quantity
+              ? `Minimum de commande : ${product.min_quantity} unités.`
+              : "Maximum : 5 000 unités par référence."}
+        </p>
+      ) : null}
+    </>
+  );
+}
+
 export function PrivateMultiBrandOrderForm({
   products,
   initialBrandSlug,
@@ -58,6 +118,7 @@ export function PrivateMultiBrandOrderForm({
   const [query, setQuery] = useState("");
   const [brandFilter, setBrandFilter] = useState(initialBrandSlug ?? "all");
   const [sort, setSort] = useState("brand");
+  const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
 
   const brandOptions = useMemo(() => {
     const unique = new Map<string, string>();
@@ -192,95 +253,168 @@ export function PrivateMultiBrandOrderForm({
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#69717d]">
-            <p className="font-semibold">{visible.length} références affichées · {selected.length} sélectionnées · 40 maximum</p>
-            <p>Tarifs HT · Minimum par référence</p>
+          <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-[#69717d]">
+            <div>
+              <p className="font-semibold">{visible.length} références affichées · {selected.length} sélectionnées · 40 maximum</p>
+              <p className="mt-1">Tarifs HT · Minimum par référence</p>
+            </div>
+            <div role="group" aria-label="Mode d'affichage des produits"
+              className="inline-flex items-center rounded-lg border border-[#dce3ea] bg-white p-1">
+              <button type="button" onClick={() => setViewMode("cards")} aria-pressed={viewMode === "cards"}
+                className={`inline-flex min-h-9 items-center gap-2 rounded-md px-3 text-xs font-bold transition ${viewMode === "cards" ? "bg-[#0e1d31] text-white shadow-sm" : "text-[#526071] hover:bg-[#f3f5f6]"}`}>
+                <LayoutGrid size={15} aria-hidden="true" /> Cartes
+              </button>
+              <button type="button" onClick={() => setViewMode("list")} aria-pressed={viewMode === "list"}
+                className={`inline-flex min-h-9 items-center gap-2 rounded-md px-3 text-xs font-bold transition ${viewMode === "list" ? "bg-[#0e1d31] text-white shadow-sm" : "text-[#526071] hover:bg-[#f3f5f6]"}`}>
+                <List size={16} aria-hidden="true" /> Liste
+              </button>
+            </div>
           </div>
 
           <div id="liste-produits" className="space-y-2">
-            {visible.map((product) => {
-              const quantity = quantities[product.id] ?? 0;
-              const referenceQuantity = quantity || product.min_quantity;
-              const tier = findTierForQuantity(product.pricing.tiers, referenceQuantity);
-              const nextTier = nextTierForQuantity(product.pricing.tiers, referenceQuantity);
-              const nextRange = priceRangeForTier(nextTier);
-              const price = product.pricing.mode === "contractual" && tier && "price_ht" in tier
-                ? euroHT(tier.price_ht) + " HT / unité"
-                : indicativeRange(tier && "price_min_ht" in tier ? tier : null);
-              const invalid = quantity > 0 && !isAllowedQuantity(quantity, product.min_quantity);
+            {viewMode === "cards" ? (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {visible.map((product) => {
+                  const quantity = quantities[product.id] ?? 0;
+                  const referenceQuantity = quantity || product.min_quantity;
+                  const tier = findTierForQuantity(product.pricing.tiers, referenceQuantity);
+                  const nextTier = nextTierForQuantity(product.pricing.tiers, referenceQuantity);
+                  const nextRange = priceRangeForTier(nextTier);
+                  const price = product.pricing.mode === "contractual" && tier && "price_ht" in tier
+                    ? euroHT(tier.price_ht) + " HT / unité"
+                    : indicativeRange(tier && "price_min_ht" in tier ? tier : null);
 
-              return (
-                <article key={product.id}
-                  className="grid grid-cols-[56px_minmax(0,1fr)] gap-x-3 gap-y-3 rounded-xl border border-[#e2e7ec] bg-white p-3 transition hover:border-[#cbd5d6] sm:grid-cols-[minmax(0,1fr)_165px_145px] sm:items-center sm:gap-4 sm:p-4">
-                  <div className="col-span-2 flex min-w-0 items-center gap-3 sm:col-span-1">
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#f4f0e7]">
-                      {product.image_url ? (
-                        <Image src={product.image_url} width={112} height={112} unoptimized alt={product.name}
-                          className="h-full w-full object-contain p-1.5" />
-                      ) : <Package size={25} strokeWidth={1.2} className="text-[#a9b0b3]" aria-hidden="true" />}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-extrabold uppercase tracking-[.13em] text-[#ad4b08]">{product.brand_name}</p>
-                      <h3 className="mt-0.5 text-sm font-extrabold leading-5 text-[#0e1d31]">{product.name}</h3>
-                      <p className="mt-1 text-[11px] leading-4 text-[#69717d]">{product.format || "Format non renseigné"} · Réf. {product.sku}</p>
-                      <p className="text-[10px] text-[#89939b]">
-                        {product.ean ? "EAN " + product.ean + " · " : ""}Minimum {product.min_quantity} u. · TVA {product.vat_rate} %
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="min-w-0 self-center">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-[#7a8790]">
-                      {product.pricing.mode === "contractual" ? "Votre tarif HT" : "Prix indicatif HT"}
-                    </p>
-                    <p className="mt-1 text-sm font-black leading-5 text-[#0e1d31]">{price}</p>
-                    {tier ? (
-                      <p className="mt-0.5 text-[10px] text-[#69717d]">Palier dès {tier.min_quantity} unité{tier.min_quantity > 1 ? "s" : ""}</p>
-                    ) : <p className="mt-0.5 text-[10px] text-[#69717d]">Tarif à confirmer</p>}
-                    {quantity > 0 && nextTier ? (
-                      <p className="mt-1 text-[10px] font-semibold text-[#ad4b08]">
-                        Encore {nextTier.min_quantity - quantity} u. pour le palier {nextTier.min_quantity}
-                        {nextRange ? " · " + formatPriceRange(nextRange.min, nextRange.max) + " HT/u." : ""}
-                      </p>
-                    ) : null}
-                  </div>
-
-                  <div className="flex items-center justify-between gap-2 sm:justify-end">
-                    {quantity === 0 ? (
-                      <button type="button" onClick={() => add(product)} disabled={maxReferencesReached}
-                        className="shop-primary-action inline-flex min-h-10 w-full items-center justify-center gap-2 px-3 text-xs sm:w-auto sm:min-w-[124px] disabled:cursor-not-allowed disabled:opacity-40">
-                        <Plus size={15} aria-hidden="true" /> {maxReferencesReached ? "Limite atteinte" : "Ajouter"}
-                        {!maxReferencesReached && <span className="font-medium opacity-80">· {product.min_quantity} u.</span>}
-                      </button>
-                    ) : (
-                      <div className="flex min-h-10 items-center overflow-hidden rounded-lg border border-[#dce3ea]">
-                        <button type="button" onClick={() => subtract(product)} aria-label={"Diminuer " + product.name}
-                          className="flex h-10 w-9 items-center justify-center text-[#162a45] hover:bg-[#fff1e6]"><Minus size={16} /></button>
-                        <input type="number" inputMode="numeric" name={"quantity_" + product.id}
-                          min={0} max={5000} step={1} value={quantity}
-                          aria-label={"Quantité pour " + product.name}
-                          onChange={(event) => setQuantity(product, event.target.value === "" ? 0 : Number(event.target.value))}
-                          className="h-10 w-14 border-x border-[#e8ecee] text-center text-sm font-extrabold text-[#0e1d31] outline-none" />
-                        <button type="button" onClick={() => add(product)} aria-label={"Augmenter " + product.name}
-                          disabled={quantity >= 5000}
-                          className="flex h-10 w-9 items-center justify-center text-[#162a45] hover:bg-[#fff1e6] disabled:opacity-30"><Plus size={16} /></button>
+                  return (
+                    <article key={product.id}
+                      className="group flex min-w-0 flex-col overflow-hidden rounded-xl border border-[#e2e7ec] bg-white transition hover:border-[#cbd5d6] hover:shadow-[0_12px_28px_-24px_rgba(14,29,49,.45)]">
+                      <div className="relative flex h-44 items-center justify-center overflow-hidden bg-[#f5f2ec] p-4">
+                        {product.image_url ? (
+                          <Image src={product.image_url} width={420} height={320} unoptimized alt={product.name}
+                            className="h-full w-full object-contain transition duration-300 group-hover:scale-[1.03]" />
+                        ) : <Package size={42} strokeWidth={1.1} className="text-[#a9b0b3]" aria-hidden="true" />}
+                        <span className="absolute left-3 top-3 max-w-[80%] truncate rounded-full border border-white/70 bg-white/90 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[.1em] text-[#ad4b08] backdrop-blur">
+                          {product.brand_name}
+                        </span>
                       </div>
-                    )}
-                    {quantity === 0 ? <input type="hidden" name={"quantity_" + product.id} value="0" /> : null}
-                  </div>
 
-                  {invalid ? (
-                    <p role="alert" className="col-span-2 text-[11px] font-bold text-red-700 sm:col-span-3">
-                      {!Number.isSafeInteger(quantity)
-                        ? "Saisissez un nombre entier."
-                        : quantity < product.min_quantity
-                          ? `Minimum de commande : ${product.min_quantity} unités.`
-                          : "Maximum : 5 000 unités par référence."}
-                    </p>
-                  ) : null}
-                </article>
-              );
-            })}
+                      <div className="flex flex-1 flex-col p-3.5">
+                        <div className="min-h-[86px]">
+                          <h3 className="text-sm font-extrabold leading-5 text-[#0e1d31]">{product.name}</h3>
+                          <p className="mt-1.5 text-[11px] text-[#69717d]">{product.format || "Format non renseigné"}</p>
+                          <p className="mt-1 break-all text-[10px] text-[#89939b]">
+                            Réf. {product.sku}{product.ean ? " · EAN " + product.ean : ""}
+                          </p>
+                        </div>
+
+                        <div className="mt-3 border-t border-[#edf0f1] pt-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="text-[9px] font-bold uppercase tracking-wide text-[#7a8790]">
+                                {product.pricing.mode === "contractual" ? "Votre tarif HT" : "Prix indicatif HT"}
+                              </p>
+                              <p className="mt-1 text-sm font-black leading-5 text-[#0e1d31]">{price}</p>
+                              <p className="mt-1 text-[10px] text-[#69717d]">
+                                {tier ? "Palier dès " + tier.min_quantity + " u." : "Tarif à confirmer"} · Min. {product.min_quantity} u.
+                              </p>
+                            </div>
+                            <span className="shrink-0 rounded-md bg-[#f5f6f6] px-2 py-1 text-[9px] font-semibold text-[#69717d]">
+                              TVA {product.vat_rate} %
+                            </span>
+                          </div>
+                          {quantity > 0 && nextTier ? (
+                            <p className="mt-2 text-[10px] font-semibold leading-4 text-[#ad4b08]">
+                              Encore {nextTier.min_quantity - quantity} u. pour le palier {nextTier.min_quantity}
+                              {nextRange ? " · " + formatPriceRange(nextRange.min, nextRange.max) + " HT/u." : ""}
+                            </p>
+                          ) : null}
+                        </div>
+
+                        <div className="mt-auto pt-4">
+                          <ProductQuantityControl
+                            product={product}
+                            quantity={quantity}
+                            maxReferencesReached={maxReferencesReached}
+                            onAdd={() => add(product)}
+                            onSubtract={() => subtract(product)}
+                            onSetQuantity={(next) => setQuantity(product, next)}
+                          />
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="hidden items-center gap-3 rounded-lg bg-[#f4f5f5] px-4 py-2 text-[9px] font-extrabold uppercase tracking-[.1em] text-[#7a8790] md:grid md:grid-cols-[64px_minmax(0,1fr)_150px_145px]">
+                  <span>Visuel</span>
+                  <span>Produit / référence</span>
+                  <span>Tarif HT</span>
+                  <span className="text-right">Quantité</span>
+                </div>
+                {visible.map((product) => {
+                  const quantity = quantities[product.id] ?? 0;
+                  const referenceQuantity = quantity || product.min_quantity;
+                  const tier = findTierForQuantity(product.pricing.tiers, referenceQuantity);
+                  const nextTier = nextTierForQuantity(product.pricing.tiers, referenceQuantity);
+                  const nextRange = priceRangeForTier(nextTier);
+                  const price = product.pricing.mode === "contractual" && tier && "price_ht" in tier
+                    ? euroHT(tier.price_ht) + " HT / unité"
+                    : indicativeRange(tier && "price_min_ht" in tier ? tier : null);
+
+                  return (
+                    <article key={product.id}
+                      className="grid grid-cols-[52px_minmax(0,1fr)] items-center gap-x-3 gap-y-2 rounded-lg border border-[#e2e7ec] bg-white p-3 transition hover:border-[#cbd5d6] md:grid-cols-[64px_minmax(0,1fr)_150px_145px] md:gap-3 md:px-4">
+                      <div className="flex h-13 w-13 items-center justify-center overflow-hidden rounded-lg bg-[#f5f2ec] md:h-14 md:w-14">
+                        {product.image_url ? (
+                          <Image src={product.image_url} width={112} height={112} unoptimized alt={product.name}
+                            className="h-full w-full object-contain p-1.5" />
+                        ) : <Package size={25} strokeWidth={1.2} className="text-[#a9b0b3]" aria-hidden="true" />}
+                      </div>
+
+                      <div className="min-w-0">
+                        <p className="truncate text-[9px] font-extrabold uppercase tracking-[.12em] text-[#ad4b08]">{product.brand_name}</p>
+                        <h3 className="mt-0.5 text-xs font-extrabold leading-4 text-[#0e1d31]">{product.name}</h3>
+                        <p className="mt-1 text-[10px] leading-4 text-[#69717d]">
+                          {product.format || "Format non renseigné"} · Réf. {product.sku}
+                        </p>
+                        <p className="break-all text-[9px] leading-4 text-[#89939b]">
+                          {product.ean ? "EAN " + product.ean + " · " : ""}Min. {product.min_quantity} u. · TVA {product.vat_rate} %
+                        </p>
+                      </div>
+
+                      <div className="col-span-2 flex items-center justify-between gap-3 border-t border-[#edf0f1] pt-2 md:col-span-1 md:block md:border-0 md:pt-0">
+                        <div>
+                          <p className="text-[9px] font-bold uppercase tracking-wide text-[#7a8790]">
+                            {product.pricing.mode === "contractual" ? "Votre tarif HT" : "Prix indicatif HT"}
+                          </p>
+                          <p className="mt-0.5 text-xs font-black text-[#0e1d31]">{price}</p>
+                          {tier ? <p className="mt-0.5 text-[9px] text-[#69717d]">Palier dès {tier.min_quantity} u.</p> : null}
+                        </div>
+                        {quantity > 0 && nextTier ? (
+                          <p className="text-right text-[9px] font-semibold text-[#ad4b08] md:mt-1 md:text-left">
+                            Encore {nextTier.min_quantity - quantity} u. pour {nextTier.min_quantity}
+                            {nextRange ? " · " + formatPriceRange(nextRange.min, nextRange.max) + " HT/u." : ""}
+                          </p>
+                        ) : null}
+                      </div>
+
+                      <div className="col-span-2 flex items-center justify-end md:col-span-1">
+                        <ProductQuantityControl
+                          product={product}
+                          quantity={quantity}
+                          maxReferencesReached={maxReferencesReached}
+                          compact
+                          onAdd={() => add(product)}
+                          onSubtract={() => subtract(product)}
+                          onSetQuantity={(next) => setQuantity(product, next)}
+                        />
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
 
             {selected.filter((product) => !visible.some((item) => item.id === product.id)).map((product) => (
               <input key={product.id} type="hidden" name={"quantity_" + product.id} value={quantities[product.id]} />
