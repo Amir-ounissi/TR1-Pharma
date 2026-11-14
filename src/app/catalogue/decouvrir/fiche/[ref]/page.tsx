@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowUpRight, Barcode, Building2, Check, ClipboardList, FileCheck2, LockKeyhole, PackageSearch, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Barcode, Building2, Check, ClipboardList, LockKeyhole, PackageSearch } from "lucide-react";
 import { Ean13Barcode } from "@/components/catalogue/ean13-barcode";
 import { isValidEan13 } from "@/lib/ean13";
 import { faireProductInformationByEan } from "@/lib/catalogue-faire-product-information";
@@ -52,7 +52,6 @@ export default async function PublicCatalogueProductPage({ params }: ProductPara
   const photo = publicProductImage(product);
   const eanIsValid = Boolean(product.ean && isValidEan13(product.ean));
   const cosmetics = product.brand !== "VK SWISS";
-  const isBiodanceMask = product.brand === "Biodance" && product.category.toLowerCase().includes("hydrogel");
 
   return (
     <div className="space-y-7 pb-4">
@@ -77,9 +76,7 @@ export default async function PublicCatalogueProductPage({ params }: ProductPara
                 <p className="mt-2 max-w-[290px] text-xs leading-5 text-[#788895]">Nous n’affichons pas la photo d’un autre format ou produit pour remplir artificiellement la fiche.</p>
               </div>
             )}
-            <span className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-2 text-[11px] font-bold text-[#546576]">Référencement fournisseur</span>
           </div>
-          {photo && <p className="px-2 text-[11px] leading-5 text-[#82909a]">Visuel produit : {photo.source}. Image indicative ; autorisation de réutilisation à confirmer avant exploitation commerciale.</p>}
         </section>
 
         <div className="space-y-6">
@@ -91,9 +88,6 @@ export default async function PublicCatalogueProductPage({ params }: ProductPara
               <span className="rounded-full border border-[#e2e6e7] bg-white px-3 py-2">{product.format || "Format à confirmer"}</span>
               <span className="rounded-full border border-[#e2e6e7] bg-white px-3 py-2">{publicProductFamily(product)}</span>
             </div>
-            <p className="mt-5 text-sm leading-7 text-[#60717e]">
-              Fiche d’identification destinée aux pharmacies et parapharmacies : dénomination, format, identifiant pour le logiciel d’officine et code-barres scannable.
-            </p>
           </header>
 
           <section aria-labelledby="scannable-title" className="space-y-3">
@@ -123,12 +117,9 @@ export default async function PublicCatalogueProductPage({ params }: ProductPara
         <section aria-labelledby="more-product-information" className="rounded-2xl border border-[#e5e9eb] bg-white p-5 sm:p-7">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-[.14em] text-[#b56d3e]">{officialInfo ? "Documentation fabricant" : "Documentation revendeur"}</p>
+              <p className="text-[11px] font-bold uppercase tracking-[.14em] text-[#b56d3e]">Informations produit</p>
               <h2 id="more-product-information" className="mt-2 text-xl font-black text-[#122a41] sm:text-2xl">Connaître le produit</h2>
             </div>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#e5e9eb] bg-[#f7f8f6] px-3 py-2 text-[11px] font-bold text-[#566a78]">
-              <FileCheck2 size={14} aria-hidden="true" /> {product.ean ? "Référence EAN documentée" : "Référence fabricant documentée"}
-            </span>
           </div>
           <p className="mt-4 max-w-3xl text-sm leading-7 text-[#526676]">{verifiedInfo.description}</p>
           <div className="mt-6 grid gap-6 md:grid-cols-2">
@@ -143,7 +134,7 @@ export default async function PublicCatalogueProductPage({ params }: ProductPara
               </ul>
             </div>
             <div>
-              <h3 className="text-sm font-extrabold text-[#20394c]">Ingrédients mis en avant</h3>
+              <h3 className="text-sm font-extrabold text-[#20394c]">Actifs clés</h3>
               <div className="mt-3 flex flex-wrap gap-2">
                 {verifiedInfo.keyIngredients.map((ingredient) => (
                   <span key={ingredient} className="rounded-full border border-[#e4e8e8] bg-[#f7f8f6] px-3 py-2 text-xs font-semibold text-[#526473]">{ingredient}</span>
@@ -153,22 +144,10 @@ export default async function PublicCatalogueProductPage({ params }: ProductPara
           </div>
           {officialInfo?.usage && (
             <div className="mt-6 rounded-xl border border-[#e8ede8] bg-[#f7faf7] px-4 py-4">
-              <h3 className="text-sm font-extrabold text-[#20394c]">Conseil d’utilisation fabricant</h3>
+              <h3 className="text-sm font-extrabold text-[#20394c]">Conseils d’utilisation</h3>
               <p className="mt-2 text-sm leading-6 text-[#5f7180]">{officialInfo.usage}</p>
             </div>
           )}
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-[#e9edee] pt-4">
-            <p className="text-xs leading-6 text-[#70818e]">
-              Source : {officialInfo ? officialInfo.sourceName : "fiche Faire de " + faireInfo?.sourceSeller}.
-              {officialInfo
-                ? " Caractéristiques marketing reformulées depuis la documentation fabricant. La liste INCI complète et la version UE restent à vérifier sur l’emballage commercialisé."
-                : " Informations du vendeur tiers à confirmer auprès du fabricant."}
-            </p>
-            <a href={verifiedInfo.sourceUrl} target="_blank" rel="noopener noreferrer"
-              className="inline-flex min-h-10 shrink-0 items-center gap-1.5 text-xs font-extrabold text-[#263e54] underline-offset-4 hover:underline">
-              Voir la fiche source <ArrowUpRight size={16} aria-hidden="true" />
-            </a>
-          </div>
         </section>
       )}
 
@@ -180,14 +159,10 @@ export default async function PublicCatalogueProductPage({ params }: ProductPara
           <dl>
             {detail("Dénomination", product.name)}
             {detail("Marque", product.brand)}
-            {detail("Famille", publicProductFamily(product))}
             {detail("Catégorie", product.category)}
-            {detail("EAN / GTIN-13", eanIsValid ? product.ean : "Non communiqué", !eanIsValid)}
-            {faireInfo?.origin && detail("Pays de fabrication (vendeur Faire)", faireInfo.origin)}
-            {detail("CIP / ACL", "Non communiqué par le fournisseur", true)}
-            {product.sku ? detail("Référence fournisseur", product.sku) : null}
+            {eanIsValid ? detail("EAN / GTIN-13", product.ean) : null}
+            {product.sku ? detail("Référence", product.sku) : null}
           </dl>
-          <p className="mt-4 text-xs leading-6 text-[#758491]">Le contrôle EAN-13 vérifie la structure et la clé de contrôle. Il ne prouve pas à lui seul l’enregistrement du produit dans un LGO ou dans la Base Claude Bernard.</p>
         </section>
 
         <section className="rounded-2xl border border-[#e5e9eb] bg-white p-5 sm:p-7">
@@ -195,29 +170,12 @@ export default async function PublicCatalogueProductPage({ params }: ProductPara
             <h2 className="text-lg font-black text-[#122a41]">Présentation & référencement</h2>
           </div>
           <dl>
-            {detail("Présentation", product.format || "À compléter", !product.format)}
+            {product.format ? detail("Format", product.format) : null}
             {detail("Type", cosmetics ? "Produit cosmétique" : "Complément alimentaire")}
-            {detail("Conditionnement", isBiodanceMask ? "Prix fournisseur à l’unité ; commande par multiples de 4 masques (à confirmer)" : "À confirmer selon le colisage fournisseur", !isBiodanceMask)}
-            {detail("Liste INCI complète", cosmetics ? "À confirmer sur le conditionnement UE de la référence" : "Composition complète fournisseur à fournir", true)}
-            {detail("Conseils d’utilisation", officialInfo?.usage ? "Voir recommandation fabricant ci-dessus" : "Notice / étiquetage fabricant à intégrer", !officialInfo?.usage)}
-            {detail("Disponibilité", "À confirmer avec le distributeur", true)}
           </dl>
-          <p className="mt-4 text-xs leading-6 text-[#758491]">Les informations de type LGO sont présentées comme une fiche de travail. Les données non confirmées ne sont ni inventées ni présentées comme issues de Claude Bernard.</p>
         </section>
       </div>
 
-      <div className="flex flex-wrap items-start gap-3 rounded-2xl border border-[#e3e8e6] bg-[#f7f8f6] px-5 py-5">
-        <ShieldCheck size={20} className="mt-0.5 shrink-0 text-[#66816b]" aria-hidden="true" />
-        <div className="flex-1">
-          <p className="text-sm font-black text-[#1e3748]">Statut : fiche en cours de validation</p>
-          <p className="mt-1 text-xs leading-6 text-[#6f7f89]">
-            EAN valide lorsque fourni, mais compatibilité LGO, colisage, visuel, données réglementaires et droit d’utilisation des photos à finaliser avant diffusion commerciale définitive.
-          </p>
-        </div>
-        <Link href="/catalogue/decouvrir#produits" className="inline-flex min-h-10 items-center gap-2 text-xs font-extrabold text-[#253e51] underline-offset-4 hover:underline">
-          <ArrowLeft size={16} aria-hidden="true" /> Retour aux produits
-        </Link>
-      </div>
     </div>
   );
 }
