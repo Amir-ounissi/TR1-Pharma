@@ -126,7 +126,7 @@ export function PrivateOrderForm({
         <div className="min-w-0 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#69717d]">
             <p className="font-semibold">{visible.length} produit{visible.length > 1 ? "s" : ""}</p>
-            <p>Prix HT indicatifs · Paliers dégressifs appliqués automatiquement</p>
+            <p>Tarifs HT · Minimums et paliers par référence</p>
           </div>
           <div id="liste-produits" className="space-y-2">
             {visible.map((p) => {
