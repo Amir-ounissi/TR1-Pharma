@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Minus, Package, Plus, Search, ShoppingBag, ShoppingCart, SlidersHorizontal, Trash2 } from "lucide-react";
 import { sendPrivateCatalogueRequest } from "@/app/catalogue/actions";
 import type { CatalogProduct } from "@/lib/private-catalogue";
-import { euroHT, indicativeRange, isAllowedQuantity, tierForQuantity, firstOrderQuantity, steppedOrderQuantity } from "@/lib/private-catalogue-format";
+import { euroHT, indicativeRange, isAllowedQuantity, tierForQuantity, firstOrderQuantity, steppedOrderQuantity, catalogueQuantityPricingLabel } from "@/lib/private-catalogue-format";
 
 type ProductTier = CatalogProduct["pricing"]["tiers"][number];
 function priceRangeForTier(tier: ProductTier | null) {
@@ -133,7 +133,7 @@ export function PrivateOrderForm({
           <div id="liste-produits" className="space-y-2">
             {visible.map((p) => {
               const qty = quantities[p.id] ?? 0;
-              const stepQty = qty || p.min_quantity;
+              const stepQty = qty || firstOrderQuantity(p.min_quantity, p.quantity_step);
               const activeTier = findTierForQuantity(p.pricing.tiers, stepQty);
               const nextTier = nextTierForQuantity(p.pricing.tiers, stepQty);
               const nextTierPrice = priceRangeForTier(nextTier);
@@ -141,6 +141,9 @@ export function PrivateOrderForm({
                 ? activeTier && "price_ht" in activeTier ? euroHT(activeTier.price_ht) + " HT / unité" : "Tarif sur demande"
                 : indicativeRange(activeTier && "price_min_ht" in activeTier ? activeTier : null);
               const selectedInvalid = qty > 0 && !isAllowedQuantity(qty, p.min_quantity, p.quantity_step);
+              const quantityPricingLabel = catalogueQuantityPricingLabel(
+                p.min_quantity, p.quantity_step, activeTier?.min_quantity ?? null,
+              );
 
               return (
                 <article key={p.id}
@@ -159,7 +162,7 @@ export function PrivateOrderForm({
                         {p.format || "Format non renseigné"} · Réf. {p.sku}
                       </p>
                       <p className="text-[10px] text-[#89939b]">
-                        {p.ean ? "EAN " + p.ean + " · " : ""}Minimum {p.min_quantity} u. · TVA {p.vat_rate} %
+                        {p.ean ? "EAN " + p.ean + " · " : ""}TVA {p.vat_rate} %
                       </p>
                     </div>
                   </div>
@@ -169,9 +172,7 @@ export function PrivateOrderForm({
                       {p.pricing.mode === "contractual" ? "Votre tarif HT" : "Prix indicatif HT"}
                     </p>
                     <p className="mt-1 text-sm font-black leading-5 text-[#0e1d31]">{price}</p>
-                    {activeTier ? (
-                      <p className="mt-0.5 text-[10px] text-[#69717d]">Palier dès {activeTier.min_quantity} unité{activeTier.min_quantity > 1 ? "s" : ""}</p>
-                    ) : <p className="mt-0.5 text-[10px] text-[#69717d]">Tarif à confirmer</p>}
+                    <p className="mt-0.5 text-[10px] leading-4 text-[#69717d]">{quantityPricingLabel}</p>
                     {qty > 0 && nextTier ? (
                       <p className="mt-1 text-[10px] font-semibold text-[#ad4b08]">
                         {nextTier.min_quantity - qty > 0
