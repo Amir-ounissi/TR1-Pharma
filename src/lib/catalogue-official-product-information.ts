@@ -447,3 +447,473 @@ export const officialBiodanceByName: Record<string,OfficialEducation> = {
     "sourceName": "Biodance (fabricant)"
   }
 };
+
+// Fiches publiques Beauty of Joseon recoupées avec le site officiel.
+// Un même soin peut exister en formats différents, identifiés par EAN distincts.
+export const officialBeautyOfJoseonByEan: Record<string,OfficialEducation> = {
+  "8809738312872": {
+    "description": "Gel exfoliant peluchant à base de fleur de prunier et de cellulose, pour une peau visuellement plus lisse.",
+    "benefits": [
+      "Exfoliation douce",
+      "Grain de peau affiné",
+      "Confort"
+    ],
+    "keyIngredients": [
+      "Eau de fleur de prunier",
+      "Cellulose végétale"
+    ],
+    "sourceUrl": "https://beautyofjoseon.com/products/apricot-blossom-peeling-gel",
+    "sourceName": "Beauty of Joseon (fabricant)",
+    "usage": "Sur peau sèche et propre, masser doucement puis rincer soigneusement."
+  },
+  "8809968133124": {
+    "description": "Sérum hydratant destiné aux peaux sujettes aux sensations d’inconfort.",
+    "benefits": [
+      "Hydratation",
+      "Confort cutané",
+      "Soutien de la barrière"
+    ],
+    "keyIngredients": [
+      "Green Tea-HA™",
+      "Panthénol",
+      "Céramide NP"
+    ],
+    "sourceUrl": "https://beautyofjoseon.com/products/calming-barrier-serum",
+    "sourceName": "Beauty of Joseon (fabricant)"
+  },
+  "8809738316412": {
+    "description": "Sérum apaisant et hydratant associant thé vert et panthénol.",
+    "benefits": [
+      "Confort",
+      "Hydratation",
+      "Aspect des rougeurs"
+    ],
+    "keyIngredients": [
+      "Thé vert",
+      "Panthénol"
+    ],
+    "sourceUrl": "https://beautyofjoseon.com/collections/serum",
+    "sourceName": "Beauty of Joseon (fabricant)"
+  },
+  "8809968130918": {
+    "description": "Sérum apaisant et hydratant associant thé vert et panthénol.",
+    "benefits": [
+      "Confort",
+      "Hydratation",
+      "Aspect des rougeurs"
+    ],
+    "keyIngredients": [
+      "Thé vert",
+      "Panthénol"
+    ],
+    "sourceUrl": "https://beautyofjoseon.com/collections/serum",
+    "sourceName": "Beauty of Joseon (fabricant)"
+  },
+  "8809525249565": {
+    "description": "Crème nourrissante au riz et au ginseng, pour une peau souple et un fini lumineux.",
+    "benefits": [
+      "Hydratation",
+      "Souplesse",
+      "Éclat"
+    ],
+    "keyIngredients": [
+      "Eau de son de riz",
+      "Ginseng",
+      "Squalane",
+      "Niacinamide"
+    ],
+    "sourceUrl": "https://beautyofjoseon.com/products/dynasty-cream",
+    "sourceName": "Beauty of Joseon (fabricant)",
+    "usage": "Après lotion et sérum, appliquer une petite quantité sur visage et cou."
+  },
+  "8809954941498": {
+    "description": "Crème nourrissante au riz et au ginseng, pour une peau souple et un fini lumineux.",
+    "benefits": [
+      "Hydratation",
+      "Souplesse",
+      "Éclat"
+    ],
+    "keyIngredients": [
+      "Eau de son de riz",
+      "Ginseng",
+      "Squalane",
+      "Niacinamide"
+    ],
+    "sourceUrl": "https://beautyofjoseon.com/products/dynasty-cream",
+    "sourceName": "Beauty of Joseon (fabricant)",
+    "usage": "Après lotion et sérum, appliquer une petite quantité sur visage et cou."
+  },
+  "8809968130130": {
+    "description": "Huile démaquillante conçue pour retirer maquillage, sébum et filtres solaires lors du premier nettoyage.",
+    "benefits": [
+      "Démaquillage",
+      "Élimination des impuretés",
+      "Confort"
+    ],
+    "keyIngredients": [
+      "Huile de soja",
+      "Huile de graines de ginseng"
+    ],
+    "sourceUrl": "https://beautyofjoseon.com/products/ginseng-cleansing-oil",
+    "sourceName": "Beauty of Joseon (fabricant)",
+    "usage": "Masser sur peau sèche, émulsionner avec de l’eau puis rincer."
+  },
+  "8809738310960": {
+    "description": "Essence tonique hydratante qui associe ginseng et niacinamide.",
+    "benefits": [
+      "Hydratation",
+      "Éclat",
+      "Équilibre sébum/hydratation"
+    ],
+    "keyIngredients": [
+      "Eau de racine de ginseng",
+      "Niacinamide",
+      "Complexe ginseng"
+    ],
+    "sourceUrl": "https://beautyofjoseon.com/products/ginseng-essence-water",
+    "sourceName": "Beauty of Joseon (fabricant)"
+  },
+  "8809864752689": {
+    "description": "Soin solaire visage à texture sérum, associant protection UV et actifs hydratants.",
+    "benefits": [
+      "Protection solaire",
+      "Hydratation",
+      "Confort"
+    ],
+    "keyIngredients": [
+      "Ginseng"
+    ],
+    "sourceUrl": "https://beautyofjoseon.com/collections/sunscreen",
+    "sourceName": "Beauty of Joseon (fabricant)"
+  },
+  "8809738312728": {
+    "description": "Sérum éclat ciblant l’apparence du teint irrégulier.",
+    "benefits": [
+      "Éclat",
+      "Teint visuellement unifié",
+      "Hydratation"
+    ],
+    "keyIngredients": [
+      "Eau de riz",
+      "Alpha-arbutine"
+    ],
+    "sourceUrl": "https://beautyofjoseon.com/products/glow-deep-serum-rice-alpha-arbutin",
+    "sourceName": "Beauty of Joseon (fabricant)"
+  },
+  "8809968130871": {
+    "description": "Sérum éclat ciblant l’apparence du teint irrégulier.",
+    "benefits": [
+      "Éclat",
+      "Teint visuellement unifié",
+      "Hydratation"
+    ],
+    "keyIngredients": [
+      "Eau de riz",
+      "Alpha-arbutine"
+    ],
+    "sourceUrl": "https://beautyofjoseon.com/products/glow-deep-serum-rice-alpha-arbutin",
+    "sourceName": "Beauty of Joseon (fabricant)"
+  },
+  "8809968130239": {
+    "description": "Lotion biphasée à base de riz, pensée pour hydrater tout en atténuant l’apparence du sébum.",
+    "benefits": [
+      "Hydratation",
+      "Éclat sans effet gras",
+      "Équilibre sébum/hydratation"
+    ],
+    "keyIngredients": [
+      "Extrait de riz",
+      "Acides aminés de riz"
+    ],
+    "sourceUrl": "https://beautyofjoseon.com/products/glow-replenishing-rice-milk",
+    "sourceName": "Beauty of Joseon (fabricant)",
+    "usage": "Agiter pour mélanger les deux phases. Appliquer après le nettoyage, avec les mains ou un coton."
+  },
+  "8809657114960": {
+    "description": "Sérum visage à la propolis et à la niacinamide, destiné à améliorer l’apparence des pores et l’éclat.",
+    "benefits": [
+      "Confort",
+      "Éclat",
+      "Aspect des pores"
+    ],
+    "keyIngredients": [
+      "Propolis 60 %",
+      "Niacinamide 2 %",
+      "BHA"
+    ],
+    "sourceUrl": "https://beautyofjoseon.com/products/glow-serum-propolis-niacinamide",
+    "sourceName": "Beauty of Joseon (fabricant)",
+    "usage": "Appliquer 2 à 3 gouttes sur le visage, puis tapoter jusqu’à absorption."
+  },
+  "8809968130895": {
+    "description": "Sérum visage à la propolis et à la niacinamide, destiné à améliorer l’apparence des pores et l’éclat.",
+    "benefits": [
+      "Confort",
+      "Éclat",
+      "Aspect des pores"
+    ],
+    "keyIngredients": [
+      "Propolis 60 %",
+      "Niacinamide 2 %",
+      "BHA"
+    ],
+    "sourceUrl": "https://beautyofjoseon.com/products/glow-serum-propolis-niacinamide",
+    "sourceName": "Beauty of Joseon (fabricant)",
+    "usage": "Appliquer 2 à 3 gouttes sur le visage, puis tapoter jusqu’à absorption."
+  },
+  "8809738314678": {
+    "description": "Gel nettoyant doux légèrement acide, destiné au nettoyage quotidien sans effet décapant.",
+    "benefits": [
+      "Nettoyage",
+      "Confort",
+      "Préparation de la peau"
+    ],
+    "keyIngredients": [
+      "Eau de prune verte",
+      "Extrait de haricot mungo"
+    ],
+    "sourceUrl": "https://beautyofjoseon.com/products/green-plum-refreshing-cleanser",
+    "sourceName": "Beauty of Joseon (fabricant)",
+    "usage": "Sur visage humide, masser doucement puis rincer à l’eau tiède."
+  },
+  "8809968132172": {
+    "description": "Gel nettoyant doux légèrement acide, destiné au nettoyage quotidien sans effet décapant.",
+    "benefits": [
+      "Nettoyage",
+      "Confort",
+      "Préparation de la peau"
+    ],
+    "keyIngredients": [
+      "Eau de prune verte",
+      "Extrait de haricot mungo"
+    ],
+    "sourceUrl": "https://beautyofjoseon.com/products/green-plum-refreshing-cleanser",
+    "sourceName": "Beauty of Joseon (fabricant)",
+    "usage": "Sur visage humide, masser doucement puis rincer à l’eau tiède."
+  },
+  "8809968130123": {
+    "description": "Lotion exfoliante pour peaux au grain irrégulier ou à pores visibles.",
+    "benefits": [
+      "Exfoliation",
+      "Peau d’apparence plus lisse",
+      "Aspect des pores"
+    ],
+    "keyIngredients": [
+      "Eau de prune verte",
+      "AHA",
+      "BHA"
+    ],
+    "sourceUrl": "https://beautyofjoseon.com/products/green-plum-refreshing-toner-aha-bha",
+    "sourceName": "Beauty of Joseon (fabricant)",
+    "usage": "Après nettoyage, appliquer en évitant le contour des yeux. Utiliser une protection solaire en journée."
+  },
+  "8809968130246": {
+    "description": "Masque crème à rincer associant riz, miel et argile pour hydrater et purifier.",
+    "benefits": [
+      "Confort",
+      "Éclat",
+      "Nettoyage de surface"
+    ],
+    "keyIngredients": [
+      "Riz",
+      "Miel",
+      "Kaolin"
+    ],
+    "sourceUrl": "https://beautyofjoseon.com/products/ground-rice-and-honey-glow-mask",
+    "sourceName": "Beauty of Joseon (fabricant)",
+    "usage": "Appliquer une couche homogène, laisser poser 15 à 20 minutes puis rincer."
+  },
+  "8809875906477": {
+    "description": "Sérum éclat à la vitamine C stabilisée, associé à la centella asiatica.",
+    "benefits": [
+      "Éclat",
+      "Teint visuellement plus homogène",
+      "Confort"
+    ],
+    "keyIngredients": [
+      "Centella asiatica",
+      "3-O-ethyl ascorbic acid (vitamine C stabilisée)"
+    ],
+    "sourceUrl": "https://beautyofjoseon.com/products/light-on-serum-centella-vita-c",
+    "sourceName": "Beauty of Joseon (fabricant)",
+    "usage": "Appliquer après la lotion, puis la crème. Le matin, terminer par une protection solaire."
+  },
+  "8809864766884": {
+    "description": "Stick solaire matifiant, pensé pour les retouches de protection au cours de la journée.",
+    "benefits": [
+      "Protection solaire",
+      "Fini mat",
+      "Retouches pratiques"
+    ],
+    "keyIngredients": [
+      "Armoise (mugwort)",
+      "Thé vert",
+      "Complexe séborégulateur"
+    ],
+    "sourceUrl": "https://fr.beautyofjoseon.com/products/matte-sun-stick-mugwort-camelia",
+    "sourceName": "Beauty of Joseon (fabricant)",
+    "usage": "Appliquer sur les zones exposées ; renouveler régulièrement selon les recommandations de protection solaire."
+  },
+  "8809968133476": {
+    "description": "Sérum lissant formulé avec un complexe PDRN de haricot rouge et des peptides.",
+    "benefits": [
+      "Aspect des pores",
+      "Peau d’apparence plus rebondie",
+      "Souplesse"
+    ],
+    "keyIngredients": [
+      "Red Bean PDRN™",
+      "Peptides"
+    ],
+    "sourceUrl": "https://beautyofjoseon.com/products/pore-firming-red-bean-pdrn-serum-global",
+    "sourceName": "Beauty of Joseon (fabricant)"
+  },
+  "8809606851663": {
+    "description": "Baume démaquillant qui fond au massage, pour retirer maquillage et filtres solaires.",
+    "benefits": [
+      "Démaquillage",
+      "Nettoyage",
+      "Confort"
+    ],
+    "keyIngredients": [
+      "Huile de son de riz",
+      "Extraits de céréales"
+    ],
+    "sourceUrl": "https://beautyofjoseon.com/collections/cleanser",
+    "sourceName": "Beauty of Joseon (fabricant)"
+  },
+  "8809738316986": {
+    "description": "Masque crème à l’argile et au haricot rouge pour améliorer l’aspect des pores sans sensation de dessèchement.",
+    "benefits": [
+      "Aspect des pores",
+      "Excès de sébum",
+      "Confort"
+    ],
+    "keyIngredients": [
+      "Argile kaolin",
+      "Extrait de haricot rouge"
+    ],
+    "sourceUrl": "https://beautyofjoseon.com/products/red-bean-refreshing-pore-mask",
+    "sourceName": "Beauty of Joseon (fabricant)",
+    "usage": "Sur peau propre et légèrement humide, appliquer 5 à 10 minutes, puis masser doucement et rincer."
+  },
+  "8809738316993": {
+    "description": "Gel hydratant léger destiné notamment aux peaux mixtes et grasses.",
+    "benefits": [
+      "Hydratation légère",
+      "Aspect du sébum",
+      "Souplesse"
+    ],
+    "keyIngredients": [
+      "Extrait de haricot rouge",
+      "Complexe de peptides"
+    ],
+    "sourceUrl": "https://beautyofjoseon.com/products/red-bean-water-gel",
+    "sourceName": "Beauty of Joseon (fabricant)"
+  },
+  "8809782555508": {
+    "description": "Soin de protection solaire quotidien SPF50+ PA++++ au riz et aux extraits fermentés.",
+    "benefits": [
+      "Protection UV",
+      "Hydratation",
+      "Fini confortable"
+    ],
+    "keyIngredients": [
+      "Riz",
+      "Extraits fermentés"
+    ],
+    "sourceUrl": "https://beautyofjoseon.com/collections/sunscreen",
+    "sourceName": "Beauty of Joseon (fabricant)",
+    "usage": "Dernière étape du soin du matin. Appliquer généreusement et renouveler régulièrement."
+  },
+  "8809968130277": {
+    "description": "Fluide solaire SPF50+ PA++++ léger à base d’eau de riz et de panthénol.",
+    "benefits": [
+      "Protection UV",
+      "Hydratation légère",
+      "Confort des peaux mixtes"
+    ],
+    "keyIngredients": [
+      "Eau de riz",
+      "Panthénol (B5)"
+    ],
+    "sourceUrl": "https://beautyofjoseon.com/products/relief-sun-aqua-fresh",
+    "sourceName": "Beauty of Joseon (fabricant)",
+    "usage": "Dernière étape de la routine du matin, appliquer généreusement puis renouveler au moins toutes les deux heures en cas d’exposition."
+  },
+  "8809738316146": {
+    "description": "Sérum contour des yeux au ginseng et au rétinal, ciblant l’apparence des ridules.",
+    "benefits": [
+      "Hydratation du contour des yeux",
+      "Aspect des ridules",
+      "Souplesse"
+    ],
+    "keyIngredients": [
+      "Ginseng",
+      "Rétinal"
+    ],
+    "sourceUrl": "https://beautyofjoseon.com/products/revive-eye-serum-ginseng-retinal",
+    "sourceName": "Beauty of Joseon (fabricant)",
+    "usage": "Commencer progressivement, notamment sur peau sensible ; appliquer une protection solaire dans la journée."
+  },
+  "8809968133193": {
+    "description": "Crème hydratante au rétinol et au ginseng, destinée à améliorer l’apparence du grain de peau et la souplesse.",
+    "benefits": [
+      "Hydratation",
+      "Aspect de la fermeté",
+      "Grain de peau"
+    ],
+    "keyIngredients": [
+      "Rétinol",
+      "Ginseng Ceramide™"
+    ],
+    "sourceUrl": "https://beautyofjoseon.com/products/revive-firming-moisturizer",
+    "sourceName": "Beauty of Joseon (fabricant)",
+    "usage": "Introduire progressivement selon la tolérance et porter une protection solaire en journée."
+  },
+  "8809968132523": {
+    "description": "Patchs hydrogel contour des yeux au ginseng et au rétinal.",
+    "benefits": [
+      "Hydratation du regard",
+      "Aspect des ridules",
+      "Confort"
+    ],
+    "keyIngredients": [
+      "Ginseng",
+      "Rétinal",
+      "Céramides"
+    ],
+    "sourceUrl": "https://beautyofjoseon.com/products/revive-under-eye-patch",
+    "sourceName": "Beauty of Joseon (fabricant)"
+  },
+  "8809738316139": {
+    "description": "Sérum hydratant associant ginseng et filtrat de sécrétion d’escargot, pour une peau d’apparence rebondie.",
+    "benefits": [
+      "Hydratation",
+      "Aspect de l’élasticité",
+      "Confort"
+    ],
+    "keyIngredients": [
+      "Ginseng",
+      "Mucine d’escargot",
+      "Centella asiatica"
+    ],
+    "sourceUrl": "https://beautyofjoseon.com/products/revive-serum-ginseng-snail-mucin",
+    "sourceName": "Beauty of Joseon (fabricant)"
+  },
+  "8809968130888": {
+    "description": "Sérum hydratant associant ginseng et filtrat de sécrétion d’escargot, pour une peau d’apparence rebondie.",
+    "benefits": [
+      "Hydratation",
+      "Aspect de l’élasticité",
+      "Confort"
+    ],
+    "keyIngredients": [
+      "Ginseng",
+      "Mucine d’escargot",
+      "Centella asiatica"
+    ],
+    "sourceUrl": "https://beautyofjoseon.com/products/revive-serum-ginseng-snail-mucin",
+    "sourceName": "Beauty of Joseon (fabricant)"
+  }
+};
