@@ -5,9 +5,41 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowUpRight, Check, ChevronLeft, ChevronRight, LockKeyhole, Search, SlidersHorizontal } from "lucide-react";
 import { publicCatalogueProducts, publicProductImage, publicProductHref, type PublicCatalogueProduct } from "@/lib/catalogue-products";
+import { euroHT, tierForQuantity } from "@/lib/private-catalogue-format";
 
 type DisplayProduct = PublicCatalogueProduct;
 type BrandTheme = { bg: string; ink: string; border: string; short: string; detail: string };
+type PrivateDisplayProduct = {
+  id: string;
+  brandSlug: string;
+  name: string;
+  ean: string | null;
+  min_quantity: number;
+  quantity_step: number;
+  vat_rate: number;
+  pricing:
+    | { mode: "indicative"; tiers: { min_quantity: number; price_min_ht: number; price_max_ht: number }[] }
+    | { mode: "contractual"; tiers: { min_quantity: number; price_ht: number }[] };
+};
+const brandSlugs: Record<string, string> = {
+  "Beauty of Joseon": "beauty-of-joseon",
+  "Dr. Althea": "dr-althea",
+  "Biodance": "biodance",
+};
+const normalizeProductName = (value: string) => value.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLocaleLowerCase("fr").replace(/[^a-z0-9]+/g, " ").trim();
+function privateTierPrice(
+  pricing: PrivateDisplayProduct["pricing"],
+  tier: PrivateDisplayProduct["pricing"]["tiers"][number] | null,
+) {
+  if (!tier) return "Tarif sur demande";
+  if (pricing.mode === "contractual" && "price_ht" in tier) return euroHT(tier.price_ht);
+  if (pricing.mode === "indicative" && "price_min_ht" in tier) {
+    return tier.price_min_ht === tier.price_max_ht
+      ? euroHT(tier.price_min_ht)
+      : euroHT(tier.price_min_ht) + " – " + euroHT(tier.price_max_ht);
+  }
+  return "Tarif sur demande";
+}
 
 const allProducts: DisplayProduct[] = publicCatalogueProducts;
 const brands = ["Toutes les marques", "Beauty of Joseon", "Dr. Althea", "Biodance"];
@@ -21,7 +53,30 @@ const themes: Record<string, BrandTheme> = {
 
 const formatBrandCount = (brand: string) => allProducts.filter((p) => p.brand === brand).length;
 
-export function PublicProductGrid() {
+export function PublicProductGrid({ privateProducts }: { privateProducts?: PrivateDisplayProduct[] } = {}) {
+  const privateMode = privateProducts !== undefined;
+  const privateProductMap = useMemo(() => {
+    const map = new Map<string, PrivateDisplayProduct>();
+    for (const product of privateProducts ?? []) {
+      if (product.ean) map.set("ean:" + product.ean, product);
+      map.set("name:" + product.brandSlug + ":" + normalizeProductName(product.name), product);
+    }
+    return map;
+  }, [privateProducts]);
+  const lookupPrivateProduct = (product: DisplayProduct) => {
+    const slug = brandSlugs[product.brand];
+    if (!slug) return undefined;
+    return (product.ean ? privateProductMap.get("ean:" + product.ean) : undefined)
+      ?? privateProductMap.get("name:" + slug + ":" + normalizeProductName(product.name));
+  };
+  const catalogueProducts = useMemo(
+    () => privateMode ? allProducts.filter((product) => Boolean(lookupPrivateProduct(product))) : allProducts,
+    [privateMode, privateProductMap],
+  );
+  const availableBrands = brands.filter((brand, index) =>
+    index === 0 || catalogueProducts.some((product) => product.brand === brand),
+  );
+  const formatBrandCount = (brand: string) => catalogueProducts.filter((product) => product.brand === brand).length;
   const [selectedBrand, setSelectedBrand] = useState("Toutes les marques");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
@@ -29,13 +84,13 @@ export function PublicProductGrid() {
   const [page, setPage] = useState(1);
 
   const categories = useMemo(
-    () => [...new Set(allProducts.filter((p) => selectedBrand === "Toutes les marques" || p.brand === selectedBrand)
+    () => [...new Set(catalogueProducts.filter((p) => selectedBrand === "Toutes les marques" || p.brand === selectedBrand)
       .map((p) => p.category).filter(Boolean))].sort((a, b) => a.localeCompare(b, "fr")),
     [selectedBrand],
   );
   const visible = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase("fr");
-    const matches = allProducts.filter((p) => (
+    const matches = catalogueProducts.filter((p) => (
       (selectedBrand === "Toutes les marques" || p.brand === selectedBrand) &&
       (category === "all" || p.category === category) &&
       [p.brand, p.name, p.category, p.format, p.ean, p.sku ?? ""]
@@ -46,7 +101,7 @@ export function PublicProductGrid() {
       : sort === "brand"
       ? a.brand.localeCompare(b.brand, "fr") || a.name.localeCompare(b.name, "fr")
       : a.name.localeCompare(b.name, "fr"));
-  }, [selectedBrand, query, category, sort]);
+  }, [catalogueProducts, selectedBrand, query, category, sort]);
   const pageSize = 12;
   const maxPage = Math.max(1, Math.ceil(visible.length / pageSize));
   const shown = visible.slice((Math.min(page, maxPage) - 1) * pageSize, Math.min(page, maxPage) * pageSize);
@@ -63,11 +118,11 @@ export function PublicProductGrid() {
             Parcourez les fiches produits pour découvrir les bénéfices, les actifs, les conseils d’utilisation et les compositions des soins sélectionnés.
           </p>
         </div>
-        <span className="rounded-full border border-[#e2e7ec] bg-white px-3.5 py-2 text-xs font-bold text-[#5d6b77]">{allProducts.length} références · {allProducts.filter((p) => !!publicProductImage(p)).length} photos</span>
+        <span className="rounded-full border border-[#e2e7ec] bg-white px-3.5 py-2 text-xs font-bold text-[#5d6b77]">{catalogueProducts.length} références · {catalogueProducts.filter((p) => !!publicProductImage(p)).length} photos</span>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {brands.slice(1).map((brand) => {
+        {availableBrands.slice(1).map((brand) => {
           const look = theme(brand);
           return (
             <button type="button" key={brand} onClick={() => chooseBrand(brand)}
@@ -93,7 +148,7 @@ export function PublicProductGrid() {
 
       <div className="space-y-4 rounded-2xl border border-[#e4e8e8] bg-white p-3 sm:p-4">
         <div className="flex gap-1.5 overflow-x-auto pb-1">
-          {brands.map((b) => (
+          {availableBrands.map((b) => (
             <button type="button" key={b} onClick={() => chooseBrand(b)} aria-pressed={selectedBrand === b}
               className={"min-h-10 shrink-0 rounded-full px-4 text-xs font-bold transition " +
                 (selectedBrand === b ? "bg-[#142941] text-white" : "bg-[#f7f7f5] text-[#5b6875] hover:bg-[#eff1f1]")}>
@@ -139,6 +194,13 @@ export function PublicProductGrid() {
           {shown.map((product) => {
             const look = theme(product.brand);
             const photo = publicProductImage(product);
+            const privateProduct = privateMode ? lookupPrivateProduct(product) : null;
+            const selectedTier = privateProduct
+              ? tierForQuantity(privateProduct.pricing.tiers, privateProduct.min_quantity)
+              : null;
+            const selectedPrice = privateProduct
+              ? privateTierPrice(privateProduct.pricing, selectedTier)
+              : null;
             return (
               <article key={product.brand + product.name + product.ean}
                 className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-[#e5e9e9] bg-white transition hover:border-[#cbd5d6] hover:shadow-[0_18px_38px_-25px_rgba(18,38,57,.25)]">
@@ -162,14 +224,52 @@ export function PublicProductGrid() {
                   <h4 className="mt-2 min-h-12 text-sm font-extrabold leading-5 text-[#142941] sm:text-[15px]">{product.name}</h4>
                   <p className="mt-1.5 text-xs leading-5 text-[#7b8690]">{product.category}{product.format ? " · " + product.format : ""}</p>
                   <div className="mt-auto border-t border-[#eef0f0] pt-3">
-                    <p className="flex items-center gap-1.5 text-[11px] font-semibold text-[#64717e]">
-                      <LockKeyhole size={13} aria-hidden="true" /> Tarifs professionnels non publics
-                    </p>
-                    <p className="mt-2 text-[11px] text-[#8a9299]">{product.ean ? "EAN " + product.ean : ""}</p>
-                    <Link href={publicProductHref(product)}
-                      className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#142941] px-3 text-center text-xs font-extrabold text-white hover:bg-[#1e405f]">
-                      Fiche & code-barres <ArrowUpRight size={14} aria-hidden="true"/>
-                    </Link>
+                    {privateMode && privateProduct ? (
+                      <>
+                        <p className="text-[11px] font-semibold text-[#64717e]">
+                          {privateProduct.pricing.mode === "contractual" ? "Votre tarif HT / unité" : "Tarif professionnel HT / unité"}
+                        </p>
+                        <p className="mt-1 text-lg font-black tracking-tight text-[#142941]">{selectedPrice}</p>
+                        <p className="mt-1 text-[10px] text-[#7b8690]">
+                          Minimum {privateProduct.min_quantity} u. · Pas de {privateProduct.quantity_step} · TVA {privateProduct.vat_rate} %
+                        </p>
+                        {privateProduct.pricing.tiers.length > 1 ? (
+                          <details className="mt-2 rounded-lg bg-[#f7f7f5] px-3 py-2">
+                            <summary className="cursor-pointer text-[11px] font-bold text-[#31475a]">Voir les paliers fournisseurs</summary>
+                            <div className="mt-2 space-y-1.5 border-t border-[#e5e9e9] pt-2">
+                              {privateProduct.pricing.tiers.map((tier) => (
+                                <div key={tier.min_quantity} className="flex items-center justify-between gap-2 text-[11px] text-[#64717e]">
+                                  <span>Dès {tier.min_quantity} unités</span>
+                                  <strong className="text-[#142941]">{privateTierPrice(privateProduct.pricing, tier)} HT</strong>
+                                </div>
+                              ))}
+                            </div>
+                          </details>
+                        ) : null}
+                        <p className="mt-2 text-[11px] text-[#8a9299]">{product.ean ? "EAN " + product.ean : ""}</p>
+                        <div className="mt-3 grid gap-2">
+                          <Link href={publicProductHref(product)}
+                            className="inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-lg border border-[#dce3e5] bg-white px-3 text-center text-[11px] font-extrabold text-[#142941] hover:bg-[#f7f8f6]">
+                            Fiche & code-barres <ArrowUpRight size={13} aria-hidden="true"/>
+                          </Link>
+                          <Link href={"/catalogue/marques/" + privateProduct.brandSlug + "?produit=" + privateProduct.id + "#produits"}
+                            className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#142941] px-3 text-center text-xs font-extrabold text-white hover:bg-[#1e405f]">
+                            Commander <ArrowUpRight size={14} aria-hidden="true"/>
+                          </Link>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <p className="flex items-center gap-1.5 text-[11px] font-semibold text-[#64717e]">
+                          <LockKeyhole size={13} aria-hidden="true" /> Tarifs professionnels non publics
+                        </p>
+                        <p className="mt-2 text-[11px] text-[#8a9299]">{product.ean ? "EAN " + product.ean : ""}</p>
+                        <Link href={publicProductHref(product)}
+                          className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#142941] px-3 text-center text-xs font-extrabold text-white hover:bg-[#1e405f]">
+                          Fiche & code-barres <ArrowUpRight size={14} aria-hidden="true"/>
+                        </Link>
+                      </>
+                    )}
                   </div>
                 </div>
               </article>
@@ -198,19 +298,39 @@ export function PublicProductGrid() {
           </div>
         </nav>
       )}
-      <div className="rounded-xl border border-[#e9e2d6] bg-[#f7f4ee] px-5 py-4 text-xs leading-6 text-[#6d6a64]">
-        <p><Check size={15} aria-hidden="true" className="mr-2 inline" />
-          Les prix et remises ne sont jamais affichés dans ce catalogue public.</p>
-      </div>
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-[#142941] p-6 text-white sm:p-8">
-        <div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-[#e3a474]">Vous êtes pharmacien ?</p>
-          <h3 className="mt-2 text-xl font-black sm:text-2xl">Les conditions sont réservées aux officines.</h3>
-          <p className="mt-2 max-w-xl text-xs leading-5 text-[#bdcbd7]">Une fois votre compte professionnel autorisé, retrouvez votre sélection et les tarifs validés par TR1 PHARMA.</p>
-        </div>
-        <Link href="/catalogue/connexion" className="shop-primary-action inline-flex min-h-11 items-center gap-2 px-4 text-sm">
-          Connexion pro <ArrowUpRight size={16}/>
-        </Link>
-      </div>
+      {privateMode ? (
+        <>
+          <div className="rounded-xl border border-[#e9e2d6] bg-[#f7f4ee] px-5 py-4 text-xs leading-6 text-[#6d6a64]">
+            <p><Check size={15} aria-hidden="true" className="mr-2 inline" />
+              Tarifs professionnels indicatifs HT. Les paliers et minimums de commande sont indiqués par référence ; le tarif définitif est confirmé sur devis.</p>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-[#142941] p-6 text-white sm:p-8">
+            <div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-[#e3a474]">Votre espace pharmacie</p>
+              <h3 className="mt-2 text-xl font-black sm:text-2xl">Retrouvez le suivi de vos demandes.</h3>
+              <p className="mt-2 max-w-xl text-xs leading-5 text-[#bdcbd7]">Vos tarifs sont réservés à votre officine et restent invisibles depuis le catalogue public.</p>
+            </div>
+            <Link href="/catalogue/mes-demandes" className="shop-primary-action inline-flex min-h-11 items-center gap-2 px-4 text-sm">
+              Mes demandes <ArrowUpRight size={16}/>
+            </Link>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="rounded-xl border border-[#e9e2d6] bg-[#f7f4ee] px-5 py-4 text-xs leading-6 text-[#6d6a64]">
+            <p><Check size={15} aria-hidden="true" className="mr-2 inline" />
+              Les prix et remises ne sont jamais affichés dans ce catalogue public.</p>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-[#142941] p-6 text-white sm:p-8">
+            <div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-[#e3a474]">Vous êtes pharmacien ?</p>
+              <h3 className="mt-2 text-xl font-black sm:text-2xl">Les conditions sont réservées aux officines.</h3>
+              <p className="mt-2 max-w-xl text-xs leading-5 text-[#bdcbd7]">Une fois votre compte professionnel autorisé, retrouvez votre sélection et les tarifs validés par TR1 PHARMA.</p>
+            </div>
+            <Link href="/catalogue/connexion" className="shop-primary-action inline-flex min-h-11 items-center gap-2 px-4 text-sm">
+              Connexion pro <ArrowUpRight size={16}/>
+            </Link>
+          </div>
+        </>
+      )}
     </section>
   );
 }
