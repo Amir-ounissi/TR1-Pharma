@@ -15,10 +15,19 @@ type ProductImageGalleryProps = {
 export function ProductImageGallery({ images, brand, productName, format }: ProductImageGalleryProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [failedImages, setFailedImages] = useState<Set<string>>(() => new Set());
+  const [failedHdVariants, setFailedHdVariants] = useState<Set<string>>(() => new Set());
   const zoomRef = useRef<HTMLDialogElement>(null);
   const activeImage = images[Math.min(activeIndex, images.length - 1)];
   const displayable = Boolean(activeImage && !failedImages.has(activeImage));
-  const markFailed = (url: string) => setFailedImages((old) => new Set(old).add(url));
+  const displaySrc = (url: string, width: number) =>
+    failedHdVariants.has(url) ? url : shopifyResponsivePhoto(url, width);
+  const markFailed = (url: string, width: number) => {
+    if (displaySrc(url, width) !== url) {
+      setFailedHdVariants((old) => new Set(old).add(url));
+    } else {
+      setFailedImages((old) => new Set(old).add(url));
+    }
+  };
 
   if (images.length === 0) {
     return (
@@ -33,13 +42,13 @@ export function ProductImageGallery({ images, brand, productName, format }: Prod
       <div className="group relative aspect-square w-full overflow-hidden rounded-2xl border border-[#e6eaec] bg-white">
         {displayable ? (
           <Image
-            src={shopifyResponsivePhoto(activeImage, 1600)}
+            src={displaySrc(activeImage, 1600)}
             alt={brand + " " + productName + " — " + format + ", photo " + (activeIndex + 1)}
             fill
             unoptimized
             priority
             sizes="(max-width: 640px) calc(100vw - 32px), (max-width: 1024px) 55vw, 650px"
-            onError={() => markFailed(activeImage)}
+            onError={() => markFailed(activeImage, 1600)}
             className="object-contain p-5 sm:p-8"
           />
         ) : (
@@ -74,13 +83,13 @@ export function ProductImageGallery({ images, brand, productName, format }: Prod
             >
               {failedImages.has(url) ? <ImageOff size={19} className="mx-auto text-[#9aa6ac]" /> : (
                 <Image
-                  src={shopifyResponsivePhoto(url, 320)}
+                  src={displaySrc(url, 320)}
                   alt=""
                   fill
                   unoptimized
                   sizes="80px"
                   loading="lazy"
-                  onError={() => markFailed(url)}
+                  onError={() => markFailed(url, 320)}
                   className="object-contain p-1"
                 />
               )}
@@ -100,11 +109,12 @@ export function ProductImageGallery({ images, brand, productName, format }: Prod
         {displayable ? (
           <div className="relative h-full w-full">
             <Image
-              src={shopifyResponsivePhoto(activeImage, 1600)}
+              src={displaySrc(activeImage, 1600)}
               alt={brand + " " + productName + " — détail agrandi"}
               fill
               unoptimized
               sizes="(max-width: 640px) 90vw, 1100px"
+              onError={() => markFailed(activeImage, 1600)}
               className="object-contain p-3 sm:p-5"
             />
           </div>
