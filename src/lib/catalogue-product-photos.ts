@@ -765,4 +765,34 @@ export const productGalleryByEan: Record<string, string[]> = {
       "https://fr.beautyofjoseon.com/cdn/shop/files/Untitled_design_-_2025-04-29T191109.529_14a34240-d3ba-47df-9b40-2fb75e3af7a6.png?v=1776932264&width=2200",
       "https://fr.beautyofjoseon.com/cdn/shop/files/optimized_6a2233336da2d7.43783369_14.jpg?v=1780632046&width=2200"
   ]
+  "8809738316139": [
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/Untitled_design_-_2025-06-09T112913.685.png?v=1749436197",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/31.png?v=1749436470",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/33_0a814389-bea1-4063-b03f-6072b6139087.png?v=1749436471",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/32.png?v=1749436470",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/Untitled_design_-_2025-06-09T113420.265.png?v=1749436476"
+  ],
+  "8809864752689": [
+      "https://fr.beautyofjoseon.com/cdn/shop/files/Perfect-Hanbang-Sun-Trio-Relief-Sun-Matte-Sun-Stick-Sun-Serum-_Beauty-of-Joseon_81380730-52106203398516.jpg?crop=center&height=2000&v=1762679751&width=2000",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/Perfect-Hanbang-Sun-Trio-Relief-Sun-Matte-Sun-Stick-Sun-Serum-_Beauty-of-Joseon_2330491-52106198778228.jpg?crop=center&height=2000&v=1762679751&width=2000",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/Ginseng-Moist-Sun-Serum-SPF-50-PA-_Beauty-of-Joseon_39790829-27677668180133.png?crop=center&height=1080&v=1762679737&width=1080",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/Ginseng-Moist-Sun-Serum-SPF-50-PA-_Beauty-of-Joseon_33309460-27677668212901.png?crop=center&height=1080&v=1762679737&width=1080",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/Ginseng-Moist-Sun-Serum-SPF-50-PA-_Beauty-of-Joseon_82790254-27677668245669.png?crop=center&height=1080&v=1762679737&width=1080",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/63.png?v=1750234998",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/62.png?v=1750234998",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/61.png?v=1750234997",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/Untitled_design_-_2025-06-18T170540.590.png?v=1750233953"
+  ],
+  "8809968133193": [
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/revive-firming-moisturizer-main-1.jpg?v=1767855217",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/rfm-tab2-boost-bounce.png?v=1769421092",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/rfm-tab2-soothes.png?v=1769420278",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/rfm-tab2-balances.png?v=1769421588"
+  ],
+  "8809968133124": [
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/v1_J0570.jpg?v=1775055615",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/20251224_BOJ_0389.jpg?v=1775059740",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/v1_J0712.jpg?v=1775056718",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/v1_J0821.jpg?v=1775059860"
+  ]
 };
