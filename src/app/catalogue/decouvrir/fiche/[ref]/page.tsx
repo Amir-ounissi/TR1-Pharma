@@ -149,6 +149,18 @@ export default async function PublicCatalogueProductPage({ params }: ProductPara
               <p className="mt-2 text-sm leading-6 text-[#5f7180]">{officialInfo.usage}</p>
             </div>
           )}
+          <div className="mt-6 flex flex-wrap items-start justify-between gap-3 border-t border-[#e9edee] pt-4">
+            <p className="max-w-2xl text-xs leading-6 text-[#6e808b]">
+              Source : {officialInfo?.sourceName ?? "Faire — " + faireInfo?.sourceSeller}.
+              {officialManufacturerSource
+                ? " Description et actifs mis en avant reformulés de la documentation de la marque."
+                : " Information provenant d’un revendeur, à confirmer avec la marque."}
+              {" "}La liste INCI complète, les précautions et la conformité de la version commercialisée doivent être vérifiées sur l’emballage et la documentation réglementaire.
+            </p>
+            <a href={verifiedInfo.sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-10 shrink-0 items-center gap-1.5 text-xs font-bold text-[#23465d] underline-offset-4 hover:underline">
+              Consulter la source <ArrowUpRight size={15} aria-hidden="true"/>
+            </a>
+          </div>
         </section>
       )}
 
