@@ -62,7 +62,7 @@ export default async function PharmacyRequestsPage({
                 <div className="flex flex-col items-start gap-2 sm:items-end">
                   <p className="text-lg font-black">{request.request_kind === "quote" || request.total_ht === null ? "À chiffrer" : euroHT(Number(request.total_ht)) + " HT"}</p>
                   {reorderable.has(request.id) ? (
-                    <Link href={"/catalogue?reprendre=" + encodeURIComponent(request.id) + "#reassort"}
+                    <Link href={"/catalogue?reprendre=" + encodeURIComponent(request.id) + "#liste-produits"}
                       className="inline-flex min-h-9 items-center rounded-lg border border-[#142941] px-3 text-xs font-bold text-[#142941] hover:bg-[#f4f6f6]">
                       Reprendre cette sélection
                     </Link>
