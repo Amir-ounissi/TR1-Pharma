@@ -582,14 +582,20 @@ export function PrivateMultiBrandOrderForm({
                               <p className="mt-1 text-[10px] text-[#69717d]">
                                 {tier ? "Palier dès " + tier.min_quantity + " u." : "Tarif à confirmer"} · {groupByProduct.has(product.id) ? "Minimum collectif " + groupByProduct.get(product.id)!.minimum_total_units + " u." : "Min. " + product.min_quantity + " u."}
                               </p>
+                              {lineTotal ? <p className="mt-1 text-[11px] font-bold text-[#142941]">Total ligne : {lineTotal} HT</p> : null}
+                              {savings !== null && savings > 0 ? <p className="mt-1 text-[11px] font-semibold text-[#54705e]">Économie estimée : {euroHT(savings / 100)} HT</p> : null}
                             </div>
                             <span className="shrink-0 rounded-md bg-[#f5f6f6] px-2 py-1 text-[9px] font-semibold text-[#69717d]">
                               TVA {product.vat_rate} %
                             </span>
                           </div>
-                          {quantity > 0 && nextTier ? (
+                          {groupNeedsMinimum && group ? (
                             <p className="mt-2 text-[10px] font-semibold leading-4 text-[#ad4b08]">
-                              Encore {nextTier.min_quantity - (groupByProduct.get(product.id) ? groupTotals.get(groupByProduct.get(product.id)!.id) ?? 0 : quantity)} u. pour le palier {nextTier.min_quantity}
+                              Encore {group.minimum_total_units - groupTotal} u. pour atteindre le minimum collectif
+                            </p>
+                          ) : quantity > 0 && nextTier ? (
+                            <p className="mt-2 text-[10px] font-semibold leading-4 text-[#ad4b08]">
+                              Encore {nextTier.min_quantity - (group ? groupTotal : quantity)} u. pour le palier {nextTier.min_quantity}
                               {nextRange ? " · " + formatPriceRange(nextRange.min, nextRange.max) + " HT/u." : ""}
                             </p>
                           ) : null}
@@ -673,10 +679,16 @@ export function PrivateMultiBrandOrderForm({
                           </p>
                           <p className="mt-0.5 text-xs font-black text-[#0e1d31]">{price}</p>
                           {tier ? <p className="mt-0.5 text-[9px] text-[#69717d]">Palier dès {tier.min_quantity} u.</p> : null}
+                          {lineTotal ? <p className="mt-1 text-[10px] font-bold text-[#142941]">Total : {lineTotal} HT</p> : null}
+                          {savings !== null && savings > 0 ? <p className="mt-1 text-[10px] font-semibold text-[#54705e]">Économie estimée : {euroHT(savings / 100)} HT</p> : null}
                         </div>
-                        {quantity > 0 && nextTier ? (
+                        {groupNeedsMinimum && group ? (
                           <p className="text-right text-[9px] font-semibold text-[#ad4b08] md:mt-1 md:text-left">
-                            Encore {nextTier.min_quantity - (groupByProduct.get(product.id) ? groupTotals.get(groupByProduct.get(product.id)!.id) ?? 0 : quantity)} u. pour {nextTier.min_quantity}
+                            Encore {group.minimum_total_units - groupTotal} u. pour atteindre le minimum collectif
+                          </p>
+                        ) : quantity > 0 && nextTier ? (
+                          <p className="text-right text-[9px] font-semibold text-[#ad4b08] md:mt-1 md:text-left">
+                            Encore {nextTier.min_quantity - (group ? groupTotal : quantity)} u. pour {nextTier.min_quantity}
                             {nextRange ? " · " + formatPriceRange(nextRange.min, nextRange.max) + " HT/u." : ""}
                           </p>
                         ) : null}
@@ -755,6 +767,7 @@ export function PrivateMultiBrandOrderForm({
                         const quantity = quantities[product.id];
                         const tier = findTierForQuantity(product.pricing.tiers,effectiveTierQuantity(product,quantity));
                         const range = priceRangeForTier(tier);
+                        const savings = savingsForProduct(product, quantity, tier);
                         return (
                           <div key={product.id} className="border-b border-[#f0f1f1] pb-2 text-xs last:border-0">
                             <div className="flex items-start justify-between gap-3">
@@ -764,9 +777,12 @@ export function PrivateMultiBrandOrderForm({
                                 <p className="mt-1 text-[10px] text-[#69717d]">
                                   {range ? formatPriceRange(range.min, range.max) + " HT / unité" : "Tarif à confirmer"}
                                 </p>
+                                {savings !== null && savings > 0 ? (
+                                  <p className="mt-1 text-[10px] font-semibold text-[#54705e]">Économie estimée : {euroHT(savings / 100)} HT</p>
+                                ) : null}
                               </div>
                               <strong className="shrink-0 text-right">
-                                {range ? formatPriceRange(range.min * quantity, range.max * quantity) + " HT" : "Sur devis"}
+                                {lineTotalHT(range, quantity) ? lineTotalHT(range, quantity) + " HT" : "Sur devis"}
                               </strong>
                             </div>
                           </div>
@@ -830,6 +846,9 @@ export function PrivateMultiBrandOrderForm({
               <div>
                 <p className="text-xs text-[#69717d]">{priceSummaryTitle}</p>
                 <p className="mt-1 text-xl font-black text-[#0e1d31]" aria-live="polite">{priceSummaryValue}</p>
+                {priceSummary.savingsCents > 0 ? (
+                  <p className="mt-1 text-xs font-bold text-[#54705e]" aria-live="polite">Économie estimée sur les paliers : {euroHT(priceSummary.savingsCents / 100)} HT</p>
+                ) : null}
               </div>
               <span className="rounded-full bg-[#fff1e6] px-2.5 py-1 text-[10px] font-bold text-[#162a45]">B2B</span>
             </div>
@@ -840,7 +859,7 @@ export function PrivateMultiBrandOrderForm({
               {!pending && <ShoppingBag size={17} aria-hidden="true" />}
             </button>
             <p className="text-[11px] leading-5 text-[#69717d]">
-              Une demande distincte sera créée pour chaque marque. Les prix indicatifs et disponibilités seront confirmés avant validation définitive.
+              Économies calculées à quantité égale par rapport au premier palier de chaque référence, hors livraison. Une demande est créée par marque ; les prix indicatifs et disponibilités sont confirmés avant validation.
             </p>
           </div>
         </aside>
@@ -853,6 +872,7 @@ export function PrivateMultiBrandOrderForm({
               {selected.length} réf. · {quantityTotal} unité{quantityTotal > 1 ? "s" : ""}
             </p>
             <p className="truncate text-[11px] text-[#69717d]">{priceSummaryValue}</p>
+            {priceSummary.savingsCents > 0 ? <p className="truncate text-[10px] font-semibold text-[#54705e]">Économie estimée : {euroHT(priceSummary.savingsCents / 100)} HT</p> : null}
           </div>
           <a href="#panier" className="shrink-0 px-2 py-2 text-xs font-bold text-[#0e1d31] underline underline-offset-4">Panier</a>
           <button type="submit" disabled={pending || !selected.length || !valid}
