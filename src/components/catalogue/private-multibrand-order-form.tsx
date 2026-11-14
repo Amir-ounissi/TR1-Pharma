@@ -8,6 +8,7 @@ import { savePharmacyCart, sendMultiBrandCatalogueRequest } from "@/app/catalogu
 import type { ReorderRequest, SavedCartLine } from "@/lib/catalogue-buyer-workspace";
 import type { CatalogProduct } from "@/lib/private-catalogue";
 import type { PharmacyProductWithVisuals } from "@/lib/catalogue-private-product-visuals";
+import type { CommercialContext, CommercialQuantityGroup } from "@/lib/catalogue-commercial";
 import { euroHT, indicativeRange, isAllowedQuantity } from "@/lib/private-catalogue-format";
 
 export type PrivateMultiBrandProduct = PharmacyProductWithVisuals;
@@ -108,6 +109,7 @@ export function PrivateMultiBrandOrderForm({
   initialCartLines = [],
   reorderHistory = [],
   initialReorderId,
+  commercialConditions,
 }: {
   products: PrivateMultiBrandProduct[];
   initialBrandSlug?: string;
@@ -115,6 +117,7 @@ export function PrivateMultiBrandOrderForm({
   initialCartLines?: SavedCartLine[];
   reorderHistory?: ReorderRequest[];
   initialReorderId?: string;
+  commercialConditions: CommercialContext;
 }) {
   const [state, action, pending] = useActionState(sendMultiBrandCatalogueRequest, { error: "" });
   const [quantities, setQuantities] = useState<Record<string, number>>(() => {
@@ -149,6 +152,44 @@ export function PrivateMultiBrandOrderForm({
   );
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "error">("saved");
   const [reorderMessage, setReorderMessage] = useState("");
+
+  // Le nombre total d'une collection mutualisée (ex. cinq masques Biodance)
+  // détermine les paliers de toutes ses références.
+  const volumeGroups = commercialConditions.quantity_groups;
+  const groupByProduct = useMemo(() => {
+    const index = new Map<string, CommercialQuantityGroup>();
+    for (const group of volumeGroups) {
+      for (const productId of group.product_ids) index.set(productId, group);
+    }
+    return index;
+  }, [volumeGroups]);
+
+  const groupTotals = useMemo(() => {
+    const totals = new Map<string, number>();
+    for (const group of volumeGroups) {
+      totals.set(group.id, group.product_ids.reduce(
+        (total, id) => total + (quantities[id] ?? 0), 0
+      ));
+    }
+    return totals;
+  }, [volumeGroups, quantities]);
+
+  const effectiveTierQuantity = (product: PrivateMultiBrandProduct, quantity: number) => {
+    const group = groupByProduct.get(product.id);
+    if (!group) return quantity;
+    return Math.max(group.minimum_total_units, groupTotals.get(group.id) ?? 0);
+  };
+  const groupErrors = volumeGroups.flatMap((group) => {
+    const total = groupTotals.get(group.id) ?? 0;
+    if (!total) return [];
+    if (total < group.minimum_total_units) {
+      return [`${group.name} : encore ${group.minimum_total_units - total} unité(s) pour atteindre le minimum de ${group.minimum_total_units}.`];
+    }
+    if (total % group.quantity_multiple !== 0) {
+      return [`${group.name} : ${total} masques sélectionnés, le total doit être un multiple de ${group.quantity_multiple}.`];
+    }
+    return [];
+  });
   const didMount = useRef(false);
 
   // Persistance cote serveur entre les pages, appareils et sessions.
@@ -199,11 +240,12 @@ export function PrivateMultiBrandOrderForm({
         : a.brand_name.localeCompare(b.brand_name, "fr") || a.name.localeCompare(b.name, "fr"));
   }, [products, query, brandFilter, sort]);
 
-  const valid = selected.every((product) =>
+  const valid = groupErrors.length === 0 && selected.every((product) =>
     isAllowedQuantity(quantities[product.id], product.min_quantity),
   );
   const allContractual = selected.length > 0 && selected.every((product) => {
-    const tier = findTierForQuantity(product.pricing.tiers, quantities[product.id]);
+    const tier = findTierForQuantity(product.pricing.tiers,
+      effectiveTierQuantity(product, quantities[product.id]));
     return product.pricing.mode === "contractual" && tier !== null && "price_ht" in tier;
   });
 
@@ -214,7 +256,8 @@ export function PrivateMultiBrandOrderForm({
     let priced = 0;
     for (const product of selected) {
       const quantity = quantities[product.id] ?? 0;
-      const tier = findTierForQuantity(product.pricing.tiers, quantity);
+      const tier = findTierForQuantity(product.pricing.tiers,
+        effectiveTierQuantity(product, quantity));
       const range = priceRangeForTier(tier);
       if (!range) {
         unpriced += 1;
@@ -435,8 +478,8 @@ export function PrivateMultiBrandOrderForm({
                 {visible.map((product) => {
                   const quantity = quantities[product.id] ?? 0;
                   const referenceQuantity = quantity || product.min_quantity;
-                  const tier = findTierForQuantity(product.pricing.tiers, referenceQuantity);
-                  const nextTier = nextTierForQuantity(product.pricing.tiers, referenceQuantity);
+                  const tier = findTierForQuantity(product.pricing.tiers, effectiveTierQuantity(product, referenceQuantity));
+                  const nextTier = nextTierForQuantity(product.pricing.tiers, effectiveTierQuantity(product, referenceQuantity));
                   const nextRange = priceRangeForTier(nextTier);
                   const price = product.pricing.mode === "contractual" && tier && "price_ht" in tier
                     ? euroHT(tier.price_ht) + " HT / unité"
@@ -472,7 +515,7 @@ export function PrivateMultiBrandOrderForm({
                               </p>
                               <p className="mt-1 text-sm font-black leading-5 text-[#0e1d31]">{price}</p>
                               <p className="mt-1 text-[10px] text-[#69717d]">
-                                {tier ? "Palier dès " + tier.min_quantity + " u." : "Tarif à confirmer"} · Min. {product.min_quantity} u.
+                                {tier ? "Palier dès " + tier.min_quantity + " u." : "Tarif à confirmer"} · {groupByProduct.has(product.id) ? "Minimum collectif " + groupByProduct.get(product.id)!.minimum_total_units + " u." : "Min. " + product.min_quantity + " u."}
                               </p>
                             </div>
                             <span className="shrink-0 rounded-md bg-[#f5f6f6] px-2 py-1 text-[9px] font-semibold text-[#69717d]">
@@ -519,8 +562,8 @@ export function PrivateMultiBrandOrderForm({
                 {visible.map((product) => {
                   const quantity = quantities[product.id] ?? 0;
                   const referenceQuantity = quantity || product.min_quantity;
-                  const tier = findTierForQuantity(product.pricing.tiers, referenceQuantity);
-                  const nextTier = nextTierForQuantity(product.pricing.tiers, referenceQuantity);
+                  const tier = findTierForQuantity(product.pricing.tiers, effectiveTierQuantity(product, referenceQuantity));
+                  const nextTier = nextTierForQuantity(product.pricing.tiers, effectiveTierQuantity(product, referenceQuantity));
                   const nextRange = priceRangeForTier(nextTier);
                   const price = product.pricing.mode === "contractual" && tier && "price_ht" in tier
                     ? euroHT(tier.price_ht) + " HT / unité"
@@ -627,7 +670,7 @@ export function PrivateMultiBrandOrderForm({
               <div className="max-h-[55vh] space-y-4 overflow-auto">
                 {selectedByBrand.map((group) => {
                   const firm = group.items.every((product) => {
-                    const tier = findTierForQuantity(product.pricing.tiers, quantities[product.id]);
+                    const tier = findTierForQuantity(product.pricing.tiers, effectiveTierQuantity(product, quantities[product.id]));
                     return product.pricing.mode === "contractual" && tier !== null && "price_ht" in tier;
                   });
                   return (
