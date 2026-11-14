@@ -4,6 +4,7 @@ import Image from "next/image";
 import { getCatalogueBrands, getCatalogueBrandForPharmacy, requirePharmacyCatalogue } from "@/lib/private-catalogue";
 import { tierForQuantity, indicativeRange, euroHT } from "@/lib/private-catalogue-format";
 import { disconnectPharmacyCatalogue } from "@/app/catalogue/actions";
+import { PublicProductGrid } from "@/components/catalogue/public-product-grid";
 
 export default async function PrivateCatalogueHome() {
   const { admin, pharmacy } = await requirePharmacyCatalogue();
@@ -30,14 +31,15 @@ export default async function PrivateCatalogueHome() {
         <div className="max-w-2xl">
           <p className="text-[11px] font-extrabold uppercase tracking-[.2em] text-[#ffa460]">Votre catalogue professionnel</p>
           <h1 className="mt-3 text-3xl font-black tracking-[-.04em] sm:text-4xl">Vos produits, vos conditions.</h1>
-          <p className="mt-4 text-sm leading-7 text-[#d5dde7]">Retrouvez les références disponibles pour votre pharmacie, consultez vos tarifs par volume et préparez vos demandes de réassort.</p>
+          <p className="mt-4 text-sm leading-7 text-[#d5dde7]">Consultez les fiches détaillées des références sélectionnées par TR1 PHARMA. Les tarifs et conditions commerciales apparaîtront dans votre espace après validation des accords.</p>
         </div>
         <Link href="/catalogue/mes-demandes" className="inline-flex min-h-11 items-center gap-2 rounded-md border border-white/30 px-4 text-sm font-bold text-white hover:bg-white/10">
           <Clock3 size={17} aria-hidden="true" /> Mes demandes <ArrowRight size={17} aria-hidden="true" />
         </Link>
       </section>
 
-      <section aria-labelledby="accessible-brands" className="space-y-4">
+      {productCount > 0 ? (
+        <section aria-labelledby="accessible-brands" className="space-y-4">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 id="accessible-brands" className="text-2xl font-black tracking-tight text-[#0e1d31]">Laboratoires</h2>
           <span className="text-xs font-semibold text-[#69717d]">{brands.length} marque{brands.length > 1 ? "s" : ""} · {productCount} référence{productCount > 1 ? "s" : ""}</span>
@@ -61,7 +63,17 @@ export default async function PrivateCatalogueHome() {
             <p className="mt-2 text-sm text-[#69717d]">Votre interlocuteur commercial vous informera dès que vos marques seront disponibles.</p>
           </div>
         )}
-      </section>
+        </section>
+      ) : (
+        <section aria-labelledby="catalogue-reference" className="space-y-5">
+          <div className="space-y-2">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-[#ad4b08]">Catalogue de référence TR1 PHARMA</p>
+            <h2 id="catalogue-reference" className="text-2xl font-black tracking-tight text-[#0e1d31]">Les fiches produits disponibles</h2>
+            <p className="max-w-3xl text-sm leading-6 text-[#69717d]">Retrouvez les 89 références Beauty of Joseon, Dr. Althea et Biodance, avec leurs visuels, informations produit et codes-barres. Les tarifs et conditions de commande ne sont pas encore activés pour ce compte de test.</p>
+          </div>
+          <PublicProductGrid />
+        </section>
+      )}
 
       {productCount > 0 ? (
         <section aria-labelledby="available-products" className="space-y-5">
@@ -109,10 +121,12 @@ export default async function PrivateCatalogueHome() {
         </section>
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-3 rounded-md border border-[#e2e7ec] bg-white p-4 text-xs text-[#69717d]">
-        <Tag size={18} className="shrink-0 text-[#515d6b]" aria-hidden="true" />
-        Les tarifs affichés sont les conditions autorisées pour votre officine. Les demandes de devis et commandes sont soumises à confirmation.
-      </div>
+      {productCount > 0 ? (
+        <div className="flex flex-wrap items-center gap-3 rounded-md border border-[#e2e7ec] bg-white p-4 text-xs text-[#69717d]">
+          <Tag size={18} className="shrink-0 text-[#515d6b]" aria-hidden="true" />
+          Les tarifs affichés sont les conditions autorisées pour votre officine. Les demandes de devis et commandes sont soumises à confirmation.
+        </div>
+      ) : null}
     </div>
   );
 }
