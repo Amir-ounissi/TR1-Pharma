@@ -24,6 +24,20 @@ function hostnameOf(rawUrl: string): string | null {
   }
 }
 
+function isVerifiedBrandAsset(rawUrl: string): boolean {
+  const host = hostnameOf(rawUrl);
+  if (host && officialPhotoHosts.has(host)) return true;
+  try {
+    const parsed = new URL(rawUrl);
+    // Shopify CDN path belonging to the official Beauty of Joseon storefront.
+    return parsed.protocol === "https:"
+      && parsed.hostname === "cdn.shopify.com"
+      && parsed.pathname.startsWith("/s/files/1/0558/4135/7989/");
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Une galerie déjà rattachée à l'EAN peut proposer une photo officielle
  * plus nette. Ne jamais sélectionner un visuel par simple similarité de nom.
@@ -32,9 +46,7 @@ export function preferredVerifiedPackshot(
   primary: string | null,
   eanMatchedGallery: readonly string[],
 ): string | null {
-  const official = eanMatchedGallery.find((url) =>
-    officialPhotoHosts.has(hostnameOf(url) ?? ""),
-  );
+  const official = eanMatchedGallery.find(isVerifiedBrandAsset);
   return official ?? primary ?? eanMatchedGallery[0] ?? null;
 }
 
