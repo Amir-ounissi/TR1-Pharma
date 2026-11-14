@@ -166,5 +166,49 @@ export const productPhotoByEan: Record<string, ProductPhoto> = {
   "8809968132523": {
     "url": "https://kbeautyforyou.hu/cdn/shop/files/Beauty-of-Joseon-Revive-Under-Eye-Patch-Ginseng-Retinal.jpg?v=1769418803",
     "source": "KBeauty For You"
+  },
+  "8809447255620": {
+    "url": "https://ddwonder.ua/content/images/8/1500x1500l80mc0/ochyshchuiuchyi-balzam-dlia-oblychchia-dr.-althea-pore-refresh-grinding-cleansing-balm-50-ml-61351336420749.jpg",
+    "source": "DD Wonder"
+  },
+  "8809447256658": {
+    "url": "https://au.medpak.shop/cdn/shop/files/dr-althea-retinol-flat-iron-eye-roller-25-ml-dralt658-1233039906.jpg?crop=center&height=1200&v=1776682810&width=1200",
+    "source": "Medpak"
+  },
+  "8809447256085": {
+    "url": "https://armele.lt/cdn/shop/files/Untitleddesign_34.jpg?v=1772609515&width=2000",
+    "source": "Armele"
+  },
+  "8809447256115": {
+    "url": "https://pharmazone.com/cdn/shop/files/58431-Dr.Althea345ReliefCreamMist100mLinside1.webp?v=1778568401",
+    "source": "Pharmazone"
+  },
+  "8809447256238": {
+    "url": "https://pt.medpak.shop/cdn/shop/files/dr-althea-abc-glow-whipped-serum-100-ml-dralt238-1237488943.jpg?v=1778490193&width=1214",
+    "source": "Medpak"
+  },
+  "8809447255729": {
+    "url": "https://web.tradekorea.com/product/139/2306139/%28Dr_Althea%29_Cushion_Veil_Calming_Mask_35g_2.jpg",
+    "source": "TradeKorea"
+  },
+  "8809447255743": {
+    "url": "https://skincarebyself.com/cdn/shop/files/1080x1080_2.webp?v=1778570999&width=1946",
+    "source": "Skincare by Self"
+  },
+  "8809447255040": {
+    "url": "https://cremile.com/cdn/shop/files/Dr._Althea_Niathione_Cream.png?v=1772728273",
+    "source": "Cremile"
+  },
+  "8809447255828": {
+    "url": "https://cosibella.lt/hpeciai/dcc84b4cf16b3ea94a5a3ba357efe361/lit_pl_Dr-Althea-Pro-Lab-Aqua-Glowing-Sunscreen-SPF50-PA-Drekinamasis-Kremas-nuo-Saules-45ml-25540_4.webp",
+    "source": "Cosibella"
+  },
+  "8809447251998": {
+    "url": "https://assets.atida.com/transform/0450e588-93a9-4b75-8abf-f137e7304757/Dr-Althea-Marine-Anti-Blemish-Mascarilla-5-uds?io=transform%3Aextend%2Cwidth%3A600%2Cheight%3A600",
+    "source": "Atida"
+  },
+  "8809447256122": {
+    "url": "https://sk.medpak.shop/cdn/shop/files/dr-althea-345-relief-cream-mist-moisturising-face-mist-60-ml-dralt122-1207392297.jpg?v=1763550438&width=1500",
+    "source": "Medpak"
   }
 };
