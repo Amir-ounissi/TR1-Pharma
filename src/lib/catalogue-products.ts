@@ -13,15 +13,22 @@ const vkProducts: PublicCatalogueProduct[] = [
   { brand: "VK SWISS", name: "Tribulus", sku: "6467329", ean: "7629999149366", format: "30 gélules", category: "Compléments alimentaires" },
 ];
 
+// Visibilité publique des marques : les données produits restent conservées ci-dessous.
+ // Passer une marque à false la masque du catalogue public sans supprimer ses références, EAN ou visuels.
+export const catalogueBrandVisibility: Record<string, boolean> = {
+  "VK SWISS": false,
+};
+
 // Deux références dont le conditionnement ou le packshot ne sont pas cohérents avec la source
-// restent disponibles en administration mais sont écartées de la galerie publique.
+// restent disponibles dans les données mais sont écartées de la galerie publique.
 const pendingVisualAudit = new Set(["8809968132714"]);
 export const publicCatalogueProducts: PublicCatalogueProduct[] = [
   ...publicPreviewProducts.filter((p) =>
+    catalogueBrandVisibility[p.brand] !== false &&
     !pendingVisualAudit.has(p.ean) &&
     !(p.brand === "Biodance" && p.name === "Caviar PDRN Dual Gel Toner Pads")
   ),
-  ...vkProducts,
+  ...vkProducts.filter((p) => catalogueBrandVisibility[p.brand] !== false),
 ];
 
 function slug(value: string) {
