@@ -29,7 +29,7 @@ type DisplayPrice =
   | { kind: "none" };
 
 const MAX_FILE_SIZE = 8 * 1024 * 1024;
-const MAX_ROWS = 20000;
+const MAX_ROWS = 5000;
 
 function decodeCsvFile(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
@@ -154,6 +154,9 @@ export function PharmacyPurchaseComparator({
     brand_name: product.brand_name,
     ean: product.ean,
     format: product.format,
+    normalizedName: normalizeCsvText(product.name),
+    normalizedBrand: normalizeCsvText(product.brand_name),
+    normalizedFormat: normalizeCsvFormat(product.format),
   })), [products]);
 
   const summary = useMemo(() => {
@@ -199,7 +202,7 @@ export function PharmacyPurchaseComparator({
       const content = decodeCsvFile(await file.arrayBuffer());
       const result = parseCsvContent(content);
       if (result.rows.length > MAX_ROWS) {
-        throw new Error("Le fichier contient plus de 20 000 lignes. Fractionnez votre export pour conserver une comparaison fluide.");
+        throw new Error("Le fichier contient plus de 5 000 lignes. Fractionnez votre export pour conserver une comparaison fiable et fluide.");
       }
       setFileName(file.name);
       setParsed(result);
@@ -319,7 +322,7 @@ export function PharmacyPurchaseComparator({
           </div>
           <div>
             <h2 className="text-lg font-extrabold text-[#142941]">1. Importer le catalogue de votre pharmacie</h2>
-            <p className="mt-1 text-xs text-[#69717d]">Format CSV · 8 Mo maximum · 20 000 lignes maximum</p>
+            <p className="mt-1 text-xs text-[#69717d]">Format CSV · 8 Mo maximum · 5 000 lignes maximum</p>
           </div>
         </div>
 
