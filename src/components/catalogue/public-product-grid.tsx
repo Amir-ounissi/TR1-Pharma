@@ -126,10 +126,16 @@ export function PublicProductGrid({ privateProducts }: { privateProducts?: Priva
     <section id="produits" aria-labelledby="public-products" className="space-y-7">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-[.17em] text-[#b3683e]">Les collections TR1</p>
-          <h2 id="public-products" className="mt-2 text-3xl font-black tracking-[-.045em] text-[#0e1d31] sm:text-[38px]">Explorez les marques.</h2>
+          <p className="text-[11px] font-bold uppercase tracking-[.17em] text-[#b3683e]">
+            {privateMode ? "Commande professionnelle" : "Les collections TR1"}
+          </p>
+          <h2 id="public-products" className="mt-2 text-3xl font-black tracking-[-.045em] text-[#0e1d31] sm:text-[38px]">
+            {privateMode ? "Commandez vos références." : "Explorez les marques."}
+          </h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[#66717d]">
-            Parcourez les fiches produits pour découvrir les bénéfices, les actifs, les conseils d’utilisation et les compositions des soins sélectionnés.
+            {privateMode
+              ? "Recherchez par nom, référence ou EAN. Consultez votre tarif et préparez directement votre réassort."
+              : "Parcourez les fiches produits pour découvrir les bénéfices, les actifs, les conseils d’utilisation et les compositions des soins sélectionnés."}
           </p>
         </div>
         <span className="rounded-full border border-[#e2e7ec] bg-white px-3.5 py-2 text-xs font-bold text-[#5d6b77]">{catalogueProducts.length} références · {catalogueProducts.filter((p) => !!publicProductImage(p)).length} photos</span>
