@@ -83,5 +83,25 @@ describe("catalogue CSV comparison helpers", () => {
       ean: null,
       format: "30 ml",
     }, products)).toMatchObject({ productId: null, suggestedProductId: "p1", method: "suggested" });
+
+    expect(findProductMatch({
+      name: "Relief Sun Rice Probiotics SPF50",
+      brand: "Beauty of Joseon",
+      ean: null,
+      format: "50ml",
+    }, products)).toMatchObject({ productId: "p1", method: "exact" });
+  });
+
+  it("does not auto-select an ambiguous exact product name", () => {
+    const products = [
+      { id: "p1", name: "Magnésium", brand_name: "Marque A", ean: null, format: "30 gélules" },
+      { id: "p2", name: "Magnésium", brand_name: "Marque B", ean: null, format: "30 gélules" },
+    ];
+    expect(findProductMatch({
+      name: "Magnésium",
+      brand: null,
+      ean: null,
+      format: "30 gélules",
+    }, products)).toMatchObject({ productId: null, suggestedProductId: null, method: "none" });
   });
 });
