@@ -16,8 +16,10 @@ export default async function PharmacyRequestsPage({
 }: { searchParams: Promise<{ envoyee?: string; marques?: string }> }) {
   const { envoyee, marques } = await searchParams;
   const submittedBrandCount = Math.max(1, Math.min(20, Number(marques) || 1));
-  const { pharmacy, catalog, admin } = await requirePharmacyCatalogue();
-  const workspace = await getBuyerWorkspace(admin);
+  const { pharmacy, catalog, admin, isLinkAccess } = await requirePharmacyCatalogue();
+  const workspace = isLinkAccess
+    ? { lines: [], recent_requests: [] }
+    : await getBuyerWorkspace(admin);
   const reorderable = new Set(workspace.recent_requests.map((request) => request.id));
   const recentById = new Map(workspace.recent_requests.map((request) => [request.id, request] as const));
   const requests = catalog.requests ?? [];
@@ -28,7 +30,7 @@ export default async function PharmacyRequestsPage({
       <Link href="/catalogue" className="text-sm font-semibold text-[#69717d] hover:text-[#ea7015]">← Retour au catalogue</Link>
       <div>
         <p className="text-xs font-bold uppercase tracking-[.18em] text-[#ea7015]">{pharmacy.name}</p>
-        <h1 className="mt-2 text-4xl font-black tracking-tight">Mes demandes</h1>
+        <h1 className="mt-2 text-4xl font-black tracking-tight">{isLinkAccess ? "Suivi des demandes" : "Mes demandes"}</h1>
         <p className="mt-3 text-sm text-[#69717d]">Une demande reçue ne constitue pas encore une commande confirmée par le laboratoire.</p>
       </div>
       {envoyee === "1" ? <p role="status" className="rounded-xl border border-[#4f7a58]/30 bg-[#edf7ee] p-4 text-sm font-semibold text-[#315638]">{submittedBrandCount > 1 ? `Votre panier a été réparti automatiquement en ${submittedBrandCount} demandes distinctes, une par marque.` : "Votre demande a été enregistrée et transmise à TR1 PHARMA."}</p> : null}
@@ -46,14 +48,14 @@ export default async function PharmacyRequestsPage({
                       Regroupement livraison coréenne · Lot {recentById.get(request.id)!.shipping_batch_id!.slice(0, 8).toUpperCase()} · Franco à 250 € HT remisé sur les marques cumulées, à confirmer après chiffrage.
                     </p>
                   ) : null}
-                  {recentById.get(request.id)?.items?.length ? (
+                  {(recentById.get(request.id)?.items ?? request.items ?? []).length ? (
                     <details className="mt-3 rounded-lg border border-[#e5e9eb] bg-[#faf9f6] p-3">
                       <summary className="cursor-pointer text-xs font-bold text-[#142941]">
-                        Voir les {recentById.get(request.id)!.items.length} références de la demande
+                        Voir {(recentById.get(request.id)?.items ?? request.items ?? []).length} références de la demande
                       </summary>
                       <ul className="mt-2 space-y-1 text-xs text-[#526071]">
-                        {recentById.get(request.id)!.items.map((line) => (
-                          <li key={line.product_id}>{line.name} · {line.quantity} unité{line.quantity > 1 ? "s" : ""}</li>
+                        {(recentById.get(request.id)?.items ?? request.items ?? []).map((line, index) => (
+                          <li key={(line.product_id ?? "ligne") + "-" + index}>{line.name} · {line.quantity} unité{line.quantity > 1 ? "s" : ""}</li>
                         ))}
                       </ul>
                     </details>
