@@ -1,0 +1,239 @@
+export type ParsedCsvContent = {
+  headers: string[];
+  rows: string[][];
+  delimiter: string;
+};
+
+export type MatchableProduct = {
+  id: string;
+  name: string;
+  brand_name: string;
+  ean: string | null;
+};
+
+export type ProductMatch = {
+  productId: string | null;
+  suggestedProductId: string | null;
+  method: "ean" | "exact" | "suggested" | "none";
+};
+
+export type PharmacyCsvRecord = {
+  id: string;
+  lineNumber: number;
+  name: string;
+  brand: string | null;
+  ean: string | null;
+  purchasePriceHt: number | null;
+};
+
+export type CsvColumnMapping = {
+  name: number | null;
+  price: number | null;
+  ean: number | null;
+  brand: number | null;
+};
+
+export function detectCsvDelimiter(input: string): string {
+  const candidates = [";", ",", "\t"];
+  const sample = input.split(/\r?\n/).slice(0, 8).join("\n");
+  const counts = candidates.map((delimiter) => {
+    let count = 0;
+    let quoted = false;
+    for (let index = 0; index < sample.length; index += 1) {
+      const char = sample[index];
+      if (char === '"') {
+        if (quoted && sample[index + 1] === '"') index += 1;
+        else quoted = !quoted;
+      } else if (!quoted && char === delimiter) {
+        count += 1;
+      }
+    }
+    return { delimiter, count };
+  });
+  return counts.sort((a, b) => b.count - a.count)[0]?.count
+    ? counts.sort((a, b) => b.count - a.count)[0].delimiter
+    : ";";
+}
+
+export function parseCsvContent(input: string): ParsedCsvContent {
+  const source = input.replace(/^\uFEFF/, "");
+  const delimiter = detectCsvDelimiter(source);
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = "";
+  let quoted = false;
+
+  for (let index = 0; index < source.length; index += 1) {
+    const char = source[index];
+    if (char === '"') {
+      if (quoted && source[index + 1] === '"') {
+        field += '"';
+        index += 1;
+      } else {
+        quoted = !quoted;
+      }
+    } else if (!quoted && char === delimiter) {
+      row.push(field);
+      field = "";
+    } else if (!quoted && (char === "\n" || char === "\r")) {
+      row.push(field);
+      if (row.some((cell) => cell.trim() !== "")) rows.push(row);
+      row = [];
+      field = "";
+      if (char === "\r" && source[index + 1] === "\n") index += 1;
+    } else {
+      field += char;
+    }
+  }
+
+  row.push(field);
+  if (row.some((cell) => cell.trim() !== "")) rows.push(row);
+
+  if (rows.length < 2) {
+    throw new Error("Le fichier doit contenir une ligne d’en-têtes et au moins une ligne de produits.");
+  }
+
+  const headers = rows[0].map((value) => value.trim());
+  if (headers.length < 2 || headers.every((header) => !header)) {
+    throw new Error("Les en-têtes de colonnes sont introuvables.");
+  }
+
+  return {
+    headers,
+    rows: rows.slice(1).map((cells) => headers.map((_, index) => (cells[index] ?? "").trim())),
+    delimiter,
+  };
+}
+
+export function normalizeCsvText(value: string): string {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+export function normalizeEan(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const digits = value.replace(/[^0-9]/g, "");
+  return digits.length >= 8 && digits.length <= 14 ? digits : null;
+}
+
+export function parseFrenchAmount(value: string | null | undefined): number | null {
+  if (!value) return null;
+  let cleaned = value.replace(/[\s\u00a0\u202f€]/g, "").replace(/[^0-9,.-]/g, "");
+  if (!cleaned || !/[0-9]/.test(cleaned)) return null;
+
+  const comma = cleaned.lastIndexOf(",");
+  const dot = cleaned.lastIndexOf(".");
+  if (comma >= 0 && dot >= 0) {
+    cleaned = comma > dot
+      ? cleaned.replace(/\./g, "").replace(",", ".")
+      : cleaned.replace(/,/g, "");
+  } else if (comma >= 0) {
+    cleaned = cleaned.replace(",", ".");
+  }
+
+  const parsed = Number(cleaned);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
+const HEADER_PATTERNS: Record<keyof CsvColumnMapping, string[]> = {
+  name: ["designation", "libelle", "nom produit", "nom article", "produit", "article"],
+  price: ["prix achat ht", "prix d achat ht", "prix achat net", "prix net achat", "pamp ht", "pamp", "cout achat ht", "cout unitaire ht", "prix achat"],
+  ean: ["ean", "gtin", "code barre", "codebarre", "cip13", "cip 13", "code ean"],
+  brand: ["marque", "laboratoire", "brand"],
+};
+
+export function detectCsvColumn(
+  headers: string[],
+  kind: keyof CsvColumnMapping,
+): number | null {
+  const normalized = headers.map(normalizeCsvText);
+  const patterns = HEADER_PATTERNS[kind].map(normalizeCsvText);
+  const exact = normalized.findIndex((header) => patterns.includes(header));
+  if (exact >= 0) return exact;
+  const partial = normalized.findIndex((header) => patterns.some((pattern) => header.includes(pattern)));
+  return partial >= 0 ? partial : null;
+}
+
+export function buildPharmacyCsvRecords(
+  rows: string[][],
+  mapping: CsvColumnMapping,
+): PharmacyCsvRecord[] {
+  if (mapping.name === null || mapping.price === null) return [];
+  return rows.flatMap((cells, index) => {
+    const name = (cells[mapping.name!] ?? "").trim();
+    if (!name) return [];
+    const brand = mapping.brand === null ? "" : (cells[mapping.brand] ?? "").trim();
+    const ean = mapping.ean === null ? null : normalizeEan(cells[mapping.ean] ?? "");
+    const purchasePriceHt = parseFrenchAmount(cells[mapping.price] ?? "");
+    return [{
+      id: "csv-row-" + (index + 2),
+      lineNumber: index + 2,
+      name,
+      brand: brand || null,
+      ean,
+      purchasePriceHt,
+    }];
+  });
+}
+
+function levenshteinSimilarity(left: string, right: string): number {
+  if (left === right) return 1;
+  if (!left || !right) return 0;
+  const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+  for (let i = 1; i <= left.length; i += 1) {
+    let diagonal = previous[0];
+    previous[0] = i;
+    for (let j = 1; j <= right.length; j += 1) {
+      const above = previous[j];
+      const cost = left[i - 1] === right[j - 1] ? 0 : 1;
+      previous[j] = Math.min(previous[j] + 1, previous[j - 1] + 1, diagonal + cost);
+      diagonal = above;
+    }
+  }
+  return 1 - previous[right.length] / Math.max(left.length, right.length);
+}
+
+function tokenSimilarity(left: string, right: string): number {
+  const leftTokens = new Set(left.split(" ").filter((token) => token.length > 1));
+  const rightTokens = new Set(right.split(" ").filter((token) => token.length > 1));
+  if (!leftTokens.size || !rightTokens.size) return 0;
+  let common = 0;
+  for (const token of leftTokens) if (rightTokens.has(token)) common += 1;
+  return (2 * common) / (leftTokens.size + rightTokens.size);
+}
+
+export function findProductMatch(
+  record: Pick<PharmacyCsvRecord, "name" | "brand" | "ean">,
+  products: MatchableProduct[],
+): ProductMatch {
+  if (record.ean) {
+    const eanMatches = products.filter((product) => normalizeEan(product.ean) === record.ean);
+    if (eanMatches.length === 1) {
+      return { productId: eanMatches[0].id, suggestedProductId: null, method: "ean" };
+    }
+  }
+
+  const name = normalizeCsvText(record.name);
+  const brand = record.brand ? normalizeCsvText(record.brand) : null;
+  if (!name) return { productId: null, suggestedProductId: null, method: "none" };
+
+  const candidates = products
+    .filter((product) => !brand || normalizeCsvText(product.brand_name) === brand)
+    .map((product) => {
+      const productName = normalizeCsvText(product.name);
+      const score = (levenshteinSimilarity(name, productName) * 0.55)
+        + (tokenSimilarity(name, productName) * 0.45);
+      return { product, score, exact: name === productName };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  const best = candidates[0];
+  if (!best) return { productId: null, suggestedProductId: null, method: "none" };
+  if (best.exact) {
+    return { productId: best.product.id, suggestedProductId: null, method: "exact" };
+  }
+  if (best.score >= 0.86) {
+    return { productId: null, suggestedProductId: best.product.id, method: "suggested" };
+  }
+  return { productId: null, suggestedProductId: null, method: "none" };
+}
