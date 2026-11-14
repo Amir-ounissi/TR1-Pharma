@@ -10,6 +10,7 @@ import type { CatalogProduct } from "@/lib/private-catalogue";
 import type { PharmacyProductWithVisuals } from "@/lib/catalogue-private-product-visuals";
 import type { CommercialContext, CommercialQuantityGroup } from "@/lib/catalogue-commercial";
 import { euroHT, indicativeRange, isAllowedQuantity, tierSavingsCents, nextTierDiscountCents } from "@/lib/private-catalogue-format";
+import { KOREAN_FRANCO, koreanFrancoProgress } from "@/lib/catalogue-shipping";
 
 export type PrivateMultiBrandProduct = PharmacyProductWithVisuals;
 
@@ -431,7 +432,22 @@ export function PrivateMultiBrandOrderForm({
     return { minCents, maxCents, unpriced, priced, savingsCents };
   }, [selected, quantities]);
 
+  // Franco HT remisé calculé sur les trois marques coréennes uniquement.
+  const koreanFranco = useMemo(() => koreanFrancoProgress(selected.map((product) => {
+    const quantity = quantities[product.id] ?? 0;
+    const tier = findTierForQuantity(product.pricing.tiers, effectiveTierQuantity(product, quantity));
+    const range = priceRangeForTier(tier);
+    return {
+      brandSlug: product.brand_slug,
+      quantity,
+      unitPriceMinCents: range ? Math.round(range.min * 100) : null,
+      unitPriceMaxCents: range ? Math.round(range.max * 100) : null,
+    };
+  })), [selected, quantities, groupTotals]);
+
+
   const selectedByBrand = useMemo(() => {
+
     const groups = new Map<string, { brandName: string; items: PrivateMultiBrandProduct[] }>();
     for (const product of selected) {
       const group = groups.get(product.brand_slug) ?? {
@@ -504,6 +520,9 @@ export function PrivateMultiBrandOrderForm({
           <div>
             <p className="text-[10px] font-extrabold uppercase tracking-[.14em] text-[#ad4b08]">Votre approvisionnement</p>
             <h2 className="mt-1 text-xl font-black tracking-tight text-[#142941]">Réassort express ou catalogue</h2>
+            <p className="mt-2 text-xs font-bold text-[#476b55]">
+              Franco dès 250 € HT remisé sur le panier cumulé Biodance, Beauty of Joseon et Dr. Althea.
+            </p>
             <p className="mt-1 text-xs text-[#69717d]">
               {saveStatus === "saving" ? "Enregistrement automatique du panier…" :
                 saveStatus === "error" ? "La sauvegarde a échoué. Vérifiez votre connexion." :
@@ -872,6 +891,33 @@ export function PrivateMultiBrandOrderForm({
             {selected.length ? (
               <section className="space-y-2 rounded-xl border border-[#dce3ea] bg-[#f9faf9] p-3" aria-label="Conditions commerciales du panier">
                 <h3 className="text-xs font-black text-[#142941]">Conditions commerciales</h3>
+                {koreanFranco.productCount > 0 ? (
+                  <div className="space-y-2 rounded-lg border border-[#c8d9ce] bg-white p-3" aria-label="Franco multimarque coréen">
+                    <p className="text-xs font-extrabold text-[#21462d]">Franco multimarque · 250 € HT remisé</p>
+                    <p className="text-[11px] text-[#50645b]">Biodance + Beauty of Joseon + Dr. Althea : quantités et montants cumulés pour le franco, après application des paliers propres à chaque référence.</p>
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-bold text-[#142941]">
+                      <span>Sous-total coréen estimé HT remisé</span>
+                      <span className="text-right">{formatPriceRange(koreanFranco.totalMinCents / 100, koreanFranco.totalMaxCents / 100)} / 250,00 €</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-[#e7ebdf]" role="progressbar"
+                      aria-label="Progression vers le franco coréen"
+                      aria-valuemin={0} aria-valuemax={250}
+                      aria-valuenow={Math.min(250, Math.max(0, koreanFranco.totalMinCents / 100))}>
+                      <div className="h-full rounded-full bg-[#5a8a67] transition-all"
+                        style={{ width: Math.min(100, koreanFranco.totalMinCents / KOREAN_FRANCO.thresholdCents * 100) + "%" }} />
+                    </div>
+                    {koreanFranco.status === "reached" ? (
+                      <p className="text-[11px] font-extrabold text-[#315c3f]">Seuil atteint sur estimation · franco confirmé après vérification des prix définitifs.</p>
+                    ) : koreanFranco.status === "below" ? (
+                      <p className="text-[11px] font-bold text-[#a35214]">
+                        Encore {formatPriceRange((koreanFranco.missingMinCents ?? 0) / 100, (koreanFranco.missingMaxCents ?? 0) / 100)} HT remisé pour le franco.
+                      </p>
+                    ) : (
+                      <p className="text-[11px] font-bold text-[#a35214]">Franco à confirmer : certains tarifs sont absents ou variables.</p>
+                    )}
+                    <p className="text-[10px] text-[#637268]">Sous 250 € HT remisé, frais de livraison à confirmer. Les autres marques sont exclues de ce seuil.</p>
+                  </div>
+                ) : null}
                 {volumeGroups.filter((group) => (groupTotals.get(group.id) ?? 0)>0).map((group) => {
                   const total = groupTotals.get(group.id) ?? 0;
                   const nextTier = [...new Set(group.product_ids.flatMap((productId) =>
@@ -903,7 +949,7 @@ export function PrivateMultiBrandOrderForm({
                   </div>
                 ))}
                 {supplierSummaries.length === 0 ? (
-                  <p className="text-[11px] text-[#69717d]">Livraison, franco et unités gratuites : conditions fournisseurs à confirmer. Aucune offre non vérifiée n'est appliquée.</p>
+                  <p className="text-[11px] text-[#69717d]">Autres conditions fournisseurs et gratuités à confirmer. Le franco multimarque coréen s’applique dès 250 € HT remisé.</p>
                 ) : null}
                 {[...groupErrors,...supplierErrors].map((message) => (
                   <p key={message} role="alert" className="rounded-md bg-[#fff1e6] p-2 text-[11px] font-bold text-[#8c4212]">{message}</p>
@@ -928,7 +974,7 @@ export function PrivateMultiBrandOrderForm({
               {!pending && <ShoppingBag size={17} aria-hidden="true" />}
             </button>
             <p className="text-[11px] leading-5 text-[#69717d]">
-              Économies calculées à quantité égale par rapport au premier palier de chaque référence, hors livraison. Une demande est créée par marque ; les prix indicatifs et disponibilités sont confirmés avant validation.
+              Économies calculées à quantité égale par rapport au premier palier. Franco multimarque dès 250 € HT remisé pour Biodance, Beauty of Joseon et Dr. Althea réunies. Une demande est créée par marque ; prix définitifs et éventuels frais de port confirmés avant validation.
             </p>
           </div>
         </aside>
