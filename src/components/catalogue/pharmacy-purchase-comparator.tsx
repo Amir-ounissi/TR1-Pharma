@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { type ChangeEvent, useMemo, useState } from "react";
 import Link from "next/link";
 import { AlertCircle, ArrowLeft, CheckCircle2, FileSpreadsheet, Info, RefreshCw, ShieldCheck, UploadCloud } from "lucide-react";
 import type { PharmacyProductWithVisuals } from "@/lib/catalogue-private-product-visuals";
@@ -150,11 +150,11 @@ export function PharmacyPurchaseComparator({
     const matched = lines.filter((line) => line.productId !== null);
     const exact = matched.filter((line) => {
       const product = products.find((item) => item.id === line.productId);
-      return product?.pricing.mode === "contractual";
+      return product ? getDisplayPrice(product, quantityGroups).kind === "contractual" : false;
     });
     const indicative = matched.filter((line) => {
       const product = products.find((item) => item.id === line.productId);
-      return product?.pricing.mode === "indicative";
+      return product ? getDisplayPrice(product, quantityGroups).kind === "indicative" : false;
     });
     const cheaper = exact.filter((line) => {
       const product = products.find((item) => item.id === line.productId);
@@ -172,7 +172,7 @@ export function PharmacyPurchaseComparator({
     };
   }, [lines, products, quantityGroups]);
 
-  async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
     setError("");
