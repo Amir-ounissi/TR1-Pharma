@@ -9,7 +9,7 @@ import type { ReorderRequest, SavedCartLine } from "@/lib/catalogue-buyer-worksp
 import type { CatalogProduct } from "@/lib/private-catalogue";
 import type { PharmacyProductWithVisuals } from "@/lib/catalogue-private-product-visuals";
 import type { CommercialContext, CommercialQuantityGroup } from "@/lib/catalogue-commercial";
-import { euroHT, indicativeRange, isAllowedQuantity, tierSavingsCents, nextTierDiscountCents, firstOrderQuantity, steppedOrderQuantity, collectiveTierTopUp } from "@/lib/private-catalogue-format";
+import { euroHT, indicativeRange, isAllowedQuantity, tierSavingsCents, nextTierDiscountCents, firstOrderQuantity, steppedOrderQuantity, collectiveTierTopUp, catalogueQuantityPricingLabel } from "@/lib/private-catalogue-format";
 import { KOREAN_FRANCO, koreanFrancoProgress } from "@/lib/catalogue-shipping";
 
 export type PrivateMultiBrandProduct = PharmacyProductWithVisuals;
@@ -640,7 +640,7 @@ export function PrivateMultiBrandOrderForm({
           <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-[#69717d]">
             <div>
               <p className="font-semibold">{visible.length} références affichées · {selected.length} sélectionnées · 40 maximum</p>
-              <p className="mt-1">Tarifs HT · Minimum par référence</p>
+              <p className="mt-1">Tarifs HT · Conditionnement et paliers selon chaque marque</p>
             </div>
             <div role="group" aria-label="Mode d'affichage des produits"
               className="inline-flex items-center rounded-lg border border-[#dce3ea] bg-white p-1">
@@ -672,6 +672,10 @@ export function PrivateMultiBrandOrderForm({
                   const price = product.pricing.mode === "contractual" && tier && "price_ht" in tier
                     ? euroHT(tier.price_ht) + " HT / unité"
                     : indicativeRange(tier && "price_min_ht" in tier ? tier : null);
+                   const quantityPricingLabel = catalogueQuantityPricingLabel(
+                     product.min_quantity, product.quantity_step, tier?.min_quantity ?? null,
+                     groupByProduct.get(product.id),
+                   );
 
                   return (
                     <article key={product.id}
@@ -710,7 +714,7 @@ export function PrivateMultiBrandOrderForm({
                               </p>
                               <p className="mt-1 text-sm font-black leading-5 text-[#0e1d31]">{price}</p>
                               <p className="mt-1 text-[10px] text-[#69717d]">
-                                {tier ? "Palier dès " + tier.min_quantity + " u." : "Tarif à confirmer"} · {groupByProduct.has(product.id) ? "Minimum collectif " + groupByProduct.get(product.id)!.minimum_total_units + " u." : "Min. " + product.min_quantity + " u."}
+                                {quantityPricingLabel}
                               </p>
                               {lineTotal ? <p className="mt-1 text-[11px] font-bold text-[#142941]">Total ligne : {lineTotal} HT</p> : null}
                             </div>
@@ -759,6 +763,10 @@ export function PrivateMultiBrandOrderForm({
                   const price = product.pricing.mode === "contractual" && tier && "price_ht" in tier
                     ? euroHT(tier.price_ht) + " HT / unité"
                     : indicativeRange(tier && "price_min_ht" in tier ? tier : null);
+                   const quantityPricingLabel = catalogueQuantityPricingLabel(
+                     product.min_quantity, product.quantity_step, tier?.min_quantity ?? null,
+                     groupByProduct.get(product.id),
+                   );
 
                   return (
                     <article key={product.id}
@@ -777,7 +785,7 @@ export function PrivateMultiBrandOrderForm({
                           {product.format || "Format non renseigné"} · Réf. {product.sku}
                         </p>
                         <p className="break-all text-[9px] leading-4 text-[#89939b]">
-                          {product.ean ? "EAN " + product.ean + " · " : ""}{groupByProduct.has(product.id) ? "Minimum groupe "+groupByProduct.get(product.id)!.minimum_total_units+" u." : "Min. "+product.min_quantity+" u."} · TVA {product.vat_rate} %
+                          {product.ean ? "EAN " + product.ean + " · " : ""}TVA {product.vat_rate} %
                         </p>
                         {product.product_detail_href ? (
                           <Link href={product.product_detail_href}
@@ -800,7 +808,7 @@ export function PrivateMultiBrandOrderForm({
                             {product.pricing.mode === "contractual" ? "Votre tarif HT" : "Prix indicatif HT"}
                           </p>
                           <p className="mt-0.5 text-xs font-black text-[#0e1d31]">{price}</p>
-                          {tier ? <p className="mt-0.5 text-[9px] text-[#69717d]">Palier dès {tier.min_quantity} u.</p> : null}
+                          <p className="mt-0.5 text-[10px] leading-4 text-[#69717d]">{quantityPricingLabel}</p>
                           {lineTotal ? <p className="mt-1 text-[10px] font-bold text-[#142941]">Total : {lineTotal} HT</p> : null}
                         </div>
                       </div>
