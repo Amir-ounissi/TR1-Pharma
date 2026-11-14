@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Building2, Clock3 } from "lucide-react";
 import { getCatalogueBrands, getCatalogueBrandForPharmacy, requirePharmacyCatalogue } from "@/lib/private-catalogue";
 import { disconnectPharmacyCatalogue } from "@/app/catalogue/actions";
-import { PublicProductGrid } from "@/components/catalogue/public-product-grid";
+import { PrivateMultiBrandOrderForm } from "@/components/catalogue/private-multibrand-order-form";
 import { Tr1BrandLogo } from "@/components/brand/tr1-brand-logo";
 
 export default async function PrivateCatalogueHome() {
@@ -12,14 +12,10 @@ export default async function PrivateCatalogueHome() {
     const result = await getCatalogueBrandForPharmacy(pharmacy.id, brand.slug, admin);
     return { brand, products: result.products };
   }));
-  const privateProducts = groups.flatMap(({ brand, products }) => products.map((product) => ({
-    id: product.id,
-    brandSlug: brand.slug,
-    name: product.name,
-    ean: product.ean,
-    min_quantity: product.min_quantity,
-    vat_rate: product.vat_rate,
-    pricing: product.pricing,
+  const orderProducts = groups.flatMap(({ brand, products }) => products.map((product) => ({
+    ...product,
+    brand_slug: brand.slug,
+    brand_name: brand.name,
   })));
 
   return (
@@ -45,7 +41,7 @@ export default async function PrivateCatalogueHome() {
             Préparez votre réassort en quelques clics.
           </h1>
           <p className="mt-5 max-w-xl text-sm leading-7 text-[#d5dde7] sm:text-base">
-            Vos références, tarifs HT et paliers de commande sont réunis au même endroit. Recherchez, ajoutez au panier et transmettez votre demande.
+            Vos références et tarifs HT sont réunis dans un seul panier. Mélangez plusieurs marques, puis transmettez votre sélection en une fois.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <Link href="#produits" className="shop-primary-action inline-flex min-h-12 items-center gap-2 px-5 text-sm">
@@ -62,7 +58,7 @@ export default async function PrivateCatalogueHome() {
         </div>
       </section>
 
-      <PublicProductGrid privateProducts={privateProducts} />
+      <PrivateMultiBrandOrderForm products={orderProducts} />
     </div>
   );
 }
