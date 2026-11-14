@@ -17,6 +17,8 @@ export default async function PharmacyBrandPage({
   const { admin, pharmacy } = await requirePharmacyCatalogue();
   const commercialConditions = await getCommercialContext(admin);
   const workspace = await getBuyerWorkspace(admin);
+  const { data: favoriteIds, error: favoritesError } = await admin.rpc("catalogue_my_favorites");
+  if (favoritesError) throw favoritesError;
   const { brand, products } = await getCatalogueBrandForPharmacy(pharmacy.id, slug, admin);
   const accessibleBrands = await getCatalogueBrands(pharmacy.id, admin);
   const otherGroups = await Promise.all(accessibleBrands
@@ -60,7 +62,7 @@ export default async function PharmacyBrandPage({
           <ShoppingBag size={16} aria-hidden="true" /> Mes demandes
         </Link>
       </div>
-      <div id="produits"><PrivateMultiBrandOrderForm key={brand.slug} products={orderProducts} commercialConditions={commercialConditions} initialBrandSlug={brand.slug} initialProductId={produit} initialCartLines={workspace.lines} reorderHistory={workspace.recent_requests} /></div>
+      <div id="produits"><PrivateMultiBrandOrderForm key={brand.slug} products={orderProducts} commercialConditions={commercialConditions} initialFavoriteIds={(favoriteIds ?? []) as string[]} initialBrandSlug={brand.slug} initialProductId={produit} initialCartLines={workspace.lines} reorderHistory={workspace.recent_requests} /></div>
     </div>
   );
 }
