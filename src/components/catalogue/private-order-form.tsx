@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Minus, Package, Plus, Search, ShoppingBag, ShoppingCart, SlidersHorizontal, Trash2 } from "lucide-react";
 import { sendPrivateCatalogueRequest } from "@/app/catalogue/actions";
 import type { CatalogProduct } from "@/lib/private-catalogue";
-import { euroHT, indicativeRange, isAllowedQuantity, tierForQuantity } from "@/lib/private-catalogue-format";
+import { euroHT, indicativeRange, isAllowedQuantity, tierForQuantity, firstOrderQuantity, steppedOrderQuantity } from "@/lib/private-catalogue-format";
 
 type ProductTier = CatalogProduct["pricing"]["tiers"][number];
 function priceRangeForTier(tier: ProductTier | null) {
@@ -43,7 +43,7 @@ export function PrivateOrderForm({
   const [state, action, pending] = useActionState(sendPrivateCatalogueRequest, { error: "" });
   const [quantities, setQuantities] = useState<Record<string, number>>(() => {
     const target = products.find((product) => product.id === initialProductId);
-    return target ? { [target.id]: target.min_quantity } : {};
+    return target ? { [target.id]: firstOrderQuantity(target.min_quantity, target.quantity_step) } : {};
   });
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("name");
@@ -56,7 +56,7 @@ export function PrivateOrderForm({
       .sort((a, b) => sort === "sku" ? a.sku.localeCompare(b.sku) : a.name.localeCompare(b.name, "fr"));
   }, [products, query, sort]);
 
-  const valid = selected.every((p) => isAllowedQuantity(quantities[p.id], p.min_quantity));
+  const valid = selected.every((p) => isAllowedQuantity(quantities[p.id], p.min_quantity, p.quantity_step));
   const allContractual = selected.length > 0 && selected.every((p) =>
     p.pricing.mode === "contractual" && tierForQuantity(p.pricing.tiers, quantities[p.id]) !== null,
   );
@@ -93,11 +93,11 @@ export function PrivateOrderForm({
   const add = (p: CatalogProduct) => {
     const current = quantities[p.id] ?? 0;
     if (current === 0 && selected.length >= 40) return;
-    setQuantity(p, current === 0 ? p.min_quantity : current + 1);
+    setQuantity(p, steppedOrderQuantity(current, p.min_quantity, p.quantity_step, 1));
   };
   const subtract = (p: CatalogProduct) => {
     const current = quantities[p.id] ?? 0;
-    setQuantity(p, current <= p.min_quantity ? 0 : current - 1);
+    setQuantity(p, steppedOrderQuantity(current, p.min_quantity, p.quantity_step, -1));
   };
 
   return (
@@ -140,7 +140,7 @@ export function PrivateOrderForm({
               const price = p.pricing.mode === "contractual"
                 ? activeTier && "price_ht" in activeTier ? euroHT(activeTier.price_ht) + " HT / unité" : "Tarif sur demande"
                 : indicativeRange(activeTier && "price_min_ht" in activeTier ? activeTier : null);
-              const selectedInvalid = qty > 0 && !isAllowedQuantity(qty, p.min_quantity);
+              const selectedInvalid = qty > 0 && !isAllowedQuantity(qty, p.min_quantity, p.quantity_step);
 
               return (
                 <article key={p.id}
@@ -186,19 +186,19 @@ export function PrivateOrderForm({
                       <button type="button" onClick={() => add(p)} disabled={maxReferencesReached}
                         className="shop-primary-action inline-flex min-h-10 w-full items-center justify-center gap-2 px-3 text-xs sm:w-auto sm:min-w-[128px] disabled:cursor-not-allowed disabled:opacity-40">
                         <Plus size={15} aria-hidden="true" /> {maxReferencesReached ? "Limite atteinte" : "Ajouter"}
-                        {!maxReferencesReached && <span className="font-medium opacity-80">· {p.min_quantity} u.</span>}
+                        {!maxReferencesReached && <span className="font-medium opacity-80">· {firstOrderQuantity(p.min_quantity, p.quantity_step)} u.</span>}
                       </button>
                     ) : (
                       <div className="flex min-h-10 items-center overflow-hidden rounded-lg border border-[#dce3ea]">
                         <button type="button" onClick={() => subtract(p)} aria-label={"Diminuer " + p.name}
                           className="flex h-10 w-9 items-center justify-center text-[#162a45] hover:bg-[#fff1e6]"><Minus size={16} /></button>
                         <input type="number" inputMode="numeric" name={"quantity_" + p.id}
-                          min={0} max={5000} step={1} value={qty}
+                          min={0} max={5000} step={p.quantity_step} value={qty}
                           aria-label={"Quantité pour " + p.name}
                           onChange={(event) => setQuantity(p, event.target.value === "" ? 0 : Number(event.target.value))}
                           className="h-10 w-14 border-x border-[#e8ecee] text-center text-sm font-extrabold text-[#0e1d31] outline-none" />
                         <button type="button" onClick={() => add(p)} aria-label={"Augmenter " + p.name}
-                          disabled={qty >= 5000}
+                          disabled={qty + p.quantity_step > 5000}
                           className="flex h-10 w-9 items-center justify-center text-[#162a45] hover:bg-[#fff1e6] disabled:opacity-30"><Plus size={16} /></button>
                       </div>
                     )}
@@ -210,7 +210,8 @@ export function PrivateOrderForm({
                         ? "Saisissez un nombre entier."
                         : qty < p.min_quantity
                           ? `Minimum de commande : ${p.min_quantity} unités par référence.`
-                          : "Maximum : 5 000 unités par référence."}
+                          : qty > 5000 ? "Maximum : 5 000 unités par référence."
+                          : `Quantité par multiples de ${p.quantity_step} unités.`}
                     </p>
                   ) : null}
                 </article>
