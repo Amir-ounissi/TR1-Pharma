@@ -23,6 +23,7 @@ export default async function CatalogueConnexion({
         </div>
         {erreur ? <p role="alert" className="rounded-md bg-[#fff1e5] p-3 text-sm text-[#803e0d]">{erreur === "acces" ? "Ce compte n’a pas d’accès actif au catalogue. Contactez TR1 PHARMA." : "Connexion impossible. Vérifiez vos identifiants."}</p> : null}
         <button type="submit" className="shop-primary-action w-full px-5 py-3">Accéder au catalogue</button>
+        <div className="text-right"><Link href="/forgot-password" className="inline-flex min-h-9 items-center text-xs font-bold text-[#ad4b08] underline underline-offset-4">Mot de passe oublié ?</Link></div>
       </form>
       <div className="space-y-2 text-sm text-[#69717d]">
         <p>Adresse préautorisée par TR1 PHARMA, mais pas encore de compte ? <Link className="font-extrabold text-[#0e1d31] underline" href="/catalogue/inscription">Activer mon espace</Link>.</p>
