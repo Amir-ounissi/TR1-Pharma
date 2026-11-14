@@ -18,7 +18,6 @@ export default async function PrivateCatalogueHome() {
     name: product.name,
     ean: product.ean,
     min_quantity: product.min_quantity,
-    quantity_step: product.quantity_step,
     vat_rate: product.vat_rate,
     pricing: product.pricing,
   })));
