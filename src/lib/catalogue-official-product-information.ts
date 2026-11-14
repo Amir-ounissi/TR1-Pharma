@@ -1283,3 +1283,108 @@ export const additionalBeautyOfJoseonByEan: Record<string,OfficialEducation> = {
     "usage": "Appliquer sur peau exposée puis renouveler régulièrement."
   }
 };
+
+// Compléments Dr. Althea recoupés avec fiches revendeurs, sans prix et avec provenance explicite.
+export const additionalDrAltheaByEan: Record<string,OfficialEducation> = {
+  "8809447255828": {
+    "description": "Protection solaire visage Aqua Glowing Sunscreen 45 ml à texture crème légère, destinée à protéger des UV tout en apportant de l’hydratation.",
+    "benefits": [
+      "Protection UV quotidienne",
+      "Hydratation",
+      "Fini léger"
+    ],
+    "keyIngredients": [
+      "Eau de bambou (Bambusa vulgaris)",
+      "Panthénol",
+      "Extrait de Caulerpa lentillifera",
+      "Céramide NP"
+    ],
+    "sourceUrl": "https://www.superdrug.com/skin/sun-care/sun-protection-creams/dr-althea-aqua-glowing-sunscreen-45ml/p/mp-00333022",
+    "sourceName": "Superdrug (revendeur, EAN recoupé)",
+    "usage": "Appliquer généreusement avant l'exposition solaire et renouveler fréquemment."
+  },
+  "8809447255989": {
+    "description": "Protection solaire visage Green Tea Fresh Sunscreen 45 ml SPF50+ PA++++, texture légère et rapidement absorbée.",
+    "benefits": [
+      "Protection solaire SPF50+ PA++++",
+      "Confort des peaux sensibles",
+      "Fini non gras"
+    ],
+    "keyIngredients": [
+      "Eau de feuille de thé vert",
+      "Centella asiatica",
+      "Niacinamide",
+      "Houttuynia cordata"
+    ],
+    "sourceUrl": "https://www.cosmeterie.fr/dr-althea/green-tea-fresh-sunscreen",
+    "sourceName": "Cosmeterie (revendeur, EAN recoupé)",
+    "usage": "Appliquer généreusement au dernier geste du matin. Renouveler toutes les deux heures en cas d’exposition prolongée."
+  },
+  "8809447255729": {
+    "description": "Coffret de quatre masques en tissu Cushion Veil Calming Mask de 35 g chacun, à effet rafraîchissant pour les peaux en recherche de confort.",
+    "benefits": [
+      "Apaisement",
+      "Hydratation",
+      "Sensation rafraîchissante"
+    ],
+    "keyIngredients": [
+      "Centella asiatica",
+      "Camomille",
+      "Panthénol",
+      "Eau de bouleau"
+    ],
+    "sourceUrl": "https://b2b.cremile.com/products/dr-althea-cushion-veil-calming-mask-35g-4ea",
+    "sourceName": "Cremile B2B (revendeur, EAN recoupé)",
+    "usage": "Après nettoyage et lotion, appliquer une feuille 10 à 15 minutes puis tapoter l’excédent."
+  },
+  "8809447255743": {
+    "description": "Coffret de quatre masques Jelly Seal Dewy Mask de 28 g chacun, à texture gel pour une peau hydratée et souple.",
+    "benefits": [
+      "Hydratation",
+      "Confort de la barrière cutanée",
+      "Aspect rebondi"
+    ],
+    "keyIngredients": [
+      "Acide hyaluronique",
+      "Allantoïne",
+      "Extrait de lotus",
+      "Sodium DNA (PhytoPDRN)"
+    ],
+    "sourceUrl": "https://se.iherb.com/pr/dr-althea-jelly-seal-dewy-beauty-mask-4-sheets-0-99-oz-28-g-each/159700",
+    "sourceName": "iHerb (revendeur, EAN recoupé)",
+    "usage": "Appliquer une feuille après nettoyage, laisser poser 10 à 15 minutes puis tapoter le sérum restant."
+  },
+  "8809447251998": {
+    "description": "Coffret de cinq masques visage Marine Anti-Blemish destinés aux peaux à imperfections, chaque masque étant imprégné de sérum hydratant.",
+    "benefits": [
+      "Hydratation",
+      "Confort des peaux à imperfections",
+      "Soutien de la barrière cutanée"
+    ],
+    "keyIngredients": [
+      "Crithmum maritimum",
+      "Centella asiatica",
+      "Extraits d’algues",
+      "Céramide NP"
+    ],
+    "sourceUrl": "https://www.roverisland.com/products/dr-althea-marine-anti-blemish-sheet-mask",
+    "sourceName": "Rover Island (revendeur, EAN recoupé)"
+  },
+  "8809447255040": {
+    "description": "Crème visage Niathione 30 ml conçue pour un effet éclat et l’apparence d’un teint plus homogène, avec un fini léger.",
+    "benefits": [
+      "Éclat",
+      "Teint visuellement plus uniforme",
+      "Hydratation"
+    ],
+    "keyIngredients": [
+      "Niacinamide",
+      "Glutathion",
+      "Panthénol",
+      "Extrait de réglisse"
+    ],
+    "sourceUrl": "https://qudobeauty.com/product/dr-althea-niathione-cream-30ml/",
+    "sourceName": "Qudo Beauty (revendeur, EAN recoupé)",
+    "usage": "Appliquer sur peau propre comme dernière étape de la routine ; le matin, ajouter une protection solaire."
+  }
+};
