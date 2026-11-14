@@ -78,9 +78,16 @@ export function PrivateOrderForm({
     return { minCents, maxCents, unpriced };
   }, [selected, quantities]);
   const quantityTotal = selected.reduce((sum, p) => sum + quantities[p.id], 0);
+  const priceSummaryTitle = allContractual ? "Total HT" : priceSummary.minCents > 0 ? "Estimation HT" : "Montant à confirmer";
+  const priceSummaryValue = selected.length === 0
+    ? "—"
+    : priceSummary.minCents > 0 || priceSummary.maxCents > 0
+      ? `${formatPriceRange(priceSummary.minCents / 100, priceSummary.maxCents / 100)} HT${priceSummary.unpriced > 0 ? ` + ${priceSummary.unpriced} référence(s) à chiffrer` : ""}`
+      : "Sur devis";
 
   const setQuantity = (product: CatalogProduct, next: number) => {
-    setQuantities((previous) => ({ ...previous, [product.id]: Math.max(0, Math.min(5000, next)) }));
+    const safeNext = Number.isFinite(next) ? Math.max(0, Math.min(5000, next)) : 0;
+    setQuantities((previous) => ({ ...previous, [product.id]: safeNext }));
   };
   const add = (p: CatalogProduct) => {
     const current = quantities[p.id] ?? 0;
@@ -92,7 +99,7 @@ export function PrivateOrderForm({
   };
 
   return (
-    <form action={action} className="space-y-5">
+    <form action={action} className="space-y-5 pb-24 lg:pb-0">
       <input type="hidden" name="slug" value={slug} />
 
       <div className="grid gap-3 rounded-lg border border-[#e2e7ec] bg-white p-4 sm:grid-cols-[1fr_190px]">
@@ -113,10 +120,7 @@ export function PrivateOrderForm({
         </label>
       </div>
 
-      <a href="#panier" className="flex items-center justify-between rounded-md bg-[#0e1d31] px-4 py-3 text-sm font-extrabold text-white lg:hidden">
-        <span className="inline-flex items-center gap-2"><ShoppingBag size={17} aria-hidden="true" /> Voir mon panier</span>
-        <span>{selected.length} référence{selected.length > 1 ? "s" : ""} · {quantityTotal} u.</span>
-      </a>
+      {state.error ? <p role="alert" className="rounded-lg border border-[#e7c8b4] bg-[#fff5ee] p-3 text-xs font-semibold text-[#884c2b]">{state.error}</p> : null}
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="min-w-0 space-y-4">
@@ -124,123 +128,89 @@ export function PrivateOrderForm({
             <p className="font-semibold">{visible.length} produit{visible.length > 1 ? "s" : ""}</p>
             <p>Prix HT indicatifs · Paliers dégressifs appliqués automatiquement</p>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div id="liste-produits" className="space-y-2">
             {visible.map((p) => {
               const qty = quantities[p.id] ?? 0;
               const stepQty = qty || p.min_quantity;
-              const indicativeTier = p.pricing.mode === "indicative" ? tierForQuantity(p.pricing.tiers, stepQty) : null;
-              const contractualTier = p.pricing.mode === "contractual" ? tierForQuantity(p.pricing.tiers, stepQty) : null;
-              const activeTier = p.pricing.mode === "contractual" ? contractualTier : indicativeTier;
+              const activeTier = findTierForQuantity(p.pricing.tiers, stepQty);
               const nextTier = nextTierForQuantity(p.pricing.tiers, stepQty);
               const nextTierPrice = priceRangeForTier(nextTier);
               const price = p.pricing.mode === "contractual"
-                ? contractualTier ? euroHT(contractualTier.price_ht) : "Tarif sur demande"
-                : indicativeRange(indicativeTier);
+                ? activeTier && "price_ht" in activeTier ? euroHT(activeTier.price_ht) + " HT / unité" : "Tarif sur demande"
+                : indicativeRange(activeTier && "price_min_ht" in activeTier ? activeTier : null);
               const selectedInvalid = qty > 0 && !isAllowedQuantity(qty, p.min_quantity);
 
               return (
-                <article key={p.id} className="shop-card flex min-w-0 flex-col overflow-hidden transition hover:border-[#dce3ea] hover:shadow-md">
-                  <div className="relative flex h-47 items-center justify-center overflow-hidden bg-[#f4f0e7] sm:h-52">
-                    {p.image_url ? (
-                      <Image src={p.image_url} width={440} height={440} unoptimized alt={p.name}
-                        className="h-full w-full object-contain p-5" />
+                <article key={p.id}
+                  className="grid grid-cols-[64px_minmax(0,1fr)] gap-x-3 gap-y-3 rounded-xl border border-[#e2e7ec] bg-white p-3 transition hover:border-[#cbd5d6] sm:grid-cols-[minmax(0,1fr)_170px_150px] sm:items-center sm:gap-4 sm:p-4">
+                  <div className="col-span-2 flex min-w-0 items-center gap-3 sm:col-span-1">
+                    <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#f4f0e7]">
+                      {p.image_url ? (
+                        <Image src={p.image_url} width={128} height={128} unoptimized alt={p.name}
+                          className="h-full w-full object-contain p-2" />
+                      ) : <Package size={27} strokeWidth={1.2} className="text-[#a9b0b3]" aria-hidden="true" />}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-extrabold uppercase tracking-[.14em] text-[#ad4b08]">{brandName}</p>
+                      <h3 className="mt-0.5 text-sm font-extrabold leading-5 text-[#0e1d31] sm:text-[15px]">{p.name}</h3>
+                      <p className="mt-1 text-[11px] leading-4 text-[#69717d]">
+                        {p.format || "Format non renseigné"} · Réf. {p.sku}
+                      </p>
+                      <p className="text-[10px] text-[#89939b]">
+                        {p.ean ? "EAN " + p.ean + " · " : ""}Minimum {p.min_quantity} u. · TVA {p.vat_rate} %
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="min-w-0 self-center">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-[#7a8790]">
+                      {p.pricing.mode === "contractual" ? "Votre tarif HT" : "Prix indicatif HT"}
+                    </p>
+                    <p className="mt-1 text-sm font-black leading-5 text-[#0e1d31]">{price}</p>
+                    {activeTier ? (
+                      <p className="mt-0.5 text-[10px] text-[#69717d]">Palier dès {activeTier.min_quantity} unité{activeTier.min_quantity > 1 ? "s" : ""}</p>
+                    ) : <p className="mt-0.5 text-[10px] text-[#69717d]">Tarif à confirmer</p>}
+                    {qty > 0 && nextTier ? (
+                      <p className="mt-1 text-[10px] font-semibold text-[#ad4b08]">
+                        {nextTier.min_quantity - qty > 0
+                          ? `Encore ${nextTier.min_quantity - qty} u. pour le palier ${nextTier.min_quantity}${nextTierPrice ? " · " + formatPriceRange(nextTierPrice.min, nextTierPrice.max) + " HT/u." : ""}`
+                          : `Palier ${nextTier.min_quantity}`}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 sm:justify-end">
+                    {qty === 0 ? (
+                      <button type="button" onClick={() => add(p)}
+                        className="shop-primary-action inline-flex min-h-10 w-full items-center justify-center gap-2 px-3 text-xs sm:w-auto sm:min-w-[128px]">
+                        <Plus size={15} aria-hidden="true" /> Ajouter
+                        <span className="font-medium opacity-80">· {p.min_quantity} u.</span>
+                      </button>
                     ) : (
-                      <div className="flex flex-col items-center gap-2 text-[#b4b8b7]">
-                        <Package size={49} strokeWidth={1.1} aria-hidden="true" />
-                        <span className="text-[11px] font-semibold">Visuel produit à venir</span>
+                      <div className="flex min-h-10 items-center overflow-hidden rounded-lg border border-[#dce3ea]">
+                        <button type="button" onClick={() => subtract(p)} aria-label={"Diminuer " + p.name}
+                          className="flex h-10 w-9 items-center justify-center text-[#162a45] hover:bg-[#fff1e6]"><Minus size={16} /></button>
+                        <input type="number" inputMode="numeric" name={"quantity_" + p.id}
+                          min={0} max={5000} step={1} value={qty}
+                          aria-label={"Quantité pour " + p.name}
+                          onChange={(event) => setQuantity(p, event.target.value === "" ? 0 : Number(event.target.value))}
+                          className="h-10 w-14 border-x border-[#e8ecee] text-center text-sm font-extrabold text-[#0e1d31] outline-none" />
+                        <button type="button" onClick={() => add(p)} aria-label={"Augmenter " + p.name}
+                          disabled={qty >= 5000}
+                          className="flex h-10 w-9 items-center justify-center text-[#162a45] hover:bg-[#fff1e6] disabled:opacity-30"><Plus size={16} /></button>
                       </div>
                     )}
-                    <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-bold text-[#162a45]">
-                      {p.pricing.mode === "contractual" ? "Votre tarif" : "Prix indicatif"}
-                    </span>
+                    {qty === 0 ? <input type="hidden" name={"quantity_" + p.id} value="0" /> : null}
                   </div>
-                  <div className="flex flex-1 flex-col gap-3 px-4 pb-4 pt-4">
-                    <div>
-                      <p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-[#ad4b08]">{brandName}</p>
-                      <h3 className="mt-1 text-lg font-black leading-6 text-[#0e1d31]">{p.name}</h3>
-                      <p className="mt-1.5 text-[11px] text-[#69717d]">{p.format || "Complément alimentaire"} · Réf. {p.sku}</p>
-                    </div>
-                    {p.description ? <p className="line-clamp-2 text-xs leading-5 text-[#69717d]">{p.description}</p> : null}
-                    <div className="mt-auto border-t border-[#e2e7ec] pt-3">
-                      <p className="text-[11px] font-bold text-[#69717d]">
-                        {p.pricing.mode === "contractual" ? "Votre prix unitaire" : "Tarif indicatif HT / unité"}
-                      </p>
-                      <p className="mt-1 text-[19px] font-black tracking-tight text-[#0e1d31]">{price}</p>
-                      <p className="mt-1 text-[11px] text-[#69717d]">
-                        {p.pricing.mode === "contractual"
-                          ? "Conditions convenues avec votre officine"
-                          : "Le tarif définitif est confirmé sur devis"}
-                      </p>
-                    </div>
-
-                    {p.pricing.tiers.length > 0 ? (
-                      <details className="rounded-lg bg-[#faf9f6] px-3 py-2.5">
-                        <summary className="cursor-pointer text-xs font-extrabold text-[#162a45]">Voir les paliers par volume</summary>
-                        <div className="mt-3 space-y-2 border-t border-[#e2e7ec] pt-3">
-                          {p.pricing.tiers.map((tier) => {
-                            const active = activeTier?.min_quantity === tier.min_quantity;
-                            return (
-                              <div key={tier.min_quantity}
-                                className={`flex items-start justify-between gap-2 rounded-md text-[11px] ${active ? "bg-[#fff1e6] px-2 py-1.5 text-[#162a45]" : ""}`}>
-                                <span>
-                                  Dès {tier.min_quantity} u.
-                                  {active ? <span className="ml-1 font-extrabold text-[#ad4b08]">· Appliqué</span> : null}
-                                </span>
-                                <strong className="text-right">
-                                  {p.pricing.mode === "contractual"
-                                    ? "price_ht" in tier ? euroHT(tier.price_ht) : "Sur demande"
-                                    : indicativeRange("price_min_ht" in tier ? tier : null)}
-                                </strong>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </details>
-                    ) : null}
-
-                    <p className="text-[11px] text-[#69717d]">
-                      {p.min_quantity > 1 ? `Minimum ${p.min_quantity} unités par référence` : "Commande possible à l'unité"}
-                      {p.vat_rate !== null ? ` · TVA ${p.vat_rate} %` : ""}
+                  {selectedInvalid ? (
+                    <p role="alert" className="col-span-2 text-[11px] font-bold text-red-700 sm:col-span-3">
+                      {!Number.isSafeInteger(qty)
+                        ? "Saisissez un nombre entier."
+                        : qty < p.min_quantity
+                          ? `Minimum de commande : ${p.min_quantity} unités par référence.`
+                          : "Maximum : 5 000 unités par référence."}
                     </p>
-                    {qty > 0 && !selectedInvalid && nextTier && nextTierPrice ? (
-                      <p className="text-[11px] font-semibold text-[#ad4b08]">
-                        Encore {nextTier.min_quantity - qty} unité{nextTier.min_quantity - qty > 1 ? "s" : ""} pour atteindre le palier {nextTier.min_quantity} u. ({formatPriceRange(nextTierPrice.min, nextTierPrice.max)} HT / unité).
-                      </p>
-                    ) : null}
-                    <div className="flex items-center gap-2">
-                      {qty === 0 ? (
-                        <button type="button" onClick={() => add(p)}
-                          className="shop-primary-action inline-flex min-h-11 flex-1 items-center justify-center gap-2 px-3 text-sm">
-                          <Plus size={17} aria-hidden="true" /> Ajouter au panier
-                        </button>
-                      ) : (
-                        <div className="flex min-h-11 w-full items-center justify-between overflow-hidden rounded-lg border border-[#dce3ea]">
-                          <button type="button" onClick={() => subtract(p)} aria-label={"Diminuer " + p.name}
-                            className="flex h-11 w-11 items-center justify-center text-[#162a45] hover:bg-[#fff1e6]"><Minus size={17} /></button>
-                          <span className="text-xs font-bold">{qty} u.</span>
-                          <button type="button" onClick={() => add(p)} aria-label={"Augmenter " + p.name}
-                            disabled={qty >= 5000}
-                            className="flex h-11 w-11 items-center justify-center text-[#162a45] hover:bg-[#fff1e6]"><Plus size={17} /></button>
-                        </div>
-                      )}
-                    </div>
-                    <label className="flex items-center justify-between gap-2 text-[11px] text-[#69717d]">
-                      <span>Quantité personnalisée</span>
-                      <input type="number" inputMode="numeric" name={"quantity_" + p.id}
-                        min={0} max={5000} step={1} value={qty}
-                        onChange={(event) => setQuantity(p, event.target.value === "" ? 0 : Number(event.target.value))}
-                        className="w-20 rounded-md border border-[#dce3ea] px-2 py-1.5 text-right text-xs font-bold text-[#0e1d31]" />
-                    </label>
-                    {selectedInvalid ? (
-                      <p role="alert" className="text-xs font-bold text-red-700">
-                        {!Number.isSafeInteger(qty)
-                          ? "Saisissez un nombre entier."
-                          : qty < p.min_quantity
-                            ? `Minimum de commande : ${p.min_quantity} unités par référence.`
-                            : "Maximum : 5 000 unités par référence."}
-                      </p>
-                    ) : null}
-                  </div>
+                  ) : null}
                 </article>
               );
             })}
@@ -306,36 +276,40 @@ export function PrivateOrderForm({
             )}
             <div className="flex items-start justify-between gap-2 border-t border-[#e2e7ec] pt-4">
               <div>
-                <p className="text-xs text-[#69717d]">
-                  {allContractual
-                    ? "Total HT"
-                    : priceSummary.minCents > 0
-                      ? priceSummary.unpriced > 0 ? "Sous-total indicatif HT" : "Estimation indicative HT"
-                      : "Montant à confirmer"}
-                </p>
-                <p className="mt-1 text-xl font-black text-[#0e1d31]">
-                  {selected.length === 0
-                    ? "—"
-                    : priceSummary.minCents > 0 || priceSummary.maxCents > 0
-                      ? `${formatPriceRange(priceSummary.minCents / 100, priceSummary.maxCents / 100)} HT${priceSummary.unpriced > 0 ? ` + ${priceSummary.unpriced} référence(s) à chiffrer` : ""}`
-                      : "Sur devis"}
-                </p>
+                <p className="text-xs text-[#69717d]">{priceSummaryTitle}</p>
+                <p className="mt-1 text-xl font-black text-[#0e1d31]">{priceSummaryValue}</p>
               </div>
               <span className="rounded-full bg-[#fff1e6] px-2.5 py-1 text-[10px] font-bold text-[#162a45]">B2B</span>
             </div>
-            {state.error ? <p role="alert" className="rounded-lg bg-[#fff0e4] p-3 text-xs font-semibold text-[#884c2b]">{state.error}</p> : null}
             <button type="submit" disabled={pending || !selected.length || !valid}
               className="shop-primary-action inline-flex min-h-12 w-full items-center justify-center gap-2 px-4 text-sm">
-              {pending ? "Envoi en cours…" : allContractual ? "Envoyer ma commande" : "Demander mon devis"}
+              {pending ? "Envoi en cours…" : allContractual ? "Envoyer ma demande de commande" : "Demander un devis"}
               {!pending && <ShoppingBag size={17} aria-hidden="true" />}
             </button>
             <p className="text-[11px] leading-5 text-[#69717d]">
               {allContractual
-                ? "Votre demande de commande sera vérifiée avant confirmation définitive."
-                : "Les prix et paliers affichés sont indicatifs. Les références sans tarif public et le montant définitif seront confirmés avant validation."}
+                ? "Votre demande est transmise à TR1 PHARMA. La commande devient définitive après confirmation."
+                : "Les prix sont indicatifs. TR1 PHARMA vous confirme les tarifs et la disponibilité avant validation."}
             </p>
           </div>
         </aside>
+      </div>
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#dce3ea] bg-white/95 px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-10px_30px_-20px_rgba(14,29,49,.35)] backdrop-blur lg:hidden">
+        <div className="mx-auto flex max-w-7xl items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[11px] font-extrabold text-[#0e1d31]">
+              {selected.length} réf. · {quantityTotal} unité{quantityTotal > 1 ? "s" : ""}
+            </p>
+            <p className="truncate text-[11px] text-[#69717d]">{priceSummaryValue}</p>
+          </div>
+          <a href="#panier" className="shrink-0 px-2 py-2 text-xs font-bold text-[#0e1d31] underline underline-offset-4">Panier</a>
+          <button type="submit" disabled={pending || !selected.length || !valid}
+            aria-label={allContractual ? "Envoyer ma demande de commande" : "Demander un devis"}
+            className="shop-primary-action inline-flex min-h-11 shrink-0 items-center justify-center gap-2 px-4 text-xs">
+            {pending ? "Envoi…" : allContractual ? "Envoyer" : "Devis"}
+            {!pending && <ShoppingBag size={15} aria-hidden="true" />}
+          </button>
+        </div>
       </div>
     </form>
   );
