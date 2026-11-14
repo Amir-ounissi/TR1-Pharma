@@ -10,7 +10,7 @@ type DisplayProduct = PublicCatalogueProduct;
 type BrandTheme = { bg: string; ink: string; border: string; short: string; detail: string };
 
 const allProducts: DisplayProduct[] = publicCatalogueProducts;
-const brands = ["Toutes les marques", "Beauty of Joseon", "Dr. Althea", "Biodance", "VK SWISS"];
+const brands = ["Toutes les marques", "Beauty of Joseon", "Dr. Althea", "Biodance"];
 
 const themes: Record<string, BrandTheme> = {
   "Beauty of Joseon": { bg: "#eee9de", ink: "#5d4a36", border: "#c6b496", short: "BEAUTY OF JOSEON", detail: "Soins coréens inspirés des rituels traditionnels" },
