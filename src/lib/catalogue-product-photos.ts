@@ -320,6 +320,39 @@ export const productGalleryByName: Record<string, string[]> = {
     "https://assets.digitalcontent.marksandspencer.app/images/w_2560%2Cq_auto%2Cf_auto/MS_07_T23_3128F_NC_X_EC_5/Collagen-Peptide-Eye-Patches-30-pairs",
     "https://assets.digitalcontent.marksandspencer.app/images/w_2560%2Cq_auto%2Cf_auto/MS_07_T23_3128F_NC_X_EC_6/Collagen-Peptide-Eye-Patches-30-pairs"
   ]
+  "Caviar PDRN Eye Patches": [
+      "https://cdn.shopify.com/s/files/1/0887/1067/6791/files/eyepatch_pdrn_d2-1_img.jpg?v=1769497348",
+      "https://cdn.shopify.com/s/files/1/0887/1067/6791/files/eyepatch_pdrn_d2-2_img.jpg?v=1769497348",
+      "https://cdn.shopify.com/s/files/1/0887/1067/6791/files/eyepatch_pdrn_d2-3_img.gif?v=1769499176",
+      "https://www.ballagrio.com/cdn/shop/files/biodance-caviar-pdrn-eye-patch-30ea-01_1024x1024.jpg?v=1779180096",
+      "https://www.ballagrio.com/cdn/shop/files/biodance-caviar-pdrn-eye-patch-30ea-06.jpg?v=1779180096",
+      "https://cremile.lv/cdn/shop/files/Biodance_Caviar_PDRN_Eye_Patches_paakiu_padeliai.png?v=1781378190",
+      "https://holtrenfrew.scene7.com/is/image/HoltRenfrew1/u_8809891186631_02"
+  ],
+  "Caviar PDRN Jelly Serum Mist": [
+      "https://dayjsrwbk0r7f.cloudfront.net/creative/brand-mall/biodance/Thumbnail_PDRN_mist_test.jpg",
+      "https://dayjsrwbk0r7f.cloudfront.net/creative/brand-mall/biodance/thumbnail/PDRN_mist.jpg",
+      "https://lovelybunny.com.ua/image/cache/data/SKINCARE/SERUM-AMP/BID022-600x600.png"
+  ],
+  "Collagen Peptide Jelly Serum Mist": [
+      "https://images.asos-media.com/products/biodance-collagen-peptide-jelly-serum-mist-50ml/210823067-1-collagen?%24n_750w%24=&fit=crop&hei=750&wid=750"
+  ],
+  "Collagen Peptide Liposome Bubble Booster": [
+      "https://www.ballagrio.com/cdn/shop/files/biodance-collagen-peptide-liposome-bubble-booster-95ml-01.jpg?v=1779771423",
+      "https://www.ballagrio.com/cdn/shop/files/biodance-collagen-peptide-liposome-bubble-booster-95ml-06_1024x1024.jpg?v=1779771422"
+  ],
+  "Caviar PDRN Liposome Bubble Booster": [
+      "https://www.ballagrio.com/cdn/shop/files/biodance-caviar-pdrn-liposome-bubble-booster-95ml-01.jpg?v=1779771330"
+  ],
+  "Collagen Cleansing Oil": [
+      "https://international-cosmetic.com/cdn/shop/files/CollagenCleansingOil.jpg?v=1769944698&width=1214"
+  ],
+  "First Synergy Toner": [
+      "https://biodance.com/cdn/shop/files/2510_2093e5de-99e6-458c-81cd-9b897b65d739.jpg?v=1760332371"
+  ],
+  "Hydro Ceramide Cleansing Powder": [
+      "https://ie.facethefuture.store/cdn/shop/files/Product-page-sizes_272e1e74-f52b-43bf-9270-5b210cb223e5.jpg?v=1748444845"
+  ]
 };
 
 // Packshots Biodance associés à la dénomination exacte : 24 articles sans EAN dans le catalogue fournisseur.
