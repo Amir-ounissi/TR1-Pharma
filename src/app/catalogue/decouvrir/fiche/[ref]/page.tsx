@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowUpRight, Barcode, Building2, Check, ClipboardList, File
 import { Ean13Barcode } from "@/components/catalogue/ean13-barcode";
 import { isValidEan13 } from "@/lib/ean13";
 import { faireProductInformationByEan } from "@/lib/catalogue-faire-product-information";
+import { officialBiodanceByName, officialBeautyOfJoseonByEan, officialDrAltheaByEan } from "@/lib/catalogue-official-product-information";
 import { findPublicProduct, publicCatalogueProducts, publicProductFamily, publicProductImage, publicProductKey } from "@/lib/catalogue-products";
 
 type ProductParams = { params: Promise<{ ref: string }> };
@@ -39,7 +40,15 @@ export default async function PublicCatalogueProductPage({ params }: ProductPara
   const { ref } = await params;
   const product = findPublicProduct(ref);
   if (!product) notFound();
-  const verifiedInfo = product.ean ? faireProductInformationByEan[product.ean] : undefined;
+  const officialInfo = product.brand === "Biodance"
+    ? officialBiodanceByName[product.name]
+    : product.brand === "Beauty of Joseon"
+      ? officialBeautyOfJoseonByEan[product.ean]
+      : product.brand === "Dr. Althea"
+        ? officialDrAltheaByEan[product.ean]
+        : undefined;
+  const faireInfo = product.ean ? faireProductInformationByEan[product.ean] : undefined;
+  const verifiedInfo = officialInfo ?? faireInfo;
   const photo = publicProductImage(product);
   const eanIsValid = Boolean(product.ean && isValidEan13(product.ean));
   const cosmetics = product.brand !== "VK SWISS";
@@ -114,11 +123,11 @@ export default async function PublicCatalogueProductPage({ params }: ProductPara
         <section aria-labelledby="more-product-information" className="rounded-2xl border border-[#e5e9eb] bg-white p-5 sm:p-7">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-[.14em] text-[#b56d3e]">Documentation produit</p>
+              <p className="text-[11px] font-bold uppercase tracking-[.14em] text-[#b56d3e]">{officialInfo ? "Documentation fabricant" : "Documentation revendeur"}</p>
               <h2 id="more-product-information" className="mt-2 text-xl font-black text-[#122a41] sm:text-2xl">Connaître le produit</h2>
             </div>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-[#e5e9eb] bg-[#f7f8f6] px-3 py-2 text-[11px] font-bold text-[#566a78]">
-              <FileCheck2 size={14} aria-hidden="true" /> Identifiant EAN recoupé
+              <FileCheck2 size={14} aria-hidden="true" /> {product.ean ? "Référence EAN documentée" : "Référence fabricant documentée"}
             </span>
           </div>
           <p className="mt-4 max-w-3xl text-sm leading-7 text-[#526676]">{verifiedInfo.description}</p>
@@ -142,8 +151,19 @@ export default async function PublicCatalogueProductPage({ params }: ProductPara
               </div>
             </div>
           </div>
+          {officialInfo?.usage && (
+            <div className="mt-6 rounded-xl border border-[#e8ede8] bg-[#f7faf7] px-4 py-4">
+              <h3 className="text-sm font-extrabold text-[#20394c]">Conseil d’utilisation fabricant</h3>
+              <p className="mt-2 text-sm leading-6 text-[#5f7180]">{officialInfo.usage}</p>
+            </div>
+          )}
           <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-[#e9edee] pt-4">
-            <p className="text-xs leading-6 text-[#70818e]">Source : fiche Faire publiée par {verifiedInfo.sourceSeller}, rapprochée de l’EAN du catalogue fournisseur. Informations marketing du vendeur tiers à confirmer auprès du fabricant.</p>
+            <p className="text-xs leading-6 text-[#70818e]">
+              Source : {officialInfo ? officialInfo.sourceName : "fiche Faire de " + faireInfo?.sourceSeller}.
+              {officialInfo
+                ? " Caractéristiques marketing reformulées depuis la documentation fabricant. La liste INCI complète et la version UE restent à vérifier sur l’emballage commercialisé."
+                : " Informations du vendeur tiers à confirmer auprès du fabricant."}
+            </p>
             <a href={verifiedInfo.sourceUrl} target="_blank" rel="noopener noreferrer"
               className="inline-flex min-h-10 shrink-0 items-center gap-1.5 text-xs font-extrabold text-[#263e54] underline-offset-4 hover:underline">
               Voir la fiche source <ArrowUpRight size={16} aria-hidden="true" />
@@ -163,7 +183,7 @@ export default async function PublicCatalogueProductPage({ params }: ProductPara
             {detail("Famille", publicProductFamily(product))}
             {detail("Catégorie", product.category)}
             {detail("EAN / GTIN-13", eanIsValid ? product.ean : "Non communiqué", !eanIsValid)}
-            {verifiedInfo && detail("Pays de fabrication", verifiedInfo.origin)}
+            {faireInfo?.origin && detail("Pays de fabrication (vendeur Faire)", faireInfo.origin)}
             {detail("CIP / ACL", "Non communiqué par le fournisseur", true)}
             {product.sku ? detail("Référence fournisseur", product.sku) : null}
           </dl>
@@ -178,8 +198,8 @@ export default async function PublicCatalogueProductPage({ params }: ProductPara
             {detail("Présentation", product.format || "À compléter", !product.format)}
             {detail("Type", cosmetics ? "Produit cosmétique" : "Complément alimentaire")}
             {detail("Conditionnement", isBiodanceMask ? "Prix fournisseur à l’unité ; commande par multiples de 4 masques (à confirmer)" : "À confirmer selon le colisage fournisseur", !isBiodanceMask)}
-            {detail("Données INCI", cosmetics ? "Composition intégrale fabricant à fournir" : "Composition officielle à fournir", true)}
-            {detail("Conseils d’utilisation", "Notice / étiquetage fabricant à intégrer", true)}
+            {detail("Liste INCI complète", cosmetics ? "À confirmer sur le conditionnement UE de la référence" : "Composition complète fournisseur à fournir", true)}
+            {detail("Conseils d’utilisation", officialInfo?.usage ? "Voir recommandation fabricant ci-dessus" : "Notice / étiquetage fabricant à intégrer", !officialInfo?.usage)}
             {detail("Disponibilité", "À confirmer avec le distributeur", true)}
           </dl>
           <p className="mt-4 text-xs leading-6 text-[#758491]">Les informations de type LGO sont présentées comme une fiche de travail. Les données non confirmées ne sont ni inventées ni présentées comme issues de Claude Bernard.</p>
