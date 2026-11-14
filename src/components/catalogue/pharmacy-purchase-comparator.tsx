@@ -11,6 +11,7 @@ import {
   detectCsvColumn,
   findProductMatch,
   parseCsvContent,
+  normalizeCsvText,
   type CsvColumnMapping,
   type ParsedCsvContent,
 } from "@/lib/catalogue-csv-comparison";
@@ -66,7 +67,7 @@ function getDisplayPrice(
 
   const collective = groups.find((group) => group.product_ids.includes(product.id));
   const threshold = collective
-    ? firstOrderQuantity(Math.max(first.min_quantity, collective.minimum_total_units), collective.quantity_multiple)
+    ? firstOrderQuantity(Math.max(first.min_quantity, collective.minimum_total_units, product.min_quantity), collective.quantity_multiple)
     : firstOrderQuantity(Math.max(first.min_quantity, product.min_quantity), product.quantity_step);
 
   if (!threshold) return { kind: "none" };
@@ -88,7 +89,13 @@ function getDisplayPrice(
     : { kind: "none" };
 }
 
-function priceComparison(currentPrice: number | null, price: DisplayPrice): string {
+function hasFormatMismatch(importedFormat: string | null, catalogueFormat: string | null): boolean {
+  return Boolean(importedFormat && catalogueFormat
+    && normalizeCsvText(importedFormat) !== normalizeCsvText(catalogueFormat));
+}
+
+function priceComparison(currentPrice: number | null, price: DisplayPrice, formatMismatch: boolean): string {
+  if (formatMismatch) return "Conditionnement différent : écart non calculé";
   if (currentPrice === null) return "Prix d’achat HT manquant dans le fichier";
   if (price.kind === "none") return "Tarif TR1 à confirmer";
 
@@ -134,6 +141,7 @@ export function PharmacyPurchaseComparator({
     price: null,
     ean: null,
     brand: null,
+    format: null,
   });
   const [lines, setLines] = useState<ComparisonLine[]>([]);
   const [error, setError] = useState("");
@@ -144,6 +152,7 @@ export function PharmacyPurchaseComparator({
     name: product.name,
     brand_name: product.brand_name,
     ean: product.ean,
+    format: product.format,
   })), [products]);
 
   const summary = useMemo(() => {
@@ -158,7 +167,7 @@ export function PharmacyPurchaseComparator({
     });
     const cheaper = exact.filter((line) => {
       const product = products.find((item) => item.id === line.productId);
-      if (!product || line.purchasePriceHt === null) return false;
+      if (!product || line.purchasePriceHt === null || hasFormatMismatch(line.format, product.format)) return false;
       const price = getDisplayPrice(product, quantityGroups);
       return price.kind === "contractual" && line.purchasePriceHt - price.price > 0.005;
     });
@@ -198,6 +207,7 @@ export function PharmacyPurchaseComparator({
         price: detectCsvColumn(result.headers, "price"),
         ean: detectCsvColumn(result.headers, "ean"),
         brand: detectCsvColumn(result.headers, "brand"),
+        format: detectCsvColumn(result.headers, "format"),
       });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Impossible de lire ce fichier CSV.");
@@ -255,7 +265,7 @@ export function PharmacyPurchaseComparator({
     setParsed(null);
     setLines([]);
     setError("");
-    setMapping({ name: null, price: null, ean: null, brand: null });
+    setMapping({ name: null, price: null, ean: null, brand: null, format: null });
   }
 
   const fieldClass = "mt-1 min-h-11 w-full rounded-lg border border-[#dce3e8] bg-white px-3 text-sm text-[#142941] outline-offset-2";
@@ -338,11 +348,12 @@ export function PharmacyPurchaseComparator({
             <h2 className="mt-1 text-xl font-extrabold text-[#142941]">2. Vérifier les colonnes détectées</h2>
             <p className="mt-2 text-xs leading-5 text-[#69717d]">Les colonnes sont proposées automatiquement. Vérifiez surtout que le prix sélectionné correspond bien à votre prix d’achat net unitaire HT, et non au prix de vente.</p>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
             {selectColumn("Désignation produit", "name", true)}
             {selectColumn("Prix d’achat unitaire HT", "price", true)}
             {selectColumn("Code EAN / code-barres", "ean", false)}
             {selectColumn("Marque / laboratoire", "brand", false)}
+            {selectColumn("Conditionnement / format", "format", false)}
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-[#f7f8f7] p-4">
             <p className="text-xs text-[#69717d]">Les lignes sans prix resteront visibles, mais ne pourront pas être comparées.</p>
@@ -412,15 +423,17 @@ export function PharmacyPurchaseComparator({
                     const product = products.find((item) => item.id === line.productId) ?? null;
                     const suggestion = products.find((item) => item.id === line.suggestedProductId) ?? null;
                     const displayPrice = product ? getDisplayPrice(product, quantityGroups) : { kind: "none" as const };
-                    const difference = line.purchasePriceHt !== null && displayPrice.kind === "contractual"
+                    const formatMismatch = product ? hasFormatMismatch(line.format, product.format) : false;
+                    const difference = !formatMismatch && line.purchasePriceHt !== null && displayPrice.kind === "contractual"
                       ? line.purchasePriceHt - displayPrice.price
                       : null;
-                    const comparison = priceComparison(line.purchasePriceHt, displayPrice);
+                    const comparison = priceComparison(line.purchasePriceHt, displayPrice, formatMismatch);
                     return (
                       <tr key={line.id} className="align-top">
                         <td className="max-w-[230px] px-4 py-4">
                           <p className="font-extrabold text-[#142941]">{line.name}</p>
                           <p className="mt-1 text-[10px] text-[#7b8790]">{line.brand || "Marque non renseignée"}{line.ean ? " · EAN " + line.ean : ""}</p>
+                          {line.format ? <p className="mt-1 text-[10px] text-[#7b8790]">Format importé : {line.format}</p> : null}
                           <p className="mt-1 text-[10px] text-[#8b969e]">Ligne CSV {line.lineNumber}</p>
                         </td>
                         <td className="whitespace-nowrap px-4 py-4 font-bold tabular-nums text-[#142941]">
@@ -433,6 +446,7 @@ export function PharmacyPurchaseComparator({
                               <p className="mt-1 font-semibold text-[#405267]">{product.name}</p>
                               <p className="mt-1 text-[10px] text-[#7b8790]">{product.format || "Format non renseigné"} · Réf. {product.sku}{product.ean ? " · EAN " + product.ean : ""}</p>
                               <span className="mt-2 inline-flex rounded-full bg-[#edf5ef] px-2 py-1 text-[10px] font-bold text-[#426a4e]">{matchLabel(line.matchMethod)}</span>
+                              {formatMismatch ? <span className="mt-2 ml-1 inline-flex rounded-full bg-[#fff2e8] px-2 py-1 text-[10px] font-bold text-[#92552e]">Format à vérifier</span> : null}
                               {product.product_detail_href ? <Link href={product.product_detail_href} className="ml-2 text-[10px] font-bold text-[#ad4b08] underline underline-offset-2">Fiche produit</Link> : null}
                             </div>
                           ) : (
@@ -503,7 +517,7 @@ export function PharmacyPurchaseComparator({
 
           <div className="flex items-start gap-3 rounded-xl border border-[#e6dfd2] bg-[#fbf8f2] p-4 text-xs leading-5 text-[#6e604e]">
             <Info size={17} className="mt-0.5 shrink-0" aria-hidden="true" />
-            <p>Comparaison indicative à l’unité, à partir du prix d’achat HT renseigné dans votre fichier. Les tarifs TR1 dépendent des quantités minimales et des paliers indiqués. Les fourchettes indicatives ne sont pas des prix garantis. Les frais de port, remises différées, ristournes et conditions particulières ne sont pas intégrés.</p>
+            <p>Comparaison indicative à l’unité, à partir du prix d’achat HT renseigné dans votre fichier. Si vous importez aussi le conditionnement, les formats différents bloquent le calcul de l’écart. Les tarifs TR1 dépendent des quantités minimales et des paliers indiqués. Les fourchettes indicatives ne sont pas des prix garantis. Les frais de port, remises différées, ristournes et conditions particulières ne sont pas intégrés.</p>
           </div>
 
           <div className="flex flex-wrap justify-between gap-3">
