@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ChevronRight, LockKeyhole, ShoppingBag } from "lucide-react";
 import { getCatalogueBrands, getCatalogueBrandForPharmacy, requirePharmacyCatalogue } from "@/lib/private-catalogue";
 import { PrivateMultiBrandOrderForm } from "@/components/catalogue/private-multibrand-order-form";
+import { withPharmacyProductVisuals } from "@/lib/catalogue-private-product-visuals";
 
 export default async function PharmacyBrandPage({
   params, searchParams,
@@ -21,9 +22,9 @@ export default async function PharmacyBrandPage({
       products: (await getCatalogueBrandForPharmacy(pharmacy.id, item.slug, admin)).products,
     })));
   const orderProducts = [
-    ...products.map((product) => ({ ...product, brand_slug: brand.slug, brand_name: brand.name })),
+    ...products.map((product) => withPharmacyProductVisuals(product, brand)),
     ...otherGroups.flatMap(({ brand: item, products: items }) =>
-      items.map((product) => ({ ...product, brand_slug: item.slug, brand_name: item.name })),
+      items.map((product) => withPharmacyProductVisuals(product, item)),
     ),
   ];
 
