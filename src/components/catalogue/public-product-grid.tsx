@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowUpRight, Check, ChevronLeft, ChevronRight, LockKeyhole, Search, SlidersHorizontal } from "lucide-react";
 import { publicCatalogueProducts, publicProductImage, publicProductHref, type PublicCatalogueProduct } from "@/lib/catalogue-products";
-import { euroHT, tierForQuantity } from "@/lib/private-catalogue-format";
+import { euroHT } from "@/lib/private-catalogue-format";
 
 type DisplayProduct = PublicCatalogueProduct;
 type BrandTheme = { bg: string; ink: string; border: string; short: string; detail: string };
@@ -27,6 +27,15 @@ const brandSlugs: Record<string, string> = {
   "Biodance": "biodance",
 };
 const normalizeProductName = (value: string) => value.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLocaleLowerCase("fr").replace(/[^a-z0-9]+/g, " ").trim();
+function privateTierForQuantity(product: PrivateDisplayProduct, quantity: number) {
+  let selected: PrivateDisplayProduct["pricing"]["tiers"][number] | null = null;
+  for (const tier of product.pricing.tiers) {
+    if (tier.min_quantity <= quantity && (!selected || tier.min_quantity > selected.min_quantity)) {
+      selected = tier;
+    }
+  }
+  return selected;
+}
 function privateTierPrice(
   pricing: PrivateDisplayProduct["pricing"],
   tier: PrivateDisplayProduct["pricing"]["tiers"][number] | null,
@@ -201,7 +210,7 @@ export function PublicProductGrid({ privateProducts }: { privateProducts?: Priva
             const photo = publicProductImage(product);
             const privateProduct = privateMode ? lookupPrivateProduct(product) : null;
             const selectedTier = privateProduct
-              ? tierForQuantity(privateProduct.pricing.tiers, privateProduct.min_quantity)
+              ? privateTierForQuantity(privateProduct, privateProduct.min_quantity)
               : null;
             const selectedPrice = privateProduct
               ? privateTierPrice(privateProduct.pricing, selectedTier)
