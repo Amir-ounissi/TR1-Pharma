@@ -232,7 +232,10 @@ export function PrivateMultiBrandOrderForm({
     }
     const target = allowed.get(initialProductId ?? "");
     if (target && (restored[target.id] || Object.keys(restored).length < 40)) {
-      restored[target.id] = restored[target.id] || firstOrderQuantity(target.min_quantity, target.quantity_step);
+      const group = commercialConditions.quantity_groups.find((g) => g.product_ids.includes(target.id));
+      const displayStep = group?.quantity_multiple ?? target.quantity_step;
+      restored[target.id] = restored[target.id]
+        || Math.max(displayStep, Math.ceil(target.min_quantity / displayStep) * displayStep);
     }
     return restored;
   });
