@@ -3,8 +3,8 @@
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Check, LayoutGrid, List, Minus, Package, Plus, RotateCcw, Search, ShoppingBag, ShoppingCart, SlidersHorizontal, Trash2 } from "lucide-react";
-import { savePharmacyCart, sendMultiBrandCatalogueRequest } from "@/app/catalogue/actions";
+import { ArrowRight, Check, LayoutGrid, List, Minus, Package, Plus, Heart, RotateCcw, Search, ShoppingBag, ShoppingCart, SlidersHorizontal, Trash2 } from "lucide-react";
+import { savePharmacyCart, sendMultiBrandCatalogueRequest, setCatalogueFavorite } from "@/app/catalogue/actions";
 import type { ReorderRequest, SavedCartLine } from "@/lib/catalogue-buyer-workspace";
 import type { CatalogProduct } from "@/lib/private-catalogue";
 import type { PharmacyProductWithVisuals } from "@/lib/catalogue-private-product-visuals";
@@ -163,6 +163,7 @@ export function PrivateMultiBrandOrderForm({
   initialBrandSlug,
   initialProductId,
   initialCartLines = [],
+  initialFavoriteIds = [],
   reorderHistory = [],
   initialReorderId,
   commercialConditions,
@@ -171,6 +172,7 @@ export function PrivateMultiBrandOrderForm({
   initialBrandSlug?: string;
   initialProductId?: string;
   initialCartLines?: SavedCartLine[];
+  initialFavoriteIds?: string[];
   reorderHistory?: ReorderRequest[];
   initialReorderId?: string;
   commercialConditions: CommercialContext;
@@ -201,6 +203,11 @@ export function PrivateMultiBrandOrderForm({
   });
   const [query, setQuery] = useState("");
   const [brandFilter, setBrandFilter] = useState(initialBrandSlug ?? "all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [favorites, setFavorites] = useState<Set<string>>(() => new Set(initialFavoriteIds));
+  const [favoriteUpdating, setFavoriteUpdating] = useState<Set<string>>(new Set());
+  const [favoriteError, setFavoriteError] = useState("");
   const [sort, setSort] = useState("brand");
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   const [buyerView, setBuyerView] = useState<"reorder" | "catalogue">(
@@ -345,20 +352,53 @@ export function PrivateMultiBrandOrderForm({
     };
   };
 
+  const categories = useMemo(
+    () => [...new Set(products.map((product) => product.category).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b, "fr")),
+    [products],
+  );
+
+  const toggleFavorite = async (product: PrivateMultiBrandProduct) => {
+    if (favoriteUpdating.has(product.id)) return;
+    const next = !favorites.has(product.id);
+    setFavoriteError("");
+    setFavoriteUpdating((previous) => new Set(previous).add(product.id));
+    const result = await setCatalogueFavorite(product.id, next);
+    if (result.ok) {
+      setFavorites((previous) => {
+        const updated = new Set(previous);
+        if (next) updated.add(product.id);
+        else updated.delete(product.id);
+        return updated;
+      });
+    } else {
+      setFavoriteError(result.error ?? "Impossible d'enregistrer ce favori.");
+    }
+    setFavoriteUpdating((previous) => {
+      const updated = new Set(previous);
+      updated.delete(product.id);
+      return updated;
+    });
+  };
+
   const visible = useMemo(() => {
-    const normalized = query.trim().toLocaleLowerCase("fr");
+    const normalized = (value: string) => value.normalize("NFD")
+      .replace(/\\p{Diacritic}/gu, "").toLocaleLowerCase("fr");
+    const terms = normalized(query.trim()).split(/\\s+/).filter(Boolean);
     return products
       .filter((product) => (
         (brandFilter === "all" || product.brand_slug === brandFilter) &&
-        [
+        (categoryFilter === "all" || product.category === categoryFilter) &&
+        (!favoritesOnly || favorites.has(product.id)) &&
+        terms.every((term) => normalized([
           product.brand_name, product.name, product.sku, product.ean ?? "",
-          product.description, product.format,
-        ].some((value) => value.toLocaleLowerCase("fr").includes(normalized))
+          product.category, product.description, product.format,
+        ].join(" ")).includes(term))
       ))
       .sort((a, b) => sort === "name"
         ? a.name.localeCompare(b.name, "fr")
         : a.brand_name.localeCompare(b.brand_name, "fr") || a.name.localeCompare(b.name, "fr"));
-  }, [products, query, brandFilter, sort]);
+  }, [products, query, brandFilter, categoryFilter, favoritesOnly, favorites, sort]);
 
   const supplierSummaries = commercialConditions.suppliers
     .map((supplier) => {
