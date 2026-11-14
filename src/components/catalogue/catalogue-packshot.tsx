@@ -17,9 +17,17 @@ export function CataloguePackshot({
   variant?: "card" | "list";
   priority?: boolean;
 }) {
-  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const [failedHighRes, setFailedHighRes] = useState<string | null>(null);
+  const [failedOriginal, setFailedOriginal] = useState<string | null>(null);
   const isList = variant === "list";
-  const canShowPhoto = Boolean(src && src !== failedSrc);
+  const highResUrl = src ? shopifyResponsivePhoto(src, isList ? 320 : 960) : null;
+  const displayUrl = src && failedHighRes === src ? src : highResUrl;
+  const canShowPhoto = Boolean(src && src !== failedOriginal);
+  const handleError = () => {
+    if (!src) return;
+    if (displayUrl !== src) setFailedHighRes(src);
+    else setFailedOriginal(src);
+  };
 
   return (
     <div className={isList
@@ -27,14 +35,14 @@ export function CataloguePackshot({
       : "relative flex h-[220px] w-full items-center justify-center overflow-hidden bg-white sm:h-[250px] xl:h-[270px]"}>
       {canShowPhoto && src ? (
         <Image
-          src={shopifyResponsivePhoto(src, isList ? 320 : 960)}
+          src={displayUrl ?? src}
           alt={alt}
           fill
           unoptimized
           priority={priority && !isList}
           loading={priority && !isList ? "eager" : "lazy"}
           sizes={isList ? "64px" : "(max-width: 640px) calc(100vw - 36px), (max-width: 1024px) 45vw, 480px"}
-          onError={() => setFailedSrc(src)}
+          onError={handleError}
           className={isList
             ? "object-contain p-1"
             : "object-contain p-3 transition-transform duration-300 ease-out group-hover:scale-[1.04] sm:p-4"}
