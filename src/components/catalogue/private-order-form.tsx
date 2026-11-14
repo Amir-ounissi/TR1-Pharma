@@ -78,6 +78,7 @@ export function PrivateOrderForm({
     return { minCents, maxCents, unpriced };
   }, [selected, quantities]);
   const quantityTotal = selected.reduce((sum, p) => sum + quantities[p.id], 0);
+  const maxReferencesReached = selected.length >= 40;
   const priceSummaryTitle = allContractual ? "Total HT" : priceSummary.minCents > 0 ? "Estimation HT" : "Montant à confirmer";
   const priceSummaryValue = selected.length === 0
     ? "—"
@@ -91,6 +92,7 @@ export function PrivateOrderForm({
   };
   const add = (p: CatalogProduct) => {
     const current = quantities[p.id] ?? 0;
+    if (current === 0 && selected.length >= 40) return;
     setQuantity(p, current === 0 ? p.min_quantity : current + 1);
   };
   const subtract = (p: CatalogProduct) => {
@@ -125,7 +127,7 @@ export function PrivateOrderForm({
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="min-w-0 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#69717d]">
-            <p className="font-semibold">{visible.length} produit{visible.length > 1 ? "s" : ""}</p>
+            <p className="font-semibold">{visible.length} produit{visible.length > 1 ? "s" : ""} · 40 références maximum par demande</p>
             <p>Tarifs HT · Minimums et paliers par référence</p>
           </div>
           <div id="liste-produits" className="space-y-2">
@@ -181,10 +183,10 @@ export function PrivateOrderForm({
 
                   <div className="flex items-center justify-between gap-2 sm:justify-end">
                     {qty === 0 ? (
-                      <button type="button" onClick={() => add(p)}
-                        className="shop-primary-action inline-flex min-h-10 w-full items-center justify-center gap-2 px-3 text-xs sm:w-auto sm:min-w-[128px]">
-                        <Plus size={15} aria-hidden="true" /> Ajouter
-                        <span className="font-medium opacity-80">· {p.min_quantity} u.</span>
+                      <button type="button" onClick={() => add(p)} disabled={maxReferencesReached}
+                        className="shop-primary-action inline-flex min-h-10 w-full items-center justify-center gap-2 px-3 text-xs sm:w-auto sm:min-w-[128px] disabled:cursor-not-allowed disabled:opacity-40">
+                        <Plus size={15} aria-hidden="true" /> {maxReferencesReached ? "Limite atteinte" : "Ajouter"}
+                        {!maxReferencesReached && <span className="font-medium opacity-80">· {p.min_quantity} u.</span>}
                       </button>
                     ) : (
                       <div className="flex min-h-10 items-center overflow-hidden rounded-lg border border-[#dce3ea]">
