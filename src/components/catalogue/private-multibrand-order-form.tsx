@@ -69,6 +69,7 @@ function ProductQuantityControl({
   maxReferencesReached,
   compact = false,
   tierOffer,
+  groupQuantityMultiple,
   onAdd,
   onSubtract,
   onSetQuantity,
@@ -78,15 +79,21 @@ function ProductQuantityControl({
   maxReferencesReached: boolean;
   compact?: boolean;
   tierOffer?: TierUpsellOffer | null;
+  groupQuantityMultiple?: number;
   onAdd: () => void;
   onSubtract: () => void;
   onSetQuantity: (next: number) => void;
 }) {
-  const firstQuantity = firstOrderQuantity(product.min_quantity, product.quantity_step);
+  // Pas fournisseur de 4 sur le TOTAL : boutons +4/-4, saisie par référence libre.
+  const displayStep = groupQuantityMultiple ?? product.quantity_step;
+  const firstQuantity = groupQuantityMultiple
+    ? Math.max(displayStep, Math.ceil(product.min_quantity / displayStep) * displayStep)
+    : firstOrderQuantity(product.min_quantity, product.quantity_step);
   const invalid = quantity > 0 && !isAllowedQuantity(quantity, product.min_quantity, product.quantity_step);
-  const presets = product.quantity_step === 6
+  const presets = displayStep === 6
     ? QUICK_QUANTITIES.filter((preset) => preset >= firstQuantity)
-    : [0, 1, 2, 3, 7].map((n) => firstQuantity + n * product.quantity_step)
+    : displayStep === 4 ? [4, 8, 12, 16, 24, 48].filter((n) => n >= firstQuantity)
+    : [0, 1, 2, 3, 7].map((n) => firstQuantity + n * displayStep)
         .filter((n) => n >= firstQuantity && n <= 5000);
   return (
     <>
@@ -109,7 +116,7 @@ function ProductQuantityControl({
               onChange={(event) => onSetQuantity(event.target.value === "" ? 0 : Number(event.target.value))}
               className="h-10 w-14 border-x border-[#e8ecee] text-center text-sm font-extrabold text-[#0e1d31] outline-none" />
             <button type="button" onClick={onAdd} aria-label={"Augmenter " + product.name}
-              disabled={quantity + product.quantity_step > 5000}
+              disabled={quantity + displayStep > 5000}
               className="flex h-10 w-9 items-center justify-center text-[#162a45] hover:bg-[#fff1e6] disabled:opacity-30">
               <Plus size={16} />
             </button>
@@ -151,6 +158,11 @@ function ProductQuantityControl({
           </div>
         ) : null}
       </div>
+      {groupQuantityMultiple ? (
+        <p className="mt-1 text-[10px] text-[#62717e]">
+          Boutons + / − {displayStep} · total de la gamme multiple de {groupQuantityMultiple}, minimum collectif dans le panier. Répartition libre entre masques.
+        </p>
+      ) : null}
       <div className="mt-2 flex flex-wrap gap-1.5" aria-label={"Quantités rapides pour " + product.name}>
         {presets.map((preset) => (
           <button type="button" key={preset} onClick={() => onSetQuantity(preset)}
@@ -336,14 +348,13 @@ export function PrivateMultiBrandOrderForm({
     let target: number | null = threshold;
     let missingUnits = 0;
 
-    // Palier individuel + pas par référence + colisage collectif fournisseur.
-    // Exemple Biodance : de 24 à 40, +16 est interdit avec pas de 6 ;
-    // +24 donne 48 masques et respecte également le colisage collectif par 4.
+    // Le prochain palier Biodance de 24 à 40 s'atteint avec +16 masques
+    // car le fournisseur impose des multiples de 4 sur le total du groupe.
     if (target === null && needsPackingMultiple && group) {
       target = volume + 1;
     }
     if (target !== null) {
-      const step = product.quantity_step;
+      const step = group?.quantity_multiple ?? product.quantity_step;
       missingUnits = Math.ceil(Math.max(1, target - volume) / step) * step;
       while (group && (volume + missingUnits) % group.quantity_multiple !== 0
         && quantity + missingUnits <= 5000) {
@@ -578,12 +589,14 @@ export function PrivateMultiBrandOrderForm({
   const add = (product: PrivateMultiBrandProduct) => {
     const current = quantities[product.id] ?? 0;
     if (current === 0 && selected.length >= 40) return;
-    setQuantity(product, steppedOrderQuantity(current, product.min_quantity, product.quantity_step, 1));
+    const step = groupByProduct.get(product.id)?.quantity_multiple ?? product.quantity_step;
+    setQuantity(product, steppedOrderQuantity(current, Math.max(product.min_quantity, step), step, 1));
   };
 
   const subtract = (product: PrivateMultiBrandProduct) => {
     const current = quantities[product.id] ?? 0;
-    setQuantity(product, steppedOrderQuantity(current, product.min_quantity, product.quantity_step, -1));
+    const step = groupByProduct.get(product.id)?.quantity_multiple ?? product.quantity_step;
+    setQuantity(product, steppedOrderQuantity(current, Math.max(product.min_quantity, step), step, -1));
   };
 
   return (
@@ -810,6 +823,7 @@ export function PrivateMultiBrandOrderForm({
                             quantity={quantity}
                             maxReferencesReached={maxReferencesReached}
                             tierOffer={tierOfferForProduct(product, quantity)}
+                            groupQuantityMultiple={groupByProduct.get(product.id)?.quantity_multiple}
                             onAdd={() => add(product)}
                             onSubtract={() => subtract(product)}
                             onSetQuantity={(next) => setQuantity(product, next)}
@@ -889,6 +903,7 @@ export function PrivateMultiBrandOrderForm({
                           maxReferencesReached={maxReferencesReached}
                           compact
                           tierOffer={tierOfferForProduct(product, quantity)}
+                          groupQuantityMultiple={groupByProduct.get(product.id)?.quantity_multiple}
                           onAdd={() => add(product)}
                           onSubtract={() => subtract(product)}
                           onSetQuantity={(next) => setQuantity(product, next)}
