@@ -34,21 +34,48 @@ export const officialBiodanceByName: Record<string,OfficialEducation> = {
     "usage": "Appliquer sur peau nettoyée pendant 3 à 4 heures ou pendant la nuit selon les indications du fabricant."
   },
   "Hydro Cera-nol Real Deep Mask": {
-    "description": "Masque hydrogel axé sur le confort des peaux déshydratées et le soutien de la barrière cutanée.",
+    "description": "Masque visage hydrogel en deux parties, conçu pour apporter une hydratation intense et du confort aux peaux sèches, sensibles, sujettes aux rougeurs ou dont la barrière cutanée est fragilisée. Sa matrice hydrogel se transforme progressivement et devient transparente pendant la pose, maintenant les actifs au contact de la peau.",
     "benefits": [
-      "Hydratation et confort",
-      "Peaux sèches ou sensibles",
-      "Protection contre la perte en eau"
+      "Hydratation intense et prolongée",
+      "Aide à soutenir la barrière cutanée et à limiter la perte en eau",
+      "Contribue à apaiser les sensations d’inconfort et les rougeurs visibles",
+      "Sensation rafraîchissante sans menthol",
+      "Hydrogel sans trame textile, qui devient progressivement transparent",
+      "Format adapté à une pose prolongée ou à une utilisation de jour"
     ],
     "keyIngredients": [
-      "Complexe Cera-nol",
-      "Céramides",
-      "Panthénol",
-      "Acide hyaluronique"
+      "Complexe Cera-nol : D-Panthénol, 5 céramides et 10 formes d’oligo-acide hyaluronique",
+      "D-Panthénol : contribue à apaiser la peau",
+      "Céramides NP, NS, AS, AP et EOP : participent au soutien de la barrière cutanée",
+      "10 formes d’oligo-acide hyaluronique : contribuent à l’hydratation",
+      "Eau glaciaire à 50 000 ppm : apporte une base aqueuse riche en minéraux",
+      "Extraits de fenouil, coriandre, cardamome et safran : associés à la sensation rafraîchissante non mentholée"
     ],
     "sourceUrl": "https://biodance.com/pages/hydro-cera-nol-real-deep-mask",
-    "sourceName": "Biodance (fabricant)",
-    "usage": "Appliquer sur peau propre et laisser poser selon la notice du masque."
+    "sourceName": "Biodance — fabricant",
+    "usage": "Appliquer sur peau propre après les soins légers, puis laisser poser 3 à 4 heures ou toute la nuit selon le protocole choisi.",
+    "skinTypes": [
+      "Peaux sèches",
+      "Peaux sensibles",
+      "Peaux sujettes aux rougeurs",
+      "Peaux dont la barrière cutanée est fragilisée"
+    ],
+    "usageSteps": [
+      "Nettoyer le visage et sécher délicatement la peau.",
+      "Appliquer le toner et, si souhaité, un sérum léger. Éviter les crèmes ou huiles épaisses juste avant le masque.",
+      "Déplier les deux parties du masque hydrogel.",
+      "Positionner la partie supérieure sur le front et le contour des yeux, puis la partie inférieure sur le menton et la mâchoire. Ajuster délicatement.",
+      "En journée, laisser poser 3 à 4 heures ou jusqu’à ce que le masque devienne transparent.",
+      "Pour une pose de nuit, laisser agir jusqu’à 8 heures, puis retirer le masque au réveil.",
+      "Tapoter l’essence restante pour favoriser son absorption."
+    ],
+    "precautions": [
+      "Ne pas appliquer sur une peau irritée ou lésée.",
+      "Cesser l’utilisation en cas de réaction allergique ou d’irritation."
+    ],
+    "inci": "Water, Dipropylene Glycol, Glycerin, Cetyl Ethylhexanoate, Niacinamide, Xanthan Gum, Ceratonia Siliqua (Carob) Gum, Chondrus Crispus, Betaine, Panthenol, Hydroxyacetophenone, Ethylhexyl Olivate, Butyrospermum Parkii (Shea) Butter, Potassium Chloride, Caprylyl Glycol, Butylene Glycol, Cellulose Gum, 1,2-Hexanediol, Sucrose, Polyacrylate-13, Sodium Acrylates Copolymer, Glyceryl Stearate, Algin, Chondrus Crispus Extract, Glucomannan, Polyglyceryl-4 Oleate, Ethylhexylglycerin, Hydrolyzed Hyaluronic Acid, Hydrogenated Polyisobutene, Adenosine, Pyrus Communis (Pear) Fruit Extract, Disodium EDTA, Polyglyceryl-10 Laurate, Rosa Damascena Flower Water, Ethylhexyl Palmitate, Allantoin, Iris Florentina Root Extract, Sorbitan Isostearate, Cucumis Melo (Melon) Fruit Extract, Hydrogenated Lecithin, Hedera Helix (Ivy) Leaf/Stem Extract, Dextrin, Cetearyl Alcohol, Stearic Acid, Sodium Hyaluronate, Dipotassium Glycyrrhizate, Collagen Extract, Coriandrum Sativum (Coriander) Extract, Foeniculum Vulgare (Fennel) Seed Extract, Elettaria Cardamomum Seed Extract, Crocus Sativus Flower Extract, Hydroxypropyltrimonium Hyaluronate, Ceramide NP, Tocopherol, Ceramide NS, Cholesterol, Sodium Acetylated Hyaluronate, Phytosphingosine, Ceramide AP, Ceramide AS, Hyaluronic Acid, Hydrolyzed Sodium Hyaluronate, Sodium Hyaluronate Crosspolymer, Potassium Hyaluronate, Ceramide EOP",
+    "packaging": "Masque hydrogel en deux parties — 34 g par masque, vendu à l’unité pour cette référence",
+    "origin": "Corée du Sud"
   },
   "Radiant Vita Niacinamide Real Deep Mask": {
     "description": "Masque hydrogel éclat pensé pour les teints ternes et irréguliers.",
