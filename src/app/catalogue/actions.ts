@@ -117,7 +117,7 @@ export async function sendPrivateCatalogueRequest(
 
   // La transaction Postgres refait l'intégralité des contrôles et recalcule
   // les prix depuis les accords réels, sans jamais accepter de total du client.
-  const { error } = await admin.rpc("catalogue_submit_multibrand_request", {
+  const { error } = await admin.rpc("catalogue_submit_with_korean_franco", {
     p_groups: [{ slug: slug.data, lines }],
   });
   if (error) return { error: "La demande n'a pas pu être enregistrée. Vérifiez votre accès et réessayez." };
@@ -210,7 +210,7 @@ export async function sendMultiBrandCatalogueRequest(
 
   // Une seule transaction PostgreSQL traite tous les groupes : en cas d'erreur
   // sur une marque, aucune demande partielle n'est conservée.
-  const { error } = await admin.rpc("catalogue_submit_multibrand_request", {
+  const { error } = await admin.rpc("catalogue_submit_with_korean_franco", {
     p_groups: groups,
   });
   if (error) {
@@ -244,4 +244,42 @@ export async function savePharmacyCart(
   } catch {
     return { saved: false, error: "Enregistrement du panier indisponible." };
   }
+}
+
+/** Ajouter une référence à un brouillon existant depuis la fiche sans perdre le panier. */
+export async function addCatalogueProductToCart(
+  productId: string,
+  quantity: number,
+): Promise<{ ok: boolean; error?: string }> {
+  const parsed = z.object({ productId: z.uuid(), quantity: z.number().int().min(1).max(5000) })
+    .safeParse({ productId, quantity });
+  if (!parsed.success) return { ok: false, error: "Quantité ou référence invalide." };
+  const { admin } = await requirePharmacyCatalogue();
+  const { error } = await admin.rpc("catalogue_add_cart_line", {
+    p_product_id: parsed.data.productId,
+    p_quantity: parsed.data.quantity,
+  });
+  if (error) {
+    return { ok: false, error: "Ajout indisponible : vérifiez la quantité, vos accès ou la limite de 40 références." };
+  }
+  revalidatePath("/catalogue");
+  return { ok: true };
+}
+
+/** Favoris strictement rattachés à l'utilisateur et à son officine. */
+export async function setCatalogueFavorite(
+  productId: string,
+  saved: boolean,
+): Promise<{ ok: boolean; error?: string }> {
+  const parsed = z.object({ productId: z.uuid(), saved: z.boolean() })
+    .safeParse({ productId, saved });
+  if (!parsed.success) return { ok: false, error: "Référence invalide." };
+  const { admin } = await requirePharmacyCatalogue();
+  const { error } = await admin.rpc("catalogue_set_favorite", {
+    p_product_id: parsed.data.productId,
+    p_saved: parsed.data.saved,
+  });
+  if (error) return { ok: false, error: "Impossible de modifier ce favori. Réessayez." };
+  revalidatePath("/catalogue");
+  return { ok: true };
 }
