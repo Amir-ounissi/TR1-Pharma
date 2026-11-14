@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowUpRight, Barcode, Building2, Check, ClipboardList, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Barcode, Building2, Check, ClipboardList, ShoppingBag } from "lucide-react";
 import { Ean13Barcode } from "@/components/catalogue/ean13-barcode";
 import { ProductImageGallery } from "@/components/catalogue/product-image-gallery";
+import { PharmacyProductActions } from "@/components/catalogue/pharmacy-product-actions";
 import { ExternalCompositionAnalysis } from "@/components/catalogue/external-composition-analysis";
 import { isValidEan13 } from "@/lib/ean13";
 import { faireProductInformationByEan } from "@/lib/catalogue-faire-product-information";
@@ -61,6 +62,9 @@ export default async function PharmacyCatalogueProductPage({ params }: ProductPa
     ?? products.find((item) => normalizeProductName(item.name) === normalizeProductName(product.name));
   if (!privateProduct) notFound();
   const commercial = await getCommercialContext(admin);
+  const { data: favoriteIds, error: favoriteError } = await admin.rpc("catalogue_my_favorites");
+  if (favoriteError) throw favoriteError;
+  const initialFavorite = ((favoriteIds ?? []) as string[]).includes(privateProduct.id);
   const quantityGroup = commercial.quantity_groups.find((group) => group.product_ids.includes(privateProduct.id));
   const officialInfo = product.brand === "Biodance"
     ? officialBiodanceByName[product.name]
@@ -152,10 +156,13 @@ export default async function PharmacyCatalogueProductPage({ params }: ProductPa
                 ? "Prix indicatifs. Le montant définitif est confirmé après vérification de la demande."
                 : "Conditions contractuelles de votre officine."}
             </p>
-            <Link href={"/catalogue/marques/" + brand.slug + "?produit=" + privateProduct.id + "#produits"}
-              className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-lg bg-[#e99055] px-5 text-sm font-extrabold text-[#142941] hover:bg-[#f4a779]">
-              Commander ce produit <ArrowUpRight size={16} aria-hidden="true" />
-            </Link>
+            <PharmacyProductActions
+              productId={privateProduct.id}
+              name={privateProduct.name}
+              minQuantity={privateProduct.min_quantity}
+              collectiveMinimum={quantityGroup?.minimum_total_units ?? null}
+              initialFavorite={initialFavorite}
+            />
           </section>
         </div>
       </div>
