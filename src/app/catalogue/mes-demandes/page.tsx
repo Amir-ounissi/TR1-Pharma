@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { euroHT, requirePharmacyCatalogue } from "@/lib/private-catalogue";
+import { getBuyerWorkspace } from "@/lib/catalogue-buyer-workspace";
 
 const labels: Record<string, string> = {
   received: "Reçue",
@@ -15,7 +16,9 @@ export default async function PharmacyRequestsPage({
 }: { searchParams: Promise<{ envoyee?: string; marques?: string }> }) {
   const { envoyee, marques } = await searchParams;
   const submittedBrandCount = Math.max(1, Math.min(20, Number(marques) || 1));
-  const { pharmacy, catalog } = await requirePharmacyCatalogue();
+  const { pharmacy, catalog, admin } = await requirePharmacyCatalogue();
+  const workspace = await getBuyerWorkspace(admin);
+  const reorderable = new Set(workspace.recent_requests.map((request) => request.id));
   const requests = catalog.requests ?? [];
   const names = new Map(catalog.brands.map((b) => [b.id, b.name]));
 
@@ -38,7 +41,15 @@ export default async function PharmacyRequestsPage({
                   <p className="mt-1 text-xs text-[#69717d]">{new Date(request.created_at).toLocaleDateString("fr-FR")} · Réf. {request.id.slice(0, 8).toUpperCase()}</p>
                   <p className="mt-2 text-xs font-bold text-[#69717d]">{request.request_kind === "quote" ? "Demande de conditions · " : "Demande de commande · "}{labels[request.status] ?? request.status}</p>
                 </div>
-                <p className="text-lg font-black">{request.request_kind === "quote" || request.total_ht === null ? "À chiffrer" : euroHT(Number(request.total_ht)) + " HT"}</p>
+                <div className="flex flex-col items-start gap-2 sm:items-end">
+                  <p className="text-lg font-black">{request.request_kind === "quote" || request.total_ht === null ? "À chiffrer" : euroHT(Number(request.total_ht)) + " HT"}</p>
+                  {reorderable.has(request.id) ? (
+                    <Link href={"/catalogue?reprendre=" + encodeURIComponent(request.id) + "#reassort"}
+                      className="inline-flex min-h-9 items-center rounded-lg border border-[#142941] px-3 text-xs font-bold text-[#142941] hover:bg-[#f4f6f6]">
+                      Reprendre cette sélection
+                    </Link>
+                  ) : null}
+                </div>
               </div>
             ))}
           </div>
