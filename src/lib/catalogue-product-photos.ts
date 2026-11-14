@@ -597,4 +597,37 @@ export const productGalleryByEan: Record<string, string[]> = {
       "https://doctoraltheaglobal.com/cdn/shop/files/260224______1200_-06_8a0e1e4f-15e5-4d45-8cf7-875ef6efa024.jpg?v=1782881657&width=200",
       "https://doctoraltheaglobal.com/cdn/shop/files/260223______1200_-07_7f272ba4-cf57-44d3-9a2e-ec67d2f2d514.jpg?v=1782881657&width=200"
   ]
+  "8809738312872": [
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/Untitled_design_-_2025-06-11T151225.534.png?v=1749622353",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/46.png?v=1749622557",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/48.png?v=1749622557"
+  ],
+  "8809738316412": [
+      "https://fr.beautyofjoseon.com/cdn/shop/files/calming-serum-green-tea-panthenol-1-front.webp?crop=center&height=3000&v=1770617473&width=3000",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/calming-serum-green-tea-panthenol-3.webp?crop=center&height=3000&v=1770617501&width=3000",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/calming-serum-green-tea-panthenol-4.webp?crop=center&height=3000&v=1770617533&width=3000",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/calming-serum-green-tea-panthenol-5.webp?crop=center&height=3000&v=1770617560&width=3000",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/calming-serum-green-tea-panthenol-6.webp?crop=center&height=3000&v=1770617594&width=3000",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/006.png?crop=center&height=3000&v=1773209171&width=3000",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/calming-serum-green-tea-panthenol-8.webp?crop=center&height=3000&v=1773205977&width=3000"
+  ],
+  "8809968130239": [
+      "https://fr.beautyofjoseon.com/cdn/shop/files/Untitled_design_-_2025-05-29T111310.463.png?v=1748484934&width=1800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/18_f70b7a6c-0d35-4468-b450-31c216e03fe4.png?v=1748492123&width=800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/17_2e630cce-8eca-4444-807a-6dc77e07e725.png?v=1748492122&width=800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/optimized_6a26ddce85ff37.48907790_v2_BOj1145.jpg?v=1780970417&width=800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/boj-key-ingredients-rice.webp?v=1774944252&width=1600"
+  ],
+  "8809875906477": [
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/Untitled_design_-_2025-05-30T134541.277.png?v=1748580368",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/23.png?v=1748580575",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/24.png?v=1748580576",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/Untitled_design_-_2025-05-30T133203.410.png?v=1748579557"
+  ],
+  "8809738316986": [
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/13_2b4f9766-1cd0-4820-8d38-81fa15ec912e.png?v=1746668823",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/15_fb7704fc-6eaa-4c31-8424-d073a42cc6ff.png?v=1746669943",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/13_e5dd42bb-9b08-4d15-a2b0-926ebf5898b7.png?v=1746669943",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/14_76953cde-da00-4293-bcaa-83d6b2f5e66d.png?v=1746669943"
+  ]
 };
