@@ -26,7 +26,7 @@ const brandSlugs: Record<string, string> = {
   "Dr. Althea": "dr-althea",
   "Biodance": "biodance",
 };
-const normalizeProductName = (value: string) => value.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLocaleLowerCase("fr").replace(/[^a-z0-9]+/g, " ").trim();
+const normalizeProductName = (value: string) => value.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLocaleLowerCase("fr").replace(/[^a-z0-9]+/g, " ").trim();
 function privateTierPrice(
   pricing: PrivateDisplayProduct["pricing"],
   tier: PrivateDisplayProduct["pricing"]["tiers"][number] | null,
@@ -51,8 +51,6 @@ const themes: Record<string, BrandTheme> = {
   "VK SWISS": { bg: "#e9edf1", ink: "#263d56", border: "#c6d0db", short: "VK SWISS", detail: "Compléments alimentaires" },
 };
 
-const formatBrandCount = (brand: string) => allProducts.filter((p) => p.brand === brand).length;
-
 export function PublicProductGrid({ privateProducts }: { privateProducts?: PrivateDisplayProduct[] } = {}) {
   const privateMode = privateProducts !== undefined;
   const privateProductMap = useMemo(() => {
@@ -69,10 +67,17 @@ export function PublicProductGrid({ privateProducts }: { privateProducts?: Priva
     return (product.ean ? privateProductMap.get("ean:" + product.ean) : undefined)
       ?? privateProductMap.get("name:" + slug + ":" + normalizeProductName(product.name));
   };
-  const catalogueProducts = useMemo(
-    () => privateMode ? allProducts.filter((product) => Boolean(lookupPrivateProduct(product))) : allProducts,
-    [privateMode, privateProductMap],
-  );
+  const catalogueProducts = useMemo(() => {
+    if (!privateMode) return allProducts;
+    return allProducts.filter((product) => {
+      const slug = brandSlugs[product.brand];
+      if (!slug) return false;
+      return Boolean(
+        (product.ean ? privateProductMap.get("ean:" + product.ean) : undefined)
+        ?? privateProductMap.get("name:" + slug + ":" + normalizeProductName(product.name)),
+      );
+    });
+  }, [privateMode, privateProductMap]);
   const availableBrands = brands.filter((brand, index) =>
     index === 0 || catalogueProducts.some((product) => product.brand === brand),
   );
@@ -86,7 +91,7 @@ export function PublicProductGrid({ privateProducts }: { privateProducts?: Priva
   const categories = useMemo(
     () => [...new Set(catalogueProducts.filter((p) => selectedBrand === "Toutes les marques" || p.brand === selectedBrand)
       .map((p) => p.category).filter(Boolean))].sort((a, b) => a.localeCompare(b, "fr")),
-    [selectedBrand],
+    [catalogueProducts, selectedBrand],
   );
   const visible = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase("fr");
