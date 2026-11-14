@@ -48,6 +48,69 @@ export function steppedOrderQuantity(
   return next < first ? 0 : next;
 }
 
+/** Condition collective fournisseur : minimum et multiple sur l'ensemble de la gamme. */
+export type CollectiveQuantityRule = {
+  minimum_total_units: number;
+  quantity_multiple: number;
+};
+
+/** Seuil réel d'accès au prix, parmi les quantités effectivement commandables. */
+export function orderablePricingThreshold(
+  tierMinimum: number,
+  productMinimum: number,
+  productStep: number,
+  collective?: CollectiveQuantityRule | null,
+) {
+  if (collective) {
+    return firstOrderQuantity(
+      Math.max(tierMinimum, collective.minimum_total_units),
+      collective.quantity_multiple,
+    );
+  }
+  return firstOrderQuantity(Math.max(tierMinimum, productMinimum), productStep);
+}
+
+/**
+ * Pour l'affichage uniquement, fusionne les paliers qui tombent sur le même
+ * premier colisage possible. Conserve le DERNIER tarif applicable à ce volume.
+ * La grille des fournisseurs et les calculs de prix restent inchangés.
+ */
+export function orderablePricingTiers<T extends { min_quantity: number }>(
+  tiers: readonly T[],
+  minimum: number,
+  step: number,
+  collective?: CollectiveQuantityRule | null,
+): { threshold: number; tier: T }[] {
+  const byThreshold = new Map<number, T>();
+  for (const tier of [...tiers].sort((a, b) => a.min_quantity - b.min_quantity)) {
+    const threshold = orderablePricingThreshold(tier.min_quantity, minimum, step, collective);
+    if (threshold > 0) byThreshold.set(threshold, tier);
+  }
+  return [...byThreshold.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([threshold, tier]) => ({ threshold, tier }));
+}
+
+/** Libellé clair côté pharmacien ; jamais un palier 1 u. non commandable. */
+export function catalogueQuantityPricingLabel(
+  minimum: number,
+  step: number,
+  tierMinimum: number | null,
+  collective?: CollectiveQuantityRule | null,
+) {
+  if (collective) {
+    const base = `Minimum ${collective.minimum_total_units} masques cumulés · Total par multiples de ${collective.quantity_multiple}`;
+    return tierMinimum === null ? `${base} · Tarif à confirmer`
+      : `${base} · Tarif HT dès ${orderablePricingThreshold(tierMinimum, minimum, step, collective)} masques cumulés`;
+  }
+  const first = firstOrderQuantity(minimum, step);
+  const orderRule = first === step
+    ? `Commande par ${step} unité${step > 1 ? "s" : ""}`
+    : `Minimum ${first} unités · Quantités par ${step}`;
+  return tierMinimum === null ? `${orderRule} · Tarif à confirmer`
+    : `${orderRule} · Tarif HT applicable dès ${orderablePricingThreshold(tierMinimum, minimum, step)} unités`;
+}
+
 export function sumOrderCents(lines: { price_ht: number; quantity: number }[]) {
   return lines.reduce((sum, line) => sum + Math.round(line.price_ht * 100) * line.quantity, 0);
 }
