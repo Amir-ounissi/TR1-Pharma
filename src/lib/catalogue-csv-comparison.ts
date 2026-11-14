@@ -9,6 +9,7 @@ export type MatchableProduct = {
   name: string;
   brand_name: string;
   ean: string | null;
+  format: string | null;
 };
 
 export type ProductMatch = {
@@ -23,6 +24,7 @@ export type PharmacyCsvRecord = {
   name: string;
   brand: string | null;
   ean: string | null;
+  format: string | null;
   purchasePriceHt: number | null;
 };
 
@@ -31,6 +33,7 @@ export type CsvColumnMapping = {
   price: number | null;
   ean: number | null;
   brand: number | null;
+  format: number | null;
 };
 
 export function detectCsvDelimiter(input: string): string {
@@ -50,14 +53,13 @@ export function detectCsvDelimiter(input: string): string {
     }
     return { delimiter, count };
   });
-  return counts.sort((a, b) => b.count - a.count)[0]?.count
-    ? counts.sort((a, b) => b.count - a.count)[0].delimiter
-    : ";";
+  const best = counts.sort((a, b) => b.count - a.count)[0];
+  return best?.count ? best.delimiter : ";";
 }
 
 export function parseCsvContent(input: string): ParsedCsvContent {
   let source = input.replace(/^\uFEFF/, "");
-  const separatorHint = source.match(/^sep=(;|,|\\t)\\s*(?:\\r?\\n)/i);
+  const separatorHint = source.match(/^sep=(;|,|\t)\s*(?:\r?\n)/i);
   if (separatorHint) source = source.slice(separatorHint[0].length);
   const delimiter = detectCsvDelimiter(source);
   const rows: string[][] = [];
@@ -114,7 +116,15 @@ export function normalizeCsvText(value: string): string {
 
 export function normalizeEan(value: string | null | undefined): string | null {
   if (!value) return null;
-  const digits = value.replace(/[^0-9]/g, "");
+  const raw = value.trim().replace(/\.0+$/, "");
+  if (/^\d+(?:[.,]\d+)?e[+-]?\d+$/i.test(raw)) {
+    const numeric = Number(raw.replace(",", "."));
+    if (Number.isSafeInteger(numeric)) {
+      const expanded = String(numeric);
+      return expanded.length >= 8 && expanded.length <= 14 ? expanded : null;
+    }
+  }
+  const digits = raw.replace(/[^0-9]/g, "");
   return digits.length >= 8 && digits.length <= 14 ? digits : null;
 }
 
@@ -142,6 +152,7 @@ const HEADER_PATTERNS: Record<keyof CsvColumnMapping, string[]> = {
   price: ["prix achat ht", "prix d achat ht", "prix achat net", "prix net achat", "pamp ht", "pamp", "cout achat ht", "cout unitaire ht", "prix achat"],
   ean: ["ean", "gtin", "code barre", "codebarre", "cip13", "cip 13", "code ean"],
   brand: ["marque", "laboratoire", "brand"],
+  format: ["conditionnement", "format", "contenance", "unite de vente", "unite vente"],
 };
 
 export function detectCsvColumn(
@@ -168,6 +179,7 @@ export function buildPharmacyCsvRecords(
     if (!name) return [];
     const brand = mapping.brand === null ? "" : (cells[mapping.brand] ?? "").trim();
     const ean = mapping.ean === null ? null : normalizeEan(cells[mapping.ean] ?? "");
+    const format = mapping.format === null ? "" : (cells[mapping.format] ?? "").trim();
     const purchasePriceHt = parseFrenchAmount(cells[mapping.price] ?? "");
     return [{
       id: "csv-row-" + (index + 2),
@@ -175,6 +187,7 @@ export function buildPharmacyCsvRecords(
       name,
       brand: brand || null,
       ean,
+      format: format || null,
       purchasePriceHt,
     }];
   });
@@ -207,7 +220,7 @@ function tokenSimilarity(left: string, right: string): number {
 }
 
 export function findProductMatch(
-  record: Pick<PharmacyCsvRecord, "name" | "brand" | "ean">,
+  record: Pick<PharmacyCsvRecord, "name" | "brand" | "ean" | "format">,
   products: MatchableProduct[],
 ): ProductMatch {
   if (record.ean) {
@@ -227,16 +240,19 @@ export function findProductMatch(
       const productName = normalizeCsvText(product.name);
       const score = (levenshteinSimilarity(name, productName) * 0.55)
         + (tokenSimilarity(name, productName) * 0.45);
-      return { product, score, exact: name === productName };
+      const csvFormat = record.format ? normalizeCsvText(record.format) : null;
+      const productFormat = product.format ? normalizeCsvText(product.format) : null;
+      const formatMismatch = Boolean(csvFormat && productFormat && csvFormat !== productFormat);
+      return { product, score, exact: name === productName, formatMismatch };
     })
     .sort((a, b) => b.score - a.score);
 
   const best = candidates[0];
   if (!best) return { productId: null, suggestedProductId: null, method: "none" };
-  if (best.exact) {
+  if (best.exact && !best.formatMismatch) {
     return { productId: best.product.id, suggestedProductId: null, method: "exact" };
   }
-  if (best.score >= 0.86) {
+  if (best.exact || best.score >= 0.86) {
     return { productId: null, suggestedProductId: best.product.id, method: "suggested" };
   }
   return { productId: null, suggestedProductId: null, method: "none" };
