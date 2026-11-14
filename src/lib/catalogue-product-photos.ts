@@ -273,12 +273,7 @@ export const productPhotoByEan: Record<string, ProductPhoto> = {
 
 /** Galeries Biodance rapprochées au nom exact et au format produit. Sources officielles et distributeurs identifiés. */
 export const productGalleryByName: Record<string, string[]> = {
-  "Bio Collagen-Real Deep Mask": [
-    "https://cdn.shopify.com/s/files/1/0894/2554/3511/files/Biodance_real_deep.png?v=1769774509",
-    "https://international-cosmetic.com/cdn/shop/files/biodance.webp?v=1740065156&width=1214",
-    "https://cosibella.com.de/hpeciai/95e4a47b01752bc003dc3f387fa56eca/ger_pl_Biodance-Bio-Collagen-Real-Deep-Mask-Set-Set-mit-straffenden-Kollagen-Gesichtsmasken-4-Stuck-34g-22061_1.webp",
-    "https://www.korendy.com.tr/cdn/shop/files/Biodance-RealDeepMask-Bio-Collagen4luKorendy1_grande.png?v=1740418001"
-  ],
+
   "Pore Perfecting Collagen Peptide Serum": [
     "https://www.skincupid.us/cdn/shop/files/BIODANCEPorePerfectingCollagenPeptideSerum_30ml.png?v=1769521930&width=800",
     "https://www.skincupid.us/cdn/shop/files/BIODANCE_Pore_Perfecting_Collagen_Peptide_Serum_30ml_Skin_Cupid_TEXTURE.png?v=1769523287&width=800",
@@ -522,20 +517,18 @@ export const productGalleryByEan: Record<string, string[]> = {
       "https://fr.beautyofjoseon.com/cdn/shop/files/Untitled_design_-_2025-04-28T173106.372_61d6cf83-e4d7-4fbf-8c55-8c62304642ff.png?v=1777588874&width=2200"
   ]
   "8809937361718": [
-      "https://cdn.shopify.com/s/files/1/0894/2554/3511/files/Biodance_real_deep.png?v=1769774509",
-      "https://international-cosmetic.com/cdn/shop/files/biodance.webp?v=1740065156&width=1214",
-      "https://cosibella.com.de/hpeciai/95e4a47b01752bc003dc3f387fa56eca/ger_pl_Biodance-Bio-Collagen-Real-Deep-Mask-Set-Set-mit-straffenden-Kollagen-Gesichtsmasken-4-Stuck-34g-22061_1.webp",
-      "https://www.korendy.com.tr/cdn/shop/files/Biodance-RealDeepMask-Bio-Collagen4luKorendy1_grande.png?v=1740418001"
+      "https://cdn.shop-apotheke.com/images/mp/prod/b9a5eb02a3294257a9d604a3cf50934f",
+      "https://cdn.shop-apotheke.com/images/mp/prod/b1a23360ff3f41598e66a0f9975c62b7",
+      "https://cdn.shop-apotheke.com/images/mp/prod/392c79096f0b43318efde33147c112bd",
+      "https://cdn.shop-apotheke.com/images/mp/prod/844027d18c674ccd9bfcb4b9841d1c29",
+      "https://cdn.shop-apotheke.com/images/mp/prod/6030c6bc844f42e0873a77dfff4aefdb",
+      "https://kbeauty-cosmetics.com/cdn/shop/files/1482.jpg?v=1768923874"
   ],
   "8809891184583": [
-      "https://ldfranceimport.com/cdn/shop/files/BIODANCERadiantVitaNiacinamideRealDeepMasquex4pieces.jpg?v=1776939980",
-      "https://shop.r10s.jp/biodance/cabinet/12176159/imgrc0099974854.jpg",
-      "https://www.sephora.com/productimages/sku/s2865343-av-01-zoom.jpg",
-      "https://www.fragranza.uk/cdn/shop/files/10060772.jpg?v=1777091300"
+      "https://www.pharmashopi.com/media/catalog/product/cache/8fb9ccd96a3a4426c64d43d5c86136cb/8/8/8809891184583.webp",
+      "https://www.kalista-parfums.com/236848-thickbox_default/radiant-vita-niacinamide-real-deep-mask.jpg"
   ],
   "8809891184569": [
-      "https://lilabeauty.com.au/cdn/shop/files/buy-biodance-refreshing-sea-scalp-real-deep-mask-34g-at-lila-beauty-korean-and-japanese-beauty-skin-care-868247_800x.jpg?v=1747441936",
-      "https://resource.megaeletronicos.com/uploads/Blog/4/8/1/481/6939a64b14596.webp",
-      "https://www.tjhughes.co.uk/cdn/shop/files/10060773.jpg?v=1777380177"
+      "https://koreanskincare.nl/cdn/shop/files/Biodance_RefreshingSeaKelpRealDeepMask_Packshot.jpg?v=1762264118"
   ]
 };
