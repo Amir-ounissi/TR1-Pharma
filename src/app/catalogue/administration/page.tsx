@@ -82,6 +82,16 @@ export default async function CatalogueAdministration({
           Consulter les imports
         </Link>
       </div>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#e2e7ec] bg-white p-4">
+        <div>
+          <p className="text-sm font-extrabold">Conditions commerciales fournisseurs</p>
+          <p className="mt-1 text-xs text-[#69717d]">Associer marques et fournisseurs réels, confirmer les minimums, les paliers, les gratuités et les frais de livraison.</p>
+        </div>
+        <Link href="/catalogue/administration/conditions"
+          className="rounded-md bg-[#142941] px-4 py-2.5 text-sm font-extrabold text-white">
+          Paramétrer les conditions
+        </Link>
+      </div>
       {succes === "1" ? <div role="status" className="rounded-lg border border-[#4f7a58]/30 bg-[#edf7ee] p-4 text-sm font-semibold text-[#315638]">Action enregistrée.</div> : null}
 
       <div className="grid gap-3 sm:grid-cols-4">
