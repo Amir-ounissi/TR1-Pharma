@@ -332,19 +332,29 @@ export function PrivateMultiBrandOrderForm({
     const minimumToReach = volume < minimum;
     const needsPackingMultiple = Boolean(group && volume >= minimum && volume % group.quantity_multiple !== 0);
     const nextTier = nextTierForQuantity(product.pricing.tiers, volume);
-    let target: number | null = minimumToReach ? minimum : (nextTier?.min_quantity ?? null);
+    const threshold: number | null = minimumToReach ? minimum : (nextTier?.min_quantity ?? null);
+    let target: number | null = threshold;
+    let missingUnits = 0;
 
-    // Si le dernier palier est atteint, guider vers le prochain multiple valide
-    // sans inventer une nouvelle remise.
+    // Palier individuel + pas par référence + colisage collectif fournisseur.
+    // Exemple Biodance : de 24 à 40, +16 est interdit avec pas de 6 ;
+    // +24 donne 48 masques et respecte également le colisage collectif par 4.
     if (target === null && needsPackingMultiple && group) {
-      target = Math.ceil(volume / group.quantity_multiple) * group.quantity_multiple;
+      target = volume + 1;
     }
-    if (target !== null && group) {
-      target = Math.ceil(target / group.quantity_multiple) * group.quantity_multiple;
-    }
-    const missingUnits = target === null ? 0 : target - volume;
-    if (target !== null && (missingUnits < 1 || quantity + missingUnits > 5000)) {
-      target = null;
+    if (target !== null) {
+      const step = product.quantity_step;
+      missingUnits = Math.ceil(Math.max(1, target - volume) / step) * step;
+      while (group && (volume + missingUnits) % group.quantity_multiple !== 0
+        && quantity + missingUnits <= 5000) {
+        missingUnits += step;
+      }
+      if (quantity + missingUnits > 5000) {
+        target = null;
+        missingUnits = 0;
+      } else {
+        target = volume + missingUnits;
+      }
     }
 
     const currentTier = findTierForQuantity(product.pricing.tiers, volume);
@@ -364,7 +374,7 @@ export function PrivateMultiBrandOrderForm({
       : null;
 
     return {
-      missingUnits: target === null ? 0 : target - volume,
+      missingUnits,
       targetQuantity: target,
       nextUnitPrice: nextPrice ? formatPriceRange(nextPrice.min, nextPrice.max) : null,
       currentSavingsCents,
