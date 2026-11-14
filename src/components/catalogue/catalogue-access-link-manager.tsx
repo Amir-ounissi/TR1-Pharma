@@ -40,7 +40,7 @@ export function CatalogueAccessLinkManager({
     initialState,
   );
   const [copied, setCopied] = useState(false);
-  const isActive = Boolean(activeExpiresAt && new Date(activeExpiresAt).getTime() > Date.now());
+  const isActive = Boolean(activeExpiresAt);
 
   async function copyLink() {
     if (!created.url) return;
