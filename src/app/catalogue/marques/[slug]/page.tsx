@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ChevronRight, LockKeyhole, ShoppingBag } from "lucide-react";
-import { getCatalogueBrandForPharmacy, requirePharmacyCatalogue } from "@/lib/private-catalogue";
-import { PrivateOrderForm } from "@/components/catalogue/private-order-form";
+import { getCatalogueBrands, getCatalogueBrandForPharmacy, requirePharmacyCatalogue } from "@/lib/private-catalogue";
+import { PrivateMultiBrandOrderForm } from "@/components/catalogue/private-multibrand-order-form";
 
 export default async function PharmacyBrandPage({
   params, searchParams,
@@ -13,6 +13,19 @@ export default async function PharmacyBrandPage({
   const { produit } = await searchParams;
   const { admin, pharmacy } = await requirePharmacyCatalogue();
   const { brand, products } = await getCatalogueBrandForPharmacy(pharmacy.id, slug, admin);
+  const accessibleBrands = await getCatalogueBrands(pharmacy.id, admin);
+  const otherGroups = await Promise.all(accessibleBrands
+    .filter((item) => item.slug !== brand.slug)
+    .map(async (item) => ({
+      brand: item,
+      products: (await getCatalogueBrandForPharmacy(pharmacy.id, item.slug, admin)).products,
+    })));
+  const orderProducts = [
+    ...products.map((product) => ({ ...product, brand_slug: brand.slug, brand_name: brand.name })),
+    ...otherGroups.flatMap(({ brand: item, products: items }) =>
+      items.map((product) => ({ ...product, brand_slug: item.slug, brand_name: item.name })),
+    ),
+  ];
 
   return (
     <div className="space-y-7">
@@ -42,7 +55,7 @@ export default async function PharmacyBrandPage({
           <ShoppingBag size={16} aria-hidden="true" /> Mes demandes
         </Link>
       </div>
-      <div id="produits"><PrivateOrderForm slug={brand.slug} brandName={brand.name} products={products} initialProductId={produit} /></div>
+      <div id="produits"><PrivateMultiBrandOrderForm products={orderProducts} initialBrandSlug={brand.slug} initialProductId={produit} /></div>
     </div>
   );
 }
