@@ -17,6 +17,7 @@ const publicByName = new Map(publicCatalogueProducts
 export type PharmacyProductWithVisuals = CatalogProduct & {
   brand_slug: string;
   brand_name: string;
+  category: string;
   product_detail_href: string | null;
 };
 
@@ -34,6 +35,7 @@ export function withPharmacyProductVisuals(
     ...product,
     brand_slug: brand.slug,
     brand_name: brand.name,
+    category: original?.category || "Autres soins",
     image_url: product.image_url?.trim() || originalPhoto,
     product_detail_href: original
       ? `/catalogue/marques/${brand.slug}/fiche/${publicProductKey(original)}`
