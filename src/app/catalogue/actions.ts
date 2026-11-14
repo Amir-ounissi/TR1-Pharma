@@ -73,10 +73,13 @@ export async function activatePharmacyCatalogue(formData: FormData) {
 }
 
 export async function disconnectPharmacyCatalogue() {
+  const { isLinkAccess } = await requirePharmacyCatalogue();
   const cookieStore = await cookies();
   cookieStore.delete(PRIVATE_CATALOGUE_LINK_COOKIE);
-  const client = await createClient();
-  await client.auth.signOut();
+  if (!isLinkAccess) {
+    const client = await createClient();
+    await client.auth.signOut();
+  }
   redirect("/catalogue/connexion");
 }
 
