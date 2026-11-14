@@ -603,6 +603,9 @@ export function PrivateMultiBrandOrderForm({
           {!products.length ? <p className="rounded-lg bg-white p-6 text-sm">Aucune référence disponible pour le moment.</p> : null}
         </div>
         )}
+        {buyerView === "reorder" ? selected.map((product) => (
+          <input key={product.id} type="hidden" name={"quantity_" + product.id} value={quantities[product.id]} />
+        )) : null}
 
         <aside id="panier" aria-label="Panier multimarque" className="scroll-mt-6 overflow-hidden rounded-xl border border-[#e2e7ec] bg-white shadow-[0_16px_35px_-25px_rgba(20,52,40,.3)] lg:sticky lg:top-6">
           <div className="flex items-center gap-3 bg-[#0e1d31] px-5 py-5 text-white">
