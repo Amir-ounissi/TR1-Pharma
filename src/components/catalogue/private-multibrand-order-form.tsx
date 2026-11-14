@@ -9,7 +9,7 @@ import type { ReorderRequest, SavedCartLine } from "@/lib/catalogue-buyer-worksp
 import type { CatalogProduct } from "@/lib/private-catalogue";
 import type { PharmacyProductWithVisuals } from "@/lib/catalogue-private-product-visuals";
 import type { CommercialContext, CommercialQuantityGroup } from "@/lib/catalogue-commercial";
-import { euroHT, indicativeRange, isAllowedQuantity, tierSavingsCents } from "@/lib/private-catalogue-format";
+import { euroHT, indicativeRange, isAllowedQuantity, tierSavingsCents, nextTierDiscountCents } from "@/lib/private-catalogue-format";
 
 export type PrivateMultiBrandProduct = PharmacyProductWithVisuals;
 
@@ -50,11 +50,23 @@ function nextTierForQuantity(tiers: readonly ProductTier[], quantity: number) {
     .sort((a, b) => a.min_quantity - b.min_quantity)[0] ?? null;
 }
 
+type TierUpsellOffer = {
+  missingUnits: number;
+  targetQuantity: number | null;
+  nextUnitPrice: string | null;
+  currentSavingsCents: number | null;
+  nextDiscountCents: number | null;
+  grouped: boolean;
+  minimumToReach: boolean;
+  needsPackingMultiple: boolean;
+};
+
 function ProductQuantityControl({
   product,
   quantity,
   maxReferencesReached,
   compact = false,
+  tierOffer,
   onAdd,
   onSubtract,
   onSetQuantity,
@@ -63,6 +75,7 @@ function ProductQuantityControl({
   quantity: number;
   maxReferencesReached: boolean;
   compact?: boolean;
+  tierOffer?: TierUpsellOffer | null;
   onAdd: () => void;
   onSubtract: () => void;
   onSetQuantity: (next: number) => void;
@@ -70,7 +83,7 @@ function ProductQuantityControl({
   const invalid = quantity > 0 && !isAllowedQuantity(quantity, product.min_quantity);
   return (
     <>
-      <div className={`flex items-center gap-2 ${compact ? "justify-end" : "w-full"}`}>
+      <div className={`flex flex-wrap items-start gap-2 ${compact ? "justify-end" : "w-full"}`}>
         {quantity === 0 ? (
           <button type="button" onClick={onAdd} disabled={maxReferencesReached}
             className={`shop-primary-action inline-flex min-h-10 items-center justify-center gap-2 px-3 text-xs disabled:cursor-not-allowed disabled:opacity-40 ${compact ? "w-auto min-w-[112px]" : "w-full"}`}>
@@ -96,6 +109,40 @@ function ProductQuantityControl({
           </div>
         )}
         {quantity === 0 ? <input type="hidden" name={"quantity_" + product.id} value="0" /> : null}
+        {tierOffer && quantity > 0 ? (
+          <div className={`min-w-[175px] flex-1 rounded-lg border border-[#f0dfc6] bg-[#fffaf2] px-3 py-2.5 text-[11px] leading-5 text-[#523b2b] ${compact ? "text-left" : ""}`}>
+            {tierOffer.targetQuantity !== null ? (
+              <>
+                <p className="font-semibold">
+                  {tierOffer.minimumToReach ? "Pour atteindre le minimum :" :
+                    tierOffer.needsPackingMultiple ? "Pour compléter le colisage :" :
+                    "Prochain palier :"}
+                  {" "}<strong className="text-[#9c4a12]">+{tierOffer.missingUnits} u.</strong>
+                </p>
+                <p>
+                  {tierOffer.grouped ? "Total gamme" : "Total référence"} : {tierOffer.targetQuantity} u.
+                  {tierOffer.nextUnitPrice ? <> · <strong>{tierOffer.nextUnitPrice} HT/u.</strong></> : null}
+                </p>
+              </>
+            ) : <p className="font-bold text-[#527156]">Meilleur palier atteint</p>}
+            {tierOffer.currentSavingsCents !== null && tierOffer.currentSavingsCents > 0 ? (
+              <p className="font-semibold text-[#487255]">Déjà économisé sur cette ligne : {euroHT(tierOffer.currentSavingsCents / 100)} HT</p>
+            ) : null}
+            {tierOffer.nextDiscountCents !== null && tierOffer.nextDiscountCents > 0 ? (
+              <p className="font-semibold text-[#487255]">
+                Remise supplémentaire sur le volume futur{tierOffer.grouped ? " de la gamme" : ""} : {euroHT(tierOffer.nextDiscountCents / 100)} HT
+              </p>
+            ) : null}
+            {tierOffer.targetQuantity !== null ? (
+              <button type="button"
+                onClick={() => onSetQuantity(quantity + tierOffer.missingUnits)}
+                className="mt-1.5 inline-flex min-h-8 items-center gap-1 rounded-md border border-[#d8a26c] bg-white px-2.5 text-[10px] font-extrabold text-[#8b3f0c] hover:bg-[#ffeddb]"
+                aria-label={`Ajouter ${tierOffer.missingUnits} unités de ${product.name} pour atteindre ${tierOffer.targetQuantity} unités`}>
+                <Plus size={12} aria-hidden="true" /> Ajouter +{tierOffer.missingUnits} u.
+              </button>
+            ) : null}
+          </div>
+        ) : null}
       </div>
       {invalid ? (
         <p role="alert" className="mt-2 text-[11px] font-bold text-red-700">
