@@ -216,6 +216,9 @@ export function PrivateOrderForm({
                 </article>
               );
             })}
+            {selected.filter((product) => !visible.some((item) => item.id === product.id)).map((product) => (
+              <input key={product.id} type="hidden" name={"quantity_" + product.id} value={quantities[product.id]} />
+            ))}
           </div>
           {!visible.length ? (
             <div className="rounded-lg border border-dashed border-[#dce3ea] bg-white px-5 py-12 text-center">
