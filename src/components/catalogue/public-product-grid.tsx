@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowUpRight, Check, ChevronLeft, ChevronRight, LockKeyhole, Search, SlidersHorizontal } from "lucide-react";
-import { publicCatalogueProducts, publicProductImage, publicProductHref, type PublicCatalogueProduct } from "@/lib/catalogue-products";
+import { publicCatalogueProducts, publicProductImage, publicProductHref, publicProductKey, type PublicCatalogueProduct } from "@/lib/catalogue-products";
 import { euroHT } from "@/lib/private-catalogue-format";
 
 type DisplayProduct = PublicCatalogueProduct;
@@ -262,9 +262,9 @@ export function PublicProductGrid({ privateProducts }: { privateProducts?: Priva
                         ) : null}
                         <p className="mt-2 text-[11px] text-[#8a9299]">{product.ean ? "EAN " + product.ean : ""}</p>
                         <div className="mt-3 grid gap-2">
-                          <Link href={publicProductHref(product)}
+                          <Link href={"/catalogue/marques/" + privateProduct.brandSlug + "/fiche/" + publicProductKey(product)}
                             className="inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-lg border border-[#dce3e5] bg-white px-3 text-center text-[11px] font-extrabold text-[#142941] hover:bg-[#f7f8f6]">
-                            Fiche & code-barres <ArrowUpRight size={13} aria-hidden="true"/>
+                            Fiche produit <ArrowUpRight size={13} aria-hidden="true"/>
                           </Link>
                           <Link href={"/catalogue/marques/" + privateProduct.brandSlug + "?produit=" + privateProduct.id + "#produits"}
                             className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#142941] px-3 text-center text-xs font-extrabold text-white hover:bg-[#1e405f]">
@@ -280,7 +280,7 @@ export function PublicProductGrid({ privateProducts }: { privateProducts?: Priva
                         <p className="mt-2 text-[11px] text-[#8a9299]">{product.ean ? "EAN " + product.ean : ""}</p>
                         <Link href={publicProductHref(product)}
                           className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#142941] px-3 text-center text-xs font-extrabold text-white hover:bg-[#1e405f]">
-                          Fiche & code-barres <ArrowUpRight size={14} aria-hidden="true"/>
+                          Fiche produit <ArrowUpRight size={14} aria-hidden="true"/>
                         </Link>
                       </>
                     )}
