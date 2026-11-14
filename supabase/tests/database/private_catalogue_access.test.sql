@@ -32,7 +32,7 @@ insert into public.private_catalog_invitations(pharmacy_id,email,invited_by)
 values ('f6e20000-0000-4000-8000-000000000010',
  'private-catalogue-test@example.invalid','f6e20000-0000-4000-8000-000000000001');
 
-select plan(14);
+select plan(15);
 select ok(not has_function_privilege('anon','public.catalogue_claim_invitation()','execute'),
  'anonymous clients cannot claim invitations');
 select ok(not has_function_privilege('anon','public.catalogue_my_data(text)','execute'),
@@ -56,6 +56,12 @@ set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"f6e20000-0000-4000-8000-000000000001","role":"authenticated"}',true);
 select set_config('request.jwt.claim.sub','f6e20000-0000-4000-8000-000000000001',true);
 select is(public.catalogue_claim_invitation(),true,'verified invited pharmacist can claim');
+select throws_ok(
+  $select public.catalogue_submit_request('test-private-catalogue',
+    '[{"product_id":"f6e20000-0000-4000-8000-000000000030","quantity":11}]'::jsonb)$,
+  '22023',
+  'Minimum de commande non respecte: 12 unites minimum',
+  'the minimum remains enforced');
 select is(
   public.catalogue_my_data('test-private-catalogue')->'products'->0->'pricing'->>'mode',
   'indicative','default display is indicative');
@@ -63,9 +69,9 @@ select ok(public.catalogue_my_data('test-private-catalogue')::text not like '%99
  'internal reference price never escapes to the pharmacy');
 select is(
   public.catalogue_submit_request('test-private-catalogue',
-  '[{"product_id":"f6e20000-0000-4000-8000-000000000030","quantity":12}]'::jsonb)
+  '[{"product_id":"f6e20000-0000-4000-8000-000000000030","quantity":13}]'::jsonb)
   ->>'request_kind',
-  'quote','without agreement, request is a quote');
+  'quote','a unit increment above the minimum is accepted without a contract');
 reset role;
 
 update public.private_catalog_access set pricing_mode='contractual'
