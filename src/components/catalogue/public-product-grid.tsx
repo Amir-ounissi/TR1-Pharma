@@ -60,7 +60,7 @@ export function PublicProductGrid() {
           <p className="text-[11px] font-bold uppercase tracking-[.17em] text-[#b3683e]">Les collections TR1</p>
           <h2 id="public-products" className="mt-2 text-3xl font-black tracking-[-.045em] text-[#0e1d31] sm:text-[38px]">Explorez les marques.</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[#66717d]">
-            Découvrez les gammes en cours de référencement. Les conditions commerciales seront accessibles aux pharmacies autorisées après validation.
+            Parcourez les fiches produits pour découvrir les bénéfices, les actifs, les conseils d’utilisation et les compositions des soins sélectionnés.
           </p>
         </div>
         <span className="rounded-full border border-[#e2e7ec] bg-white px-3.5 py-2 text-xs font-bold text-[#5d6b77]">{allProducts.length} références · {allProducts.filter((p) => !!publicProductImage(p)).length} photos</span>
@@ -165,7 +165,7 @@ export function PublicProductGrid() {
                     <p className="flex items-center gap-1.5 text-[11px] font-semibold text-[#64717e]">
                       <LockKeyhole size={13} aria-hidden="true" /> Tarifs professionnels non publics
                     </p>
-                    <p className="mt-2 text-[11px] text-[#8a9299]">{product.ean ? "EAN " + product.ean : "Référence en cours de vérification"}</p>
+                    <p className="mt-2 text-[11px] text-[#8a9299]">{product.ean ? "EAN " + product.ean : ""}</p>
                     <Link href={publicProductHref(product)}
                       className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#142941] px-3 text-center text-xs font-extrabold text-white hover:bg-[#1e405f]">
                       Fiche & code-barres <ArrowUpRight size={14} aria-hidden="true"/>
@@ -200,8 +200,7 @@ export function PublicProductGrid() {
       )}
       <div className="rounded-xl border border-[#e9e2d6] bg-[#f7f4ee] px-5 py-4 text-xs leading-6 text-[#6d6a64]">
         <p><Check size={15} aria-hidden="true" className="mr-2 inline" />
-          Aperçu non contractuel. Références, EAN, photos et conditions de distribution soumis à validation avant publication commerciale.</p>
-        <p className="mt-1">Les prix et remises ne sont jamais affichés dans ce catalogue public.</p>
+          Les prix et remises ne sont jamais affichés dans ce catalogue public.</p>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-[#142941] p-6 text-white sm:p-8">
         <div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-[#e3a474]">Vous êtes pharmacien ?</p>
