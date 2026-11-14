@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useMemo, useState } from "react";
-import Image from "next/image";
+import { CataloguePackshot } from "@/components/catalogue/catalogue-packshot";
 import { Minus, Package, Plus, Search, ShoppingBag, ShoppingCart, SlidersHorizontal, Trash2 } from "lucide-react";
 import { sendPrivateCatalogueRequest } from "@/app/catalogue/actions";
 import type { CatalogProduct } from "@/lib/private-catalogue";
@@ -149,12 +149,7 @@ export function PrivateOrderForm({
                 <article key={p.id}
                   className="grid grid-cols-[64px_minmax(0,1fr)] gap-x-3 gap-y-3 rounded-xl border border-[#e2e7ec] bg-white p-3 transition hover:border-[#cbd5d6] sm:grid-cols-[minmax(0,1fr)_170px_150px] sm:items-center sm:gap-4 sm:p-4">
                   <div className="col-span-2 flex min-w-0 items-center gap-3 sm:col-span-1">
-                    <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#f4f0e7]">
-                      {p.image_url ? (
-                        <Image src={p.image_url} width={128} height={128} unoptimized alt={p.name}
-                          className="h-full w-full object-contain p-2" />
-                      ) : <Package size={27} strokeWidth={1.2} className="text-[#a9b0b3]" aria-hidden="true" />}
-                    </div>
+                    <CataloguePackshot src={p.image_url} alt={brandName + " " + p.name} variant="list" />
                     <div className="min-w-0">
                       <p className="text-[10px] font-extrabold uppercase tracking-[.14em] text-[#ad4b08]">{brandName}</p>
                       <h3 className="mt-0.5 text-sm font-extrabold leading-5 text-[#0e1d31] sm:text-[15px]">{p.name}</h3>
