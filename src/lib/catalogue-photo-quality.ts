@@ -47,8 +47,9 @@ export function shopifyResponsivePhoto(url: string, requestedWidth: number): str
     const parsed = new URL(url);
     if (parsed.protocol !== "https:" ||
       !(parsed.pathname.includes("/cdn/shop/") || parsed.hostname === "cdn.shopify.com")) return url;
-    const existingWidth = Number(parsed.searchParams.get("width"));
-    if (existingWidth >= requestedWidth) return url;
+    // Demander seulement la taille utile pour le contexte : miniature 320,
+    // carte 960, agrandissement 1600, sans télécharger un original surdimensionné.
+    if (parsed.searchParams.get("width") === String(requestedWidth)) return url;
     parsed.searchParams.set("width", String(requestedWidth));
     return parsed.toString();
   } catch {
