@@ -6,6 +6,8 @@
 const officialPhotoHosts = new Set([
   "biodance.com",
   "www.biodance.com",
+  "biodance.co.kr",
+  "m.biodance.co.kr",
   "beautyofjoseon.com",
   "www.beautyofjoseon.com",
   "fr.beautyofjoseon.com",
