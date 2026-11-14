@@ -4,21 +4,12 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowUpRight, Check, ChevronLeft, ChevronRight, LockKeyhole, Search, SlidersHorizontal } from "lucide-react";
-import { vkSwissMediaBySku } from "@/lib/catalogue-vk-swiss-media";
-import { publicPreviewProducts, type PublicPreviewProduct } from "@/lib/catalogue-public-preview";
+import { publicCatalogueProducts, publicProductImage, publicProductHref, type PublicCatalogueProduct } from "@/lib/catalogue-products";
 
-type DisplayProduct = PublicPreviewProduct & { sku?: string };
+type DisplayProduct = PublicCatalogueProduct;
 type BrandTheme = { bg: string; ink: string; border: string; short: string; detail: string };
 
-const vkProducts: DisplayProduct[] = [
-  { brand: "VK SWISS", name: "Ashwagandha KSM-66", sku: "6467333", ean: "7629999810969", format: "30 gélules", category: "Compléments alimentaires" },
-  { brand: "VK SWISS", name: "Bacopa", sku: "6467332", ean: "7629999601949", format: "30 gélules", category: "Compléments alimentaires" },
-  { brand: "VK SWISS", name: "Curcuma", sku: "6467334", ean: "7629999608559", format: "30 gélules", category: "Compléments alimentaires" },
-  { brand: "VK SWISS", name: "Shatavari", sku: "6467330", ean: "7629999637191", format: "30 gélules", category: "Compléments alimentaires" },
-  { brand: "VK SWISS", name: "Shilajit", sku: "6467328", ean: "7629999731837", format: "30 gélules", category: "Compléments alimentaires" },
-  { brand: "VK SWISS", name: "Tribulus", sku: "6467329", ean: "7629999149366", format: "30 gélules", category: "Compléments alimentaires" },
-];
-const allProducts: DisplayProduct[] = [...publicPreviewProducts, ...vkProducts];
+const allProducts: DisplayProduct[] = publicCatalogueProducts;
 const brands = ["Toutes les marques", "Beauty of Joseon", "Dr. Althea", "Biodance", "VK SWISS"];
 
 const themes: Record<string, BrandTheme> = {
@@ -34,7 +25,7 @@ export function PublicProductGrid() {
   const [selectedBrand, setSelectedBrand] = useState("Toutes les marques");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
-  const [sort, setSort] = useState("name");
+  const [sort, setSort] = useState("photos");
   const [page, setPage] = useState(1);
 
   const categories = useMemo(
@@ -50,7 +41,9 @@ export function PublicProductGrid() {
       [p.brand, p.name, p.category, p.format, p.ean, p.sku ?? ""]
         .some((value) => value.toLocaleLowerCase("fr").includes(needle))
     ));
-    return matches.sort((a, b) => sort === "brand"
+    return matches.sort((a, b) => sort === "photos"
+      ? Number(Boolean(publicProductImage(b))) - Number(Boolean(publicProductImage(a))) || a.name.localeCompare(b.name, "fr")
+      : sort === "brand"
       ? a.brand.localeCompare(b.brand, "fr") || a.name.localeCompare(b.name, "fr")
       : a.name.localeCompare(b.name, "fr"));
   }, [selectedBrand, query, category, sort]);
@@ -70,7 +63,7 @@ export function PublicProductGrid() {
             Découvrez les gammes en cours de référencement. Les conditions commerciales seront accessibles aux pharmacies autorisées après validation.
           </p>
         </div>
-        <span className="rounded-full border border-[#e2e7ec] bg-white px-3.5 py-2 text-xs font-bold text-[#5d6b77]">{allProducts.length} références · {brands.length - 1} marques</span>
+        <span className="rounded-full border border-[#e2e7ec] bg-white px-3.5 py-2 text-xs font-bold text-[#5d6b77]">{allProducts.length} références · {allProducts.filter((p) => !!publicProductImage(p)).length} photos</span>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -129,7 +122,7 @@ export function PublicProductGrid() {
             <span className="sr-only">Trier</span>
             <select value={sort} onChange={(e) => { setSort(e.target.value); setPage(1); }}
               className="h-11 w-full rounded-xl border border-[#e4e8e8] bg-[#fafaf8] px-3 text-sm">
-              <option value="name">Nom A–Z</option><option value="brand">Par marque</option>
+              <option value="photos">Photos d’abord</option><option value="name">Nom A–Z</option><option value="brand">Par marque</option>
             </select>
           </label>
         </div>
@@ -145,14 +138,14 @@ export function PublicProductGrid() {
         <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
           {shown.map((product) => {
             const look = theme(product.brand);
-            const isVk = product.brand === "VK SWISS" && !!product.sku;
+            const photo = publicProductImage(product);
             return (
               <article key={product.brand + product.name + product.ean}
                 className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-[#e5e9e9] bg-white transition hover:border-[#cbd5d6] hover:shadow-[0_18px_38px_-25px_rgba(18,38,57,.25)]">
                 <div className="relative flex h-40 items-center justify-center overflow-hidden sm:h-48"
                   style={{ backgroundColor: look.bg }}>
-                  {isVk && product.sku && vkSwissMediaBySku[product.sku] ? (
-                    <Image src={vkSwissMediaBySku[product.sku].url} alt={product.name} width={440} height={440}
+                  {photo ? (
+                    <Image src={photo.url} alt={product.brand + " " + product.name + " — " + product.format} width={700} height={700}
                       unoptimized className="h-full w-full object-contain p-4" />
                   ) : (
                     <div className="relative flex h-full w-full flex-col items-center justify-center p-4 text-center" style={{ color: look.ink }}>
@@ -173,6 +166,10 @@ export function PublicProductGrid() {
                       <LockKeyhole size={13} aria-hidden="true" /> Tarifs professionnels non publics
                     </p>
                     <p className="mt-2 text-[11px] text-[#8a9299]">{product.ean ? "EAN " + product.ean : "Référence en cours de vérification"}</p>
+                    <Link href={publicProductHref(product)}
+                      className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#142941] px-3 text-center text-xs font-extrabold text-white hover:bg-[#1e405f]">
+                      Fiche & code-barres <ArrowUpRight size={14} aria-hidden="true"/>
+                    </Link>
                   </div>
                 </div>
               </article>
