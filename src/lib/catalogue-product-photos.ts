@@ -749,4 +749,20 @@ export const productGalleryByEan: Record<string, string[]> = {
       "https://doctoraltheaglobal.com/cdn/shop/files/260508____0.15___1200_-5_e2c1414c-ece3-48ad-870a-7a32890e1a2d.jpg?v=1782881082&width=200",
       "https://doctoraltheaglobal.com/cdn/shop/files/260508____0.15___1200_-6_6b4db2b9-f90b-4dff-8a65-7470bf24321c.jpg?v=1782881082&width=200"
   ]
+  "8809864766884": [
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/Untitled_design_-_2025-06-18T135921.466.png?v=1750222769",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/58.png?v=1750222946",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/59.png?v=1750222946",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/60.png?v=1750222946",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/10_ff8dd93b-08af-40bb-af45-6baa5d82849a.png?v=1750222643"
+  ],
+  "8809968130246": [
+      "https://fr.beautyofjoseon.com/cdn/shop/files/Untitled_design_-_2025-04-30T100212.239.png?v=1745979454&width=1800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/optimized_6a22346b367188.80777529_10-1.jpg?v=1780632137&width=800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/11_aab8b04a-482d-4555-b758-161e3bda38d4.png?v=1745979444&width=800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/optimized_6a26ddd4519249.97928334_v2_BOj1402.jpg?v=1780970445&width=800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/Key_Ingredient_Img_Rice_2.webp?v=1777589412&width=1600",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/Untitled_design_-_2025-04-29T191109.529_14a34240-d3ba-47df-9b40-2fb75e3af7a6.png?v=1776932264&width=2200",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/optimized_6a2233336da2d7.43783369_14.jpg?v=1780632046&width=2200"
+  ]
 };
