@@ -301,7 +301,7 @@ export function PrivateMultiBrandOrderForm({
     const minimumToReach = volume < minimum;
     const needsPackingMultiple = Boolean(group && volume >= minimum && volume % group.quantity_multiple !== 0);
     const nextTier = nextTierForQuantity(product.pricing.tiers, volume);
-    let target = minimumToReach ? minimum : nextTier?.min_quantity ?? null;
+    let target: number | null = minimumToReach ? minimum : (nextTier?.min_quantity ?? null);
 
     // Si le dernier palier est atteint, guider vers le prochain multiple valide
     // sans inventer une nouvelle remise.
