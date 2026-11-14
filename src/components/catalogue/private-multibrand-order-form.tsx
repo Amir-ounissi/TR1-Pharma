@@ -640,13 +640,7 @@ export function PrivateMultiBrandOrderForm({
                   const quantity = quantities[product.id] ?? 0;
                   const referenceQuantity = quantity || product.min_quantity;
                   const tier = findTierForQuantity(product.pricing.tiers, effectiveTierQuantity(product, referenceQuantity));
-                  const nextTier = nextTierForQuantity(product.pricing.tiers, effectiveTierQuantity(product, referenceQuantity));
-                  const nextRange = priceRangeForTier(nextTier);
                   const lineTotal = lineTotalHT(priceRangeForTier(tier), quantity);
-                  const savings = quantity > 0 ? savingsForProduct(product, quantity, tier) : null;
-                  const group = groupByProduct.get(product.id);
-                  const groupTotal = group ? (groupTotals.get(group.id) ?? 0) : 0;
-                  const groupNeedsMinimum = Boolean(group && quantity > 0 && groupTotal < group.minimum_total_units);
                   const price = product.pricing.mode === "contractual" && tier && "price_ht" in tier
                     ? euroHT(tier.price_ht) + " HT / unité"
                     : indicativeRange(tier && "price_min_ht" in tier ? tier : null);
@@ -684,22 +678,11 @@ export function PrivateMultiBrandOrderForm({
                                 {tier ? "Palier dès " + tier.min_quantity + " u." : "Tarif à confirmer"} · {groupByProduct.has(product.id) ? "Minimum collectif " + groupByProduct.get(product.id)!.minimum_total_units + " u." : "Min. " + product.min_quantity + " u."}
                               </p>
                               {lineTotal ? <p className="mt-1 text-[11px] font-bold text-[#142941]">Total ligne : {lineTotal} HT</p> : null}
-                              {savings !== null && savings > 0 ? <p className="mt-1 text-[11px] font-semibold text-[#54705e]">Économie estimée : {euroHT(savings / 100)} HT</p> : null}
                             </div>
                             <span className="shrink-0 rounded-md bg-[#f5f6f6] px-2 py-1 text-[9px] font-semibold text-[#69717d]">
                               TVA {product.vat_rate} %
                             </span>
                           </div>
-                          {groupNeedsMinimum && group ? (
-                            <p className="mt-2 text-[10px] font-semibold leading-4 text-[#ad4b08]">
-                              Encore {group.minimum_total_units - groupTotal} u. pour atteindre le minimum collectif
-                            </p>
-                          ) : quantity > 0 && nextTier ? (
-                            <p className="mt-2 text-[10px] font-semibold leading-4 text-[#ad4b08]">
-                              Encore {nextTier.min_quantity - (group ? groupTotal : quantity)} u. pour le palier {nextTier.min_quantity}
-                              {nextRange ? " · " + formatPriceRange(nextRange.min, nextRange.max) + " HT/u." : ""}
-                            </p>
-                          ) : null}
                         </div>
 
                         <div className="mt-auto space-y-3 pt-4">
@@ -713,6 +696,7 @@ export function PrivateMultiBrandOrderForm({
                             product={product}
                             quantity={quantity}
                             maxReferencesReached={maxReferencesReached}
+                            tierOffer={tierOfferForProduct(product, quantity)}
                             onAdd={() => add(product)}
                             onSubtract={() => subtract(product)}
                             onSetQuantity={(next) => setQuantity(product, next)}
@@ -725,7 +709,7 @@ export function PrivateMultiBrandOrderForm({
               </div>
             ) : (
               <div className="space-y-2">
-                <div className="hidden items-center gap-3 rounded-lg bg-[#f4f5f5] px-4 py-2 text-[9px] font-extrabold uppercase tracking-[.1em] text-[#7a8790] md:grid md:grid-cols-[64px_minmax(0,1fr)_150px_145px]">
+                <div className="hidden items-center gap-3 rounded-lg bg-[#f4f5f5] px-4 py-2 text-[9px] font-extrabold uppercase tracking-[.1em] text-[#7a8790] md:grid md:grid-cols-[64px_minmax(0,1fr)_140px_260px]">
                   <span>Visuel</span>
                   <span>Produit / référence</span>
                   <span>Tarif HT</span>
@@ -735,20 +719,14 @@ export function PrivateMultiBrandOrderForm({
                   const quantity = quantities[product.id] ?? 0;
                   const referenceQuantity = quantity || product.min_quantity;
                   const tier = findTierForQuantity(product.pricing.tiers, effectiveTierQuantity(product, referenceQuantity));
-                  const nextTier = nextTierForQuantity(product.pricing.tiers, effectiveTierQuantity(product, referenceQuantity));
-                  const nextRange = priceRangeForTier(nextTier);
                   const lineTotal = lineTotalHT(priceRangeForTier(tier), quantity);
-                  const savings = quantity > 0 ? savingsForProduct(product, quantity, tier) : null;
-                  const group = groupByProduct.get(product.id);
-                  const groupTotal = group ? (groupTotals.get(group.id) ?? 0) : 0;
-                  const groupNeedsMinimum = Boolean(group && quantity > 0 && groupTotal < group.minimum_total_units);
                   const price = product.pricing.mode === "contractual" && tier && "price_ht" in tier
                     ? euroHT(tier.price_ht) + " HT / unité"
                     : indicativeRange(tier && "price_min_ht" in tier ? tier : null);
 
                   return (
                     <article key={product.id}
-                      className="grid grid-cols-[52px_minmax(0,1fr)] items-center gap-x-3 gap-y-2 rounded-lg border border-[#e2e7ec] bg-white p-3 transition hover:border-[#cbd5d6] md:grid-cols-[64px_minmax(0,1fr)_150px_145px] md:gap-3 md:px-4">
+                      className="grid grid-cols-[52px_minmax(0,1fr)] items-center gap-x-3 gap-y-2 rounded-lg border border-[#e2e7ec] bg-white p-3 transition hover:border-[#cbd5d6] md:grid-cols-[64px_minmax(0,1fr)_140px_260px] md:gap-3 md:px-4">
                       <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-lg bg-[#f5f2ec] md:h-14 md:w-14">
                         {product.image_url ? (
                           <Image src={product.image_url} width={112} height={112} unoptimized alt={product.name}
@@ -781,26 +759,16 @@ export function PrivateMultiBrandOrderForm({
                           <p className="mt-0.5 text-xs font-black text-[#0e1d31]">{price}</p>
                           {tier ? <p className="mt-0.5 text-[9px] text-[#69717d]">Palier dès {tier.min_quantity} u.</p> : null}
                           {lineTotal ? <p className="mt-1 text-[10px] font-bold text-[#142941]">Total : {lineTotal} HT</p> : null}
-                          {savings !== null && savings > 0 ? <p className="mt-1 text-[10px] font-semibold text-[#54705e]">Économie estimée : {euroHT(savings / 100)} HT</p> : null}
                         </div>
-                        {groupNeedsMinimum && group ? (
-                          <p className="text-right text-[9px] font-semibold text-[#ad4b08] md:mt-1 md:text-left">
-                            Encore {group.minimum_total_units - groupTotal} u. pour atteindre le minimum collectif
-                          </p>
-                        ) : quantity > 0 && nextTier ? (
-                          <p className="text-right text-[9px] font-semibold text-[#ad4b08] md:mt-1 md:text-left">
-                            Encore {nextTier.min_quantity - (group ? groupTotal : quantity)} u. pour {nextTier.min_quantity}
-                            {nextRange ? " · " + formatPriceRange(nextRange.min, nextRange.max) + " HT/u." : ""}
-                          </p>
-                        ) : null}
                       </div>
 
-                      <div className="col-span-2 flex items-center justify-end md:col-span-1">
+                      <div className="col-span-2 flex min-w-0 items-center justify-end md:col-span-1">
                         <ProductQuantityControl
                           product={product}
                           quantity={quantity}
                           maxReferencesReached={maxReferencesReached}
                           compact
+                          tierOffer={tierOfferForProduct(product, quantity)}
                           onAdd={() => add(product)}
                           onSubtract={() => subtract(product)}
                           onSetQuantity={(next) => setQuantity(product, next)}
