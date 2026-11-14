@@ -11,6 +11,13 @@ describe("catalogue : photographies HD et vérification des sources", () => {
     ])).toBe(verifiedOfficial);
   });
 
+  it("reconnaît les assets officiels du CDN Shopify Beauty of Joseon", () => {
+    const retailer = "https://retailer.example.com/packshot.jpg";
+    const official = "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/28.png?v=1749371552";
+    const otherShopifyStore = "https://cdn.shopify.com/s/files/1/9999/1111/files/other-store.jpg";
+    expect(preferredVerifiedPackshot(retailer, [otherShopifyStore, official])).toBe(official);
+  });
+
   it("conserve la photo liée à la référence lorsqu'aucune photo officielle n'est validée", () => {
     const thirdParty = "https://retailer.example.com/packshot.jpg";
     expect(preferredVerifiedPackshot(thirdParty, [
