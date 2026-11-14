@@ -10,6 +10,9 @@ export type MatchableProduct = {
   brand_name: string;
   ean: string | null;
   format: string | null;
+  normalizedName?: string;
+  normalizedBrand?: string;
+  normalizedFormat?: string;
 };
 
 export type ProductMatch = {
@@ -240,13 +243,16 @@ export function findProductMatch(
   if (!name) return { productId: null, suggestedProductId: null, method: "none" };
 
   const candidates = products
-    .filter((product) => !brand || normalizeCsvText(product.brand_name) === brand)
+    .filter((product) => !brand || (product.normalizedBrand ?? normalizeCsvText(product.brand_name)) === brand)
     .map((product) => {
-      const productName = normalizeCsvText(product.name);
-      const score = (levenshteinSimilarity(name, productName) * 0.55)
-        + (tokenSimilarity(name, productName) * 0.45);
+      const productName = product.normalizedName ?? normalizeCsvText(product.name);
+      const tokens = tokenSimilarity(name, productName);
+      const likelyCandidate = tokens >= 0.25 || name.length < 8 || productName.length < 8
+        || name.includes(productName) || productName.includes(name);
+      const editScore = likelyCandidate ? levenshteinSimilarity(name, productName) : 0;
+      const score = (editScore * 0.55) + (tokens * 0.45);
       const csvFormat = record.format ? normalizeCsvFormat(record.format) : null;
-      const productFormat = product.format ? normalizeCsvFormat(product.format) : null;
+      const productFormat = product.format ? (product.normalizedFormat ?? normalizeCsvFormat(product.format)) : null;
       const formatMismatch = Boolean(csvFormat && productFormat && csvFormat !== productFormat);
       return { product, score, exact: name === productName, formatMismatch };
     })
