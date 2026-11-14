@@ -719,4 +719,24 @@ export const productGalleryByEan: Record<string, string[]> = {
       "https://doctoraltheaglobal.com/cdn/shop/files/251219______1200_-05_jpg.jpg?v=1782876330&width=200",
       "https://doctoraltheaglobal.com/cdn/shop/files/260430______1200_-08.jpg?v=1782876329&width=200"
   ]
+  "8809447255743": [
+      "https://doctoraltheaglobal.com/cdn/shop/files/190152587c4378477e309fce268edbea.jpg?v=1786083592&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260515______1200_-1_73b7dd9a-170c-41a0-b40a-e3f4fc136ef8.jpg?v=1782883199&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260515______1200_-2_786d029e-b45c-4060-914e-a18020fc426e.jpg?v=1782883199&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260515______1200_-3_0df9b44a-ea71-4a3b-bc93-89b7c7a46364.jpg?v=1782883199&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260515______1200_-4_651841e1-028f-492c-a16d-8ab250517241.jpg?v=1782883199&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260515______1200_-5_aa97fe19-fcff-407d-9f64-1b6e668a4232.jpg?v=1782883199&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260515______1200_-6_5f6abad2-0eee-485a-8bb9-36936b431884.jpg?v=1782883199&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260515______1200_-7_4535daa5-9906-4109-b3f7-9942b483e5de.jpg?v=1782883199&width=200"
+  ],
+  "8809447255729": [
+      "https://doctoraltheaglobal.com/cdn/shop/files/caa29b6f151fb89722b94b9e3562bf74.jpg?v=1786083592&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260515______1200_-1_12609583-caae-463c-990d-a9b07bbe34a3.jpg?v=1782883393&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260515______1200_-2_db07ec0b-d4d5-41c9-a1b4-903022fe7392.jpg?v=1782883392&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260515______1200_-3_70b2f463-b4b7-4666-9929-feea85ab8fc4.jpg?v=1782883392&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260515______1200_-4_6464f3a2-a136-4ab0-a03c-19c3936c3ff3.jpg?v=1782883392&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260515______1200_-5_a3bf9ded-7586-4508-9a76-1c7a3e26aaae.jpg?v=1782883392&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260515______1200_-6_182742fd-a510-40b8-89b7-552f796de9da.jpg?v=1782883392&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260515______1200_-7_b3dc753b-34c5-43d7-9f96-88aa42b2b650.jpg?v=1782883392&width=200"
+  ]
 };
