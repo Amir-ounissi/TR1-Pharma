@@ -240,7 +240,45 @@ export function PrivateMultiBrandOrderForm({
         : a.brand_name.localeCompare(b.brand_name, "fr") || a.name.localeCompare(b.name, "fr"));
   }, [products, query, brandFilter, sort]);
 
-  const valid = groupErrors.length === 0 && selected.every((product) =>
+  const supplierSummaries = commercialConditions.suppliers
+    .map((supplier) => {
+      const items = selected.filter((product) => supplier.brand_slugs.includes(product.brand_slug));
+      const units = items.reduce((sum,product) => sum + (quantities[product.id] ?? 0), 0);
+      let minHt = 0;
+      let maxHt = 0;
+      let allPriced = items.length > 0;
+      for (const product of items) {
+        const quantity = quantities[product.id] ?? 0;
+        const tier = findTierForQuantity(product.pricing.tiers,effectiveTierQuantity(product,quantity));
+        const range = priceRangeForTier(tier);
+        if (!range) { allPriced = false; continue; }
+        minHt += Math.round(range.min * 100) * quantity / 100;
+        maxHt += Math.round(range.max * 100) * quantity / 100;
+      }
+      const gift = [...(supplier.conditions_verified ? supplier.gift_rules : [])]
+        .filter((rule) => units >= rule.minimum_order_units)
+        .sort((a,b)=>b.minimum_order_units-a.minimum_order_units)[0] ?? null;
+      const missingUnits = supplier.conditions_verified && supplier.minimum_order_units
+        ? Math.max(0,supplier.minimum_order_units-units) : 0;
+      const missingHt = supplier.conditions_verified && supplier.minimum_order_ht && allPriced
+        ? Math.max(0,supplier.minimum_order_ht-maxHt) : 0;
+      const shipping = supplier.conditions_verified && allPriced
+        ? supplier.free_shipping_from_ht !== null && minHt >= supplier.free_shipping_from_ht
+          ? "Franco atteint"
+          : supplier.shipping_fee_ht !== null
+            ? "Port indicatif : "+euroHT(supplier.shipping_fee_ht)+" HT"
+            : "Frais de livraison à confirmer"
+        : "Frais de livraison à confirmer";
+      return { ...supplier,items,units,minHt,maxHt,allPriced,gift,missingUnits,missingHt,shipping };
+    })
+    .filter((summary) => summary.items.length > 0);
+  const supplierErrors = supplierSummaries.flatMap((supplier) => [
+    ...(supplier.missingUnits > 0
+      ? [`${supplier.name} : encore ${supplier.missingUnits} unité(s) pour atteindre le minimum fournisseur.`] : []),
+    ...(supplier.missingHt > 0
+      ? [`${supplier.name} : encore ${euroHT(supplier.missingHt)} HT pour atteindre le minimum fournisseur.`] : []),
+  ]);
+  const valid = groupErrors.length === 0 && supplierErrors.length === 0 && selected.every((product) =>
     isAllowedQuantity(quantities[product.id], product.min_quantity),
   );
   const allContractual = selected.length > 0 && selected.every((product) => {
@@ -524,7 +562,7 @@ export function PrivateMultiBrandOrderForm({
                           </div>
                           {quantity > 0 && nextTier ? (
                             <p className="mt-2 text-[10px] font-semibold leading-4 text-[#ad4b08]">
-                              Encore {nextTier.min_quantity - quantity} u. pour le palier {nextTier.min_quantity}
+                              Encore {nextTier.min_quantity - effectiveTierQuantity(product, referenceQuantity)} u. pour le palier {nextTier.min_quantity}
                               {nextRange ? " · " + formatPriceRange(nextRange.min, nextRange.max) + " HT/u." : ""}
                             </p>
                           ) : null}
@@ -606,7 +644,7 @@ export function PrivateMultiBrandOrderForm({
                         </div>
                         {quantity > 0 && nextTier ? (
                           <p className="text-right text-[9px] font-semibold text-[#ad4b08] md:mt-1 md:text-left">
-                            Encore {nextTier.min_quantity - quantity} u. pour {nextTier.min_quantity}
+                            Encore {nextTier.min_quantity - effectiveTierQuantity(product, referenceQuantity)} u. pour {nextTier.min_quantity}
                             {nextRange ? " · " + formatPriceRange(nextRange.min, nextRange.max) + " HT/u." : ""}
                           </p>
                         ) : null}
@@ -683,7 +721,7 @@ export function PrivateMultiBrandOrderForm({
                       </div>
                       {group.items.map((product) => {
                         const quantity = quantities[product.id];
-                        const tier = findTierForQuantity(product.pricing.tiers, quantity);
+                        const tier = findTierForQuantity(product.pricing.tiers,effectiveTierQuantity(product,quantity));
                         const range = priceRangeForTier(tier);
                         return (
                           <div key={product.id} className="border-b border-[#f0f1f1] pb-2 text-xs last:border-0">
@@ -713,6 +751,47 @@ export function PrivateMultiBrandOrderForm({
                 <p className="text-xs text-[#69717d]">Ajoutez des références de plusieurs marques sans quitter cette page.</p>
               </div>
             )}
+
+            {selected.length ? (
+              <section className="space-y-2 rounded-xl border border-[#dce3ea] bg-[#f9faf9] p-3" aria-label="Conditions commerciales du panier">
+                <h3 className="text-xs font-black text-[#142941]">Conditions commerciales</h3>
+                {volumeGroups.filter((group) => (groupTotals.get(group.id) ?? 0)>0).map((group) => {
+                  const total = groupTotals.get(group.id) ?? 0;
+                  const nextTier = [12,24,40,96,200].find((n) =>
+                    group.brand_slug === "biodance" && group.name === "Masques hydrogel Biodance" && n>total
+                  );
+                  return (
+                    <div key={group.id} className="text-[11px] leading-5 text-[#586672]">
+                      <p className="font-bold">{group.name} : {total} / {group.minimum_total_units} masques minimum</p>
+                      <p>Paliers cumulés sur les références du groupe · multiple de {group.quantity_multiple} masques au total</p>
+                      {nextTier ? <p>Prochain palier : {nextTier} masques ({nextTier-total} supplémentaires).</p> : null}
+                    </div>
+                  );
+                })}
+                {supplierSummaries.map((supplier) => (
+                  <div key={supplier.id} className="border-t border-[#e2e7ec] pt-2 text-[11px] leading-5 text-[#586672]">
+                    <p className="font-bold text-[#142941]">{supplier.name} · {supplier.units} unités</p>
+                    {supplier.conditions_verified ? (
+                      <>
+                        {supplier.minimum_order_units !== null ? <p>Minimum : {supplier.minimum_order_units} unités cumulées</p> : null}
+                        {supplier.minimum_order_ht !== null ? (
+                          <p>Minimum de commande : {euroHT(supplier.minimum_order_ht)} HT{supplier.allPriced ? "" : " · à vérifier sur devis"}</p>
+                        ) : null}
+                        <p>{supplier.shipping}</p>
+                        {supplier.free_shipping_from_ht !== null ? <p>Franco dès {euroHT(supplier.free_shipping_from_ht)} HT</p> : null}
+                        {supplier.gift ? <p>Offre indicative : {supplier.gift.free_units} unité(s) offerte(s){supplier.gift.description ? " · "+supplier.gift.description : ""}</p> : null}
+                      </>
+                    ) : <p>Conditions fournisseur non confirmées : livraison, franco et gratuités à valider.</p>}
+                  </div>
+                ))}
+                {supplierSummaries.length === 0 ? (
+                  <p className="text-[11px] text-[#69717d]">Livraison, franco et unités gratuites : conditions fournisseurs à confirmer. Aucune offre non vérifiée n'est appliquée.</p>
+                ) : null}
+                {[...groupErrors,...supplierErrors].map((message) => (
+                  <p key={message} role="alert" className="rounded-md bg-[#fff1e6] p-2 text-[11px] font-bold text-[#8c4212]">{message}</p>
+                ))}
+              </section>
+            ) : null}
 
             <div className="flex items-start justify-between gap-2 border-t border-[#e2e7ec] pt-4">
               <div>
