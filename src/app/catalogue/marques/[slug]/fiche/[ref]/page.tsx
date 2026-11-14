@@ -10,7 +10,8 @@ import { ExternalCompositionAnalysis } from "@/components/catalogue/external-com
 import { isValidEan13 } from "@/lib/ean13";
 import { faireProductInformationByEan } from "@/lib/catalogue-faire-product-information";
 import { officialBiodanceByName, officialBeautyOfJoseonByEan, officialDrAltheaByEan, additionalBeautyOfJoseonByEan, additionalDrAltheaByEan } from "@/lib/catalogue-official-product-information";
-import { findPublicProduct, publicProductFamily, publicProductImages } from "@/lib/catalogue-products";
+import { findPublicProduct, publicProductFamily, publicProductImage, publicProductImages } from "@/lib/catalogue-products";
+import { preferredVerifiedPackshot } from "@/lib/catalogue-photo-quality";
 import { getCatalogueBrandForPharmacy, requirePharmacyCatalogue, type CatalogProduct } from "@/lib/private-catalogue";
 import { euroHT, orderablePricingTiers, firstOrderQuantity } from "@/lib/private-catalogue-format";
 import { getCommercialContext } from "@/lib/catalogue-commercial";
@@ -82,7 +83,11 @@ export default async function PharmacyCatalogueProductPage({ params }: ProductPa
         : undefined;
   const faireInfo = product.ean ? faireProductInformationByEan[product.ean] : undefined;
   const verifiedInfo = officialInfo ?? faireInfo;
-  const productImages = publicProductImages(product);
+  const originalGallery = publicProductImages(product);
+  const featuredPackshot = preferredVerifiedPackshot(publicProductImage(product)?.url ?? null, originalGallery);
+  const productImages = [...new Set(
+    [featuredPackshot, ...originalGallery].filter((url): url is string => Boolean(url)),
+  )];
   const eanIsValid = Boolean(product.ean && isValidEan13(product.ean));
   const cosmetics = product.brand !== "VK SWISS";
 
