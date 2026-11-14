@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { indicativeRange, isAllowedQuantity, sumOrderCents, tierForQuantity, tierSavingsCents, nextTierDiscountCents, firstOrderQuantity, steppedOrderQuantity, DEFAULT_QUANTITY_STEP } from "@/lib/private-catalogue-format";
+import { indicativeRange, isAllowedQuantity, sumOrderCents, tierForQuantity, tierSavingsCents, nextTierDiscountCents, firstOrderQuantity, steppedOrderQuantity, collectiveTierTopUp, DEFAULT_QUANTITY_STEP } from "@/lib/private-catalogue-format";
 
 describe("catalogue prive - contraintes des demandes", () => {
   it("applique six par défaut, et permet un pas personnalisé par produit", () => {
@@ -28,6 +28,28 @@ describe("catalogue prive - contraintes des demandes", () => {
     expect(steppedOrderQuantity(7, 6, 6, 1)).toBe(12);
     expect(steppedOrderQuantity(0, 8, 4, 1)).toBe(8);
     expect(steppedOrderQuantity(8, 8, 4, 1)).toBe(12);
+  });
+
+  it("respecte les masques Biodance : minimum 12 et multiple de 4 SUR LE TOTAL", () => {
+    // Deux references à 4 et 8 : 12 au total, condition fournisseur satisfaite.
+    expect(isAllowedQuantity(4, 1, 1)).toBe(true);
+    expect(isAllowedQuantity(8, 1, 1)).toBe(true);
+    expect((4 + 8) % 4).toBe(0);
+    // Les quantités individuelles 6+6 restent possibles, même si
+    // les boutons proposent des raccourcis +4/-4.
+    expect(isAllowedQuantity(6, 1, 1)).toBe(true);
+    expect((6 + 6) % 4).toBe(0);
+    expect(steppedOrderQuantity(0, 4, 4, 1)).toBe(4);
+    expect(steppedOrderQuantity(4, 4, 4, 1)).toBe(8);
+    expect(collectiveTierTopUp(24, 40, 4, 12, 1, 1))
+      .toEqual({ additional: 16, total: 40 });
+    expect(collectiveTierTopUp(10, 12, 4, 3, 1, 1))
+      .toEqual({ additional: 2, total: 12 });
+    // Si l'administrateur impose finalement le pas 6 sur la référence,
+    // le palier collectif reste atteignable à 48 sans quantité invalide.
+    expect(collectiveTierTopUp(24, 40, 4, 6, 6, 6))
+      .toEqual({ additional: 24, total: 48 });
+    expect(collectiveTierTopUp(20, 24, 0, 8, 1, 1)).toBeNull();
   });
 
   it("rejette les quantites falsifiees ou excessives", () => {
