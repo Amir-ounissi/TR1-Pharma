@@ -588,4 +588,13 @@ export const productGalleryByEan: Record<string, string[]> = {
       "https://fr.beautyofjoseon.com/cdn/shop/files/Untitled_design_-_2025-05-29T162038.489.png?v=1748506534&width=1800",
       "https://fr.beautyofjoseon.com/cdn/shop/files/Step2_Toner_1080_x_1500_px_1080_x_1500_px_10.png?v=1748506525&width=1200"
   ]
+  "8809447256085": [
+      "https://doctoraltheaglobal.com/cdn/shop/files/58b77213f54ca4e87270df838130b479.jpg?v=1786083592&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260224______1200_-02_1905de1a-846a-48dc-a214-ce88585409b9.jpg?v=1782881657&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260224______1200_-03_9febacd1-65d7-4e77-bd9c-118dd54b928b.jpg?v=1782881657&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260224______1200_-04_4d56d19e-2dfc-4a74-93ea-48f5a535dff8.jpg?v=1782881657&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260224______1200_-05_df1a2481-6b7a-4aee-baaf-e02043479573.jpg?v=1782881657&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260224______1200_-06_8a0e1e4f-15e5-4d45-8cf7-875ef6efa024.jpg?v=1782881657&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260223______1200_-07_7f272ba4-cf57-44d3-9a2e-ec67d2f2d514.jpg?v=1782881657&width=200"
+  ]
 };
