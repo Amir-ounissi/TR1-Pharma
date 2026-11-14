@@ -212,3 +212,100 @@ export const productPhotoByEan: Record<string, ProductPhoto> = {
     "source": "Medpak"
   }
 };
+
+// Packshots Biodance associés à la dénomination exacte : 24 articles sans EAN dans le catalogue fournisseur.
+// Le cas Caviar PDRN Dual Gel Toner Pads n'est pas mappé : poids 140 g source vs 160 g visuel trouvé.
+export const biodancePhotoByName: Record<string, ProductPhoto> = {
+  "First Synergy Toner": {
+    "url": "https://biodance.com/cdn/shop/files/2510_2093e5de-99e6-458c-81cd-9b897b65d739.jpg?v=1760332371",
+    "source": "Biodance officiel"
+  },
+  "Vita Niacinamide Gel Toner Pads": {
+    "url": "https://kozmetikumbolt.cdn.shoprenter.hu/custom/kozmetikumbolt/image/data/Iryna/A01/biodance-vita-niacinamide-gel-toner-pad-koreashop-1.png.webp?lastmod=1772572513.1703838527",
+    "source": "Korea Shop"
+  },
+  "Sea Kelp Gel Toner Pads": {
+    "url": "https://cosibella.pl/hpeciai/5dcfa33a2ba7a0d59c8fcf3e956314ba/pol_pl_Biodance-Sea-Kelp-Gel-Toner-Pad-Lagodzace-Platki-do-Twarzy-60szt-27576_2.webp",
+    "source": "Cosibella"
+  },
+  "Cera-nol Gel Toner Pads": {
+    "url": "https://www.adorebeauty.com.au/pim_media/000/532/973/productimages_%EC%8D%B8%EB%84%A4%EC%9D%BC_%EC%84%B8%EB%9D%BC%EB%86%80%EA%B2%94%ED%8C%A8%EB%93%9Ca.png?fmt=webp&h=980&w=980",
+    "source": "Adore Beauty"
+  },
+  "Collagen Gel Toner Pads": {
+    "url": "https://media.sephora.eu/content/dam/digital/pim/published/B/BIODANCE/BIODA/113640-media_principal.jpg",
+    "source": "Sephora"
+  },
+  "Pore Perfecting Collagen Peptide Serum": {
+    "url": "https://media.sephora.eu/content/dam/gdam/europe/digital/pim/published/B/BIODANCE/P1000212430/116060-media_principal-0.jpg",
+    "source": "Sephora"
+  },
+  "Hydro Cera-nol Serum": {
+    "url": "https://www.justmylook.com/cdn/shop/files/BID0022_68d55875-a63e-4c49-819c-587ed524726e.png?v=1772023114",
+    "source": "Justmylook"
+  },
+  "Skin Refining Mild PHA Toner": {
+    "url": "https://www.sephora.com/productimages/sku/s2915270-main-zoom.jpg?imwidth=465",
+    "source": "Sephora"
+  },
+  "Radiant Vita Niacinamide Serum": {
+    "url": "https://asset.sephora.co.uk/img/prod/sku/805206/399829_media_swatch_1_18-04-26-08-45-13.jpg",
+    "source": "Sephora UK"
+  },
+  "Collagen Cleansing Oil": {
+    "url": "https://ezebra.de/hpeciai/abe05745e85e36dd3904ed289b0ab459/ger_pl_Biodance-Collagen-Cleansing-Oil-pflegendes-Reinigungsol-fur-das-Gesicht-200-ml-190211_1.jpg",
+    "source": "eZebra"
+  },
+  "Refreshing Sea Kelp Serum": {
+    "url": "https://www.justmylook.com/cdn/shop/files/BID0023_55c89244-b685-4986-9b73-be464fad22f3.png?v=1772023465",
+    "source": "Justmylook"
+  },
+  "Micro Dual Serum Toner": {
+    "url": "https://cdn.redcare.it/images/mp/prod/b7342c1615134fcaa3ff93cc8385d5f1",
+    "source": "Redcare"
+  },
+  "Skin-Glow Essence Cream": {
+    "url": "https://sokoskins.shop/cdn/shop/files/414pYdXo3nL._SL1000_1024x1024%402x.jpg?v=1721642304",
+    "source": "SoKoSkins"
+  },
+  "Pore Perfecting Collagen Peptide Cream": {
+    "url": "https://www.sephora.com/productimages/sku/s2920569-main-zoom.jpg",
+    "source": "Sephora"
+  },
+  "Caviar PDRN Liposome Bubble Booster": {
+    "url": "https://www.ballagrio.com/cdn/shop/files/biodance-caviar-pdrn-liposome-bubble-booster-95ml-01.jpg?v=1779771330",
+    "source": "Ballagrio"
+  },
+  "Radiant Vita Niacinamide Cream": {
+    "url": "https://www.koreanbeauty.com/cdn/shop/files/RadiantVitaNiacinamideCream.png?v=1770985626",
+    "source": "Koreanbeauty"
+  },
+  "Collagen Peptide Liposome Bubble Booster": {
+    "url": "https://www.ballagrio.com/cdn/shop/files/biodance-collagen-peptide-liposome-bubble-booster-95ml-01.jpg?v=1779771423",
+    "source": "Ballagrio"
+  },
+  "Collagen Peptide Eye Patches": {
+    "url": "https://cdn.tirabeauty.com/v2/billowing-snowflake-434234/tira-p/wrkr/products/pictures/item/free/original/fkRNX_MHF2n-1209111-1.jpg",
+    "source": "Tira Beauty"
+  },
+  "Hydro Ceramide Cleansing Powder": {
+    "url": "https://ie.facethefuture.store/cdn/shop/files/Product-page-sizes_272e1e74-f52b-43bf-9270-5b210cb223e5.jpg?v=1748444845",
+    "source": "Face the Future"
+  },
+  "Caviar PDRN Eye Patches": {
+    "url": "https://www.ballagrio.com/cdn/shop/files/biodance-caviar-pdrn-eye-patch-30ea-01_1024x1024.jpg?v=1779180096",
+    "source": "Ballagrio"
+  },
+  "Rejuvenating Caviar PDRN Capsule Cream": {
+    "url": "https://storage.skinsort.com/pvwytcvias6yc78nev3zlhsodmeq",
+    "source": "SkinSort"
+  },
+  "Collagen Peptide Jelly Serum Mist": {
+    "url": "https://media.superdrug.com/medias/sys_master/prd-images/hb2/h34/14250651811870/prd-front-864938_600x600/prd-front-864938-600x600.jpg",
+    "source": "Superdrug"
+  },
+  "Caviar PDRN Jelly Serum Mist": {
+    "url": "https://damarbeauty.com/cdn/shop/files/s2988699-main-zoom.webp?v=1777912843&width=1946",
+    "source": "DaMar Beauty"
+  }
+};
