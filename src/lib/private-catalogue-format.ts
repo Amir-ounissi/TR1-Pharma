@@ -3,11 +3,12 @@ export function euroHT(value: number) {
   return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(value);
 }
 
-export function isAllowedQuantity(quantity: number, minimum: number, step: number) {
+export function isAllowedQuantity(quantity: number, minimum: number, _legacyStep?: number) {
+  // Les quantités sont commandables à l'unité après le minimum fournisseur.
+  // L'ancien pas de conditionnement reste accepté en argument pour compatibilité,
+  // mais ne bloque plus une commande entre deux multiples.
   return Number.isSafeInteger(quantity) && quantity >= minimum && quantity <= 5000
-    && Number.isSafeInteger(minimum) && minimum > 0
-    && Number.isSafeInteger(step) && step > 0
-    && (quantity - minimum) % step === 0;
+    && Number.isSafeInteger(minimum) && minimum > 0;
 }
 
 export function sumOrderCents(lines: { price_ht: number; quantity: number }[]) {
