@@ -176,14 +176,19 @@ export function buildPharmacyCsvRecords(
   rows: string[][],
   mapping: CsvColumnMapping,
 ): PharmacyCsvRecord[] {
-  if (mapping.name === null || mapping.price === null) return [];
+  const nameIndex = mapping.name;
+  const priceIndex = mapping.price;
+  const brandIndex = mapping.brand;
+  const eanIndex = mapping.ean;
+  const formatIndex = mapping.format;
+  if (nameIndex === null || priceIndex === null) return [];
   return rows.flatMap((cells, index) => {
-    const name = (cells[mapping.name!] ?? "").trim();
+    const name = (cells[nameIndex] ?? "").trim();
     if (!name) return [];
-    const brand = mapping.brand === null ? "" : (cells[mapping.brand] ?? "").trim();
-    const ean = mapping.ean === null ? null : normalizeEan(cells[mapping.ean] ?? "");
-    const format = mapping.format === null ? "" : (cells[mapping.format] ?? "").trim();
-    const purchasePriceHt = parseFrenchAmount(cells[mapping.price] ?? "");
+    const brand = brandIndex === null ? "" : (cells[brandIndex] ?? "").trim();
+    const ean = eanIndex === null ? null : normalizeEan(cells[eanIndex] ?? "");
+    const format = formatIndex === null ? "" : (cells[formatIndex] ?? "").trim();
+    const purchasePriceHt = parseFrenchAmount(cells[priceIndex] ?? "");
     return [{
       id: "csv-row-" + (index + 2),
       lineNumber: index + 2,
