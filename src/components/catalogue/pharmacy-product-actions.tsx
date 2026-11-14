@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Heart, Plus, ShoppingCart } from "lucide-react";
 import { addCatalogueProductToCart, setCatalogueFavorite } from "@/app/catalogue/actions";
-import { isAllowedQuantity } from "@/lib/private-catalogue-format";
+import { isAllowedQuantity, firstOrderQuantity } from "@/lib/private-catalogue-format";
 
 const PRESET_QUANTITIES = [6, 12, 18, 24, 48] as const;
 
@@ -13,20 +13,27 @@ export function PharmacyProductActions({
   productId,
   name,
   minQuantity,
+  quantityStep,
   collectiveMinimum,
   initialFavorite,
 }: {
   productId: string;
   name: string;
   minQuantity: number;
+  quantityStep: number;
   collectiveMinimum?: number | null;
   initialFavorite: boolean;
 }) {
-  const [quantity, setQuantity] = useState(Math.max(minQuantity, collectiveMinimum ?? 0));
+  const first = firstOrderQuantity(minQuantity, quantityStep);
+  const [quantity, setQuantity] = useState(first);
   const [favorite, setFavorite] = useState(initialFavorite);
   const [busy, startTransition] = useTransition();
   const [feedback, setFeedback] = useState("");
-  const valid = isAllowedQuantity(quantity, minQuantity);
+  const valid = isAllowedQuantity(quantity, minQuantity, quantityStep);
+  const presets = quantityStep === 6
+    ? PRESET_QUANTITIES.filter((value) => value >= first)
+    : [0, 1, 2, 3, 7].map((n) => first + n * quantityStep)
+      .filter((value) => value >= first && value <= 5000);
 
   const addToCart = () => {
     if (!valid || busy) return;
@@ -53,9 +60,9 @@ export function PharmacyProductActions({
 
   return (
     <div className="mt-5 space-y-3 border-t border-white/15 pt-4">
-      <p className="text-xs font-extrabold text-white">Quantité à ajouter au panier</p>
+      <p className="text-xs font-extrabold text-white">Quantité à ajouter au panier · {first} unités pré-sélectionnées · pas de {quantityStep}</p>
       <div className="flex flex-wrap gap-1.5" role="group" aria-label={"Quantités rapides pour " + name}>
-        {PRESET_QUANTITIES.filter((value) => value >= minQuantity).map((value) => (
+        {presets.map((value) => (
           <button type="button" key={value} onClick={() => { setQuantity(value); setFeedback(""); }}
             aria-pressed={quantity === value}
             className={`min-h-9 min-w-11 rounded-md border px-2 text-xs font-bold transition ${quantity === value ? "border-[#e99055] bg-[#e99055] text-[#142941]" : "border-white/25 text-white hover:bg-white/15"}`}>
@@ -65,7 +72,7 @@ export function PharmacyProductActions({
       </div>
       <label className="flex items-center gap-3 text-xs font-semibold text-[#c1cdd8]">
         Quantité personnalisée
-        <input type="number" min={minQuantity} max={5000} step={1} inputMode="numeric"
+        <input type="number" min={0} max={5000} step={quantityStep} inputMode="numeric"
           value={quantity} onChange={(event) => { setQuantity(Number(event.target.value)); setFeedback(""); }}
           className="min-h-11 w-24 rounded-md border border-white/25 bg-white px-3 text-center text-sm font-extrabold text-[#142941]"/>
       </label>
@@ -74,7 +81,7 @@ export function PharmacyProductActions({
           Minimum {collectiveMinimum} unités sur toute la gamme concernée. Vous pouvez répartir les quantités entre références.
         </p>
       ) : null}
-      {!valid ? <p role="alert" className="text-xs font-bold text-[#ffc1ad]">Quantité comprise entre {minQuantity} et 5 000 unités.</p> : null}
+      {!valid ? <p role="alert" className="text-xs font-bold text-[#ffc1ad]">Minimum {minQuantity} unités, par multiples de {quantityStep} (maximum 5 000).</p> : null}
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" onClick={addToCart} disabled={!valid || busy}
           className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#e99055] px-5 text-sm font-extrabold text-[#142941] hover:bg-[#f4a779] disabled:cursor-not-allowed disabled:opacity-50">
