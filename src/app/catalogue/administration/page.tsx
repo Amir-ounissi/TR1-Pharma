@@ -56,7 +56,7 @@ export default async function CatalogueAdministration({
     admin.from("private_catalog_contract_tiers").select("pharmacy_id,product_id,min_quantity,price_ht").order("min_quantity"),
     admin.from("private_catalog_access").select("pharmacy_id,brand_id,active,pricing_mode"),
     admin.from("private_catalog_invitations").select("id,pharmacy_id,email,created_at,expires_at,claimed_at,active").order("created_at", { ascending: false }).limit(200),
-    service.from("private_catalog_access_links").select("id,pharmacy_id,expires_at,last_used_at,active").eq("active", true),
+    service.from("private_catalog_access_links").select("id,pharmacy_id,expires_at,last_used_at,active").eq("active", true).gt("expires_at", new Date().toISOString()),
     service.from("private_catalog_request_items").select("request_id,product_name,sku,quantity,unit_price_ht,line_total_ht").limit(5000),
   ]);
   const queryError = pharmaciesError ?? brandsError ?? productsError ?? requestsError ?? membershipsError ?? indicativeError ?? contractError ?? accessError ?? invitationsError ?? accessLinksError ?? requestItemsError;
