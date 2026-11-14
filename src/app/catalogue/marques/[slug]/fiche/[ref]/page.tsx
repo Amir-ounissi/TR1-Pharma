@@ -67,7 +67,7 @@ export default async function PharmacyCatalogueProductPage({ params }: ProductPa
   if (favoriteError) throw favoriteError;
   const initialFavorite = ((favoriteIds ?? []) as string[]).includes(privateProduct.id);
   const quantityGroup = commercial.quantity_groups.find((group) => group.product_ids.includes(privateProduct.id));
-  const visiblePriceTiers = orderablePricingTiers(
+  const visiblePriceTiers = orderablePricingTiers<CatalogProduct["pricing"]["tiers"][number]>(
     privateProduct.pricing.tiers,
     privateProduct.min_quantity,
     privateProduct.quantity_step,
