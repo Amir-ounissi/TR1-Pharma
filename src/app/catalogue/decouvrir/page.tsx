@@ -5,8 +5,8 @@ import { PublicProductGrid } from "@/components/catalogue/public-product-grid";
 import { Tr1BrandLogo } from "@/components/brand/tr1-brand-logo";
 
 export const metadata: Metadata = {
-  title: "Catalogue grossiste pour pharmacies | TR1 PHARMA",
-  description: "Découvrez les références de nos laboratoires partenaires. Accédez aux prix professionnels, conditions par volumes et demandes de commande sur votre espace pharmacie.",
+  title: "Catalogue professionnel multimarque | TR1 PHARMA",
+  description: "Explorez les gammes Beauty of Joseon, Dr. Althea, Biodance et VK SWISS dans le catalogue professionnel TR1 PHARMA.",
   robots: { index: false, follow: false },
 };
 
@@ -24,21 +24,21 @@ export default function PharmacieStorefront() {
         <div aria-hidden="true" className="pointer-events-none absolute -right-15 -top-25 size-100 rounded-full border-[45px] border-white/5" />
         <div className="relative max-w-[660px]">
           <p className="text-[11px] font-extrabold uppercase tracking-[.24em] text-[#ffa460]">
-            Catalogue B2B · Pharmacies & parapharmacies
+            TR1 PHARMA · Collection professionnelle
           </p>
           <h1 className="mt-4 text-[32px] font-black leading-[1.08] tracking-[-.045em] sm:text-5xl lg:text-[56px]">
-            Vos prochains réassorts commencent ici.
+            Découvrez notre sélection multimarque.
           </h1>
           <p className="mt-5 max-w-xl text-sm leading-7 text-[#d5dde7] sm:text-base">
-            Retrouvez les références de nos laboratoires partenaires.
-            Consultez les conditions réservées à votre officine et préparez vos demandes en quelques clics.
+            Explorez les gammes Dr. Althea, Beauty of Joseon, Biodance et VK SWISS.
+            Les prix et conditions commerciales sont réservés aux pharmacies autorisées.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <Link href="#produits" className="shop-primary-action inline-flex min-h-12 items-center gap-2 px-5 text-sm">
-              Voir les produits <ArrowRight size={17} aria-hidden="true" />
+              Explorer les gammes <ArrowRight size={17} aria-hidden="true" />
             </Link>
             <Link href="/catalogue/connexion" className="inline-flex min-h-12 items-center gap-2 rounded-md border border-white/35 px-5 text-sm font-bold text-white transition hover:bg-white/10">
-              <LockKeyhole size={16} aria-hidden="true" /> Mes prix professionnels
+              <LockKeyhole size={16} aria-hidden="true" /> Connexion professionnelle
             </Link>
           </div>
         </div>
@@ -47,13 +47,6 @@ export default function PharmacieStorefront() {
           <div className="mt-4 border-t border-white/20 pt-3 text-center text-[10px] font-bold tracking-[.19em] text-white/75">CATALOGUE PROFESSIONNEL</div>
         </div>
       </section>
-
-      <nav aria-label="Catégories du catalogue" className="flex gap-2 overflow-x-auto pb-1 text-xs font-bold sm:text-sm">
-        <a href="#produits" className="whitespace-nowrap rounded-md bg-[#0e1d31] px-5 py-2.5 text-white">Tous les produits</a>
-        <a href="#produits" className="whitespace-nowrap rounded-md border border-[#e2e7ec] bg-white px-5 py-2.5 text-[#162a45] transition hover:bg-[#fff1e6]">VK SWISS</a>
-        <Link href="/catalogue/connexion" className="whitespace-nowrap rounded-md border border-[#e2e7ec] bg-white px-5 py-2.5 text-[#162a45] transition hover:bg-[#fff1e6]">Conditions professionnelles</Link>
-        <Link href="/catalogue/mes-demandes" className="whitespace-nowrap rounded-md border border-[#e2e7ec] bg-white px-5 py-2.5 text-[#162a45] transition hover:bg-[#fff1e6]">Mes demandes</Link>
-      </nav>
 
       <PublicProductGrid />
 
@@ -88,7 +81,7 @@ export default function PharmacieStorefront() {
       </section>
 
       <p className="text-center text-[11px] text-[#69717d]">
-        Présentation des références à titre informatif. Photos illustratives, non contractuelles. Les produits, prix et conditions effectives sont confirmés dans votre espace professionnel.
+        Aperçu en cours de validation commerciale et réglementaire. Aucun prix d’achat fournisseur n’est diffusé publiquement.
       </p>
     </div>
   );
