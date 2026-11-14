@@ -11,14 +11,18 @@ export default async function PrivateCatalogueHome({
   searchParams,
 }: { searchParams: Promise<{ reprendre?: string }> }) {
   const { reprendre } = await searchParams;
-  const { admin, pharmacy } = await requirePharmacyCatalogue();
-  const commercialConditions = await getCommercialContext(admin);
-  const workspace = await getBuyerWorkspace(admin);
-  const { data: favoriteIds, error: favoritesError } = await admin.rpc("catalogue_my_favorites");
-  if (favoritesError) throw favoritesError;
-  const brands = await getCatalogueBrands(pharmacy.id, admin);
+  const { admin, pharmacy, isLinkAccess, accessLinkHash } = await requirePharmacyCatalogue();
+  const commercialConditions = await getCommercialContext(admin, accessLinkHash);
+  const workspace = isLinkAccess
+    ? { lines: [], recent_requests: [] }
+    : await getBuyerWorkspace(admin);
+  const favoriteIds = isLinkAccess ? [] : await admin.rpc("catalogue_my_favorites").then(({ data, error }) => {
+    if (error) throw error;
+    return data ?? [];
+  });
+  const brands = await getCatalogueBrands(pharmacy.id, admin, accessLinkHash);
   const groups = await Promise.all(brands.map(async (brand) => {
-    const result = await getCatalogueBrandForPharmacy(pharmacy.id, brand.slug, admin);
+    const result = await getCatalogueBrandForPharmacy(pharmacy.id, brand.slug, admin, accessLinkHash);
     return { brand, products: result.products };
   }));
   const orderProducts = groups.flatMap(({ brand, products }) =>
@@ -49,7 +53,17 @@ export default async function PrivateCatalogueHome({
         </Link>
       </div>
 
-      <PrivateMultiBrandOrderForm key={reprendre ?? "catalogue"} products={orderProducts} commercialConditions={commercialConditions} initialFavoriteIds={(favoriteIds ?? []) as string[]} initialCartLines={workspace.lines} reorderHistory={workspace.recent_requests} initialReorderId={reprendre} />
+      <PrivateMultiBrandOrderForm
+        key={isLinkAccess ? "private-link-catalogue" : reprendre ?? "catalogue"}
+        products={orderProducts}
+        commercialConditions={commercialConditions}
+        initialFavoriteIds={favoriteIds as string[]}
+        initialCartLines={workspace.lines}
+        reorderHistory={workspace.recent_requests}
+        initialReorderId={isLinkAccess ? undefined : reprendre}
+        enableAccountFeatures={!isLinkAccess}
+        requiresRequesterDetails={isLinkAccess}
+      />
     </div>
   );
 }
