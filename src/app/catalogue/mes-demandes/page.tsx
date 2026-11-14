@@ -12,8 +12,9 @@ const labels: Record<string, string> = {
 
 export default async function PharmacyRequestsPage({
   searchParams,
-}: { searchParams: Promise<{ envoyee?: string }> }) {
-  const { envoyee } = await searchParams;
+}: { searchParams: Promise<{ envoyee?: string; marques?: string }> }) {
+  const { envoyee, marques } = await searchParams;
+  const submittedBrandCount = Math.max(1, Math.min(20, Number(marques) || 1));
   const { pharmacy, catalog } = await requirePharmacyCatalogue();
   const requests = catalog.requests ?? [];
   const names = new Map(catalog.brands.map((b) => [b.id, b.name]));
@@ -26,7 +27,7 @@ export default async function PharmacyRequestsPage({
         <h1 className="mt-2 text-4xl font-black tracking-tight">Mes demandes</h1>
         <p className="mt-3 text-sm text-[#69717d]">Une demande reçue ne constitue pas encore une commande confirmée par le laboratoire.</p>
       </div>
-      {envoyee === "1" ? <p role="status" className="rounded-xl border border-[#4f7a58]/30 bg-[#edf7ee] p-4 text-sm font-semibold text-[#315638]">Demande enregistrée et transmise à TR1 PHARMA.</p> : null}
+      {envoyee === "1" ? <p role="status" className="rounded-xl border border-[#4f7a58]/30 bg-[#edf7ee] p-4 text-sm font-semibold text-[#315638]">{submittedBrandCount > 1 ? `Votre panier a été réparti automatiquement en ${submittedBrandCount} demandes distinctes, une par marque.` : "Votre demande a été enregistrée et transmise à TR1 PHARMA."}</p> : null}
       <div className="overflow-hidden rounded-xl border border-[#0e1d31]/10 bg-white">
         {requests.length ? (
           <div className="divide-y divide-[#0e1d31]/10">
