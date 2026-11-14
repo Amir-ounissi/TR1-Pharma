@@ -74,8 +74,8 @@ export async function createPrivateCatalogueProduct(formData: FormData) {
     format: formData.get("format") ?? "",
     ean: formData.get("ean") ?? "", image_url: formData.get("image_url") ?? "",
     price_ht: formData.get("price_ht"), vat_rate: formData.get("vat_rate"),
-    min_quantity: formData.get("min_quantity") ?? "1",
-    quantity_step: formData.get("quantity_step") ?? "1",
+    min_quantity: formData.get("min_quantity") ?? "6",
+    quantity_step: formData.get("quantity_step") ?? "6",
   });
   const admin = await authorizedAdmin();
   const { error } = await admin.from("private_catalog_products").insert({
