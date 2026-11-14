@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
+import { CataloguePackshot } from "@/components/catalogue/catalogue-packshot";
 import Link from "next/link";
 import { Check, LayoutGrid, List, Minus, Package, Plus, Heart, Search, ShoppingBag, ShoppingCart, SlidersHorizontal, Trash2 } from "lucide-react";
 import { savePharmacyCart, sendMultiBrandCatalogueRequest, setCatalogueFavorite } from "@/app/catalogue/actions";
@@ -680,11 +680,8 @@ export function PrivateMultiBrandOrderForm({
                   return (
                     <article key={product.id}
                       className="group flex min-w-0 flex-col overflow-hidden rounded-xl border border-[#e2e7ec] bg-white transition hover:border-[#cbd5d6] hover:shadow-[0_12px_28px_-24px_rgba(14,29,49,.45)]">
-                      <div className="relative flex h-44 items-center justify-center overflow-hidden bg-[#f5f2ec] p-4">
-                        {product.image_url ? (
-                          <Image src={product.image_url} width={420} height={320} unoptimized alt={product.name}
-                            className="h-full w-full object-contain transition duration-300 group-hover:scale-[1.03]" />
-                        ) : <Package size={42} strokeWidth={1.1} className="text-[#a9b0b3]" aria-hidden="true" />}
+                      <div className="relative overflow-hidden bg-[#fbfaf8]">
+                        <CataloguePackshot src={product.image_url} alt={product.brand_name + " " + product.name} />
                         <span className="absolute left-3 top-3 max-w-[80%] truncate rounded-full border border-white/70 bg-white/90 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[.1em] text-[#ad4b08] backdrop-blur">
                           {product.brand_name}
                         </span>
@@ -771,12 +768,7 @@ export function PrivateMultiBrandOrderForm({
                   return (
                     <article key={product.id}
                       className="grid grid-cols-[52px_minmax(0,1fr)] items-center gap-x-3 gap-y-2 rounded-lg border border-[#e2e7ec] bg-white p-3 transition hover:border-[#cbd5d6] md:grid-cols-[64px_minmax(0,1fr)_140px_260px] md:gap-3 md:px-4">
-                      <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-lg bg-[#f5f2ec] md:h-14 md:w-14">
-                        {product.image_url ? (
-                          <Image src={product.image_url} width={112} height={112} unoptimized alt={product.name}
-                            className="h-full w-full object-contain p-1.5" />
-                        ) : <Package size={25} strokeWidth={1.2} className="text-[#a9b0b3]" aria-hidden="true" />}
-                      </div>
+                      <CataloguePackshot src={product.image_url} alt={product.brand_name + " " + product.name} variant="list" />
 
                       <div className="min-w-0">
                         <p className="truncate text-[9px] font-extrabold uppercase tracking-[.12em] text-[#ad4b08]">{product.brand_name}</p>
