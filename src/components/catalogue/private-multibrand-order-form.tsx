@@ -9,7 +9,7 @@ import type { ReorderRequest, SavedCartLine } from "@/lib/catalogue-buyer-worksp
 import type { CatalogProduct } from "@/lib/private-catalogue";
 import type { PharmacyProductWithVisuals } from "@/lib/catalogue-private-product-visuals";
 import type { CommercialContext, CommercialQuantityGroup } from "@/lib/catalogue-commercial";
-import { euroHT, indicativeRange, isAllowedQuantity, tierSavingsCents, nextTierDiscountCents } from "@/lib/private-catalogue-format";
+import { euroHT, indicativeRange, isAllowedQuantity, tierSavingsCents, nextTierDiscountCents, firstOrderQuantity, steppedOrderQuantity } from "@/lib/private-catalogue-format";
 import { KOREAN_FRANCO, koreanFrancoProgress } from "@/lib/catalogue-shipping";
 
 export type PrivateMultiBrandProduct = PharmacyProductWithVisuals;
@@ -82,7 +82,12 @@ function ProductQuantityControl({
   onSubtract: () => void;
   onSetQuantity: (next: number) => void;
 }) {
-  const invalid = quantity > 0 && !isAllowedQuantity(quantity, product.min_quantity);
+  const firstQuantity = firstOrderQuantity(product.min_quantity, product.quantity_step);
+  const invalid = quantity > 0 && !isAllowedQuantity(quantity, product.min_quantity, product.quantity_step);
+  const presets = product.quantity_step === 6
+    ? QUICK_QUANTITIES.filter((preset) => preset >= firstQuantity)
+    : [0, 1, 2, 3, 7].map((n) => firstQuantity + n * product.quantity_step)
+        .filter((n) => n >= firstQuantity && n <= 5000);
   return (
     <>
       <div className={`flex flex-wrap items-start gap-2 ${compact ? "justify-end" : "w-full"}`}>
@@ -90,7 +95,7 @@ function ProductQuantityControl({
           <button type="button" onClick={onAdd} disabled={maxReferencesReached}
             className={`shop-primary-action inline-flex min-h-10 items-center justify-center gap-2 px-3 text-xs disabled:cursor-not-allowed disabled:opacity-40 ${compact ? "w-auto min-w-[112px]" : "w-full"}`}>
             <Plus size={15} aria-hidden="true" /> {maxReferencesReached ? "Limite atteinte" : "Ajouter"}
-            {!maxReferencesReached && <span className="font-medium opacity-80">· {product.min_quantity} u.</span>}
+            {!maxReferencesReached && <span className="font-medium opacity-80">· {firstQuantity} u.</span>}
           </button>
         ) : (
           <div className="flex min-h-10 items-center overflow-hidden rounded-lg border border-[#dce3ea]">
@@ -99,12 +104,12 @@ function ProductQuantityControl({
               <Minus size={16} />
             </button>
             <input type="number" inputMode="numeric" name={"quantity_" + product.id}
-              min={0} max={5000} step={1} value={quantity}
+              min={0} max={5000} step={product.quantity_step} value={quantity}
               aria-label={"Quantité pour " + product.name}
               onChange={(event) => onSetQuantity(event.target.value === "" ? 0 : Number(event.target.value))}
               className="h-10 w-14 border-x border-[#e8ecee] text-center text-sm font-extrabold text-[#0e1d31] outline-none" />
             <button type="button" onClick={onAdd} aria-label={"Augmenter " + product.name}
-              disabled={quantity >= 5000}
+              disabled={quantity + product.quantity_step > 5000}
               className="flex h-10 w-9 items-center justify-center text-[#162a45] hover:bg-[#fff1e6] disabled:opacity-30">
               <Plus size={16} />
             </button>
@@ -147,7 +152,7 @@ function ProductQuantityControl({
         ) : null}
       </div>
       <div className="mt-2 flex flex-wrap gap-1.5" aria-label={"Quantités rapides pour " + product.name}>
-        {QUICK_QUANTITIES.filter((preset) => preset >= product.min_quantity).map((preset) => (
+        {presets.map((preset) => (
           <button type="button" key={preset} onClick={() => onSetQuantity(preset)}
             disabled={quantity === 0 && maxReferencesReached} aria-pressed={quantity === preset}
             className={`min-h-8 min-w-9 rounded-md border px-2 text-[10px] font-bold transition disabled:opacity-30 ${quantity === preset ? "border-[#142941] bg-[#142941] text-white" : "border-[#dce3ea] text-[#142941] hover:bg-[#f5eee6]"}`}>
@@ -161,7 +166,9 @@ function ProductQuantityControl({
             ? "Saisissez un nombre entier."
             : quantity < product.min_quantity
               ? `Minimum de commande : ${product.min_quantity} unités.`
-              : "Maximum : 5 000 unités par référence."}
+              : quantity > 5000
+                ? "Maximum : 5 000 unités par référence."
+                : `Quantité par multiples de ${product.quantity_step} unités (6 par défaut).`}
         </p>
       ) : null}
     </>
@@ -194,7 +201,9 @@ export function PrivateMultiBrandOrderForm({
     for (const line of initialCartLines.slice(0, 40)) {
       const product = allowed.get(line.product_id);
       if (product && Number.isSafeInteger(line.quantity) && line.quantity > 0 && line.quantity <= 5000) {
-        restored[product.id] = line.quantity;
+        const rounded = Math.ceil(line.quantity / product.quantity_step) * product.quantity_step;
+        const amount = Math.max(firstOrderQuantity(product.min_quantity, product.quantity_step), rounded);
+        if (amount <= 5000) restored[product.id] = amount;
       }
     }
     const restoreRequest = reorderHistory.find((request) => request.id === initialReorderId);
@@ -202,12 +211,16 @@ export function PrivateMultiBrandOrderForm({
       const product = allowed.get(line.product_id);
       if (product && Number.isSafeInteger(line.quantity) && line.quantity > 0
         && (restored[product.id] || Object.keys(restored).length < 40)) {
-        restored[product.id] = Math.max(product.min_quantity, Math.min(5000, line.quantity));
+        restored[product.id] = Math.min(
+          Math.floor(5000 / product.quantity_step) * product.quantity_step,
+          Math.max(firstOrderQuantity(product.min_quantity, product.quantity_step),
+            Math.ceil(line.quantity / product.quantity_step) * product.quantity_step),
+        );
       }
     }
     const target = allowed.get(initialProductId ?? "");
     if (target && (restored[target.id] || Object.keys(restored).length < 40)) {
-      restored[target.id] = restored[target.id] || target.min_quantity;
+      restored[target.id] = restored[target.id] || firstOrderQuantity(target.min_quantity, target.quantity_step);
     }
     return restored;
   });
@@ -451,7 +464,7 @@ export function PrivateMultiBrandOrderForm({
       ? [`${supplier.name} : encore ${euroHT(supplier.missingHt)} HT pour atteindre le minimum fournisseur.`] : []),
   ]);
   const valid = groupErrors.length === 0 && supplierErrors.length === 0 && selected.every((product) =>
-    isAllowedQuantity(quantities[product.id], product.min_quantity),
+    isAllowedQuantity(quantities[product.id], product.min_quantity, product.quantity_step),
   );
   const allContractual = selected.length > 0 && selected.every((product) => {
     const tier = findTierForQuantity(product.pricing.tiers,
@@ -555,12 +568,12 @@ export function PrivateMultiBrandOrderForm({
   const add = (product: PrivateMultiBrandProduct) => {
     const current = quantities[product.id] ?? 0;
     if (current === 0 && selected.length >= 40) return;
-    setQuantity(product, current === 0 ? product.min_quantity : current + 1);
+    setQuantity(product, steppedOrderQuantity(current, product.min_quantity, product.quantity_step, 1));
   };
 
   const subtract = (product: PrivateMultiBrandProduct) => {
     const current = quantities[product.id] ?? 0;
-    setQuantity(product, current <= product.min_quantity ? 0 : current - 1);
+    setQuantity(product, steppedOrderQuantity(current, product.min_quantity, product.quantity_step, -1));
   };
 
   return (
