@@ -143,10 +143,10 @@ export default async function CatalogueAdministration({
             <div className="grid grid-cols-2 gap-3">
               <div><label htmlFor="product_price" className={label}>Prix de référence HT (€) · interne</label><input id="product_price" name="price_ht" type="number" min="0" step="0.01" required className={field} /></div>
               <div><label htmlFor="product_vat" className={label}>TVA (%)</label><input id="product_vat" name="vat_rate" type="number" min="0" max="100" step="0.01" required className={field} /></div>
-              <div><label htmlFor="product_min" className={label}>Minimum</label><input id="product_min" name="min_quantity" type="number" min="1" defaultValue="1" className={field} /></div>
-              <div><label htmlFor="product_step" className={label}>Pas quantité</label><input id="product_step" name="quantity_step" type="number" min="1" defaultValue="1" className={field} /></div>
+              <div><label htmlFor="product_min" className={label}>Minimum de commande (u.)</label><input id="product_min" name="min_quantity" type="number" min="1" defaultValue="6" className={field} /></div>
+              <div><label htmlFor="product_step" className={label}>Pas des boutons + / − (u.)</label><input id="product_step" name="quantity_step" type="number" min="1" defaultValue="6" className={field} /></div>
             </div>
-            <p className="text-xs text-[#69717d]">Ce prix de référence est confidentiel. Il ne sera jamais affiché directement aux pharmacies.</p>
+            <p className="text-xs text-[#69717d]">Par défaut : 6 unités au premier ajout, puis +6 / −6. Modifiez librement minimum et pas pour chaque référence. Le prix de référence reste confidentiel.</p>
             <button type="submit" className={button} disabled={!brandRows.length}>Créer la fiche en brouillon</button>
           </form>
         </div>
@@ -200,7 +200,7 @@ export default async function CatalogueAdministration({
                       <div><label className={label}>Prix référence HT (confidentiel)</label><input name="price_ht" type="number" min="0" step="0.0001" required defaultValue={Number(product.price_ht)} className={field} /></div>
                       <div><label className={label}>TVA (%)</label><input name="vat_rate" type="number" min="0" max="100" step="0.01" required defaultValue={product.vat_rate === null ? "" : Number(product.vat_rate)} className={field} /></div>
                       <div><label className={label}>Minimum unités</label><input name="min_quantity" type="number" min="1" max="5000" required defaultValue={product.min_quantity} className={field} /></div>
-                      <div><label className={label}>Pas de quantité</label><input name="quantity_step" type="number" min="1" max="5000" required defaultValue={product.quantity_step} className={field} /></div>
+                      <div><label className={label}>Pas des boutons + / − (u.) · défaut 6</label><input name="quantity_step" type="number" min="1" max="5000" required defaultValue={product.quantity_step} className={field} /><p className="mt-1 text-[11px] text-[#69717d]">Actuellement {product.quantity_step} u./clic. Premier ajout arrondi au multiple supérieur du minimum.</p></div>
                     </div>
                     <button type="submit" className={button}>Enregistrer les modifications</button>
                   </form>
