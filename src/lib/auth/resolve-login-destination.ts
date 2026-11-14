@@ -48,7 +48,10 @@ export async function resolveLoginDestination(
     return "/dashboard/field";
   }
 
-  if (platformAdmin) return "/dashboard";
+  if (platformAdmin) {
+    cookieStore.delete(ACTIVE_BRAND_COOKIE);
+    return "/dashboard";
+  }
 
   const [{ data: autonomousOnboarding }, { data: pendingBrandRequest }] = await Promise.all([
     supabase.rpc("get_my_self_service_onboarding"),

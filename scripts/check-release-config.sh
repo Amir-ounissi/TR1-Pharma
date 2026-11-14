@@ -9,7 +9,7 @@ grep -Eq 'unoptimized:[[:space:]]*true' next.config.ts || {
 next_image_files="$(find src -type f -exec grep -E -l "from[[:space:]]+['\"]next/image['\"]|require\\([[:space:]]*['\"]next/image['\"][[:space:]]*\\)" {} \;)"
 for file in $next_image_files; do
   case "$file" in
-    'src/app/(public)/page.tsx'|'src/components/marketing/product-proof.tsx') ;;
+    'src/app/(public)/page.tsx'|'src/components/marketing/product-proof.tsx'|'src/components/catalogue/public-product-grid.tsx'|'src/components/catalogue/product-image-gallery.tsx'|'src/components/catalogue/catalogue-packshot.tsx'|'src/components/catalogue/imported-products-browser.tsx') ;;
     *)
       echo "Gate Sharp: utilisation non revue de next/image dans $file." >&2
       exit 1

@@ -1,0 +1,4 @@
+-- Compatibility marker for databases where the guest-link schema was applied
+-- before the dependent Korean shipping batch migration was reordered.
+-- The complete, idempotent migration now runs after all catalogue dependencies:
+-- 20261114190000_catalogue_private_access_links.sql

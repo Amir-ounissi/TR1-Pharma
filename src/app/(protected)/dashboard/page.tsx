@@ -119,6 +119,7 @@ export default async function DashboardPage() {
               <Button asChild variant="outline"><Link href="/dashboard/admin/users">Piloter les accès globaux <ArrowRight /></Link></Button>
               <Button asChild variant="outline"><Link href="/dashboard/admin/leads">Suivre les leads TR1 <ArrowRight /></Link></Button>
               <Button asChild variant="outline"><Link href="/select-brand">Entrer dans une marque <ArrowRight /></Link></Button>
+              <Button asChild><Link href="/catalogue/administration">Gérer le catalogue privé <ArrowRight /></Link></Button>
             </CardContent>
           </Card>
           <Card>
