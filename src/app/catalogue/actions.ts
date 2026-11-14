@@ -90,7 +90,7 @@ export async function sendPrivateCatalogueRequest(
   if (loadError) return { error: "Les conditions ne sont momentanément pas disponibles." };
   const catalog = data as {
     pharmacy: { id: string };
-    products: { id: string; name: string; min_quantity: number }[];
+    products: { id: string; name: string; min_quantity: number; quantity_step: number }[];
     brand: { slug: string } | null;
   } | null;
   if (!catalog?.brand || catalog.pharmacy.id !== pharmacy.id) {
@@ -105,8 +105,8 @@ export async function sendPrivateCatalogueRequest(
       return { error: "Les quantités saisies sont invalides." };
     }
     const quantity = Number(raw);
-    if (!isAllowedQuantity(quantity, product.min_quantity)) {
-      return { error: `Minimum de commande pour ${product.name} : ${product.min_quantity} unité(s). Quantité maximale : 5 000.` };
+    if (!isAllowedQuantity(quantity, product.min_quantity, product.quantity_step)) {
+      return { error: `${product.name} : minimum ${product.min_quantity} unité(s), quantités par multiples de ${product.quantity_step} ; maximum 5 000.` };
     }
     lines.push({ product_id: product.id, quantity });
   }
@@ -164,7 +164,7 @@ export async function sendMultiBrandCatalogueRequest(
     return { error: false as const, catalog: data as {
       pharmacy: { id: string };
       brand: { slug: string } | null;
-      products: { id: string; name: string; min_quantity: number }[];
+      products: { id: string; name: string; min_quantity: number; quantity_step: number }[];
     } | null };
   }));
 
@@ -177,6 +177,7 @@ export async function sendMultiBrandCatalogueRequest(
     brandSlug: string;
     name: string;
     minQuantity: number;
+    quantityStep: number;
   }>();
   for (const result of loadedCatalogues) {
     const current = result.catalog!;
@@ -185,6 +186,7 @@ export async function sendMultiBrandCatalogueRequest(
         brandSlug: current.brand!.slug,
         name: product.name,
         minQuantity: product.min_quantity,
+        quantityStep: product.quantity_step,
       });
     }
   }
@@ -195,8 +197,8 @@ export async function sendMultiBrandCatalogueRequest(
     if (!product) {
       return { error: "Une référence sélectionnée n'est plus accessible à votre officine. Actualisez le catalogue." };
     }
-    if (!isAllowedQuantity(quantity, product.minQuantity)) {
-      return { error: `Minimum de commande pour ${product.name} : ${product.minQuantity} unité(s). Quantité maximale : 5 000.` };
+    if (!isAllowedQuantity(quantity, product.minQuantity, product.quantityStep)) {
+      return { error: `${product.name} : minimum ${product.minQuantity} unité(s), quantités par multiples de ${product.quantityStep} ; maximum 5 000.` };
     }
     const lines = groupedLines.get(product.brandSlug) ?? [];
     lines.push({ product_id: productId, quantity });
