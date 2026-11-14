@@ -819,19 +819,46 @@ export const officialBeautyOfJoseonByEan: Record<string,OfficialEducation> = {
     "sourceName": "Beauty of Joseon (fabricant)"
   },
   "8809782555508": {
-    "description": "Soin de protection solaire quotidien SPF50+ PA++++ au riz et aux extraits fermentés.",
+    "description": "Protection solaire visage SPF50+ PA++++ à la texture crème légère, inspirée d’un soin hydratant. Enrichie en extrait de riz et en niacinamide, elle associe une protection UV à large spectre à une hydratation confortable. La formule s’étale facilement, pénètre rapidement et laisse un fini lumineux, sans effet blanc visible ni sensation collante.",
     "benefits": [
-      "Protection UV",
-      "Hydratation",
-      "Fini confortable"
+      "Protection solaire SPF50+ PA++++ à large spectre",
+      "Hydratation et confort cutané",
+      "Aide à apaiser la peau et à soutenir sa barrière d’hydratation",
+      "Texture légère, non collante et facile à étaler",
+      "Fini naturel et lumineux sans traces blanches visibles",
+      "Testée cliniquement : effet hydratant de 24 heures et bonne tolérance sur peaux sensibles"
     ],
     "keyIngredients": [
-      "Riz",
-      "Extraits fermentés"
+      "Extrait de riz : riche en vitamines, acides aminés et minéraux ; contribue à hydrater",
+      "Niacinamide : aide à soutenir la barrière d’hydratation et à équilibrer la peau",
+      "Extraits fermentés de céréales : complètent le complexe de soin au riz",
+      "Filtres UV : Ethylhexyl Triazone, Diethylamino Hydroxybenzoyl Hexyl Benzoate, Diethylhexyl Butamido Triazone et Methylene Bis-Benzotriazolyl Tetramethylbutylphenol"
     ],
-    "sourceUrl": "https://beautyofjoseon.com/collections/sunscreen",
-    "sourceName": "Beauty of Joseon (fabricant)",
-    "usage": "Dernière étape du soin du matin. Appliquer généreusement et renouveler régulièrement."
+    "sourceUrl": "https://fr.beautyofjoseon.com/products/relief-sun-rice-probiotics-spf50-pa-uk",
+    "sourceName": "Beauty of Joseon — fabricant",
+    "usage": "Appliquer généreusement et uniformément en dernière étape de la routine du matin sur toutes les zones exposées au soleil.",
+    "skinTypes": [
+      "Peaux normales",
+      "Peaux sèches ou déshydratées",
+      "Peaux sensibles",
+      "Peaux mixtes selon le niveau d’hydratation recherché"
+    ],
+    "usageSteps": [
+      "Appliquer en dernière étape de la routine de soin du matin.",
+      "Répartir généreusement et uniformément sur le visage et les zones exposées au soleil.",
+      "Renouveler l’application au moins toutes les deux heures.",
+      "Après une baignade, une transpiration importante ou un essuyage à la serviette, réappliquer la protection."
+    ],
+    "precautions": [
+      "En cas de baignade ou de transpiration, utiliser un écran solaire résistant à l’eau.",
+      "Limiter l’exposition au soleil, notamment entre 10 h et 14 h, et compléter la protection par des vêtements, un chapeau et des lunettes de soleil.",
+      "Éviter l’exposition directe des bébés et jeunes enfants au soleil ; l’utilisation d’un écran solaire chez les nourrissons de moins de 6 mois n’est pas recommandée.",
+      "Pour les enfants de 6 mois à 6 ans, le fabricant recommande des protections solaires minérales adaptées."
+    ],
+    "inci": "Aqua, Dibutyl Adipate, Propanediol, Diethylamino Hydroxybenzoyl Hexyl Benzoate, Polymethylsilsesquioxane, Ethylhexyl Triazone, Methylene Bis-Benzotriazolyl Tetramethylbutylphenol (Nano), Niacinamide, Coco-Caprylate/Caprate, Caprylyl Methicone, Diethylhexyl Butamido Triazone, Glycerin, 1,2-Hexanediol, Butylene Glycol, Pentylene Glycol, Behenyl Alcohol, Poly C10-30 Alkyl Acrylate, Polyglyceryl-3 Methylglucose Distearate, Decyl Glucoside, Oryza Sativa (Rice) Extract, Tromethamine, Carbomer, Acrylates/C10-30 Alkyl Acrylate Crosspolymer, Sodium Stearoyl Glutamate, Polyacrylate Crosspolymer-6, Ethylhexylglycerin, Adenosine, Xanthan Gum, T-Butyl Alcohol, Tocopherol, Oryza Sativa (Rice) Germ Extract, Camellia Sinensis Leaf Extract, Saccharum Officinarum (Sugarcane) Extract, Macrocystis Pyrifera (Kelp) Extract, Lactobacillus/Pumpkin Ferment Extract, Bacillus/Soybean Ferment Extract, Aspergillus Ferment, Cocos Nucifera (Coconut) Fruit Extract, Panax Ginseng Root Extract, Monascus/Rice Ferment, Lactobacillus/Rice Ferment, Saccharomyces/Rice Ferment Filtrate",
+    "packaging": "Tube de protection solaire visage — 50 ml",
+    "origin": "Corée du Sud",
+    "alternateName": "Relief Sun : Rice + Niacinamide (dénomination actuelle utilisée par la marque pour la même formule)"
   },
   "8809968130277": {
     "description": "Fluide solaire SPF50+ PA++++ léger à base d’eau de riz et de panthénol.",
