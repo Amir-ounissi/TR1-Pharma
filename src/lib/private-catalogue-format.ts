@@ -146,3 +146,31 @@ export function nextTierDiscountCents(
   }
   return gain > 0 ? gain : null;
 }
+
+/**
+ * Atteint le premier total collectif autorisé à partir d'un volume cible.
+ * Le fournisseur peut imposer un multiple au TOTAL (ex : Biodance 4),
+ * sans imposer ce même multiple à chaque référence.
+ * Respecte tout de même le pas individuel de l'admin si celui-ci est configuré.
+ */
+export function collectiveTierTopUp(
+  currentTotal: number,
+  targetTotal: number,
+  multiple: number,
+  currentLine: number,
+  lineMinimum: number,
+  lineStep: number,
+): { additional: number; total: number } | null {
+  if (![currentTotal, targetTotal, multiple, currentLine, lineMinimum, lineStep]
+    .every(Number.isSafeInteger)
+    || currentTotal < 0 || targetTotal <= currentTotal
+    || multiple < 1 || currentLine < 1 || lineMinimum < 1 || lineStep < 1) return null;
+  const first = Math.ceil(Math.max(currentTotal + 1, targetTotal) / multiple) * multiple;
+  for (let total = first; total - currentTotal + currentLine <= 5000; total += multiple) {
+    const nextLine = currentLine + total - currentTotal;
+    if (isAllowedQuantity(nextLine, lineMinimum, lineStep)) {
+      return { additional: total - currentTotal, total };
+    }
+  }
+  return null;
+}
