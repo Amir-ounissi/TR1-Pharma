@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { isKoreanFrancoBrand } from "@/lib/catalogue-shipping";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Barcode, Building2, Check, ClipboardList, ShoppingBag } from "lucide-react";
 import { Ean13Barcode } from "@/components/catalogue/ean13-barcode";
@@ -151,6 +152,11 @@ export default async function PharmacyCatalogueProductPage({ params }: ProductPa
                 <p className="mt-2 rounded-xl border border-white/15 px-3 py-3 text-sm font-bold">Tarif sur demande</p>
               )}
             </div>
+            {isKoreanFrancoBrand(brand.slug) ? (
+              <p className="mt-4 text-[11px] font-bold leading-5 text-[#cce9d3]">
+                Franco dès 250 € HT remisé en cumulant Biodance, Beauty of Joseon et Dr. Althea dans un même panier.
+              </p>
+            ) : null}
             <p className="mt-3 text-[11px] leading-5 text-[#c1cdd8]">
               {privateProduct.pricing.mode === "indicative"
                 ? "Prix indicatifs. Le montant définitif est confirmé après vérification de la demande."
