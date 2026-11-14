@@ -12,6 +12,7 @@ import {
   findProductMatch,
   parseCsvContent,
   normalizeCsvText,
+  normalizeCsvFormat,
   type CsvColumnMapping,
   type ParsedCsvContent,
 } from "@/lib/catalogue-csv-comparison";
@@ -91,7 +92,7 @@ function getDisplayPrice(
 
 function hasFormatMismatch(importedFormat: string | null, catalogueFormat: string | null): boolean {
   return Boolean(importedFormat && catalogueFormat
-    && normalizeCsvText(importedFormat) !== normalizeCsvText(catalogueFormat));
+    && normalizeCsvFormat(importedFormat) !== normalizeCsvFormat(catalogueFormat));
 }
 
 function priceComparison(currentPrice: number | null, price: DisplayPrice, formatMismatch: boolean): string {
