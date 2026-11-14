@@ -7,6 +7,22 @@ import { sendPrivateCatalogueRequest } from "@/app/catalogue/actions";
 import type { CatalogProduct } from "@/lib/private-catalogue";
 import { euroHT, indicativeRange, isAllowedQuantity, tierForQuantity } from "@/lib/private-catalogue-format";
 
+type ProductTier = CatalogProduct["pricing"]["tiers"][number];
+function priceRangeForTier(tier: ProductTier | null) {
+  if (!tier) return null;
+  if ("price_ht" in tier) return { min: Number(tier.price_ht), max: Number(tier.price_ht) };
+  return { min: Number(tier.price_min_ht), max: Number(tier.price_max_ht) };
+}
+function formatPriceRange(min: number, max: number) {
+  const low = euroHT(min);
+  const high = euroHT(max);
+  return low === high ? low : `${low} – ${high}`;
+}
+function nextTierForQuantity(tiers: readonly ProductTier[], quantity: number) {
+  return [...tiers].filter((tier) => tier.min_quantity > quantity)
+    .sort((a, b) => a.min_quantity - b.min_quantity)[0] ?? null;
+}
+
 export function PrivateOrderForm({
   slug, brandName, products, initialProductId,
 }: {
@@ -31,14 +47,27 @@ export function PrivateOrderForm({
       .sort((a, b) => sort === "sku" ? a.sku.localeCompare(b.sku) : a.name.localeCompare(b.name, "fr"));
   }, [products, query, sort]);
 
-  const valid = selected.every((p) => isAllowedQuantity(quantities[p.id], p.min_quantity, p.quantity_step));
+  const valid = selected.every((p) => isAllowedQuantity(quantities[p.id], p.min_quantity));
   const allContractual = selected.length > 0 && selected.every((p) =>
     p.pricing.mode === "contractual" && tierForQuantity(p.pricing.tiers, quantities[p.id]) !== null,
   );
-  const totalCents = allContractual ? selected.reduce((sum, p) => {
-    if (p.pricing.mode !== "contractual") return sum;
-    return sum + Math.round((tierForQuantity(p.pricing.tiers, quantities[p.id])?.price_ht ?? 0) * 100) * quantities[p.id];
-  }, 0) : null;
+  const priceSummary = useMemo(() => {
+    let minCents = 0;
+    let maxCents = 0;
+    let unpriced = 0;
+    for (const product of selected) {
+      const quantity = quantities[product.id] ?? 0;
+      const tier = tierForQuantity(product.pricing.tiers, quantity);
+      const range = priceRangeForTier(tier);
+      if (!range) {
+        unpriced += 1;
+        continue;
+      }
+      minCents += Math.round(range.min * 100) * quantity;
+      maxCents += Math.round(range.max * 100) * quantity;
+    }
+    return { minCents, maxCents, unpriced };
+  }, [selected, quantities]);
   const quantityTotal = selected.reduce((sum, p) => sum + quantities[p.id], 0);
 
   const setQuantity = (product: CatalogProduct, next: number) => {
@@ -46,12 +75,11 @@ export function PrivateOrderForm({
   };
   const add = (p: CatalogProduct) => {
     const current = quantities[p.id] ?? 0;
-    if (current === 0) setQuantity(p, p.min_quantity);
-    else if (current + p.quantity_step <= 5000) setQuantity(p, current + p.quantity_step);
+    setQuantity(p, current === 0 ? p.min_quantity : current + 1);
   };
   const subtract = (p: CatalogProduct) => {
     const current = quantities[p.id] ?? 0;
-    setQuantity(p, current <= p.min_quantity ? 0 : current - p.quantity_step);
+    setQuantity(p, current <= p.min_quantity ? 0 : current - 1);
   };
 
   return (
@@ -85,7 +113,7 @@ export function PrivateOrderForm({
         <div className="min-w-0 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#69717d]">
             <p className="font-semibold">{visible.length} produit{visible.length > 1 ? "s" : ""}</p>
-            <p>Tarifs HT indicatifs · Paliers fournisseurs par référence</p>
+            <p>Prix HT indicatifs · Paliers dégressifs appliqués automatiquement</p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             {visible.map((p) => {
@@ -93,10 +121,13 @@ export function PrivateOrderForm({
               const stepQty = qty || p.min_quantity;
               const indicativeTier = p.pricing.mode === "indicative" ? tierForQuantity(p.pricing.tiers, stepQty) : null;
               const contractualTier = p.pricing.mode === "contractual" ? tierForQuantity(p.pricing.tiers, stepQty) : null;
+              const activeTier = p.pricing.mode === "contractual" ? contractualTier : indicativeTier;
+              const nextTier = nextTierForQuantity(p.pricing.tiers, stepQty);
+              const nextTierPrice = priceRangeForTier(nextTier);
               const price = p.pricing.mode === "contractual"
                 ? contractualTier ? euroHT(contractualTier.price_ht) : "Tarif sur demande"
                 : indicativeRange(indicativeTier);
-              const selectedInvalid = qty > 0 && !isAllowedQuantity(qty, p.min_quantity, p.quantity_step);
+              const selectedInvalid = qty > 0 && !isAllowedQuantity(qty, p.min_quantity);
 
               return (
                 <article key={p.id} className="shop-card flex min-w-0 flex-col overflow-hidden transition hover:border-[#dce3ea] hover:shadow-md">
@@ -137,21 +168,36 @@ export function PrivateOrderForm({
                       <details className="rounded-lg bg-[#faf9f6] px-3 py-2.5">
                         <summary className="cursor-pointer text-xs font-extrabold text-[#162a45]">Voir les paliers par volume</summary>
                         <div className="mt-3 space-y-2 border-t border-[#e2e7ec] pt-3">
-                          {p.pricing.tiers.map((tier) => (
-                            <div key={tier.min_quantity} className="flex items-start justify-between gap-2 text-[11px]">
-                              <span>Dès {tier.min_quantity} u.</span>
-                              <strong className="text-right">
-                                {p.pricing.mode === "contractual"
-                                  ? "price_ht" in tier ? euroHT(tier.price_ht) : "Sur demande"
-                                  : indicativeRange("price_min_ht" in tier ? tier : null)}
-                              </strong>
-                            </div>
-                          ))}
+                          {p.pricing.tiers.map((tier) => {
+                            const active = activeTier?.min_quantity === tier.min_quantity;
+                            return (
+                              <div key={tier.min_quantity}
+                                className={`flex items-start justify-between gap-2 rounded-md text-[11px] ${active ? "bg-[#fff1e6] px-2 py-1.5 text-[#162a45]" : ""}`}>
+                                <span>
+                                  Dès {tier.min_quantity} u.
+                                  {active ? <span className="ml-1 font-extrabold text-[#ad4b08]">· Appliqué</span> : null}
+                                </span>
+                                <strong className="text-right">
+                                  {p.pricing.mode === "contractual"
+                                    ? "price_ht" in tier ? euroHT(tier.price_ht) : "Sur demande"
+                                    : indicativeRange("price_min_ht" in tier ? tier : null)}
+                                </strong>
+                              </div>
+                            );
+                          })}
                         </div>
                       </details>
                     ) : null}
 
-                    <p className="text-[11px] text-[#69717d]">{p.min_quantity > 1 || p.quantity_step > 1 ? `Minimum ${p.min_quantity} u. · Pas de ${p.quantity_step} · TVA ${p.vat_rate} %` : `Quantité minimale à confirmer sur devis · TVA ${p.vat_rate} %`}</p>
+                    <p className="text-[11px] text-[#69717d]">
+                      {p.min_quantity > 1 ? `Minimum ${p.min_quantity} unités par référence` : "Commande possible à l'unité"}
+                      {p.vat_rate !== null ? ` · TVA ${p.vat_rate} %` : ""}
+                    </p>
+                    {qty > 0 && !selectedInvalid && nextTier && nextTierPrice ? (
+                      <p className="text-[11px] font-semibold text-[#ad4b08]">
+                        Encore {nextTier.min_quantity - qty} unité{nextTier.min_quantity - qty > 1 ? "s" : ""} pour atteindre le palier {nextTier.min_quantity} u. ({formatPriceRange(nextTierPrice.min, nextTierPrice.max)} HT / unité).
+                      </p>
+                    ) : null}
                     <div className="flex items-center gap-2">
                       {qty === 0 ? (
                         <button type="button" onClick={() => add(p)}
@@ -164,7 +210,7 @@ export function PrivateOrderForm({
                             className="flex h-11 w-11 items-center justify-center text-[#162a45] hover:bg-[#fff1e6]"><Minus size={17} /></button>
                           <span className="text-xs font-bold">{qty} u.</span>
                           <button type="button" onClick={() => add(p)} aria-label={"Augmenter " + p.name}
-                            disabled={qty + p.quantity_step > 5000}
+                            disabled={qty >= 5000}
                             className="flex h-11 w-11 items-center justify-center text-[#162a45] hover:bg-[#fff1e6]"><Plus size={17} /></button>
                         </div>
                       )}
@@ -176,7 +222,15 @@ export function PrivateOrderForm({
                         onChange={(event) => setQuantity(p, event.target.value === "" ? 0 : Number(event.target.value))}
                         className="w-20 rounded-md border border-[#dce3ea] px-2 py-1.5 text-right text-xs font-bold text-[#0e1d31]" />
                     </label>
-                    {selectedInvalid ? <p role="alert" className="text-xs font-bold text-red-700">Respectez le minimum et le pas de commande.</p> : null}
+                    {selectedInvalid ? (
+                      <p role="alert" className="text-xs font-bold text-red-700">
+                        {!Number.isSafeInteger(qty)
+                          ? "Saisissez un nombre entier."
+                          : qty < p.min_quantity
+                            ? `Minimum de commande : ${p.min_quantity} unités par référence.`
+                            : "Maximum : 5 000 unités par référence."}
+                      </p>
+                    ) : null}
                   </div>
                 </article>
               );
@@ -206,16 +260,30 @@ export function PrivateOrderForm({
             {selected.length ? (
               <div className="max-h-78 space-y-3 overflow-auto">
                 {selected.map((p) => {
-                  const tier = p.pricing.mode === "contractual" ? tierForQuantity(p.pricing.tiers, quantities[p.id]) : null;
+                  const quantity = quantities[p.id];
+                  const tier = tierForQuantity(p.pricing.tiers, quantity);
+                  const range = priceRangeForTier(tier);
+                  const nextTier = nextTierForQuantity(p.pricing.tiers, quantity);
                   return (
-                    <div key={p.id} className="flex items-start justify-between gap-3 border-b border-[#e2e7ec] pb-3 text-xs">
-                      <div className="min-w-0">
-                        <p className="font-bold text-[#0e1d31]">{p.name}</p>
-                        <p className="mt-1 text-[#69717d]">{quantities[p.id]} unités</p>
+                    <div key={p.id} className="border-b border-[#e2e7ec] pb-3 text-xs">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-bold text-[#0e1d31]">{p.name}</p>
+                          <p className="mt-1 text-[#69717d]">{quantity} unité{quantity > 1 ? "s" : ""}</p>
+                          {tier ? <p className="mt-1 text-[10px] font-semibold text-[#ad4b08]">Palier appliqué dès {tier.min_quantity} unités</p> : null}
+                          <p className="mt-1 text-[10px] text-[#69717d]">
+                            {range ? `${formatPriceRange(range.min, range.max)} HT / unité` : "Tarif à confirmer"}
+                          </p>
+                        </div>
+                        <strong className="shrink-0 text-right">
+                          {range ? `${formatPriceRange(range.min * quantity, range.max * quantity)} HT` : "Sur devis"}
+                        </strong>
                       </div>
-                      <strong className="shrink-0 text-right">
-                        {tier ? euroHT(Math.round(tier.price_ht * 100) * quantities[p.id] / 100) : "Sur devis"}
-                      </strong>
+                      {nextTier ? (
+                        <p className="mt-2 text-[10px] text-[#69717d]">
+                          Prochain palier : {nextTier.min_quantity} unités
+                        </p>
+                      ) : null}
                     </div>
                   );
                 })}
@@ -229,9 +297,19 @@ export function PrivateOrderForm({
             )}
             <div className="flex items-start justify-between gap-2 border-t border-[#e2e7ec] pt-4">
               <div>
-                <p className="text-xs text-[#69717d]">{allContractual ? "Total estimé HT" : "Montant à confirmer"}</p>
+                <p className="text-xs text-[#69717d]">
+                  {allContractual
+                    ? "Total HT"
+                    : priceSummary.minCents > 0
+                      ? priceSummary.unpriced > 0 ? "Sous-total indicatif HT" : "Estimation indicative HT"
+                      : "Montant à confirmer"}
+                </p>
                 <p className="mt-1 text-xl font-black text-[#0e1d31]">
-                  {totalCents !== null ? euroHT(totalCents / 100) : "Sur devis"}
+                  {selected.length === 0
+                    ? "—"
+                    : priceSummary.minCents > 0 || priceSummary.maxCents > 0
+                      ? `${formatPriceRange(priceSummary.minCents / 100, priceSummary.maxCents / 100)} HT${priceSummary.unpriced > 0 ? ` + ${priceSummary.unpriced} référence(s) à chiffrer` : ""}`
+                      : "Sur devis"}
                 </p>
               </div>
               <span className="rounded-full bg-[#fff1e6] px-2.5 py-1 text-[10px] font-bold text-[#162a45]">B2B</span>
@@ -245,7 +323,7 @@ export function PrivateOrderForm({
             <p className="text-[11px] leading-5 text-[#69717d]">
               {allContractual
                 ? "Votre demande de commande sera vérifiée avant confirmation définitive."
-                : "Vous recevrez vos conditions commerciales personnalisées après examen de la demande."}
+                : "Les prix et paliers affichés sont indicatifs. Les références sans tarif public et le montant définitif seront confirmés avant validation."}
             </p>
           </div>
         </aside>
