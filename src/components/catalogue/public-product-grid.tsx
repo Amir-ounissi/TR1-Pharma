@@ -274,7 +274,7 @@ export function PublicProductGrid({ privateProducts }: { privateProducts?: Priva
                           </Link>
                           <Link href={"/catalogue/marques/" + privateProduct.brandSlug + "?produit=" + privateProduct.id + "#produits"}
                             className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#142941] px-3 text-center text-xs font-extrabold text-white hover:bg-[#1e405f]">
-                            Commander <ArrowUpRight size={14} aria-hidden="true"/>
+                            Préparer ma commande <ArrowUpRight size={14} aria-hidden="true"/>
                           </Link>
                         </div>
                       </>
