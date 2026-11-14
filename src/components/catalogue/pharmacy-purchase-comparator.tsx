@@ -428,7 +428,9 @@ export function PharmacyPurchaseComparator({
                     const difference = !formatMismatch && line.purchasePriceHt !== null && displayPrice.kind === "contractual"
                       ? line.purchasePriceHt - displayPrice.price
                       : null;
-                    const comparison = priceComparison(line.purchasePriceHt, displayPrice, formatMismatch);
+                    const comparison = product
+                      ? priceComparison(line.purchasePriceHt, displayPrice, formatMismatch)
+                      : "Sélectionnez une correspondance TR1 pour comparer";
                     return (
                       <tr key={line.id} className="align-top">
                         <td className="max-w-[230px] px-4 py-4">
@@ -486,7 +488,7 @@ export function PharmacyPurchaseComparator({
                           ) : null}
                         </td>
                         <td className="whitespace-nowrap px-4 py-4">
-                          {displayPrice.kind === "contractual" ? (
+                          {!product ? <p className="text-[#7b8790]">Aucune référence rapprochée</p> : displayPrice.kind === "contractual" ? (
                             <>
                               <p className="font-extrabold tabular-nums text-[#142941]">{money(displayPrice.price)}</p>
                               <p className="mt-1 text-[10px] text-[#69717d]">Contractuel · {displayPrice.thresholdLabel}</p>
