@@ -11,6 +11,7 @@ import { officialBiodanceByName, officialBeautyOfJoseonByEan, officialDrAltheaBy
 import { findPublicProduct, publicProductFamily, publicProductImages } from "@/lib/catalogue-products";
 import { getCatalogueBrandForPharmacy, requirePharmacyCatalogue, type CatalogProduct } from "@/lib/private-catalogue";
 import { euroHT } from "@/lib/private-catalogue-format";
+import { getCommercialContext } from "@/lib/catalogue-commercial";
 
 type ProductParams = { params: Promise<{ slug: string; ref: string }> };
 
@@ -59,6 +60,8 @@ export default async function PharmacyCatalogueProductPage({ params }: ProductPa
   const privateProduct = products.find((item) => product.ean && item.ean === product.ean)
     ?? products.find((item) => normalizeProductName(item.name) === normalizeProductName(product.name));
   if (!privateProduct) notFound();
+  const commercial = await getCommercialContext(admin);
+  const quantityGroup = commercial.quantity_groups.find((group) => group.product_ids.includes(privateProduct.id));
   const officialInfo = product.brand === "Biodance"
     ? officialBiodanceByName[product.name]
     : product.brand === "Beauty of Joseon"
@@ -114,7 +117,13 @@ export default async function PharmacyCatalogueProductPage({ params }: ProductPa
             <div className="mt-4 grid grid-cols-2 gap-3">
               <div className="rounded-xl bg-white/10 p-3">
                 <p className="text-[10px] font-bold uppercase tracking-wide text-[#c1cdd8]">Minimum de commande</p>
-                <p className="mt-1 text-lg font-black">{privateProduct.min_quantity} unité{privateProduct.min_quantity > 1 ? "s" : ""}</p>
+                <p className="mt-1 text-lg font-black">
+                  {quantityGroup ? quantityGroup.minimum_total_units : privateProduct.min_quantity}
+                  {" "}unité{(quantityGroup?.minimum_total_units ?? privateProduct.min_quantity)>1 ? "s" : ""}
+                </p>
+                {quantityGroup ? <p className="mt-1 text-[10px] leading-4 text-[#c1cdd8]">
+                  Minimum sur les cinq masques cumulés, commandes par multiples de {quantityGroup.quantity_multiple}.
+                </p> : null}
               </div>
               <div className="rounded-xl bg-white/10 p-3">
                 <p className="text-[10px] font-bold uppercase tracking-wide text-[#c1cdd8]">TVA</p>
@@ -129,7 +138,7 @@ export default async function PharmacyCatalogueProductPage({ params }: ProductPa
                 <div className="mt-2 divide-y divide-white/15 rounded-xl border border-white/15">
                   {privateProduct.pricing.tiers.map((tier) => (
                     <div key={tier.min_quantity} className="flex items-center justify-between gap-3 px-3 py-3 text-xs">
-                      <span>Dès {tier.min_quantity} unité{tier.min_quantity > 1 ? "s" : ""}</span>
+                      <span>Dès {tier.min_quantity} {quantityGroup ? "masques cumulés" : tier.min_quantity > 1 ? "unités" : "unité"}</span>
                       <strong className="text-right">{tierPrice(privateProduct.pricing, tier)}</strong>
                     </div>
                   ))}
