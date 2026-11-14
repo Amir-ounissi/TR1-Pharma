@@ -32,6 +32,7 @@ alter table public.private_catalog_requests
     or
     (created_by is null and access_link_id is not null
       and length(trim(coalesce(requester_name,''))) between 2 and 120
+      and requester_email is not null
       and requester_email = lower(trim(requester_email))
       and length(requester_email) between 5 and 254
       and position('@' in requester_email) > 1)
