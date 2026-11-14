@@ -2,10 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { resolveAppUrl } from "@/lib/runtime-environment";
-import { requirePharmacyCatalogue } from "@/lib/private-catalogue";
+import { PRIVATE_CATALOGUE_LINK_COOKIE, requirePharmacyCatalogue } from "@/lib/private-catalogue";
 import { isAllowedQuantity } from "@/lib/private-catalogue-format";
 
 export async function connectPharmacyCatalogue(formData: FormData) {
@@ -72,6 +73,8 @@ export async function activatePharmacyCatalogue(formData: FormData) {
 }
 
 export async function disconnectPharmacyCatalogue() {
+  const cookieStore = await cookies();
+  cookieStore.delete(PRIVATE_CATALOGUE_LINK_COOKIE);
   const client = await createClient();
   await client.auth.signOut();
   redirect("/catalogue/connexion");
@@ -130,7 +133,23 @@ export async function sendMultiBrandCatalogueRequest(
   _state: PrivateRequestState,
   formData: FormData,
 ): Promise<PrivateRequestState> {
-  const { admin, pharmacy, catalog: pharmacyCatalog } = await requirePharmacyCatalogue();
+  const { admin, pharmacy, catalog: pharmacyCatalog, isLinkAccess, accessLinkHash } = await requirePharmacyCatalogue();
+  let requesterName = "";
+  let requesterEmail = "";
+  if (isLinkAccess) {
+    const requester = z.object({
+      requester_name: z.string().trim().min(2).max(120),
+      requester_email: z.email().trim().toLowerCase().max(254),
+    }).safeParse({
+      requester_name: formData.get("requester_name"),
+      requester_email: formData.get("requester_email"),
+    });
+    if (!requester.success || !accessLinkHash) {
+      return { error: "Renseignez votre nom et une adresse email professionnelle valide." };
+    }
+    requesterName = requester.data.requester_name;
+    requesterEmail = requester.data.requester_email;
+  }
 
   const seenIds = new Set<string>();
   const quantities = new Map<string, number>();
@@ -159,7 +178,12 @@ export async function sendMultiBrandCatalogueRequest(
   }
 
   const loadedCatalogues = await Promise.all(brands.map(async (brand) => {
-    const { data, error } = await admin.rpc("catalogue_my_data", { p_slug: brand.slug });
+    const { data, error } = isLinkAccess
+      ? await admin.rpc("catalogue_private_link_my_data", {
+          p_token_hash: accessLinkHash,
+          p_slug: brand.slug,
+        })
+      : await admin.rpc("catalogue_my_data", { p_slug: brand.slug });
     if (error) return { error: true as const, catalog: null };
     return { error: false as const, catalog: data as {
       pharmacy: { id: string };
@@ -212,16 +236,24 @@ export async function sendMultiBrandCatalogueRequest(
 
   // Une seule transaction PostgreSQL traite tous les groupes : en cas d'erreur
   // sur une marque, aucune demande partielle n'est conservée.
-  const { error } = await admin.rpc("catalogue_submit_with_korean_franco", {
-    p_groups: groups,
-  });
+  const { error } = isLinkAccess
+    ? await admin.rpc("catalogue_submit_with_korean_franco_for_private_link", {
+        p_token_hash: accessLinkHash,
+        p_groups: groups,
+        p_requester_name: requesterName,
+        p_requester_email: requesterEmail,
+      })
+    : await admin.rpc("catalogue_submit_with_korean_franco", {
+        p_groups: groups,
+      });
   if (error) {
-    return { error: "Le panier n'a pas pu être transmis. Vérifiez les quantités et réessayez." };
+    return { error: "Le panier n'a pas pu être transmis. Vérifiez les coordonnées, les quantités et réessayez." };
   }
 
-  // Une demande acceptée vide le brouillon serveur. Les demandes sont déjà
-  // enregistrées ; un échec de nettoyage ne peut pas créer de doublon.
-  await admin.rpc("catalogue_save_cart", { p_lines: [] });
+  // Les accès par lien n'ont pas de brouillon persistant ni de compte utilisateur.
+  if (!isLinkAccess) {
+    await admin.rpc("catalogue_save_cart", { p_lines: [] });
+  }
   revalidatePath("/catalogue/mes-demandes");
   revalidatePath("/catalogue");
   redirect(`/catalogue/mes-demandes?envoyee=1&marques=${groups.length}`);
@@ -239,7 +271,8 @@ export async function savePharmacyCart(
 
   if (!parsed.success) return { saved: false, error: "Quantités invalides." };
   try {
-    const { admin } = await requirePharmacyCatalogue();
+    const { admin, isLinkAccess } = await requirePharmacyCatalogue();
+    if (isLinkAccess) return { saved: false, error: "Le panier par lien est temporaire." };
     const { error } = await admin.rpc("catalogue_save_cart", { p_lines: parsed.data });
     if (error) return { saved: false, error: "Le panier n'a pas pu être enregistré." };
     return { saved: true };
@@ -256,7 +289,8 @@ export async function addCatalogueProductToCart(
   const parsed = z.object({ productId: z.uuid(), quantity: z.number().int().min(1).max(5000) })
     .safeParse({ productId, quantity });
   if (!parsed.success) return { ok: false, error: "Quantité ou référence invalide." };
-  const { admin } = await requirePharmacyCatalogue();
+  const { admin, isLinkAccess } = await requirePharmacyCatalogue();
+  if (isLinkAccess) return { ok: false, error: "L'ajout rapide au panier persistant nécessite un compte." };
   const { error } = await admin.rpc("catalogue_add_cart_line", {
     p_product_id: parsed.data.productId,
     p_quantity: parsed.data.quantity,
@@ -276,7 +310,8 @@ export async function setCatalogueFavorite(
   const parsed = z.object({ productId: z.uuid(), saved: z.boolean() })
     .safeParse({ productId, saved });
   if (!parsed.success) return { ok: false, error: "Référence invalide." };
-  const { admin } = await requirePharmacyCatalogue();
+  const { admin, isLinkAccess } = await requirePharmacyCatalogue();
+  if (isLinkAccess) return { ok: false, error: "Les favoris nécessitent un compte professionnel." };
   const { error } = await admin.rpc("catalogue_set_favorite", {
     p_product_id: parsed.data.productId,
     p_saved: parsed.data.saved,
