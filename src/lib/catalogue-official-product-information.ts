@@ -861,19 +861,45 @@ export const officialBeautyOfJoseonByEan: Record<string,OfficialEducation> = {
     "alternateName": "Relief Sun : Rice + Niacinamide (dénomination actuelle utilisée par la marque pour la même formule)"
   },
   "8809968130277": {
-    "description": "Fluide solaire SPF50+ PA++++ léger à base d’eau de riz et de panthénol.",
+    "description": "Fluide solaire visage SPF50+ PA++++ à la texture ultra-légère, formulé avec de l’eau de riz et du panthénol (vitamine B5). Il apporte une hydratation fraîche tout en protégeant la peau des UVA et UVB. Sa texture pénètre rapidement, sans effet blanc ni fini collant, et convient particulièrement aux peaux mixtes à grasses.",
     "benefits": [
-      "Protection UV",
-      "Hydratation légère",
-      "Confort des peaux mixtes"
+      "Protection solaire SPF50+ PA++++ à large spectre",
+      "Hydratation légère et sensation de fraîcheur",
+      "Absorption rapide et fini non collant",
+      "Pas d’effet blanc visible",
+      "Aide à apaiser la peau et à soutenir la barrière cutanée",
+      "Non comédogène et testé pour les peaux sensibles selon la marque"
     ],
     "keyIngredients": [
-      "Eau de riz",
-      "Panthénol (B5)"
+      "Eau de graines de riz : apporte une hydratation légère, riche en acides aminés et minéraux",
+      "Panthénol (vitamine B5) : hydrate, apaise et soutient la barrière cutanée",
+      "Bêta-glucane : contribue au confort et à l’hydratation",
+      "Céramide NP et phytosphingosine : composants de soutien de la barrière cutanée",
+      "Filtres UV : Ethylhexyl Triazone, Drometrizole Trisiloxane, Terephthalylidene Dicamphor Sulfonic Acid, Diethylamino Hydroxybenzoyl Hexyl Benzoate et Bis-Ethylhexyloxyphenol Methoxyphenyl Triazine"
     ],
-    "sourceUrl": "https://beautyofjoseon.com/products/relief-sun-aqua-fresh",
-    "sourceName": "Beauty of Joseon (fabricant)",
-    "usage": "Dernière étape de la routine du matin, appliquer généreusement puis renouveler au moins toutes les deux heures en cas d’exposition."
+    "sourceUrl": "https://fr.beautyofjoseon.com/products/relief-sun-aqua-fresh-rice-b5-spf50-pa-uk",
+    "sourceName": "Beauty of Joseon — fabricant",
+    "usage": "Appliquer généreusement en dernière étape de la routine du matin sur les zones exposées au soleil.",
+    "skinTypes": [
+      "Peaux mixtes",
+      "Peaux grasses",
+      "Peaux sensibles",
+      "Peaux à tendance acnéique"
+    ],
+    "usageSteps": [
+      "Appliquer en dernière étape de la routine de soin du matin.",
+      "Répartir généreusement et uniformément sur le visage et les zones exposées au soleil.",
+      "Renouveler l’application au moins toutes les deux heures.",
+      "Réappliquer après la baignade, une transpiration importante ou un essuyage à la serviette."
+    ],
+    "precautions": [
+      "En cas de baignade ou de transpiration, utiliser un écran solaire résistant à l’eau.",
+      "Limiter l’exposition au soleil, notamment entre 10 h et 14 h, et compléter la protection par des vêtements, un chapeau et des lunettes de soleil.",
+      "Éviter l’exposition directe des bébés et jeunes enfants au soleil ; l’utilisation d’un écran solaire chez les nourrissons de moins de 6 mois n’est pas recommandée."
+    ],
+    "inci": "Aqua, Oryza Sativa (Rice) Seed Water, Dibutyl Adipate, Butyloctyl Salicylate, Ethylhexyl Triazone, Polyglyceryl-3 Distearate, Drometrizole Trisiloxane, Terephthalylidene Dicamphor Sulfonic Acid, Diethylamino Hydroxybenzoyl Hexyl Benzoate, Polymethylsilsesquioxane, Tromethamine, 1,2-Hexanediol, Panthenol, Pentylene Glycol, Glyceryl Stearate, Caprylyl Methicone, Silica, Bis-Ethylhexyloxyphenol Methoxyphenyl Triazine, Propanediol, Potassium Cetyl Phosphate, Poly C10-30 Alkyl Acrylate, Methylpropanediol, Carbomer, Acrylates/C10-30 Alkyl Acrylate Crosspolymer, Ethylhexylglycerin, Xanthan Gum, Glycerin, Polyether-1, Avena Sativa (Oat) Kernel Extract, Cynara Scolymus (Artichoke) Leaf Extract, Polyquaternium-51, Camellia Sinensis Leaf Water, Hydrogenated Lecithin, Beta-Glucan, Inositol, Tocopherol, Biosaccharide Gum-1, Ferulic Acid, Oryza Sativa (Rice) Bran Oil, Citric Acid, Ceramide NP, Phytosphingosine, Sodium Hyaluronate, Rice Amino Acids, Rice SH-Oligopeptide-1",
+    "packaging": "Fluide solaire visage — 50 ml",
+    "origin": "Corée du Sud"
   },
   "8809738316146": {
     "description": "Sérum contour des yeux au ginseng et au rétinal, ciblant l’apparence des ridules.",
