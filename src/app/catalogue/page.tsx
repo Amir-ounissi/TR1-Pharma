@@ -14,6 +14,8 @@ export default async function PrivateCatalogueHome({
   const { admin, pharmacy } = await requirePharmacyCatalogue();
   const commercialConditions = await getCommercialContext(admin);
   const workspace = await getBuyerWorkspace(admin);
+  const { data: favoriteIds, error: favoritesError } = await admin.rpc("catalogue_my_favorites");
+  if (favoritesError) throw favoritesError;
   const brands = await getCatalogueBrands(pharmacy.id, admin);
   const groups = await Promise.all(brands.map(async (brand) => {
     const result = await getCatalogueBrandForPharmacy(pharmacy.id, brand.slug, admin);
@@ -54,7 +56,7 @@ export default async function PrivateCatalogueHome({
         </div>
       </section>
 
-      <PrivateMultiBrandOrderForm key={reprendre ?? "catalogue"} products={orderProducts} commercialConditions={commercialConditions} initialCartLines={workspace.lines} reorderHistory={workspace.recent_requests} initialReorderId={reprendre} />
+      <PrivateMultiBrandOrderForm key={reprendre ?? "catalogue"} products={orderProducts} commercialConditions={commercialConditions} initialFavoriteIds={(favoriteIds ?? []) as string[]} initialCartLines={workspace.lines} reorderHistory={workspace.recent_requests} initialReorderId={reprendre} />
     </div>
   );
 }
