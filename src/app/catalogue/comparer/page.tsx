@@ -12,16 +12,16 @@ export const metadata = {
 };
 
 export default async function PharmacyPurchaseComparisonPage() {
-  const { admin, pharmacy } = await requirePharmacyCatalogue();
-  const brands = await getCatalogueBrands(pharmacy.id, admin);
+  const { admin, pharmacy, accessLinkHash } = await requirePharmacyCatalogue();
+  const brands = await getCatalogueBrands(pharmacy.id, admin, accessLinkHash);
   const groups = await Promise.all(brands.map(async (brand) => {
-    const result = await getCatalogueBrandForPharmacy(pharmacy.id, brand.slug, admin);
+    const result = await getCatalogueBrandForPharmacy(pharmacy.id, brand.slug, admin, accessLinkHash);
     return { brand, products: result.products };
   }));
   const products = groups.flatMap(({ brand, products: brandProducts }) =>
     brandProducts.map((product) => withPharmacyProductVisuals(product, brand)),
   );
-  const commercialConditions = await getCommercialContext(admin);
+  const commercialConditions = await getCommercialContext(admin, accessLinkHash);
 
   return (
     <div className="space-y-6">
