@@ -6,7 +6,10 @@ import { PrivateMultiBrandOrderForm } from "@/components/catalogue/private-multi
 import { withPharmacyProductVisuals } from "@/lib/catalogue-private-product-visuals";
 import { getBuyerWorkspace } from "@/lib/catalogue-buyer-workspace";
 
-export default async function PrivateCatalogueHome() {
+export default async function PrivateCatalogueHome({
+  searchParams,
+}: { searchParams: Promise<{ reprendre?: string }> }) {
+  const { reprendre } = await searchParams;
   const { admin, pharmacy } = await requirePharmacyCatalogue();
   const workspace = await getBuyerWorkspace(admin);
   const brands = await getCatalogueBrands(pharmacy.id, admin);
@@ -49,7 +52,7 @@ export default async function PrivateCatalogueHome() {
         </div>
       </section>
 
-      <PrivateMultiBrandOrderForm products={orderProducts} initialCartLines={workspace.lines} reorderHistory={workspace.recent_requests} />
+      <PrivateMultiBrandOrderForm key={reprendre ?? "catalogue"} products={orderProducts} initialCartLines={workspace.lines} reorderHistory={workspace.recent_requests} initialReorderId={reprendre} />
     </div>
   );
 }
