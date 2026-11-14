@@ -24,6 +24,8 @@ describe("catalogue prive - contraintes des demandes", () => {
     expect(steppedOrderQuantity(6, 6, 6, -1)).toBe(0);
     expect(steppedOrderQuantity(13, 6, 6, 1)).toBe(18);
     expect(steppedOrderQuantity(13, 6, 6, -1)).toBe(12);
+    expect(steppedOrderQuantity(7, 6, 6, -1)).toBe(6);
+    expect(steppedOrderQuantity(7, 6, 6, 1)).toBe(12);
     expect(steppedOrderQuantity(0, 8, 4, 1)).toBe(8);
     expect(steppedOrderQuantity(8, 8, 4, 1)).toBe(12);
   });
