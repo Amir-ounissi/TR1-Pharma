@@ -365,7 +365,7 @@ export function PrivateMultiBrandOrderForm({
                   return (
                     <article key={product.id}
                       className="grid grid-cols-[52px_minmax(0,1fr)] items-center gap-x-3 gap-y-2 rounded-lg border border-[#e2e7ec] bg-white p-3 transition hover:border-[#cbd5d6] md:grid-cols-[64px_minmax(0,1fr)_150px_145px] md:gap-3 md:px-4">
-                      <div className="flex h-13 w-13 items-center justify-center overflow-hidden rounded-lg bg-[#f5f2ec] md:h-14 md:w-14">
+                      <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-lg bg-[#f5f2ec] md:h-14 md:w-14">
                         {product.image_url ? (
                           <Image src={product.image_url} width={112} height={112} unoptimized alt={product.name}
                             className="h-full w-full object-contain p-1.5" />
