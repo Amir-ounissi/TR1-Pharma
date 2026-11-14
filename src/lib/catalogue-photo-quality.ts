@@ -1,0 +1,72 @@
+/**
+ * Optimisation des photos de catalogue sans substitution entre références.
+ * Les photos restent hébergées chez leurs titulaires ; vérifier les droits
+ * d'utilisation commerciale des images externes avant mise en production.
+ */
+const officialPhotoHosts = new Set([
+  "biodance.com",
+  "www.biodance.com",
+  "biodance.co.kr",
+  "m.biodance.co.kr",
+  "beautyofjoseon.com",
+  "www.beautyofjoseon.com",
+  "fr.beautyofjoseon.com",
+  "doctoraltheaglobal.com",
+  "www.doctoraltheaglobal.com",
+]);
+
+function hostnameOf(rawUrl: string): string | null {
+  try {
+    const parsed = new URL(rawUrl);
+    return parsed.protocol === "https:" ? parsed.hostname.toLowerCase() : null;
+  } catch {
+    return null;
+  }
+}
+
+function isVerifiedBrandAsset(rawUrl: string): boolean {
+  const host = hostnameOf(rawUrl);
+  if (host && officialPhotoHosts.has(host)) return true;
+  try {
+    const parsed = new URL(rawUrl);
+    // Shopify CDN path belonging to the official Beauty of Joseon storefront.
+    return parsed.protocol === "https:"
+      && parsed.hostname === "cdn.shopify.com"
+      && parsed.pathname.startsWith("/s/files/1/0558/4135/7989/");
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Une galerie déjà rattachée à l'EAN peut proposer une photo officielle
+ * plus nette. Ne jamais sélectionner un visuel par simple similarité de nom.
+ */
+export function preferredVerifiedPackshot(
+  primary: string | null,
+  eanMatchedGallery: readonly string[],
+): string | null {
+  const official = eanMatchedGallery.find(isVerifiedBrandAsset);
+  return official ?? primary ?? eanMatchedGallery[0] ?? null;
+}
+
+/**
+ * Shopify héberge souvent des originaux HD. Ne change que le paramètre de
+ * redimensionnement du CDN Shopify ; ne tente aucun upscale de bitmap.
+ * 960px pour cartes, 320px pour liste, 1600px pour zoom et fiche.
+ */
+export function shopifyResponsivePhoto(url: string, requestedWidth: number): string {
+  if (!Number.isSafeInteger(requestedWidth) || requestedWidth < 100 || requestedWidth > 2400) return url;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" ||
+      !(parsed.pathname.includes("/cdn/shop/") || parsed.hostname === "cdn.shopify.com")) return url;
+    // Demander seulement la taille utile pour le contexte : miniature 320,
+    // carte 960, agrandissement 1600, sans télécharger un original surdimensionné.
+    if (parsed.searchParams.get("width") === String(requestedWidth)) return url;
+    parsed.searchParams.set("width", String(requestedWidth));
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}

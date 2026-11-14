@@ -94,6 +94,7 @@ const platformAdminItems: NavigationItem[] = [
   { href: "/dashboard/admin/saas", label: "Offres & capacités", icon: "boxes" },
   { href: "/dashboard/admin/saas-commercial", label: "Quotas & facturation", icon: "chart" },
   { href: "/dashboard/admin/leads", label: "Leads TR1", icon: "leads" },
+  { href: "/catalogue/administration", label: "Catalogue privé", icon: "boxes" },
 ];
 
 function filterItems(items: NavigationItem[], enabledCapabilities?: readonly SaasCapability[]) {

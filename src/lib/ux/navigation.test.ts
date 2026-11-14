@@ -46,6 +46,7 @@ describe("role navigation", () => {
       "/dashboard/admin/saas",
       "/dashboard/admin/saas-commercial",
       "/dashboard/admin/leads",
+      "/catalogue/administration",
     ]);
     expect(globalLinks).not.toContain("/dashboard/users");
     expect(globalLinks).not.toContain("/dashboard/imports");
@@ -67,6 +68,7 @@ describe("role navigation", () => {
     expect(brandAdminLinks).not.toContain("/dashboard/admin/leads");
     expect(brandAdminLinks).not.toContain("/dashboard/admin/saas");
     expect(brandAdminLinks).not.toContain("/dashboard/admin/saas-commercial");
+    expect(brandAdminLinks).not.toContain("/catalogue/administration");
     expect(facilitatorLinks).toEqual(["/dashboard/field", "/dashboard/agenda", "/dashboard/missions", "/dashboard/reports", "/dashboard/account"]);
   });
 

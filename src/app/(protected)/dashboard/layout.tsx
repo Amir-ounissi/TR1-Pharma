@@ -50,6 +50,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       { id: "navigation-saas", kind: "navigation", label: "Offres & capacités", href: "/dashboard/admin/saas" },
       { id: "navigation-users", kind: "navigation", label: "Utilisateurs & accès", href: "/dashboard/admin/users" },
       { id: "navigation-leads", kind: "navigation", label: "Leads TR1", href: "/dashboard/admin/leads" },
+      { id: "navigation-private-catalog", kind: "navigation", label: "Catalogue privé", href: "/catalogue/administration" },
     ];
 
     return (

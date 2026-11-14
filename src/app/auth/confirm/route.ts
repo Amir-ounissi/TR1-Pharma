@@ -9,7 +9,13 @@ export async function GET(request: NextRequest) {
   const next = request.nextUrl.searchParams.get("next") ?? "/onboarding";
 
   if (tokenHash && type && next.startsWith("/")) {
-    const response = NextResponse.redirect(new URL(type === "invite" ? "/onboarding" : next, request.url));
+    // Only explicit pharmacy-catalogue invitations may bypass the existing tenant onboarding.
+    // The page itself verifies the server-side grant before setting a password.
+    const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/onboarding";
+    const destination = type === "invite"
+      ? (safeNext === "/catalogue/activer" ? safeNext : "/onboarding")
+      : safeNext;
+    const response = NextResponse.redirect(new URL(destination, request.url));
     const { url, publishableKey } = getPublicSupabaseEnv();
     const supabase = createServerClient(url, publishableKey, {
       cookies: {
