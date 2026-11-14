@@ -739,6 +739,13 @@ export function PrivateMultiBrandOrderForm({
                         <span className="absolute left-3 top-3 max-w-[80%] truncate rounded-full border border-white/70 bg-white/90 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[.1em] text-[#ad4b08] backdrop-blur">
                           {product.brand_name}
                         </span>
+                        <button type="button" onClick={() => void toggleFavorite(product)}
+                          disabled={favoriteUpdating.has(product.id)}
+                          aria-pressed={favorites.has(product.id)}
+                          aria-label={(favorites.has(product.id) ? "Retirer des favoris : " : "Ajouter aux favoris : ") + product.name}
+                          className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full border border-[#dce3ea] bg-white/95 text-[#a75e2b] shadow-sm hover:bg-[#fff1e6] disabled:opacity-40">
+                          <Heart size={17} fill={favorites.has(product.id) ? "currentColor" : "none"} aria-hidden="true" />
+                        </button>
                       </div>
 
                       <div className="flex flex-1 flex-col p-3.5">
@@ -832,6 +839,13 @@ export function PrivateMultiBrandOrderForm({
                             Fiche produit
                           </Link>
                         ) : null}
+                        <button type="button" onClick={() => void toggleFavorite(product)}
+                          disabled={favoriteUpdating.has(product.id)}
+                          aria-pressed={favorites.has(product.id)}
+                          className="ml-2 inline-flex min-h-7 items-center gap-1 text-[10px] font-bold text-[#9c5927] hover:underline disabled:opacity-40">
+                          <Heart size={13} fill={favorites.has(product.id) ? "currentColor" : "none"} aria-hidden="true" />
+                          {favorites.has(product.id) ? "Favori" : "Favoris"}
+                        </button>
                       </div>
 
                       <div className="col-span-2 flex items-center justify-between gap-3 border-t border-[#edf0f1] pt-2 md:col-span-1 md:block md:border-0 md:pt-0">
