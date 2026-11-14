@@ -40,17 +40,17 @@ export default async function PrivateCatalogueHome() {
         <div aria-hidden="true" className="pointer-events-none absolute -right-15 -top-25 size-100 rounded-full border-[45px] border-white/5" />
         <div className="relative max-w-[660px]">
           <p className="text-[11px] font-extrabold uppercase tracking-[.24em] text-[#ffa460]">
-            TR1 PHARMA · Collection professionnelle
+            TR1 PHARMA · Espace pharmacie
           </p>
           <h1 className="mt-4 text-[32px] font-black leading-[1.08] tracking-[-.045em] sm:text-5xl lg:text-[56px]">
-            Découvrez notre sélection multimarque.
+            Préparez votre réassort en quelques clics.
           </h1>
           <p className="mt-5 max-w-xl text-sm leading-7 text-[#d5dde7] sm:text-base">
-            Retrouvez les tarifs professionnels HT, les paliers fournisseurs et les conditions de commande réservés à votre officine.
+            Vos références, tarifs HT et paliers de commande sont réunis au même endroit. Recherchez, ajoutez au panier et transmettez votre demande.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <Link href="#produits" className="shop-primary-action inline-flex min-h-12 items-center gap-2 px-5 text-sm">
-              Explorer les gammes <ArrowRight size={17} aria-hidden="true" />
+              Accéder aux produits <ArrowRight size={17} aria-hidden="true" />
             </Link>
             <Link href="/catalogue/mes-demandes" className="inline-flex min-h-12 items-center gap-2 rounded-md border border-white/35 px-5 text-sm font-bold text-white transition hover:bg-white/10">
               <Clock3 size={16} aria-hidden="true" /> Mes demandes
