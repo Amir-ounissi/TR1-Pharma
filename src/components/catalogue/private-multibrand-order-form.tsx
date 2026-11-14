@@ -759,9 +759,10 @@ export function PrivateMultiBrandOrderForm({
                 <h3 className="text-xs font-black text-[#142941]">Conditions commerciales</h3>
                 {volumeGroups.filter((group) => (groupTotals.get(group.id) ?? 0)>0).map((group) => {
                   const total = groupTotals.get(group.id) ?? 0;
-                  const nextTier = [12,24,40,96,200].find((n) =>
-                    group.brand_slug === "biodance" && group.name === "Masques hydrogel Biodance" && n>total
-                  );
+                  const nextTier = [...new Set(group.product_ids.flatMap((productId) =>
+                    products.find((product) => product.id===productId)?.pricing.tiers
+                      .map((tier) => tier.min_quantity) ?? []
+                  ))].filter((threshold) => threshold>total).sort((a,b)=>a-b)[0];
                   return (
                     <div key={group.id} className="text-[11px] leading-5 text-[#586672]">
                       <p className="font-bold">{group.name} : {total} / {group.minimum_total_units} masques minimum</p>
