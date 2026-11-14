@@ -31,7 +31,7 @@ export default async function PrivateCatalogueHome() {
         <div className="max-w-2xl">
           <p className="text-[11px] font-extrabold uppercase tracking-[.2em] text-[#ffa460]">Votre catalogue professionnel</p>
           <h1 className="mt-3 text-3xl font-black tracking-[-.04em] sm:text-4xl">Vos produits, vos conditions.</h1>
-          <p className="mt-4 text-sm leading-7 text-[#d5dde7]">Consultez les fiches détaillées des références sélectionnées par TR1 PHARMA. Les tarifs et conditions commerciales apparaîtront dans votre espace après validation des accords.</p>
+          <p className="mt-4 text-sm leading-7 text-[#d5dde7]">Consultez vos tarifs professionnels indicatifs HT et les paliers fournisseurs disponibles. Toute demande est confirmée sur devis avant validation définitive.</p>
         </div>
         <Link href="/catalogue/mes-demandes" className="inline-flex min-h-11 items-center gap-2 rounded-md border border-white/30 px-4 text-sm font-bold text-white hover:bg-white/10">
           <Clock3 size={17} aria-hidden="true" /> Mes demandes <ArrowRight size={17} aria-hidden="true" />
@@ -69,7 +69,7 @@ export default async function PrivateCatalogueHome() {
           <div className="space-y-2">
             <p className="text-[11px] font-bold uppercase tracking-widest text-[#ad4b08]">Catalogue de référence TR1 PHARMA</p>
             <h2 id="catalogue-reference" className="text-2xl font-black tracking-tight text-[#0e1d31]">Les fiches produits disponibles</h2>
-            <p className="max-w-3xl text-sm leading-6 text-[#69717d]">Retrouvez les 89 références Beauty of Joseon, Dr. Althea et Biodance, avec leurs visuels, informations produit et codes-barres. Les tarifs et conditions de commande ne sont pas encore activés pour ce compte de test.</p>
+            <p className="max-w-3xl text-sm leading-6 text-[#69717d]">Retrouvez les fiches Beauty of Joseon, Dr. Althea et Biodance, avec leurs visuels, informations produit et codes-barres. Les tarifs professionnels s'affichent dès l'activation de votre sélection.</p>
           </div>
           <PublicProductGrid />
         </section>
@@ -105,7 +105,7 @@ export default async function PrivateCatalogueHome() {
                     <p className="mt-1 text-xs text-[#69717d]">Réf. {product.sku}</p>
                     <div className="mt-auto pt-4">
                       <p className="text-[11px] font-semibold text-[#69717d]">
-                        {product.pricing.mode === "contractual" ? "Votre prix HT / unité" : "Fourchette HT / unité"}
+                        {product.pricing.mode === "contractual" ? "Votre prix HT / unité" : "Tarif indicatif HT / unité"}
                       </p>
                       <p className="mt-1 text-lg font-black text-[#0e1d31]">{displayPrice}</p>
                       <Link href={"/catalogue/marques/" + brand.slug + "?produit=" + product.id + "#produits"}
