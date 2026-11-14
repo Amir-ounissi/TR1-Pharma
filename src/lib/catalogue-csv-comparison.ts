@@ -197,8 +197,8 @@ export function buildPharmacyCsvRecords(
 }
 
 export function normalizeCsvFormat(value: string): string {
-  const spaced = value.replace(/(\\d)([a-z])/gi, "$1 $2").replace(/([a-z])(\\d)/gi, "$1 $2");
-  return normalizeCsvText(spaced).replace(/\\b(?:boite|de|format|unite|unites)\\b/g, " ").replace(/\\s+/g, " ").trim();
+  const spaced = value.replace(/(\d)([a-z])/gi, "$1 $2").replace(/([a-z])(\d)/gi, "$1 $2");
+  return normalizeCsvText(spaced).replace(/\b(?:boite|de|format|unite|unites)\b/g, " ").replace(/\s+/g, " ").trim();
 }
 
 function levenshteinSimilarity(left: string, right: string): number {
