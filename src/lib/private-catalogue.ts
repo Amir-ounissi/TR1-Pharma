@@ -115,7 +115,19 @@ export async function requirePharmacyCatalogue() {
       .maybeSingle();
     if (adminError) throw adminError;
     if (globalAdmin) redirect("/catalogue/administration");
+  }
 
+  // Un lien explicite prime sur un éventuel compte déjà connecté : il ouvre
+  // toujours l'officine à laquelle le lien a été émis.
+  const cookieStore = await cookies();
+  const linkToken = cookieStore.get(PRIVATE_CATALOGUE_LINK_COOKIE)?.value;
+  if (linkToken) {
+    const context = await resolvePrivateCatalogueLink(linkToken);
+    if (context) return context;
+    if (!user) redirect("/catalogue/acces-invalide");
+  }
+
+  if (!authError && user) {
     const { error: invitationError } = await supabase.rpc("catalogue_claim_invitation");
     if (invitationError) throw invitationError;
 
@@ -132,14 +144,6 @@ export async function requirePharmacyCatalogue() {
         catalog: payload,
       };
     }
-  }
-
-  const cookieStore = await cookies();
-  const linkToken = cookieStore.get(PRIVATE_CATALOGUE_LINK_COOKIE)?.value;
-  if (linkToken) {
-    const context = await resolvePrivateCatalogueLink(linkToken);
-    if (context) return context;
-    redirect("/catalogue/acces-invalide");
   }
 
   redirect("/catalogue/connexion");
