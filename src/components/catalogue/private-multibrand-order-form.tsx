@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Check, LayoutGrid, List, Minus, Package, Plus, Heart, RotateCcw, Search, ShoppingBag, ShoppingCart, SlidersHorizontal, Trash2 } from "lucide-react";
+import { Check, LayoutGrid, List, Minus, Package, Plus, Heart, Search, ShoppingBag, ShoppingCart, SlidersHorizontal, Trash2 } from "lucide-react";
 import { savePharmacyCart, sendMultiBrandCatalogueRequest, setCatalogueFavorite } from "@/app/catalogue/actions";
 import type { ReorderRequest, SavedCartLine } from "@/lib/catalogue-buyer-workspace";
 import type { CatalogProduct } from "@/lib/private-catalogue";
@@ -248,11 +248,7 @@ export function PrivateMultiBrandOrderForm({
   const [favoriteError, setFavoriteError] = useState("");
   const [sort, setSort] = useState("brand");
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
-  const [buyerView, setBuyerView] = useState<"reorder" | "catalogue">(
-    reorderHistory.length && !initialProductId && !initialReorderId ? "reorder" : "catalogue",
-  );
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "error">("saved");
-  const [reorderMessage, setReorderMessage] = useState("");
 
   // Le nombre total d'une collection mutualisée (ex. cinq masques Biodance)
   // détermine les paliers de toutes ses références.
@@ -567,29 +563,6 @@ export function PrivateMultiBrandOrderForm({
     setQuantities((previous) => ({ ...previous, [product.id]: safeNext }));
   };
 
-  const reorder = (request: ReorderRequest) => {
-    const allowed = new Map(products.map((product) => [product.id, product]));
-    const next = { ...quantities };
-    let eligible = 0;
-    for (const line of request.items) {
-      const product = allowed.get(line.product_id);
-      if (!product || !Number.isSafeInteger(line.quantity) || line.quantity < 1) continue;
-      if (!next[product.id] && Object.values(next).filter((v) => v > 0).length >= 40) {
-        setReorderMessage("Le panier est limité à 40 références. Retirez des produits avant ce réassort.");
-        return;
-      }
-      next[product.id] = Math.max(product.min_quantity, Math.min(5000, line.quantity));
-      eligible++;
-    }
-    if (!eligible) {
-      setReorderMessage("Aucune référence de cette demande n'est encore disponible.");
-      return;
-    }
-    setQuantities(next);
-    setSaveStatus("saving");
-    setReorderMessage(`${eligible} référence${eligible > 1 ? "s" : ""} reprise${eligible > 1 ? "s" : ""} dans le panier. Les tarifs actuels ont été recalculés.`);
-  };
-
   const add = (product: PrivateMultiBrandProduct) => {
     const current = quantities[product.id] ?? 0;
     if (current === 0 && selected.length >= 40) return;
@@ -605,39 +578,25 @@ export function PrivateMultiBrandOrderForm({
 
   return (
     <form action={action} className="space-y-5 pb-24 lg:pb-0">
-      <section id="reassort" className="scroll-mt-6 rounded-xl border border-[#dce3e5] bg-white p-4 sm:p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-extrabold uppercase tracking-[.14em] text-[#ad4b08]">Votre approvisionnement</p>
-            <h2 className="mt-1 text-xl font-black tracking-tight text-[#142941]">Réassort express ou catalogue</h2>
-            <p className="mt-2 text-xs font-bold text-[#476b55]">
-              Franco dès 250 € HT remisé sur le panier cumulé Biodance, Beauty of Joseon et Dr. Althea.
-            </p>
-            <p className="mt-1 text-xs text-[#69717d]">
-              {saveStatus === "saving" ? "Enregistrement automatique du panier…" :
-                saveStatus === "error" ? "La sauvegarde a échoué. Vérifiez votre connexion." :
-                selected.length ? "Panier sauvegardé · retrouvez-le à votre prochaine connexion." :
-                "Vos sélections sont sauvegardées automatiquement."}
-            </p>
-          </div>
-          <div role="group" aria-label="Choisir le parcours d'achat" className="inline-flex rounded-lg border border-[#e2e7ec] bg-[#f8f9f9] p-1">
-            <button type="button" onClick={() => setBuyerView("reorder")}
-              aria-pressed={buyerView === "reorder"}
-              className={`inline-flex min-h-10 items-center gap-2 rounded-md px-3 text-xs font-bold ${buyerView === "reorder" ? "bg-[#142941] text-white" : "text-[#142941] hover:bg-white"}`}>
-              <RotateCcw size={15} /> Réassort express
-            </button>
-            <button type="button" onClick={() => setBuyerView("catalogue")}
-              aria-pressed={buyerView === "catalogue"}
-              className={`inline-flex min-h-10 items-center gap-2 rounded-md px-3 text-xs font-bold ${buyerView === "catalogue" ? "bg-[#142941] text-white" : "text-[#142941] hover:bg-white"}`}>
-              <LayoutGrid size={15} /> Catalogue
-            </button>
-          </div>
-        </div>
-      </section>
+      <header className="space-y-1 px-1">
+        <h2 className="text-xl font-black tracking-tight text-[#142941]">Catalogue produits</h2>
+        <p className="text-xs font-bold text-[#476b55]">
+          Franco dès 250 € HT remisé sur le panier cumulé Biodance, Beauty of Joseon et Dr. Althea.
+        </p>
+        <p role="status" className="text-xs text-[#69717d]">
+          {saveStatus === "saving" ? "Enregistrement automatique du panier…" :
+            saveStatus === "error" ? "La sauvegarde a échoué. Vérifiez votre connexion." :
+            selected.length ? "Panier sauvegardé · retrouvez-le à votre prochaine connexion." :
+            "Vos sélections sont sauvegardées automatiquement."}
+        </p>
+        {initialReorderId ? (
+          <p className="text-xs font-semibold text-[#315638]">
+            Votre réassort a été repris dans le panier. Vérifiez les quantités et tarifs actualisés.
+          </p>
+        ) : null}
+      </header>
 
-      <div className={buyerView === "catalogue"
-        ? "grid gap-3 rounded-xl border border-[#e2e7ec] bg-white p-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_170px_160px_150px] sm:p-4"
-        : "hidden"}>
+      <div className="grid gap-3 rounded-xl border border-[#e2e7ec] bg-white p-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_170px_160px_150px] sm:p-4">
         <label className="flex items-center gap-3 rounded-lg border border-[#e2e7ec] bg-[#faf9f6] px-3">
           <Search size={18} className="shrink-0 text-[#69717d]" aria-hidden="true" />
           <span className="sr-only">Rechercher un produit, EAN ou référence</span>
@@ -677,60 +636,6 @@ export function PrivateMultiBrandOrderForm({
       ) : null}
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-        {buyerView === "reorder" ? (
-          <section className="min-w-0 space-y-3 rounded-xl border border-[#e2e7ec] bg-white p-4 sm:p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h3 className="text-lg font-black text-[#142941]">Reprendre une sélection</h3>
-                <p className="mt-1 text-xs leading-5 text-[#69717d]">
-                  Les quantités sont reprises. Les tarifs et les conditions sont recalculés avec les prix actuels.
-                </p>
-              </div>
-              <span className="rounded-full bg-[#f5f6f6] px-3 py-1 text-[10px] font-semibold text-[#69717d]">
-                {reorderHistory.length} demande{reorderHistory.length > 1 ? "s" : ""} récente{reorderHistory.length > 1 ? "s" : ""}
-              </span>
-            </div>
-            {reorderMessage ? (
-              <p role="status" className="rounded-lg border border-[#bfd7c5] bg-[#f0f8f2] p-3 text-xs font-semibold text-[#325842]">
-                {reorderMessage} <a href="#panier" className="ml-1 underline underline-offset-2">Voir le panier</a>
-              </p>
-            ) : null}
-            {reorderHistory.length ? (
-              <div className="space-y-3">
-                {reorderHistory.map((request) => (
-                  <article key={request.id} className="rounded-lg border border-[#e2e7ec] p-3 sm:p-4">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-xs font-black text-[#142941]">{request.brand_name}</p>
-                        <p className="mt-1 text-[10px] text-[#69717d]">
-                          {new Date(request.created_at).toLocaleDateString("fr-FR")} · {request.items.length} référence{request.items.length > 1 ? "s" : ""}
-                        </p>
-                        <p className="mt-2 text-xs leading-5 text-[#4e5c66]">
-                          {request.items.slice(0, 3).map((item) => `${item.name} × ${item.quantity}`).join(" · ")}
-                          {request.items.length > 3 ? ` · +${request.items.length - 3} autre${request.items.length - 3 > 1 ? "s" : ""}` : ""}
-                        </p>
-                      </div>
-                      <button type="button" onClick={() => reorder(request)}
-                        className="shop-primary-action inline-flex min-h-10 items-center gap-2 px-3 text-xs font-bold">
-                        <RotateCcw size={15} /> Reprendre cette sélection
-                      </button>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-lg border border-dashed border-[#dce3ea] bg-[#f9faf9] px-5 py-8 text-center">
-                <ShoppingBag size={27} className="mx-auto text-[#a2aeb6]" aria-hidden="true" />
-                <p className="mt-3 text-sm font-bold text-[#142941]">Vos réassorts apparaîtront ici après votre première demande.</p>
-                <p className="mt-2 text-xs text-[#69717d]">En attendant, sélectionnez vos produits dans le catalogue.</p>
-                <button type="button" onClick={() => setBuyerView("catalogue")}
-                  className="shop-primary-action mt-4 inline-flex min-h-10 items-center gap-2 px-4 text-xs">
-                  Parcourir les produits <ArrowRight size={15}/>
-                </button>
-              </div>
-            )}
-          </section>
-        ) : (
         <div className="min-w-0 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-[#69717d]">
             <div>
@@ -935,10 +840,6 @@ export function PrivateMultiBrandOrderForm({
 
           {!products.length ? <p className="rounded-lg bg-white p-6 text-sm">Aucune référence disponible pour le moment.</p> : null}
         </div>
-        )}
-        {buyerView === "reorder" ? selected.map((product) => (
-          <input key={product.id} type="hidden" name={"quantity_" + product.id} value={quantities[product.id]} />
-        )) : null}
 
         <aside id="panier" aria-label="Panier multimarque" className="scroll-mt-6 overflow-hidden rounded-xl border border-[#e2e7ec] bg-white shadow-[0_16px_35px_-25px_rgba(20,52,40,.3)] lg:sticky lg:top-6">
           <div className="flex items-center gap-3 bg-[#0e1d31] px-5 py-5 text-white">
