@@ -60,7 +60,7 @@ select throws_ok(
   'select public.catalogue_submit_request(''test-private-catalogue'',
     ''[{"product_id":"f6e20000-0000-4000-8000-000000000030","quantity":11}]''::jsonb)',
   null,
-  'Minimum de commande non respecte: 12 unites minimum',
+  'Minimum 12 unites; commandes par multiples de 1 unites pour Sérum fictif',
   'the minimum remains enforced');
 select is(
   public.catalogue_my_data('test-private-catalogue')->'products'->0->'pricing'->>'mode',
