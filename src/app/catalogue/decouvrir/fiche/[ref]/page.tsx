@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowUpRight, Barcode, Building2, Check, ClipboardList, FileCheck2, LockKeyhole, PackageSearch, ShieldCheck } from "lucide-react";
 import { Ean13Barcode } from "@/components/catalogue/ean13-barcode";
 import { isValidEan13 } from "@/lib/ean13";
+import { faireProductInformationByEan } from "@/lib/catalogue-faire-product-information";
 import { findPublicProduct, publicCatalogueProducts, publicProductFamily, publicProductImage, publicProductKey } from "@/lib/catalogue-products";
 
 type ProductParams = { params: Promise<{ ref: string }> };
@@ -38,6 +39,7 @@ export default async function PublicCatalogueProductPage({ params }: ProductPara
   const { ref } = await params;
   const product = findPublicProduct(ref);
   if (!product) notFound();
+  const verifiedInfo = product.ean ? faireProductInformationByEan[product.ean] : undefined;
   const photo = publicProductImage(product);
   const eanIsValid = Boolean(product.ean && isValidEan13(product.ean));
   const cosmetics = product.brand !== "VK SWISS";
@@ -108,6 +110,48 @@ export default async function PublicCatalogueProductPage({ params }: ProductPara
         </div>
       </div>
 
+      {verifiedInfo && (
+        <section aria-labelledby="more-product-information" className="rounded-2xl border border-[#e5e9eb] bg-white p-5 sm:p-7">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[.14em] text-[#b56d3e]">Documentation produit</p>
+              <h2 id="more-product-information" className="mt-2 text-xl font-black text-[#122a41] sm:text-2xl">Connaître le produit</h2>
+            </div>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#e5e9eb] bg-[#f7f8f6] px-3 py-2 text-[11px] font-bold text-[#566a78]">
+              <FileCheck2 size={14} aria-hidden="true" /> Identifiant EAN recoupé
+            </span>
+          </div>
+          <p className="mt-4 max-w-3xl text-sm leading-7 text-[#526676]">{verifiedInfo.description}</p>
+          <div className="mt-6 grid gap-6 md:grid-cols-2">
+            <div>
+              <h3 className="text-sm font-extrabold text-[#20394c]">Caractéristiques et bénéfices</h3>
+              <ul className="mt-3 space-y-2">
+                {verifiedInfo.benefits.map((benefit) => (
+                  <li key={benefit} className="flex gap-2 text-sm leading-6 text-[#5f7180]">
+                    <Check size={15} className="mt-1 shrink-0 text-[#698275]" aria-hidden="true" /> {benefit}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-sm font-extrabold text-[#20394c]">Ingrédients mis en avant</h3>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {verifiedInfo.keyIngredients.map((ingredient) => (
+                  <span key={ingredient} className="rounded-full border border-[#e4e8e8] bg-[#f7f8f6] px-3 py-2 text-xs font-semibold text-[#526473]">{ingredient}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-[#e9edee] pt-4">
+            <p className="text-xs leading-6 text-[#70818e]">Source : fiche Faire publiée par {verifiedInfo.sourceSeller}, rapprochée de l’EAN du catalogue fournisseur. Informations marketing du vendeur tiers à confirmer auprès du fabricant.</p>
+            <a href={verifiedInfo.sourceUrl} target="_blank" rel="noopener noreferrer"
+              className="inline-flex min-h-10 shrink-0 items-center gap-1.5 text-xs font-extrabold text-[#263e54] underline-offset-4 hover:underline">
+              Voir la fiche source <ArrowUpRight size={16} aria-hidden="true" />
+            </a>
+          </div>
+        </section>
+      )}
+
       <div className="grid gap-5 lg:grid-cols-2">
         <section className="rounded-2xl border border-[#e5e9eb] bg-white p-5 sm:p-7">
           <div className="mb-3 flex items-center gap-2"><ClipboardList size={20} className="text-[#b56d3e]" aria-hidden="true" />
@@ -119,6 +163,7 @@ export default async function PublicCatalogueProductPage({ params }: ProductPara
             {detail("Famille", publicProductFamily(product))}
             {detail("Catégorie", product.category)}
             {detail("EAN / GTIN-13", eanIsValid ? product.ean : "Non communiqué", !eanIsValid)}
+            {verifiedInfo && detail("Pays de fabrication", verifiedInfo.origin)}
             {detail("CIP / ACL", "Non communiqué par le fournisseur", true)}
             {product.sku ? detail("Référence fournisseur", product.sku) : null}
           </dl>
