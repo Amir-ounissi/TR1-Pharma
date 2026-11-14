@@ -15,7 +15,6 @@ type PrivateDisplayProduct = {
   name: string;
   ean: string | null;
   min_quantity: number;
-  quantity_step: number;
   vat_rate: number;
   pricing:
     | { mode: "indicative"; tiers: { min_quantity: number; price_min_ht: number; price_max_ht: number }[] }
@@ -251,7 +250,7 @@ export function PublicProductGrid({ privateProducts }: { privateProducts?: Priva
                         </p>
                         <p className="mt-1 text-lg font-black tracking-tight text-[#142941]">{selectedPrice}</p>
                         <p className="mt-1 text-[10px] text-[#7b8690]">
-                          Minimum {privateProduct.min_quantity} u. · Pas de {privateProduct.quantity_step} · TVA {privateProduct.vat_rate} %
+                          Minimum {privateProduct.min_quantity} u. · TVA {privateProduct.vat_rate} %
                         </p>
                         {privateProduct.pricing.tiers.length > 1 ? (
                           <details className="mt-2 rounded-lg bg-[#f7f7f5] px-3 py-2">
