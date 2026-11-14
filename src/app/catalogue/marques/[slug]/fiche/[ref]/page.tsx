@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: ProductParams): Promise<Metad
 }
 
 function normalizeProductName(value: string) {
-  return value.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLocaleLowerCase("fr")
+  return value.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLocaleLowerCase("fr")
     .replace(/[^a-z0-9]+/g, " ").trim();
 }
 
