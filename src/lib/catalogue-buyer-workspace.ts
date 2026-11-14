@@ -13,6 +13,7 @@ export type ReorderRequest = {
   brand_name: string;
   request_kind: "quote" | "order";
   status: string;
+  shipping_batch_id?: string | null;
   items: (SavedCartLine & { name: string })[];
 };
 
