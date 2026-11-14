@@ -9,7 +9,7 @@ import type { ReorderRequest, SavedCartLine } from "@/lib/catalogue-buyer-worksp
 import type { CatalogProduct } from "@/lib/private-catalogue";
 import type { PharmacyProductWithVisuals } from "@/lib/catalogue-private-product-visuals";
 import type { CommercialContext, CommercialQuantityGroup } from "@/lib/catalogue-commercial";
-import { euroHT, indicativeRange, isAllowedQuantity } from "@/lib/private-catalogue-format";
+import { euroHT, indicativeRange, isAllowedQuantity, tierSavingsCents } from "@/lib/private-catalogue-format";
 
 export type PrivateMultiBrandProduct = PharmacyProductWithVisuals;
 
@@ -25,6 +25,14 @@ function formatPriceRange(min: number, max: number) {
   const low = euroHT(min);
   const high = euroHT(max);
   return low === high ? low : `${low} – ${high}`;
+}
+
+function lineTotalHT(range: { min: number; max: number } | null, quantity: number): string | null {
+  if (!range || !Number.isSafeInteger(quantity) || quantity < 1) return null;
+  return formatPriceRange(
+    Math.round(range.min * 100) * quantity / 100,
+    Math.round(range.max * 100) * quantity / 100,
+  );
 }
 
 function findTierForQuantity(tiers: readonly ProductTier[], quantity: number): ProductTier | null {
@@ -190,6 +198,16 @@ export function PrivateMultiBrandOrderForm({
     }
     return [];
   });
+  // Ne pas annoncer une economie acquise si le groupe ne respecte pas son minimum ou son multiple.
+  const savingsForProduct = (product: PrivateMultiBrandProduct, quantity: number, tier: ProductTier | null) => {
+    const group = groupByProduct.get(product.id);
+    if (group) {
+      const total = groupTotals.get(group.id) ?? 0;
+      if (total < group.minimum_total_units || total % group.quantity_multiple !== 0) return null;
+    }
+    return tierSavingsCents(product.pricing.tiers, tier, quantity);
+  };
+
   const didMount = useRef(false);
 
   // Persistance cote serveur entre les pages, appareils et sessions.
@@ -294,6 +312,7 @@ export function PrivateMultiBrandOrderForm({
     let maxCents = 0;
     let unpriced = 0;
     let priced = 0;
+    let savingsCents = 0;
     for (const product of selected) {
       const quantity = quantities[product.id] ?? 0;
       const tier = findTierForQuantity(product.pricing.tiers,
@@ -306,8 +325,9 @@ export function PrivateMultiBrandOrderForm({
       priced += 1;
       minCents += Math.round(range.min * 100) * quantity;
       maxCents += Math.round(range.max * 100) * quantity;
+      savingsCents += savingsForProduct(product, quantity, tier) ?? 0;
     }
-    return { minCents, maxCents, unpriced, priced };
+    return { minCents, maxCents, unpriced, priced, savingsCents };
   }, [selected, quantities]);
 
   const selectedByBrand = useMemo(() => {
@@ -521,6 +541,11 @@ export function PrivateMultiBrandOrderForm({
                   const tier = findTierForQuantity(product.pricing.tiers, effectiveTierQuantity(product, referenceQuantity));
                   const nextTier = nextTierForQuantity(product.pricing.tiers, effectiveTierQuantity(product, referenceQuantity));
                   const nextRange = priceRangeForTier(nextTier);
+                  const lineTotal = lineTotalHT(priceRangeForTier(tier), quantity);
+                  const savings = quantity > 0 ? savingsForProduct(product, quantity, tier) : null;
+                  const group = groupByProduct.get(product.id);
+                  const groupTotal = group ? (groupTotals.get(group.id) ?? 0) : 0;
+                  const groupNeedsMinimum = Boolean(group && quantity > 0 && groupTotal < group.minimum_total_units);
                   const price = product.pricing.mode === "contractual" && tier && "price_ht" in tier
                     ? euroHT(tier.price_ht) + " HT / unité"
                     : indicativeRange(tier && "price_min_ht" in tier ? tier : null);
@@ -605,6 +630,11 @@ export function PrivateMultiBrandOrderForm({
                   const tier = findTierForQuantity(product.pricing.tiers, effectiveTierQuantity(product, referenceQuantity));
                   const nextTier = nextTierForQuantity(product.pricing.tiers, effectiveTierQuantity(product, referenceQuantity));
                   const nextRange = priceRangeForTier(nextTier);
+                  const lineTotal = lineTotalHT(priceRangeForTier(tier), quantity);
+                  const savings = quantity > 0 ? savingsForProduct(product, quantity, tier) : null;
+                  const group = groupByProduct.get(product.id);
+                  const groupTotal = group ? (groupTotals.get(group.id) ?? 0) : 0;
+                  const groupNeedsMinimum = Boolean(group && quantity > 0 && groupTotal < group.minimum_total_units);
                   const price = product.pricing.mode === "contractual" && tier && "price_ht" in tier
                     ? euroHT(tier.price_ht) + " HT / unité"
                     : indicativeRange(tier && "price_min_ht" in tier ? tier : null);
