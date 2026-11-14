@@ -88,9 +88,14 @@ select is(
   '[{"product_id":"f6e20000-0000-4000-8000-000000000030","quantity":12}]'::jsonb)
   ->>'request_kind',
   'order','with agreement, request is an order');
+reset role;
 select is(
-  (public.catalogue_my_data()->'requests'->0->>'total_ht')::numeric,
+  (select r.total_ht from public.private_catalog_requests r
+    where r.pharmacy_id='f6e20000-0000-4000-8000-000000000010'
+      and r.request_kind='order'
+    order by r.created_at desc limit 1),
   107.88::numeric, 'server recalculates the total exactly');
+set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"00000000-0000-4000-8000-000000000000","role":"authenticated"}',true);
 select set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000000',true);
 select is(public.catalogue_my_data('test-private-catalogue'),null::jsonb,
