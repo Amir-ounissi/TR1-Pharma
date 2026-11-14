@@ -149,7 +149,7 @@ export function parseFrenchAmount(value: string | null | undefined): number | nu
 
 const HEADER_PATTERNS: Record<keyof CsvColumnMapping, string[]> = {
   name: ["designation", "libelle", "nom produit", "nom article", "intitule produit"],
-  price: ["prix achat ht", "prix d achat ht", "prix achat net", "prix net achat", "pamp ht", "pamp", "cout achat ht", "cout unitaire ht", "prix achat"],
+  price: ["prix achat ht", "prix d achat ht", "prix achat net", "prix d achat net", "prix net achat", "prix d achat", "pamp ht", "pamp", "cout achat ht", "cout unitaire ht", "prix achat"],
   ean: ["ean", "gtin", "code barre", "codebarre", "cip13", "cip 13", "code ean"],
   brand: ["marque", "laboratoire", "brand"],
   format: ["conditionnement", "format", "contenance", "unite de vente", "unite vente"],
