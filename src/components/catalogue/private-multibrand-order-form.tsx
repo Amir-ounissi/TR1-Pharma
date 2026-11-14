@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Minus, Package, Plus, Search, ShoppingBag, ShoppingCart, SlidersHorizontal, Trash2 } from "lucide-react";
 import { sendMultiBrandCatalogueRequest } from "@/app/catalogue/actions";
 import type { CatalogProduct } from "@/lib/private-catalogue";
-import { euroHT, indicativeRange, isAllowedQuantity, tierForQuantity } from "@/lib/private-catalogue-format";
+import { euroHT, indicativeRange, isAllowedQuantity } from "@/lib/private-catalogue-format";
 
 export type PrivateMultiBrandProduct = CatalogProduct & {
   brand_slug: string;
@@ -24,6 +24,16 @@ function formatPriceRange(min: number, max: number) {
   const low = euroHT(min);
   const high = euroHT(max);
   return low === high ? low : `${low} – ${high}`;
+}
+
+function findTierForQuantity(tiers: readonly ProductTier[], quantity: number): ProductTier | null {
+  if (!Number.isSafeInteger(quantity) || quantity < 1) return null;
+  return tiers.reduce<ProductTier | null>(
+    (selected, tier) =>
+      tier.min_quantity <= quantity && (!selected || tier.min_quantity > selected.min_quantity)
+        ? tier : selected,
+    null,
+  );
 }
 
 function nextTierForQuantity(tiers: readonly ProductTier[], quantity: number) {
@@ -81,7 +91,7 @@ export function PrivateMultiBrandOrderForm({
     isAllowedQuantity(quantities[product.id], product.min_quantity),
   );
   const allContractual = selected.length > 0 && selected.every((product) => {
-    const tier = tierForQuantity(product.pricing.tiers, quantities[product.id]);
+    const tier = findTierForQuantity(product.pricing.tiers, quantities[product.id]);
     return product.pricing.mode === "contractual" && tier !== null && "price_ht" in tier;
   });
 
@@ -92,7 +102,7 @@ export function PrivateMultiBrandOrderForm({
     let priced = 0;
     for (const product of selected) {
       const quantity = quantities[product.id] ?? 0;
-      const tier = tierForQuantity(product.pricing.tiers, quantity);
+      const tier = findTierForQuantity(product.pricing.tiers, quantity);
       const range = priceRangeForTier(tier);
       if (!range) {
         unpriced += 1;
@@ -191,7 +201,7 @@ export function PrivateMultiBrandOrderForm({
             {visible.map((product) => {
               const quantity = quantities[product.id] ?? 0;
               const referenceQuantity = quantity || product.min_quantity;
-              const tier = tierForQuantity(product.pricing.tiers, referenceQuantity);
+              const tier = findTierForQuantity(product.pricing.tiers, referenceQuantity);
               const nextTier = nextTierForQuantity(product.pricing.tiers, referenceQuantity);
               const nextRange = priceRangeForTier(nextTier);
               const price = product.pricing.mode === "contractual" && tier && "price_ht" in tier
@@ -309,7 +319,7 @@ export function PrivateMultiBrandOrderForm({
               <div className="max-h-[55vh] space-y-4 overflow-auto">
                 {selectedByBrand.map((group) => {
                   const firm = group.items.every((product) => {
-                    const tier = tierForQuantity(product.pricing.tiers, quantities[product.id]);
+                    const tier = findTierForQuantity(product.pricing.tiers, quantities[product.id]);
                     return product.pricing.mode === "contractual" && tier !== null && "price_ht" in tier;
                   });
                   return (
@@ -322,7 +332,7 @@ export function PrivateMultiBrandOrderForm({
                       </div>
                       {group.items.map((product) => {
                         const quantity = quantities[product.id];
-                        const tier = tierForQuantity(product.pricing.tiers, quantity);
+                        const tier = findTierForQuantity(product.pricing.tiers, quantity);
                         const range = priceRangeForTier(tier);
                         return (
                           <div key={product.id} className="border-b border-[#f0f1f1] pb-2 text-xs last:border-0">
