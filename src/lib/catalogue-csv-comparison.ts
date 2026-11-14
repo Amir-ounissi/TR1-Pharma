@@ -193,7 +193,7 @@ export function buildPharmacyCsvRecords(
   });
 }
 
-function normalizeFormat(value: string): string {
+export function normalizeCsvFormat(value: string): string {
   const spaced = value.replace(/(\\d)([a-z])/gi, "$1 $2").replace(/([a-z])(\\d)/gi, "$1 $2");
   return normalizeCsvText(spaced).replace(/\\b(?:boite|de|format|unite|unites)\\b/g, " ").replace(/\\s+/g, " ").trim();
 }
@@ -245,8 +245,8 @@ export function findProductMatch(
       const productName = normalizeCsvText(product.name);
       const score = (levenshteinSimilarity(name, productName) * 0.55)
         + (tokenSimilarity(name, productName) * 0.45);
-      const csvFormat = record.format ? normalizeFormat(record.format) : null;
-      const productFormat = product.format ? normalizeFormat(product.format) : null;
+      const csvFormat = record.format ? normalizeCsvFormat(record.format) : null;
+      const productFormat = product.format ? normalizeCsvFormat(product.format) : null;
       const formatMismatch = Boolean(csvFormat && productFormat && csvFormat !== productFormat);
       return { product, score, exact: name === productName, formatMismatch };
     })
