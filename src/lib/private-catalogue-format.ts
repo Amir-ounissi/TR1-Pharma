@@ -32,17 +32,20 @@ export function steppedOrderQuantity(
   const first = firstOrderQuantity(minimum, step);
   if (!first) return 0;
   if (current <= 0) return direction === 1 ? first : 0;
+  // Valeur héritée d'un ancien panier ou saisie libre : revenir d'abord
+  // au multiple autorisé le plus proche, dans le sens du bouton.
+  if (current % step !== 0 || current < first) {
+    if (direction === 1) {
+      const next = Math.max(first, Math.ceil(current / step) * step);
+      return next <= 5000 ? next : current;
+    }
+    const previous = Math.floor(current / step) * step;
+    return previous >= first ? previous : 0;
+  }
   if (direction === -1 && current <= first) return 0;
   const next = current + direction * step;
   if (direction === 1 && next > 5000) return current;
-  if (next < first) return 0;
-  // Récupération d'un ancien panier dont la quantité n'était pas un multiple.
-  if (next % step !== 0) {
-    return direction === 1
-      ? Math.min(5000, Math.ceil((current + 1) / step) * step)
-      : Math.max(0, Math.floor((current - 1) / step) * step);
-  }
-  return next;
+  return next < first ? 0 : next;
 }
 
 export function sumOrderCents(lines: { price_ht: number; quantity: number }[]) {
