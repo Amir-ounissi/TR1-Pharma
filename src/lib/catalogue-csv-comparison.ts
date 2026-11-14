@@ -56,7 +56,9 @@ export function detectCsvDelimiter(input: string): string {
 }
 
 export function parseCsvContent(input: string): ParsedCsvContent {
-  const source = input.replace(/^\uFEFF/, "");
+  let source = input.replace(/^\uFEFF/, "");
+  const separatorHint = source.match(/^sep=(;|,|\\t)\\s*(?:\\r?\\n)/i);
+  if (separatorHint) source = source.slice(separatorHint[0].length);
   const delimiter = detectCsvDelimiter(source);
   const rows: string[][] = [];
   let row: string[] = [];
@@ -136,7 +138,7 @@ export function parseFrenchAmount(value: string | null | undefined): number | nu
 }
 
 const HEADER_PATTERNS: Record<keyof CsvColumnMapping, string[]> = {
-  name: ["designation", "libelle", "nom produit", "nom article", "produit", "article"],
+  name: ["designation", "libelle", "nom produit", "nom article", "intitule produit"],
   price: ["prix achat ht", "prix d achat ht", "prix achat net", "prix net achat", "pamp ht", "pamp", "cout achat ht", "cout unitaire ht", "prix achat"],
   ean: ["ean", "gtin", "code barre", "codebarre", "cip13", "cip 13", "code ean"],
   brand: ["marque", "laboratoire", "brand"],
@@ -148,10 +150,12 @@ export function detectCsvColumn(
 ): number | null {
   const normalized = headers.map(normalizeCsvText);
   const patterns = HEADER_PATTERNS[kind].map(normalizeCsvText);
-  const exact = normalized.findIndex((header) => patterns.includes(header));
-  if (exact >= 0) return exact;
-  const partial = normalized.findIndex((header) => patterns.some((pattern) => header.includes(pattern)));
-  return partial >= 0 ? partial : null;
+  const candidates = normalized.map((header, index) => ({ header, index }))
+    .filter(({ header }) => kind !== "price" || !/(ttc|prix vente|vente|pv )/.test(header));
+  const exact = candidates.find(({ header }) => patterns.includes(header));
+  if (exact) return exact.index;
+  const partial = candidates.find(({ header }) => patterns.some((pattern) => header.includes(pattern)));
+  return partial ? partial.index : null;
 }
 
 export function buildPharmacyCsvRecords(
