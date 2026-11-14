@@ -819,4 +819,59 @@ export const productGalleryByEan: Record<string, string[]> = {
       "https://theskincarelibrary.com/cdn/shop/files/Dr._Althea_Niathione_Cream_TSCL_Photo1_1600x.png?v=1771853415",
       "https://www.dodoskin.com/cdn/shop/files/Dr.AltheaNiathioneCream30ml-4.jpg?v=1746669799&width=1200"
   ]
+  "8809968135562": [
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/260415_BOJ-11870_R01__1778507316.jpg?v=1778515454",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/260415_BOJ-11757_R01__1778507334_8a2ae7b2-aa8b-4607-9134-39cd9a394088.jpg?v=1779339272",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/JO03_0707_compressed_1778507458_14c4ac31-47c7-4ed1-b387-5527f4f0e53c.jpg?v=1779371858",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/260415_BOJ-49122_R01_1778507323_ba0ee090-a07c-49e9-9e0c-1cffb261e9c6.jpg?v=1779371877"
+  ],
+  "8809968132523": [
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/97.png?v=1760337400",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/optimized_6a5c313c500597.67139900_250703_BOJ_-_-_5.jpg?v=1784429371",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/95.png?v=1760337400"
+  ],
+  "8809606851663": [
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/27_970b6c91-3f6d-41f5-8b30-654424257133.png?v=1749456316",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/41.png?v=1749456602",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/40.png?v=1749456602",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/42.png?v=1749456602"
+  ]
+  "8809968130383": [
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/Untitled_design_-_2025-06-18T135921.466.png?v=1750222769",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/58.png?v=1750222946",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/59.png?v=1750222946",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/60.png?v=1750222946",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/10_ff8dd93b-08af-40bb-af45-6baa5d82849a.png?v=1750222643"
+  ],
+  "8809782558905": [
+      "https://fr.beautyofjoseon.com/cdn/shop/files/04_0805_Relief_sun_EU_UK_d87a9756-3bcb-4c1f-a487-1d1b900b0f2e.jpg?v=1787222280&width=1800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/52.png?v=1750140941&width=800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/53.png?v=1750140933&width=800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/54.png?v=1750140930&width=800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/Untitled_design_-_2025-06-17T142033.318.png?v=1750140933&width=1800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/boj-key-ingredients-rice.webp?v=1774944252&width=1600",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/Untitled_design_-_2025-06-17T141004.013_5fcf7ddf-8d48-4db6-b2e3-1cc929685433.png?v=1776932515&width=2200"
+  ],
+  "8809968130864": [
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/20260528-BOJ0231-F_EU.jpg?v=1785595746",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/20260528-BOJ0461-F2_EU.jpg?v=1785595771",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/56.png?v=1750150918"
+  ],
+  "8809975190561": [
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/Untitled_design_-_2025-06-09T112913.685.png?v=1749436197",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/31.png?v=1749436470",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/33_0a814389-bea1-4063-b03f-6072b6139087.png?v=1749436471",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/32.png?v=1749436470",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/Untitled_design_-_2025-06-09T113420.265.png?v=1749436476"
+  ],
+  "8809968132592": [
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/Untitled_design_-_2025-06-09T112913.685.png?v=1749436197",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/31.png?v=1749436470",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/33_0a814389-bea1-4063-b03f-6072b6139087.png?v=1749436471",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/Untitled_design_-_2025-05-29T161822.562.png?v=1748506537&width=1800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/19_b7a0e7c3-604d-4a93-9b69-64a87ea3f5ad.png?v=1748506529&width=800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/21_178f3b58-4443-4cf6-bcd7-aa0f5eb67e03.png?v=1748506528&width=800",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/97.png?v=1760337400",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/optimized_6a5c313c500597.67139900_250703_BOJ_-_-_5.jpg?v=1784429371"
+  ]
 };
