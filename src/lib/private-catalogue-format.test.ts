@@ -2,11 +2,12 @@ import { describe, expect, it } from "vitest";
 import { indicativeRange, isAllowedQuantity, sumOrderCents, tierForQuantity } from "@/lib/private-catalogue-format";
 
 describe("catalogue prive - contraintes des demandes", () => {
-  it("respecte minimum et increments", () => {
-    expect(isAllowedQuantity(12, 12, 6)).toBe(true);
-    expect(isAllowedQuantity(18, 12, 6)).toBe(true);
-    expect(isAllowedQuantity(13, 12, 6)).toBe(false);
-    expect(isAllowedQuantity(6, 12, 6)).toBe(false);
+  it("autorise les commandes à l'unité tout en respectant le minimum", () => {
+    expect(isAllowedQuantity(12, 12, 4)).toBe(true);
+    expect(isAllowedQuantity(13, 12, 4)).toBe(true);
+    expect(isAllowedQuantity(14, 12, 4)).toBe(true);
+    expect(isAllowedQuantity(11, 12, 4)).toBe(false);
+    expect(isAllowedQuantity(1, 1, 1)).toBe(true);
   });
 
   it("rejette les quantites falsifiees ou excessives", () => {
@@ -14,7 +15,6 @@ describe("catalogue prive - contraintes des demandes", () => {
       expect(isAllowedQuantity(bad, 1, 1)).toBe(false);
     }
     expect(isAllowedQuantity(1, 0, 1)).toBe(false);
-    expect(isAllowedQuantity(1, 1, 0)).toBe(false);
   });
 
   it("calcule les prix HT en centimes", () => {
