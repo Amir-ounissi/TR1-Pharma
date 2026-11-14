@@ -1,13 +1,31 @@
 import { describe, expect, it } from "vitest";
-import { indicativeRange, isAllowedQuantity, sumOrderCents, tierForQuantity, tierSavingsCents, nextTierDiscountCents } from "@/lib/private-catalogue-format";
+import { indicativeRange, isAllowedQuantity, sumOrderCents, tierForQuantity, tierSavingsCents, nextTierDiscountCents, firstOrderQuantity, steppedOrderQuantity, DEFAULT_QUANTITY_STEP } from "@/lib/private-catalogue-format";
 
 describe("catalogue prive - contraintes des demandes", () => {
-  it("autorise les commandes à l'unité tout en respectant le minimum", () => {
-    expect(isAllowedQuantity(12, 12, 4)).toBe(true);
-    expect(isAllowedQuantity(13, 12, 4)).toBe(true);
-    expect(isAllowedQuantity(14, 12, 4)).toBe(true);
-    expect(isAllowedQuantity(11, 12, 4)).toBe(false);
+  it("applique six par défaut, et permet un pas personnalisé par produit", () => {
+    expect(DEFAULT_QUANTITY_STEP).toBe(6);
+    expect(firstOrderQuantity(1)).toBe(6);
+    expect(firstOrderQuantity(6)).toBe(6);
+    expect(firstOrderQuantity(8, 6)).toBe(12);
+    expect(firstOrderQuantity(8, 4)).toBe(8);
+    expect(isAllowedQuantity(6, 6)).toBe(true);
+    expect(isAllowedQuantity(12, 6)).toBe(true);
+    expect(isAllowedQuantity(13, 6)).toBe(false);
+    expect(isAllowedQuantity(18, 6)).toBe(true);
+    expect(isAllowedQuantity(8, 8, 4)).toBe(true);
+    expect(isAllowedQuantity(9, 8, 4)).toBe(false);
     expect(isAllowedQuantity(1, 1, 1)).toBe(true);
+  });
+
+  it("fait +/-6 et supprime le produit sous le minimum", () => {
+    expect(steppedOrderQuantity(0, 6, 6, 1)).toBe(6);
+    expect(steppedOrderQuantity(6, 6, 6, 1)).toBe(12);
+    expect(steppedOrderQuantity(12, 6, 6, -1)).toBe(6);
+    expect(steppedOrderQuantity(6, 6, 6, -1)).toBe(0);
+    expect(steppedOrderQuantity(13, 6, 6, 1)).toBe(18);
+    expect(steppedOrderQuantity(13, 6, 6, -1)).toBe(12);
+    expect(steppedOrderQuantity(0, 8, 4, 1)).toBe(8);
+    expect(steppedOrderQuantity(8, 8, 4, 1)).toBe(12);
   });
 
   it("rejette les quantites falsifiees ou excessives", () => {
