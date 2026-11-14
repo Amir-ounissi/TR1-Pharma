@@ -458,13 +458,10 @@ export const productGalleryByEan: Record<string, string[]> = {
     "https://beautyofjoseon.com/cdn/shop/files/2_c5a494ef-8193-4942-ac6a-c8c83240f6a6.jpg?v=1772021294&width=1800"
   ],
   "8809937361725": [
-    "https://biodance.com/cdn/shop/files/cera-nol_B_A.jpg?v=1750148961&width=800",
-    "https://cdn.faire.com/fastly/692fe187023dc6fd002972c573b66d871193958efacd9d91f00f9a154b0e4f20.jpeg?format=jpg&precrop=1%3A1&width=720",
-    "https://cdn.faire.com/fastly/2e0068db9f97cd30db8eaa7d02e2a248673e2e20ab4a1dd8d31812278f67afa9.jpeg?format=jpg&precrop=1%3A1&width=720",
-    "https://cdn.faire.com/fastly/8f01ff8ca439fa354491a1443a10887c78d1c3b6d2bc132712aa62a5ec03205f.jpeg?format=jpg&precrop=1%3A1&width=720",
-    "https://cdn.faire.com/fastly/7a9548e5825639283c6bd947d1ae32d04145e5ec77368bfc9c6908be1821e910.jpeg?format=jpg&precrop=1%3A1&width=720",
-    "https://cdn.faire.com/fastly/f7c8f1e720f1bf78dcaa6d4749d2a118419136c22ada7935f37ab72132ad0ab5.jpeg?format=jpg&precrop=1%3A1&width=720"
-  ]
+      "https://biodance.com/cdn/shop/files/cera-nol_B_A.jpg?v=1750148961&width=800",
+      "https://www.eolys-beaute.com/19695-pdt_540/masque-biodance.jpg",
+      "https://www.janzbeautyshop.nl/cdn/shop/files/BIODANCE-Hydro-Cera-Nol-Real-Deep-Mask-ceramiden-gletsjerwater.jpg?v=1774538307&width=1000"
+  ],
   "8809447256795": [
       "https://doctoraltheaglobal.com/cdn/shop/files/147.jpg?v=1786083592&width=200",
       "https://doctoraltheaglobal.com/cdn/shop/files/147BarrierCreamThumbnail_2.jpg?v=1782871957&width=200",
