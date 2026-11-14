@@ -74,7 +74,7 @@ export default async function PublicCatalogueProductPage({ params }: ProductPara
             <h1 className="mt-3 text-3xl font-black leading-tight tracking-[-.04em] text-[#122a41] sm:text-[41px]">{product.name}</h1>
             <div className="mt-4 flex flex-wrap gap-2 text-xs font-bold text-[#576879]">
               <span className="rounded-full border border-[#e2e6e7] bg-white px-3 py-2">{product.category}</span>
-              <span className="rounded-full border border-[#e2e6e7] bg-white px-3 py-2">{product.format || "Format à confirmer"}</span>
+              {product.format ? <span className="rounded-full border border-[#e2e6e7] bg-white px-3 py-2">{product.format}</span> : null}
               <span className="rounded-full border border-[#e2e6e7] bg-white px-3 py-2">{publicProductFamily(product)}</span>
             </div>
           </header>
