@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type CommercialQuantityGroup = {
   id: string;
@@ -36,9 +36,12 @@ export type CommercialContext = {
 
 /** Toutes les règles retournées sont déjà limitées aux marques autorisées à l'officine. */
 export async function getCommercialContext(
-  client: Awaited<ReturnType<typeof createClient>>,
+  client: SupabaseClient,
+  accessLinkHash?: string | null,
 ): Promise<CommercialContext> {
-  const { data, error } = await client.rpc("catalogue_commercial_context");
+  const { data, error } = accessLinkHash
+    ? await client.rpc("catalogue_commercial_context_for_private_link", { p_token_hash: accessLinkHash })
+    : await client.rpc("catalogue_commercial_context");
   if (error) throw error;
   const context = data as CommercialContext | null;
   return {
