@@ -270,6 +270,63 @@ export const productPhotoByEan: Record<string, ProductPhoto> = {
   }
 };
 
+
+/** Galeries Biodance rapprochées au nom exact et au format produit. Sources officielles et distributeurs identifiés. */
+export const productGalleryByName: Record<string, string[]> = {
+  "Bio Collagen-Real Deep Mask": [
+    "https://cdn.shopify.com/s/files/1/0894/2554/3511/files/Biodance_real_deep.png?v=1769774509",
+    "https://international-cosmetic.com/cdn/shop/files/biodance.webp?v=1740065156&width=1214",
+    "https://cosibella.com.de/hpeciai/95e4a47b01752bc003dc3f387fa56eca/ger_pl_Biodance-Bio-Collagen-Real-Deep-Mask-Set-Set-mit-straffenden-Kollagen-Gesichtsmasken-4-Stuck-34g-22061_1.webp",
+    "https://www.korendy.com.tr/cdn/shop/files/Biodance-RealDeepMask-Bio-Collagen4luKorendy1_grande.png?v=1740418001"
+  ],
+  "Pore Perfecting Collagen Peptide Serum": [
+    "https://www.skincupid.us/cdn/shop/files/BIODANCEPorePerfectingCollagenPeptideSerum_30ml.png?v=1769521930&width=800",
+    "https://www.skincupid.us/cdn/shop/files/BIODANCE_Pore_Perfecting_Collagen_Peptide_Serum_30ml_Skin_Cupid_TEXTURE.png?v=1769523287&width=800",
+    "https://www.skincupid.us/cdn/shop/files/BIODANCE_Pore_Perfecting_Collagen_Peptide_Serum_30ml_Skin_Cupid_THUMBNAIL.png?v=1769523287&width=800",
+    "https://www.skincupid.us/cdn/shop/files/BIODANCE_Pore_Perfecting_Collagen_Peptide_Serum_30ml_Skin_Cupid_MODEL.png?v=1769523287&width=800",
+    "https://www.skincupid.us/cdn/shop/files/BIODANCE_Pore_Perfecting_Collagen_Peptide_Serum_30ml_Skin_Cupid_PACKAGING.png?v=1769523287&width=800"
+  ],
+  "Radiant Vita Niacinamide Serum": [
+    "https://asset.sephora.co.uk/img/prod/sku/805206/399829_media_swatch_1_18-04-26-08-45-13_main.jpg",
+    "https://cdn1.feelunique.com/img/prod/pid/P1000212434/116064_media_1_extendedaten_gb_0_extended_18-04-26-08-52-28_main.jpg?20260603941=",
+    "https://cdn1.feelunique.com/img/prod/pid/P1000212434/116064_media_2_extendedaten_gb_0_extended_18-04-26-08-52-28_main.jpg?20260603941=",
+    "https://cdn1.feelunique.com/img/prod/pid/P1000212434/116064_media_3_extendedaten_gb_0_extended_18-04-26-08-52-28_main.jpg?20260603941=",
+    "https://cdn1.feelunique.com/img/prod/pid/P1000212434/116064_media_4_extendedaten_gb_0_extended_18-04-26-08-52-28_main.jpg?20260603941=",
+    "https://cdn1.feelunique.com/img/prod/pid/P1000212434/116064_media_5_extendedaten_gb_0_extended_18-04-26-08-52-28_main.jpg?20260603941="
+  ],
+  "Refreshing Sea Kelp Serum": [
+    "https://biodance.com/cdn/shop/files/2510_d465f234-e2cc-414d-ab99-18485c4d7b8c.jpg?v=1760323924&width=1600",
+    "https://cdn.notinoimg.com/detail_main_hq/biodance/8809891185030_03/refreshing-sea-kelp-serum___260130.jpg"
+  ],
+  "Collagen Gel Toner Pads": [
+    "https://m.biodance.co.kr/web/product/extra/big/202410/59f3dce7f21f79255fdc19195f70983f.jpg",
+    "https://m.biodance.co.kr/web/product/big/202511/46aed9022c178f6df9e3b9413f75e7c8.jpg",
+    "https://media.sephora.eu/content/dam/digital/pim/published/B/BIODANCE/BIODA/113640-media_principal.jpg",
+    "https://static.thcdn.com/productimg/original/17710622-1815312720948985.jpg",
+    "https://pureseoul.co.uk/cdn/shop/files/BIODANCE-Collagen-Gel-Toner-Pads-60pads-PURESEOUL-UK-KBeauy-Shop-1_1800x1800.png?v=1760020320",
+    "https://cdn-image.oliveyoung.com/prdtImg/1040/f3020809-361c-4d57-858d-7c9442b2f1f7.jpg?AR=0&QT=80&RS=1500x1500"
+  ],
+  "Cera-nol Gel Toner Pads": [
+    "https://media.sephora.eu/content/dam/digital/pim/published/B/BIODANCE/771011/386519-media_swatch-1.jpg?scaleHeight=undefined&scaleMode=undefined&scaleWidth=undefined",
+    "https://media.superdrug.com/medias/sys_master/prd-images/h02/h27/13424752623646/prd-front-857134_600x600/prd-front-857134-600x600.jpg",
+    "https://media.cdn.kaufland.de/product-images/1024x1024/61aa344422548a0dfe4721bfd2ebfa68.jpg"
+  ],
+  "Sea Kelp Gel Toner Pads": [
+    "https://media.superdrug.com/medias/sys_master/prd-images/h07/hb2/13424881401886/prd-front-860630_600x600/prd-front-860630-600x600.jpg",
+    "https://saranghae.ch/cdn/shop/files/Biodance_SeaKelpGelTonerPad_60Pads_2.webp?v=1745238907",
+    "https://media.superdrug.com/medias/sys_master/prd-images/h0e/h96/13424884744222/prd-ls1-860630_600x600/prd-ls1-860630-600x600.jpg",
+    "https://cdn.shopify.com/s/files/1/1588/9573/files/BiodanceSeaKelpGelTonerPads60Pads_4.jpg?v=1753337447"
+  ],
+  "Collagen Peptide Eye Patches": [
+    "https://assets.digitalcontent.marksandspencer.app/images/w_2560%2Cq_auto%2Cf_auto/MS_07_T23_3128F_NC_X_EC_0/Collagen-Peptide-Eye-Patches-30-pairs",
+    "https://assets.digitalcontent.marksandspencer.app/images/w_2560%2Cq_auto%2Cf_auto/MS_07_T23_3128F_NC_X_EC_1/Collagen-Peptide-Eye-Patches-30-pairs",
+    "https://assets.digitalcontent.marksandspencer.app/images/w_2560%2Cq_auto%2Cf_auto/MS_07_T23_3128F_NC_X_EC_2/Collagen-Peptide-Eye-Patches-30-pairs",
+    "https://assets.digitalcontent.marksandspencer.app/images/w_2560%2Cq_auto%2Cf_auto/MS_07_T23_3128F_NC_X_EC_4/Collagen-Peptide-Eye-Patches-30-pairs",
+    "https://assets.digitalcontent.marksandspencer.app/images/w_2560%2Cq_auto%2Cf_auto/MS_07_T23_3128F_NC_X_EC_5/Collagen-Peptide-Eye-Patches-30-pairs",
+    "https://assets.digitalcontent.marksandspencer.app/images/w_2560%2Cq_auto%2Cf_auto/MS_07_T23_3128F_NC_X_EC_6/Collagen-Peptide-Eye-Patches-30-pairs"
+  ]
+};
+
 // Packshots Biodance associés à la dénomination exacte : 24 articles sans EAN dans le catalogue fournisseur.
 // Le cas Caviar PDRN Dual Gel Toner Pads n'est pas mappé : poids 140 g source vs 160 g visuel trouvé.
 export const biodancePhotoByName: Record<string, ProductPhoto> = {
@@ -370,11 +427,12 @@ export const biodancePhotoByName: Record<string, ProductPhoto> = {
 
 export const productGalleryByEan: Record<string, string[]> = {
   "8809447256221": [
-    "https://cdn.shopify.com/s/files/1/0568/9802/7638/files/Dr.Althea_345ReliefCream_Packshot.jpg?v=1772629511",
-    "https://b2b.glowberry.gr/cdn/shop/files/61oEXw09QEL__SL1080_jpg.webp?v=1732628466&width=1946",
-    "https://cdn.hstatic.net/products/200000385549/598952377_1318055747016870_4925244616297041407_n_a0155e25e01c4ac7878d52c6d9a62b6f.jpg",
-    "https://cosmeticworld.ca/cdn/shop/files/dr-althea-345-relief-cream-cosmetic-world-8304774_1280x.png?v=1776192500",
-    "https://www.koolseoul.com/cdn/shop/files/DR-ALTHEA-345-Relief-Cream-available-on-Koolseoul.jpg?crop=center&format=pjpg&height=952&v=1775796208&width=794"
+      "https://doctoraltheaglobal.com/cdn/shop/files/345_ac454af4-b078-4619-a63a-1201465548e9.jpg?v=1786083592&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260227___345___1200_-02_01001f4e-f46e-4aa0-918d-28228f558fdf.jpg?v=1782870711&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260202___345___1200_-03_5d82ce6e-61a9-4549-889c-5512c07529dc.jpg?v=1782870711&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260202___345___1200_-06_ec0c86db-0ff7-4e66-ac23-35268fbde35e.jpg?v=1782870711&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260506___345___1200_-7_ec4cc75d-8f8c-4ee0-ac9b-ba9c3fb3ad6b.jpg?v=1782887262&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260202___345___1200_-05_28375340-8c25-44ca-97f7-ebd61932fdb4.jpg?v=1782870711&width=200"
   ],
   "8809447256122": [
     "https://tshop.r10s.jp/dralthea/cabinet/12738430/12943525/imgrc0110862102.jpg?fitin=720%3A720",
@@ -383,10 +441,13 @@ export const productGalleryByEan: Record<string, string[]> = {
     "https://cdn.faire.com/fastly/449bb4fc43a233627b07fa54f0deecfd9d9ce9f05f9ba027573f80a4c125f2db.jpeg?bg-color=FFFFFF&format=jpg&precrop=72.33p%2C72.33p%2Cx13.78p%2Cy24.48p&width=720"
   ],
   "8809782555508": [
-    "https://fr.beautyofjoseon.com/cdn/shop/files/04_0805_Relief_sun_EU_UK_d87a9756-3bcb-4c1f-a487-1d1b900b0f2e.jpg?v=1787222280&width=1800",
-    "https://fr.beautyofjoseon.com/cdn/shop/files/52.png?v=1750140941&width=800",
-    "https://fr.beautyofjoseon.com/cdn/shop/files/53.png?v=1750140933&width=800",
-    "https://fr.beautyofjoseon.com/cdn/shop/files/20260528-BOJ1088-F2_d5f9d044-658b-4f9f-ab85-fb1c58ced276.jpg?v=1786926810&width=800"
+      "https://fr.beautyofjoseon.com/cdn/shop/files/04_0805_Relief_sun_EU_UK_d87a9756-3bcb-4c1f-a487-1d1b900b0f2e.jpg?v=1787222280&width=1800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/52.png?v=1750140941&width=800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/53.png?v=1750140933&width=800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/54.png?v=1750140930&width=800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/Untitled_design_-_2025-06-17T142033.318.png?v=1750140933&width=1800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/boj-key-ingredients-rice.webp?v=1774944252&width=1600",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/Untitled_design_-_2025-06-17T141004.013_5fcf7ddf-8d48-4db6-b2e3-1cc929685433.png?v=1776932515&width=2200"
   ],
   "8809968130277": [
     "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/20260528-BOJ0231-F_EU.jpg?v=1785595746",
@@ -408,5 +469,56 @@ export const productGalleryByEan: Record<string, string[]> = {
     "https://cdn.faire.com/fastly/8f01ff8ca439fa354491a1443a10887c78d1c3b6d2bc132712aa62a5ec03205f.jpeg?format=jpg&precrop=1%3A1&width=720",
     "https://cdn.faire.com/fastly/7a9548e5825639283c6bd947d1ae32d04145e5ec77368bfc9c6908be1821e910.jpeg?format=jpg&precrop=1%3A1&width=720",
     "https://cdn.faire.com/fastly/f7c8f1e720f1bf78dcaa6d4749d2a118419136c22ada7935f37ab72132ad0ab5.jpeg?format=jpg&precrop=1%3A1&width=720"
+  ]
+  "8809447256795": [
+      "https://doctoraltheaglobal.com/cdn/shop/files/147.jpg?v=1786083592&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/147BarrierCreamThumbnail_2.jpg?v=1782871957&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/147BarrierCreamThumbnail_3.jpg?v=1782871957&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/147BarrierCreamThumbnail_4_A.jpg?v=1782871957&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/147BarrierCreamThumbnail_5_A.jpg?v=1782871957&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/147BarrierCreamThumbnail_6.jpg?v=1782871957&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/147BarrierCreamThumbnail_8.jpg?v=1782871957&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/147BarrierCreamThumbnail_9.jpg?v=1782871957&width=200"
+  ],
+  "8809447256412": [
+      "https://doctoraltheaglobal.com/cdn/shop/files/5000.jpg?v=1786083592&width=700",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260601____5000__-01_990fd80e-c70c-4df4-a0f8-5d440d50eb2f.jpg?v=1782872813&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260601____5000__-02_22593508-7140-46d7-8af0-65daea7d78d7.jpg?v=1782872812&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260601____5000__-03_c012bd48-ee43-4e81-869f-178c82a35cf2.jpg?v=1782872812&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260612____5000__-04_994ff5c9-98e3-4536-99cb-c702de06bc85.jpg?v=1782872812&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260518____5000__-04_eeef9c47-51bb-4b28-9517-08c5698cc085.jpg?v=1782872812&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260518____5000__-05_40537a2e-a56d-4a40-8169-62195c8d4525.jpg?v=1782872812&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260130____5000_a_-08_1.jpg?v=1782872939&width=200"
+  ],
+  "8809447256115": [
+      "https://doctoraltheaglobal.com/cdn/shop/files/345_100ml.jpg?v=1786083592&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260202___345___1200_-01_1.jpg?v=1782872528&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260202___345___1200_-02_1.jpg?v=1782872528&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260202___345___1200_-03_1.jpg?v=1782872529&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260202___345___1200_-04_1.jpg?v=1782872528&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260202___345___1200_-05_1.jpg?v=1782872528&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260202___345___1200_-06_1.jpg?v=1782872528&width=200",
+      "https://doctoraltheaglobal.com/cdn/shop/files/260202___345___1200_-07_1.jpg?v=1782872529&width=200"
+  ],
+  "8809525249565": [
+      "https://fr.beautyofjoseon.com/cdn/shop/files/Dynasty_cream_12.jpg?v=1772021456&width=1800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/5_4a6b5087-0ccc-4f70-8d1b-ff2e515ef88f.png?v=1745821055&width=800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/6_7ce4c4f3-3710-4cf8-ae12-90e09283223c.png?v=1745821052&width=800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/Dynasty_cream_14.jpg?v=1772021392&width=800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/boj-key-ingredients-rice.webp?v=1774944252&width=1600"
+  ],
+  "8809738314678": [
+      "https://fr.beautyofjoseon.com/cdn/shop/files/cleanser_3.jpg?v=1749118519&width=1800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/27.webp?v=1777587344&width=800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/26.webp?v=1777587288&width=800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/25_29335941-8c0f-4941-a1ce-c9dc8f966371.webp?v=1777587315&width=800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/green-plum-refreshing-cleanser-2.webp?v=1770617352&width=2200"
+  ],
+  "8809738312728": [
+      "https://fr.beautyofjoseon.com/cdn/shop/files/Untitled_design_-_2025-04-28T174104.262.png?v=1745835451&width=1800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/1_b787b690-538b-4688-9380-83aeafb27aea.png?v=1745835451&width=800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/2_7556de16-2823-4dac-a897-2295dcced9c5.png?v=1745835451&width=800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/3_71364279-b67b-4bba-b24a-1c60b7b5e410.png?v=1745835451&width=800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/Untitled_design_-_2025-04-28T173106.372_61d6cf83-e4d7-4fbf-8c55-8c62304642ff.png?v=1777588874&width=2200"
   ]
 };
