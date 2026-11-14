@@ -37,3 +37,35 @@ export function indicativeRange(tier: IndicativeTier | null) {
   const high = euroHT(Number(tier.price_max_ht));
   return low === high ? low + " HT / unité" : low + " – " + high + " HT / unité";
 }
+
+/**
+ * Économie HT à quantité constante par rapport au premier palier de la
+ * même référence. Un barème indicatif en fourchette ne permet pas
+ * d'afficher une économie chiffrée fiable.
+ * Retourne null si la comparaison n'est pas fiable.
+ */
+export function tierSavingsCents(
+  tiers: readonly (IndicativeTier | ContractTier)[],
+  applied: IndicativeTier | ContractTier | null,
+  quantity: number,
+): number | null {
+  if (!applied || !Number.isSafeInteger(quantity) || quantity < 1 || tiers.length === 0) return null;
+
+  const first = tiers.reduce<(IndicativeTier | ContractTier) | null>(
+    (lowest, tier) => !lowest || tier.min_quantity < lowest.min_quantity ? tier : lowest,
+    null,
+  );
+  if (!first) return null;
+
+  const fixedPriceCents = (tier: IndicativeTier | ContractTier): number | null => {
+    if ("price_ht" in tier) return Number.isFinite(Number(tier.price_ht)) ? Math.round(Number(tier.price_ht) * 100) : null;
+    const min = Number(tier.price_min_ht);
+    const max = Number(tier.price_max_ht);
+    if (!Number.isFinite(min) || !Number.isFinite(max) || Math.round(min * 100) !== Math.round(max * 100)) return null;
+    return Math.round(min * 100);
+  };
+  const baseline = fixedPriceCents(first);
+  const actual = fixedPriceCents(applied);
+  if (baseline === null || actual === null || actual > baseline || baseline < 0 || actual < 0) return null;
+  return (baseline - actual) * quantity;
+}
