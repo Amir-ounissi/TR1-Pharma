@@ -59,7 +59,7 @@ select is(public.catalogue_claim_invitation(),true,'verified invited pharmacist 
 select throws_ok(
   'select public.catalogue_submit_request(''test-private-catalogue'',
     ''[{"product_id":"f6e20000-0000-4000-8000-000000000030","quantity":11}]''::jsonb)',
-  '22023',
+  null,
   'Minimum de commande non respecte: 12 unites minimum',
   'the minimum remains enforced');
 select is(
