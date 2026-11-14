@@ -6,7 +6,7 @@ import { ArrowLeft, ArrowUpRight, Barcode, Building2, Check, ClipboardList, Lock
 import { Ean13Barcode } from "@/components/catalogue/ean13-barcode";
 import { isValidEan13 } from "@/lib/ean13";
 import { faireProductInformationByEan } from "@/lib/catalogue-faire-product-information";
-import { officialBiodanceByName, officialBeautyOfJoseonByEan, officialDrAltheaByEan } from "@/lib/catalogue-official-product-information";
+import { officialBiodanceByName, officialBeautyOfJoseonByEan, officialDrAltheaByEan, additionalBeautyOfJoseonByEan, additionalDrAltheaByEan } from "@/lib/catalogue-official-product-information";
 import { findPublicProduct, publicCatalogueProducts, publicProductFamily, publicProductImage, publicProductKey } from "@/lib/catalogue-products";
 
 type ProductParams = { params: Promise<{ ref: string }> };
@@ -43,12 +43,13 @@ export default async function PublicCatalogueProductPage({ params }: ProductPara
   const officialInfo = product.brand === "Biodance"
     ? officialBiodanceByName[product.name]
     : product.brand === "Beauty of Joseon"
-      ? officialBeautyOfJoseonByEan[product.ean]
+      ? officialBeautyOfJoseonByEan[product.ean] ?? additionalBeautyOfJoseonByEan[product.ean]
       : product.brand === "Dr. Althea"
-        ? officialDrAltheaByEan[product.ean]
+        ? officialDrAltheaByEan[product.ean] ?? additionalDrAltheaByEan[product.ean]
         : undefined;
   const faireInfo = product.ean ? faireProductInformationByEan[product.ean] : undefined;
   const verifiedInfo = officialInfo ?? faireInfo;
+  const officialManufacturerSource = Boolean(officialInfo && !officialInfo.sourceName.toLowerCase().includes("revendeur"));
   const photo = publicProductImage(product);
   const eanIsValid = Boolean(product.ean && isValidEan13(product.ean));
   const cosmetics = product.brand !== "VK SWISS";
