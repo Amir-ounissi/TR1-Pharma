@@ -3,6 +3,7 @@ import { ArrowRight, Building2, Clock3 } from "lucide-react";
 import { getCatalogueBrands, getCatalogueBrandForPharmacy, requirePharmacyCatalogue } from "@/lib/private-catalogue";
 import { disconnectPharmacyCatalogue } from "@/app/catalogue/actions";
 import { PrivateMultiBrandOrderForm } from "@/components/catalogue/private-multibrand-order-form";
+import { withPharmacyProductVisuals } from "@/lib/catalogue-private-product-visuals";
 import { Tr1BrandLogo } from "@/components/brand/tr1-brand-logo";
 
 export default async function PrivateCatalogueHome() {
@@ -12,11 +13,9 @@ export default async function PrivateCatalogueHome() {
     const result = await getCatalogueBrandForPharmacy(pharmacy.id, brand.slug, admin);
     return { brand, products: result.products };
   }));
-  const orderProducts = groups.flatMap(({ brand, products }) => products.map((product) => ({
-    ...product,
-    brand_slug: brand.slug,
-    brand_name: brand.name,
-  })));
+  const orderProducts = groups.flatMap(({ brand, products }) =>
+    products.map((product) => withPharmacyProductVisuals(product, brand)),
+  );
 
   return (
     <div className="space-y-9">
