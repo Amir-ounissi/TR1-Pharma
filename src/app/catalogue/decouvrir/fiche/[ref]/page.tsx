@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowUpRight, Barcode, Building2, Check, ClipboardList, LockKeyhole, PackageSearch } from "lucide-react";
 import { Ean13Barcode } from "@/components/catalogue/ean13-barcode";
+import { ProductImageGallery } from "@/components/catalogue/product-image-gallery";
 import { isValidEan13 } from "@/lib/ean13";
 import { faireProductInformationByEan } from "@/lib/catalogue-faire-product-information";
 import { officialBiodanceByName, officialBeautyOfJoseonByEan, officialDrAltheaByEan, additionalBeautyOfJoseonByEan, additionalDrAltheaByEan } from "@/lib/catalogue-official-product-information";
-import { findPublicProduct, publicCatalogueProducts, publicProductFamily, publicProductImage, publicProductKey } from "@/lib/catalogue-products";
+import { findPublicProduct, publicCatalogueProducts, publicProductFamily, publicProductImages, publicProductKey } from "@/lib/catalogue-products";
 
 type ProductParams = { params: Promise<{ ref: string }> };
 export const dynamicParams = false;
@@ -49,8 +49,7 @@ export default async function PublicCatalogueProductPage({ params }: ProductPara
         : undefined;
   const faireInfo = product.ean ? faireProductInformationByEan[product.ean] : undefined;
   const verifiedInfo = officialInfo ?? faireInfo;
-  const officialManufacturerSource = Boolean(officialInfo && !officialInfo.sourceName.toLowerCase().includes("revendeur"));
-  const photo = publicProductImage(product);
+  const productImages = publicProductImages(product);
   const eanIsValid = Boolean(product.ean && isValidEan13(product.ean));
   const cosmetics = product.brand !== "VK SWISS";
 
@@ -66,18 +65,7 @@ export default async function PublicCatalogueProductPage({ params }: ProductPara
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.04fr)]">
         <section className="space-y-3">
-          <div className="relative flex min-h-[360px] items-center justify-center overflow-hidden rounded-3xl border border-[#e6eaec] bg-[#f5f4f0] p-8 sm:min-h-[470px]">
-            {photo ? (
-              <Image src={photo.url} alt={product.brand + " " + product.name + ", présentation " + product.format}
-                width={850} height={850} unoptimized priority className="max-h-[430px] w-full object-contain drop-shadow-[0_12px_18px_rgba(15,30,38,.08)]"/>
-            ) : (
-              <div className="text-center">
-                <PackageSearch className="mx-auto text-[#b5bdc2]" size={48} strokeWidth={1.3} aria-hidden="true"/>
-                <p className="mt-5 text-sm font-bold text-[#384f61]">Packshot en cours de validation</p>
-                <p className="mt-2 max-w-[290px] text-xs leading-5 text-[#788895]">Nous n’affichons pas la photo d’un autre format ou produit pour remplir artificiellement la fiche.</p>
-              </div>
-            )}
-          </div>
+          <ProductImageGallery images={productImages} brand={product.brand} productName={product.name} format={product.format} />
         </section>
 
         <div className="space-y-6">
@@ -116,16 +104,16 @@ export default async function PublicCatalogueProductPage({ params }: ProductPara
 
       {verifiedInfo && (
         <section aria-labelledby="more-product-information" className="rounded-2xl border border-[#e5e9eb] bg-white p-5 sm:p-7">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-[.14em] text-[#b56d3e]">Informations produit</p>
-              <h2 id="more-product-information" className="mt-2 text-xl font-black text-[#122a41] sm:text-2xl">Connaître le produit</h2>
-            </div>
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[.14em] text-[#b56d3e]">Informations produit</p>
+            <h2 id="more-product-information" className="mt-2 text-xl font-black text-[#122a41] sm:text-2xl">Tout savoir sur le produit</h2>
           </div>
-          <p className="mt-4 max-w-3xl text-sm leading-7 text-[#526676]">{verifiedInfo.description}</p>
-          <div className="mt-6 grid gap-6 md:grid-cols-2">
+
+          <p className="mt-4 max-w-4xl text-sm leading-7 text-[#526676]">{verifiedInfo.description}</p>
+
+          <div className="mt-6 grid gap-7 md:grid-cols-2">
             <div>
-              <h3 className="text-sm font-extrabold text-[#20394c]">Caractéristiques et bénéfices</h3>
+              <h3 className="text-sm font-extrabold text-[#20394c]">Bénéfices et propriétés</h3>
               <ul className="mt-3 space-y-2">
                 {verifiedInfo.benefits.map((benefit) => (
                   <li key={benefit} className="flex gap-2 text-sm leading-6 text-[#5f7180]">
@@ -136,31 +124,55 @@ export default async function PublicCatalogueProductPage({ params }: ProductPara
             </div>
             <div>
               <h3 className="text-sm font-extrabold text-[#20394c]">Actifs clés</h3>
-              <div className="mt-3 flex flex-wrap gap-2">
+              <ul className="mt-3 space-y-2">
                 {verifiedInfo.keyIngredients.map((ingredient) => (
-                  <span key={ingredient} className="rounded-full border border-[#e4e8e8] bg-[#f7f8f6] px-3 py-2 text-xs font-semibold text-[#526473]">{ingredient}</span>
+                  <li key={ingredient} className="flex gap-2 text-sm leading-6 text-[#5f7180]">
+                    <Check size={15} className="mt-1 shrink-0 text-[#698275]" aria-hidden="true" /> {ingredient}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {verifiedInfo.skinTypes && verifiedInfo.skinTypes.length > 0 && (
+            <div className="mt-7">
+              <h3 className="text-sm font-extrabold text-[#20394c]">Types de peau</h3>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {verifiedInfo.skinTypes.map((skinType) => (
+                  <span key={skinType} className="rounded-full border border-[#e4e8e8] bg-[#f7f8f6] px-3 py-2 text-xs font-semibold text-[#526473]">{skinType}</span>
                 ))}
               </div>
             </div>
-          </div>
-          {officialInfo?.usage && (
-            <div className="mt-6 rounded-xl border border-[#e8ede8] bg-[#f7faf7] px-4 py-4">
+          )}
+
+          {(verifiedInfo.usageSteps?.length || verifiedInfo.usage) && (
+            <div className="mt-7 rounded-xl border border-[#e8ede8] bg-[#f7faf7] px-4 py-4">
               <h3 className="text-sm font-extrabold text-[#20394c]">Conseils d’utilisation</h3>
-              <p className="mt-2 text-sm leading-6 text-[#5f7180]">{officialInfo.usage}</p>
+              {verifiedInfo.usageSteps && verifiedInfo.usageSteps.length > 0 ? (
+                <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm leading-6 text-[#5f7180]">
+                  {verifiedInfo.usageSteps.map((step) => <li key={step} className="pl-1">{step}</li>)}
+                </ol>
+              ) : (
+                <p className="mt-2 text-sm leading-6 text-[#5f7180]">{verifiedInfo.usage}</p>
+              )}
             </div>
           )}
-          <div className="mt-6 flex flex-wrap items-start justify-between gap-3 border-t border-[#e9edee] pt-4">
-            <p className="max-w-2xl text-xs leading-6 text-[#6e808b]">
-              Source : {officialInfo?.sourceName ?? "Faire — " + faireInfo?.sourceSeller}.
-              {officialManufacturerSource
-                ? " Description et actifs mis en avant reformulés de la documentation de la marque."
-                : " Information provenant d’un revendeur, à confirmer avec la marque."}
-              {" "}La liste INCI complète, les précautions et la conformité de la version commercialisée doivent être vérifiées sur l’emballage et la documentation réglementaire.
-            </p>
-            <a href={verifiedInfo.sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-10 shrink-0 items-center gap-1.5 text-xs font-bold text-[#23465d] underline-offset-4 hover:underline">
-              Consulter la source <ArrowUpRight size={15} aria-hidden="true"/>
-            </a>
-          </div>
+
+          {verifiedInfo.precautions && verifiedInfo.precautions.length > 0 && (
+            <div className="mt-6 rounded-xl border border-[#f0e6dc] bg-[#fcf8f4] px-4 py-4">
+              <h3 className="text-sm font-extrabold text-[#20394c]">Précautions d’emploi</h3>
+              <ul className="mt-3 list-disc space-y-2 pl-5 text-sm leading-6 text-[#5f7180]">
+                {verifiedInfo.precautions.map((precaution) => <li key={precaution}>{precaution}</li>)}
+              </ul>
+            </div>
+          )}
+
+          {verifiedInfo.inci && (
+            <details className="mt-6 rounded-xl border border-[#e5e9eb] bg-white px-4 py-4">
+              <summary className="cursor-pointer text-sm font-extrabold text-[#20394c]">Composition INCI complète</summary>
+              <p className="mt-3 break-words text-xs leading-6 text-[#5f7180]">{verifiedInfo.inci}</p>
+            </details>
+          )}
         </section>
       )}
 
@@ -184,6 +196,9 @@ export default async function PublicCatalogueProductPage({ params }: ProductPara
           </div>
           <dl>
             {product.format ? detail("Format", product.format) : null}
+            {verifiedInfo?.packaging ? detail("Conditionnement", verifiedInfo.packaging) : null}
+            {verifiedInfo?.origin ? detail("Pays de fabrication", verifiedInfo.origin) : null}
+            {verifiedInfo?.alternateName ? detail("Autre dénomination", verifiedInfo.alternateName) : null}
             {detail("Type", cosmetics ? "Produit cosmétique" : "Complément alimentaire")}
           </dl>
         </section>
