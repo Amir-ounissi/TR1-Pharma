@@ -19,6 +19,7 @@ export default async function PharmacyRequestsPage({
   const { pharmacy, catalog, admin } = await requirePharmacyCatalogue();
   const workspace = await getBuyerWorkspace(admin);
   const reorderable = new Set(workspace.recent_requests.map((request) => request.id));
+  const recentById = new Map(workspace.recent_requests.map((request) => [request.id, request] as const));
   const requests = catalog.requests ?? [];
   const names = new Map(catalog.brands.map((b) => [b.id, b.name]));
 
@@ -40,6 +41,23 @@ export default async function PharmacyRequestsPage({
                   <p className="font-bold">{names.get(request.brand_id) ?? "Laboratoire"}</p>
                   <p className="mt-1 text-xs text-[#69717d]">{new Date(request.created_at).toLocaleDateString("fr-FR")} · Réf. {request.id.slice(0, 8).toUpperCase()}</p>
                   <p className="mt-2 text-xs font-bold text-[#69717d]">{request.request_kind === "quote" ? "Demande de conditions · " : "Demande de commande · "}{labels[request.status] ?? request.status}</p>
+                  {recentById.get(request.id)?.shipping_batch_id ? (
+                    <p className="mt-2 text-[11px] font-semibold text-[#416a4b]">
+                      Regroupement livraison coréenne · Lot {recentById.get(request.id)!.shipping_batch_id!.slice(0, 8).toUpperCase()} · Franco à 250 € HT remisé sur les marques cumulées, à confirmer après chiffrage.
+                    </p>
+                  ) : null}
+                  {recentById.get(request.id)?.items?.length ? (
+                    <details className="mt-3 rounded-lg border border-[#e5e9eb] bg-[#faf9f6] p-3">
+                      <summary className="cursor-pointer text-xs font-bold text-[#142941]">
+                        Voir les {recentById.get(request.id)!.items.length} références de la demande
+                      </summary>
+                      <ul className="mt-2 space-y-1 text-xs text-[#526071]">
+                        {recentById.get(request.id)!.items.map((line) => (
+                          <li key={line.product_id}>{line.name} · {line.quantity} unité{line.quantity > 1 ? "s" : ""}</li>
+                        ))}
+                      </ul>
+                    </details>
+                  ) : null}
                 </div>
                 <div className="flex flex-col items-start gap-2 sm:items-end">
                   <p className="text-lg font-black">{request.request_kind === "quote" || request.total_ht === null ? "À chiffrer" : euroHT(Number(request.total_ht)) + " HT"}</p>
