@@ -3,7 +3,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowUpRight, Barcode, Building2, Check, ClipboardList, FileCheck2, LockKeyhole, PackageSearch, ShieldCheck } from "lucide-react";
-import { Ean13Barcode, isValidEan13 } from "@/components/catalogue/ean13-barcode";
+import { Ean13Barcode } from "@/components/catalogue/ean13-barcode";
+import { isValidEan13 } from "@/lib/ean13";
 import { findPublicProduct, publicCatalogueProducts, publicProductFamily, publicProductImage, publicProductKey } from "@/lib/catalogue-products";
 
 type ProductParams = { params: Promise<{ ref: string }> };
