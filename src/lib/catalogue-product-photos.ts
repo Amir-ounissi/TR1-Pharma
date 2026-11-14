@@ -210,6 +210,54 @@ export const productPhotoByEan: Record<string, ProductPhoto> = {
   "8809447256122": {
     "url": "https://sk.medpak.shop/cdn/shop/files/dr-althea-345-relief-cream-mist-moisturising-face-mist-60-ml-dralt122-1207392297.jpg?v=1763550438&width=1500",
     "source": "Medpak"
+  },
+  "8809968136019": {
+    "url": "https://d1flfk77wl2xk4.cloudfront.net/Assets/beauty-of-joseon-comfort-protection-mineral-body-sun-lotion-150ml/52/717/XXL_p0225071752.jpg",
+    "source": "YesStyle"
+  },
+  "8809968136026": {
+    "url": "https://eleven.se/storage/FEEF8B5C918A350792B42E9945F219B449F46698898D5EFB345DBE05EBC63B9B/b0aa74b5ce764a49b2d005643589e788/jpg/media/227fea4dd8b04852a7238136b4e3f809/X-199507.jpg?fit=bounds&height=560&quality=75&width=560",
+    "source": "Eleven"
+  },
+  "8809954941498": {
+    "url": "https://asiaprime.shop/cdn/shop/files/beauty-of-joseon-dynasty-face-cream-100ml-front.webp?v=1754352544&width=1000",
+    "source": "Asia Prime"
+  },
+  "8809975190561": {
+    "url": "https://cdn-image.oliveyoung.com/prdtImg/1401/eaa23350-d45f-4573-8088-9e8a578440df.png?QT=80&SF=webp",
+    "source": "Olive Young"
+  },
+  "8809968134763": {
+    "url": "https://medias.watsons.com.sg/publishing/WTCSG-45284-back-zoom.jpg?version=1779734477",
+    "source": "Watsons"
+  },
+  "8809968133193": {
+    "url": "https://www.secom.ro/cdn/shop/files/b564b64eabbf250ca9a0bebfdc10b768.jpg?v=1780386836",
+    "source": "Secom"
+  },
+  "8809968133933": {
+    "url": "https://k-touch.us/cdn/shop/files/7C8A5720-6890-4BA0-B8F1-D6F7436B265D.png?v=1781225879",
+    "source": "K-Touch"
+  },
+  "8809968130383": {
+    "url": "https://cdn-image.oliveyoung.com/prdtImg/1278/b9c4cd67-aac1-4d40-8659-44fc98e3424b.jpg",
+    "source": "Olive Young"
+  },
+  "8809782558905": {
+    "url": "https://media.douglas.it/medias/K47uGn1174667-0-dgl-IT.png?context=bWFzdGVyfGltYWdlc3w1NTY3MTd8aW1hZ2UvcG5nfGFESmhMMmc1TUM4MU1EUTFPVGs1TXpFME5UTTNOQzlMTkRkMVIyNHhNVGMwTmpZM1h6QmZaR2RzTFVsVUxuQnVad3xlMGMxOWMxZTAwNWQ1MTAwODUwNDkyZjRlZWE4Mzg2YzYwNWU4ZWVlNzA3MDM5NmZiZDNkMzA1OTU5NTcwNDE5&grid=true&transparent=true",
+    "source": "Douglas"
+  },
+  "8809968130864": {
+    "url": "https://fr.beautyofjoseon.com/cdn/shop/files/01_0330___v2_2bf39798-406c-4fd5-af5b-4f4985705e9d.jpg?v=1774857943",
+    "source": "Beauty of Joseon officiel"
+  },
+  "8809968132592": {
+    "url": "https://beautyofjoseon.com/cdn/shop/files/Mask_group_3.jpg?v=1762834163&width=2000",
+    "source": "Beauty of Joseon officiel"
+  },
+  "8809968130888": {
+    "url": "https://kkumida.ch/cdn/shop/files/Revive_Serum_Ginseng_Snail_Mucin.png?v=1770165057&width=1500",
+    "source": "KKUMIDA"
   }
 };
 
