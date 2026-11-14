@@ -874,4 +874,11 @@ export const productGalleryByEan: Record<string, string[]> = {
       "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/97.png?v=1760337400",
       "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/optimized_6a5c313c500597.67139900_250703_BOJ_-_-_5.jpg?v=1784429371"
   ]
+  "8809968136026": [
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/260402_BOJ-10925_R01__1776917318_e2f9ca16-f38e-4eab-9eea-988276323ef8.jpg?v=1777818082",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/260402_BOJ-11012_R01__1776995510.jpg?v=1776995661",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/260402_BOJ-11403__1776917451.jpg?v=1776917538",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/JO03_0351__1776917457.jpg?v=1776917556",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/260402_BOJ-10979__1776917321_b98d4744-c924-43d2-803f-e90ff4d9c24e.jpg?v=1778020882"
+  ]
 };
