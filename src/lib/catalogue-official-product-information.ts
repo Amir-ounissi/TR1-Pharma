@@ -8,6 +8,13 @@ export type OfficialEducation = {
   sourceUrl:string;
   sourceName:string;
   usage?:string;
+  skinTypes?:string[];
+  usageSteps?:string[];
+  precautions?:string[];
+  inci?:string;
+  packaging?:string;
+  origin?:string;
+  alternateName?:string;
 };
 export const officialBiodanceByName: Record<string,OfficialEducation> = {
   "Bio Collagen-Real Deep Mask": {
