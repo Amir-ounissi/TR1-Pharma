@@ -796,13 +796,15 @@ export function PrivateMultiBrandOrderForm({
                             Fiche produit
                           </Link>
                         ) : null}
-                        <button type="button" onClick={() => void toggleFavorite(product)}
-                          disabled={favoriteUpdating.has(product.id)}
-                          aria-pressed={favorites.has(product.id)}
-                          className="ml-2 inline-flex min-h-7 items-center gap-1 text-[10px] font-bold text-[#9c5927] hover:underline disabled:opacity-40">
-                          <Heart size={13} fill={favorites.has(product.id) ? "currentColor" : "none"} aria-hidden="true" />
-                          {favorites.has(product.id) ? "Favori" : "Favoris"}
-                        </button>
+                        {enableAccountFeatures ? (
+                          <button type="button" onClick={() => void toggleFavorite(product)}
+                            disabled={favoriteUpdating.has(product.id)}
+                            aria-pressed={favorites.has(product.id)}
+                            className="ml-2 inline-flex min-h-7 items-center gap-1 text-[10px] font-bold text-[#9c5927] hover:underline disabled:opacity-40">
+                            <Heart size={13} fill={favorites.has(product.id) ? "currentColor" : "none"} aria-hidden="true" />
+                            {favorites.has(product.id) ? "Favori" : "Favoris"}
+                          </button>
+                        ) : null}
                       </div>
 
                       <div className="col-span-2 flex items-center justify-between gap-3 border-t border-[#edf0f1] pt-2 md:col-span-1 md:block md:border-0 md:pt-0">
