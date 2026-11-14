@@ -3,6 +3,7 @@ import { ChevronRight, LockKeyhole, ShoppingBag } from "lucide-react";
 import { getCatalogueBrands, getCatalogueBrandForPharmacy, requirePharmacyCatalogue } from "@/lib/private-catalogue";
 import { PrivateMultiBrandOrderForm } from "@/components/catalogue/private-multibrand-order-form";
 import { withPharmacyProductVisuals } from "@/lib/catalogue-private-product-visuals";
+import { getCommercialContext } from "@/lib/catalogue-commercial";
 import { getBuyerWorkspace } from "@/lib/catalogue-buyer-workspace";
 
 export default async function PharmacyBrandPage({
@@ -14,6 +15,7 @@ export default async function PharmacyBrandPage({
   const { slug } = await params;
   const { produit } = await searchParams;
   const { admin, pharmacy } = await requirePharmacyCatalogue();
+  const commercialConditions = await getCommercialContext(admin);
   const workspace = await getBuyerWorkspace(admin);
   const { brand, products } = await getCatalogueBrandForPharmacy(pharmacy.id, slug, admin);
   const accessibleBrands = await getCatalogueBrands(pharmacy.id, admin);
@@ -58,7 +60,7 @@ export default async function PharmacyBrandPage({
           <ShoppingBag size={16} aria-hidden="true" /> Mes demandes
         </Link>
       </div>
-      <div id="produits"><PrivateMultiBrandOrderForm key={brand.slug} products={orderProducts} initialBrandSlug={brand.slug} initialProductId={produit} initialCartLines={workspace.lines} reorderHistory={workspace.recent_requests} /></div>
+      <div id="produits"><PrivateMultiBrandOrderForm key={brand.slug} products={orderProducts} commercialConditions={commercialConditions} initialBrandSlug={brand.slug} initialProductId={produit} initialCartLines={workspace.lines} reorderHistory={workspace.recent_requests} /></div>
     </div>
   );
 }
