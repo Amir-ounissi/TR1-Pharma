@@ -365,3 +365,47 @@ export const biodancePhotoByName: Record<string, ProductPhoto> = {
     "source": "DaMar Beauty"
   }
 };
+
+
+export const productGalleryByEan: Record<string, string[]> = {
+  "8809447256221": [
+    "https://cdn.shopify.com/s/files/1/0568/9802/7638/files/Dr.Althea_345ReliefCream_Packshot.jpg?v=1772629511",
+    "https://cdn.shopify.com/s/files/1/0568/9802/7638/files/Dr.Althea_345ReliefCream_Photo2.jpg?v=1772629511",
+    "https://cdn.shopify.com/s/files/1/0568/9802/7638/files/Dr.Althea_345ReliefCream_Photo3.jpg?v=1772629511",
+    "https://cdn.shopify.com/s/files/1/0568/9802/7638/files/Dr.Althea_345ReliefCream_Photo4.jpg?v=1772629511",
+    "https://cdn.shopify.com/s/files/1/0568/9802/7638/files/Dr.Althea_345ReliefCream_Photo5.jpg?v=1772629511"
+  ],
+  "8809447256122": [
+    "https://cdn.faire.com/fastly/449bb4fc43a233627b07fa54f0deecfd9d9ce9f05f9ba027573f80a4c125f2db.jpeg?bg-color=FFFFFF&format=jpg&precrop=72.33p%2C72.33p%2Cx13.78p%2Cy24.48p&width=720",
+    "https://cdn.faire.com/fastly/43fff981e77e119c49eb61411fd4c3f091b7c89b98bbb3eb56a5e0c157f6fd6b.jpeg?format=jpg&precrop=1%3A1&width=720",
+    "https://cdn.faire.com/fastly/a2247c1665a65f8516fc0867820f2052c6a1d7521be38d4c9595905e544e820e.jpeg?format=jpg&precrop=1%3A1&width=720",
+    "https://cdn.faire.com/fastly/bda7ee4f6a829a992840d6df49806744134ffd98b4c99fdefdddb9df4a1544c0.jpeg?format=jpg&precrop=1%3A1&width=720"
+  ],
+  "8809782555508": [
+    "https://fr.beautyofjoseon.com/cdn/shop/files/04_0805_Relief_sun_EU_UK_d87a9756-3bcb-4c1f-a487-1d1b900b0f2e.jpg?v=1787222280&width=1800",
+    "https://fr.beautyofjoseon.com/cdn/shop/files/52.png?v=1750140941&width=800",
+    "https://fr.beautyofjoseon.com/cdn/shop/files/53.png?v=1750140933&width=800",
+    "https://fr.beautyofjoseon.com/cdn/shop/files/20260528-BOJ1088-F2_d5f9d044-658b-4f9f-ab85-fb1c58ced276.jpg?v=1786926810&width=800"
+  ],
+  "8809968130277": [
+    "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/20260528-BOJ0231-F_EU.jpg?v=1785595746",
+    "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/20260528-BOJ0461-F2_EU.jpg?v=1785595771",
+    "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/56.png?v=1750150918"
+  ],
+  "8809657114960": [
+    "https://beautyofjoseon.com/cdn/shop/files/js14_008.jpg?v=1772021247&width=1800",
+    "https://beautyofjoseon.com/cdn/shop/files/ellipse-1.png?v=1743499045&width=800",
+    "https://beautyofjoseon.com/cdn/shop/files/ellipse-2.png?v=1743499046&width=800",
+    "https://beautyofjoseon.com/cdn/shop/files/241118_JOSEON_2396.jpg?v=1772021274&width=800",
+    "https://beautyofjoseon.com/cdn/shop/files/Untitled_design_79_da3ae97f-8266-466d-8d9b-5c64acd39c4c.png?v=1776932150&width=2200",
+    "https://beautyofjoseon.com/cdn/shop/files/2_c5a494ef-8193-4942-ac6a-c8c83240f6a6.jpg?v=1772021294&width=1800"
+  ],
+  "8809937361725": [
+    "https://biodance.com/cdn/shop/files/cera-nol_B_A.jpg?v=1750148961&width=800",
+    "https://cdn.faire.com/fastly/692fe187023dc6fd002972c573b66d871193958efacd9d91f00f9a154b0e4f20.jpeg?format=jpg&precrop=1%3A1&width=720",
+    "https://cdn.faire.com/fastly/2e0068db9f97cd30db8eaa7d02e2a248673e2e20ab4a1dd8d31812278f67afa9.jpeg?format=jpg&precrop=1%3A1&width=720",
+    "https://cdn.faire.com/fastly/8f01ff8ca439fa354491a1443a10887c78d1c3b6d2bc132712aa62a5ec03205f.jpeg?format=jpg&precrop=1%3A1&width=720",
+    "https://cdn.faire.com/fastly/7a9548e5825639283c6bd947d1ae32d04145e5ec77368bfc9c6908be1821e910.jpeg?format=jpg&precrop=1%3A1&width=720",
+    "https://cdn.faire.com/fastly/f7c8f1e720f1bf78dcaa6d4749d2a118419136c22ada7935f37ab72132ad0ab5.jpeg?format=jpg&precrop=1%3A1&width=720"
+  ]
+};
