@@ -15,6 +15,7 @@ import { KOREAN_FRANCO, koreanFrancoProgress } from "@/lib/catalogue-shipping";
 export type PrivateMultiBrandProduct = PharmacyProductWithVisuals;
 
 type ProductTier = CatalogProduct["pricing"]["tiers"][number];
+const QUICK_QUANTITIES = [6, 12, 18, 24, 48] as const;
 
 function priceRangeForTier(tier: ProductTier | null) {
   if (!tier) return null;
@@ -144,6 +145,15 @@ function ProductQuantityControl({
             ) : null}
           </div>
         ) : null}
+      </div>
+      <div className="mt-2 flex flex-wrap gap-1.5" aria-label={"Quantités rapides pour " + product.name}>
+        {QUICK_QUANTITIES.filter((preset) => preset >= product.min_quantity).map((preset) => (
+          <button type="button" key={preset} onClick={() => onSetQuantity(preset)}
+            disabled={quantity === 0 && maxReferencesReached} aria-pressed={quantity === preset}
+            className={`min-h-8 min-w-9 rounded-md border px-2 text-[10px] font-bold transition disabled:opacity-30 ${quantity === preset ? "border-[#142941] bg-[#142941] text-white" : "border-[#dce3ea] text-[#142941] hover:bg-[#f5eee6]"}`}>
+            {preset}
+          </button>
+        ))}
       </div>
       {invalid ? (
         <p role="alert" className="mt-2 text-[11px] font-bold text-red-700">
@@ -586,7 +596,7 @@ export function PrivateMultiBrandOrderForm({
       </section>
 
       <div className={buyerView === "catalogue"
-        ? "grid gap-3 rounded-xl border border-[#e2e7ec] bg-white p-3 sm:grid-cols-[minmax(0,1fr)_220px_150px] sm:p-4"
+        ? "grid gap-3 rounded-xl border border-[#e2e7ec] bg-white p-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_170px_160px_150px] sm:p-4"
         : "hidden"}>
         <label className="flex items-center gap-3 rounded-lg border border-[#e2e7ec] bg-[#faf9f6] px-3">
           <Search size={18} className="shrink-0 text-[#69717d]" aria-hidden="true" />
@@ -601,6 +611,14 @@ export function PrivateMultiBrandOrderForm({
             value={brandFilter} onChange={(event) => setBrandFilter(event.target.value)}>
             <option value="all">Toutes les marques</option>
             {brandOptions.map((brand) => <option key={brand.slug} value={brand.slug}>{brand.name}</option>)}
+          </select>
+        </label>
+        <label className="flex items-center gap-2 rounded-lg border border-[#e2e7ec] bg-[#faf9f6] px-3">
+          <span className="sr-only">Filtrer par catégorie</span>
+          <select className="min-h-11 w-full bg-transparent text-xs font-bold outline-none"
+            value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
+            <option value="all">Toutes catégories</option>
+            {categories.map((category) => <option key={category} value={category}>{category}</option>)}
           </select>
         </label>
         <label className="flex items-center gap-2 rounded-lg border border-[#e2e7ec] bg-[#faf9f6] px-3">
@@ -690,7 +708,13 @@ export function PrivateMultiBrandOrderForm({
                 <List size={16} aria-hidden="true" /> Liste
               </button>
             </div>
+            <button type="button" onClick={() => setFavoritesOnly((value) => !value)}
+              aria-pressed={favoritesOnly}
+              className={`inline-flex min-h-9 items-center gap-1.5 rounded-md border px-3 text-xs font-bold ${favoritesOnly ? "border-[#b87043] bg-[#fff1e6] text-[#9c4b18]" : "border-[#dce3ea] bg-white text-[#142941] hover:bg-[#f4f6f6]"}`}>
+              <Heart size={14} fill={favoritesOnly ? "currentColor" : "none"} aria-hidden="true" /> Mes favoris
+            </button>
           </div>
+          {favoriteError ? <p role="alert" className="rounded-md bg-[#fff1e6] p-2 text-xs font-bold text-[#8c4212]">{favoriteError}</p> : null}
 
           <div id="liste-produits" className="space-y-2">
             {viewMode === "cards" ? (
@@ -848,7 +872,7 @@ export function PrivateMultiBrandOrderForm({
             <div className="rounded-xl border border-dashed border-[#dce3ea] bg-white px-5 py-12 text-center">
               <Package size={30} className="mx-auto text-[#b4b8b7]" aria-hidden="true" />
               <p className="mt-3 text-sm font-extrabold">Aucune référence trouvée.</p>
-              <button type="button" onClick={() => { setQuery(""); setBrandFilter("all"); }}
+              <button type="button" onClick={() => { setQuery(""); setBrandFilter("all"); setCategoryFilter("all"); setFavoritesOnly(false); }}
                 className="mt-3 text-xs font-semibold underline">Afficher toutes les références</button>
             </div>
           ) : null}
