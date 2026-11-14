@@ -2,9 +2,9 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Heart, Plus, ShoppingCart } from "lucide-react";
+import { Heart, Plus, Minus, ShoppingCart } from "lucide-react";
 import { addCatalogueProductToCart, setCatalogueFavorite } from "@/app/catalogue/actions";
-import { isAllowedQuantity, firstOrderQuantity } from "@/lib/private-catalogue-format";
+import { isAllowedQuantity, firstOrderQuantity, steppedOrderQuantity } from "@/lib/private-catalogue-format";
 
 const PRESET_QUANTITIES = [6, 12, 18, 24, 48] as const;
 
@@ -15,6 +15,7 @@ export function PharmacyProductActions({
   minQuantity,
   quantityStep,
   collectiveMinimum,
+  collectiveQuantityMultiple,
   initialFavorite,
 }: {
   productId: string;
@@ -22,17 +23,22 @@ export function PharmacyProductActions({
   minQuantity: number;
   quantityStep: number;
   collectiveMinimum?: number | null;
+  collectiveQuantityMultiple?: number | null;
   initialFavorite: boolean;
 }) {
-  const first = firstOrderQuantity(minQuantity, quantityStep);
+  const displayStep = collectiveQuantityMultiple ?? quantityStep;
+  const first = collectiveQuantityMultiple
+    ? Math.max(displayStep, Math.ceil(minQuantity / displayStep) * displayStep)
+    : firstOrderQuantity(minQuantity, quantityStep);
   const [quantity, setQuantity] = useState(first);
   const [favorite, setFavorite] = useState(initialFavorite);
   const [busy, startTransition] = useTransition();
   const [feedback, setFeedback] = useState("");
   const valid = isAllowedQuantity(quantity, minQuantity, quantityStep);
-  const presets = quantityStep === 6
+  const presets = displayStep === 6
     ? PRESET_QUANTITIES.filter((value) => value >= first)
-    : [0, 1, 2, 3, 7].map((n) => first + n * quantityStep)
+    : displayStep === 4 ? [4, 8, 12, 16, 24, 48].filter((value) => value >= first)
+    : [0, 1, 2, 3, 7].map((n) => first + n * displayStep)
       .filter((value) => value >= first && value <= 5000);
 
   const addToCart = () => {
@@ -60,7 +66,15 @@ export function PharmacyProductActions({
 
   return (
     <div className="mt-5 space-y-3 border-t border-white/15 pt-4">
-      <p className="text-xs font-extrabold text-white">Quantité à ajouter au panier · {first} unités pré-sélectionnées · pas de {quantityStep}</p>
+      <p className="text-xs font-extrabold text-white">Quantité à ajouter au panier · {first} unités pré-sélectionnées · boutons par {displayStep}</p>
+      <div className="inline-flex min-h-10 items-center overflow-hidden rounded-lg border border-white/25">
+        <button type="button" aria-label="Diminuer la quantité" onClick={() => setQuantity((q) => steppedOrderQuantity(q, Math.max(minQuantity, displayStep), displayStep, -1))}
+          className="flex h-10 w-10 items-center justify-center text-white hover:bg-white/10"><Minus size={16} /></button>
+        <span aria-live="polite" className="min-w-14 border-x border-white/25 px-3 text-center text-sm font-black">{quantity}</span>
+        <button type="button" aria-label="Augmenter la quantité" disabled={quantity + displayStep > 5000}
+          onClick={() => setQuantity((q) => steppedOrderQuantity(q, Math.max(minQuantity, displayStep), displayStep, 1))}
+          className="flex h-10 w-10 items-center justify-center text-white hover:bg-white/10 disabled:opacity-40"><Plus size={16} /></button>
+      </div>
       <div className="flex flex-wrap gap-1.5" role="group" aria-label={"Quantités rapides pour " + name}>
         {presets.map((value) => (
           <button type="button" key={value} onClick={() => { setQuantity(value); setFeedback(""); }}
@@ -78,7 +92,9 @@ export function PharmacyProductActions({
       </label>
       {collectiveMinimum ? (
         <p className="text-[11px] text-[#c1cdd8]">
-          Minimum {collectiveMinimum} unités sur toute la gamme concernée. Vous pouvez répartir les quantités entre références.
+          Minimum {collectiveMinimum} unités sur toute la gamme concernée,
+          {collectiveQuantityMultiple ? ` total multiple de ${collectiveQuantityMultiple}` : " selon le colisage fournisseur"}.
+          Vous pouvez répartir librement les quantités entre références : la règle s'applique au total du panier.
         </p>
       ) : null}
       {!valid ? <p role="alert" className="text-xs font-bold text-[#ffc1ad]">Minimum {minQuantity} unités, par multiples de {quantityStep} (maximum 5 000).</p> : null}
