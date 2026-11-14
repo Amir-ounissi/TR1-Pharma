@@ -1,9 +1,12 @@
 "use server";
 
+import { randomBytes, createHash } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requirePlatformAdmin } from "@/lib/auth";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { resolveAppUrl } from "@/lib/runtime-environment";
 
 const id = z.uuid();
 const nameField = z.string().trim().min(2).max(180);
@@ -352,4 +355,94 @@ export async function saveCommercialSupplierTerms(formData: FormData) {
   }, { onConflict: "supplier_id" });
   if (error) throw error;
   returnCommercialConditions();
+}
+
+
+export type CatalogueAccessLinkActionState = {
+  url: string;
+  expiresAt: string;
+  error: string;
+  revoked: boolean;
+};
+
+export async function createPrivateCatalogueAccessLink(
+  _state: CatalogueAccessLinkActionState,
+  formData: FormData,
+): Promise<CatalogueAccessLinkActionState> {
+  const parsed = z.object({ pharmacy_id: id }).safeParse({
+    pharmacy_id: formData.get("pharmacy_id"),
+  });
+  if (!parsed.success) {
+    return { url: "", expiresAt: "", error: "Pharmacie invalide.", revoked: false };
+  }
+
+  const appUrl = resolveAppUrl();
+  if (!appUrl) {
+    return { url: "", expiresAt: "", error: "URL publique du catalogue non configurée.", revoked: false };
+  }
+
+  const { supabase, userId } = await requirePlatformAdmin();
+  const { data: pharmacy, error: pharmacyError } = await supabase
+    .from("private_catalog_pharmacies")
+    .select("id")
+    .eq("id", parsed.data.pharmacy_id)
+    .maybeSingle();
+  if (pharmacyError || !pharmacy) {
+    return { url: "", expiresAt: "", error: "Pharmacie inconnue.", revoked: false };
+  }
+
+  const token = randomBytes(32).toString("base64url");
+  const tokenHash = createHash("sha256").update(token).digest("hex");
+  const service = createAdminClient();
+  const { data: expiresAt, error } = await service.rpc("catalogue_rotate_private_access_link", {
+    p_pharmacy_id: parsed.data.pharmacy_id,
+    p_token_hash: tokenHash,
+    p_created_by: userId,
+  });
+  if (error || !expiresAt) {
+    return { url: "", expiresAt: "", error: "Impossible de générer le lien privé.", revoked: false };
+  }
+
+  revalidatePath("/catalogue/administration");
+  return {
+    url: new URL("/catalogue/acces/" + token, appUrl).toString(),
+    expiresAt: String(expiresAt),
+    error: "",
+    revoked: false,
+  };
+}
+
+export async function revokePrivateCatalogueAccessLink(
+  _state: CatalogueAccessLinkActionState,
+  formData: FormData,
+): Promise<CatalogueAccessLinkActionState> {
+  const parsed = z.object({ pharmacy_id: id }).safeParse({
+    pharmacy_id: formData.get("pharmacy_id"),
+  });
+  if (!parsed.success) {
+    return { url: "", expiresAt: "", error: "Pharmacie invalide.", revoked: false };
+  }
+
+  const { supabase } = await requirePlatformAdmin();
+  const { data: pharmacy, error: pharmacyError } = await supabase
+    .from("private_catalog_pharmacies")
+    .select("id")
+    .eq("id", parsed.data.pharmacy_id)
+    .maybeSingle();
+  if (pharmacyError || !pharmacy) {
+    return { url: "", expiresAt: "", error: "Pharmacie inconnue.", revoked: false };
+  }
+
+  const service = createAdminClient();
+  const { error } = await service
+    .from("private_catalog_access_links")
+    .update({ active: false })
+    .eq("pharmacy_id", parsed.data.pharmacy_id)
+    .eq("active", true);
+  if (error) {
+    return { url: "", expiresAt: "", error: "Impossible de désactiver le lien.", revoked: false };
+  }
+
+  revalidatePath("/catalogue/administration");
+  return { url: "", expiresAt: "", error: "", revoked: true };
 }

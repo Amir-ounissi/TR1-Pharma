@@ -121,7 +121,7 @@ export default async function ConditionsCommercialesAdmin({
                     defaultValue={termsForSupplier?.free_shipping_from_ht ?? ""} placeholder="À confirmer"/>
                 </label>
               </div>
-              <label className={label}>Paliers d'unités gratuites (facultatif)
+              <label className={label}>Paliers d&apos;unités gratuites (facultatif)
                 <textarea name="gift_rules" rows={3} spellCheck={false}
                   defaultValue={JSON.stringify(termsForSupplier?.gift_rules ?? [],null,2)}
                   className="w-full rounded-lg border border-[#dce3ea] p-3 font-mono text-xs"/>

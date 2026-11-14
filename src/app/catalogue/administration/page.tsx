@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { requirePlatformAdmin } from "@/lib/auth";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { CatalogueAccessLinkManager } from "@/components/catalogue/catalogue-access-link-manager";
 import { euroHT } from "@/lib/private-catalogue";
 import {
   authorizePrivateCatalogueBrand,
@@ -31,6 +33,7 @@ export default async function CatalogueAdministration({
   // The dashboard uses the authenticated user session plus strict super-admin RLS.
   // A shared service key must never be required to render this administration.
   const { supabase: admin } = await requirePlatformAdmin();
+  const service = createAdminClient();
   const [
     { data: pharmacies, error: pharmaciesError },
     { data: brands, error: brandsError },
@@ -41,18 +44,22 @@ export default async function CatalogueAdministration({
     { data: contractTiers, error: contractError },
     { data: brandAccess, error: accessError },
     { data: invitations, error: invitationsError },
+    { data: accessLinks, error: accessLinksError },
+    { data: requestItems, error: requestItemsError },
   ] = await Promise.all([
     admin.from("private_catalog_pharmacies").select("id,name,city,contact_email").order("name"),
     admin.from("private_catalog_brands").select("id,name,slug,active").order("name"),
     admin.from("private_catalog_products").select("id,brand_id,name,sku,category,description,format,ean,image_url,price_ht,vat_rate,min_quantity,quantity_step,active,requires_review").order("name"),
-    admin.from("private_catalog_requests").select("id,pharmacy_id,brand_id,total_ht,request_kind,status,created_at").order("created_at", { ascending: false }).limit(100),
+    admin.from("private_catalog_requests").select("id,pharmacy_id,brand_id,total_ht,request_kind,status,created_at,requester_name,requester_email,access_link_id").order("created_at", { ascending: false }).limit(100),
     admin.from("private_catalog_memberships").select("user_id,pharmacy_id,invited_email,active").limit(200),
     admin.from("private_catalog_indicative_tiers").select("product_id,min_quantity,price_min_ht,price_max_ht").order("min_quantity"),
     admin.from("private_catalog_contract_tiers").select("pharmacy_id,product_id,min_quantity,price_ht").order("min_quantity"),
     admin.from("private_catalog_access").select("pharmacy_id,brand_id,active,pricing_mode"),
     admin.from("private_catalog_invitations").select("id,pharmacy_id,email,created_at,expires_at,claimed_at,active").order("created_at", { ascending: false }).limit(200),
+    service.from("private_catalog_access_links").select("id,pharmacy_id,expires_at,last_used_at,active").eq("active", true).gt("expires_at", new Date().toISOString()),
+    service.from("private_catalog_request_items").select("request_id,product_name,sku,quantity,unit_price_ht,line_total_ht").limit(5000),
   ]);
-  const queryError = pharmaciesError ?? brandsError ?? productsError ?? requestsError ?? membershipsError ?? indicativeError ?? contractError ?? accessError ?? invitationsError;
+  const queryError = pharmaciesError ?? brandsError ?? productsError ?? requestsError ?? membershipsError ?? indicativeError ?? contractError ?? accessError ?? invitationsError ?? accessLinksError ?? requestItemsError;
   if (queryError) throw queryError;
   const pharmacyRows = pharmacies ?? [];
   const brandRows = brands ?? [];
@@ -63,6 +70,14 @@ export default async function CatalogueAdministration({
   const contractRows = contractTiers ?? [];
   const accessRows = brandAccess ?? [];
   const invitationRows = invitations ?? [];
+  const accessLinkRows = accessLinks ?? [];
+  const requestItemRows = requestItems ?? [];
+  const requestItemsById = new Map<string, typeof requestItemRows>();
+  for (const item of requestItemRows) {
+    const current = requestItemsById.get(item.request_id) ?? [];
+    current.push(item);
+    requestItemsById.set(item.request_id, current);
+  }
   const { succes } = await searchParams;
 
   return (
@@ -246,6 +261,37 @@ export default async function CatalogueAdministration({
         </div>
       </section>
 
+
+      <section aria-labelledby="guest-access" className="space-y-4">
+        <div>
+          <h2 id="guest-access" className="text-2xl font-black">3. Accès catalogue sans compte</h2>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-[#69717d]">
+            Générez un lien privé par pharmacie. Le pharmacien consulte ses marques et tarifs, prépare son panier et transmet une demande avec son nom et son email, sans inscription ni mot de passe. Chaque renouvellement révoque le lien précédent.
+          </p>
+        </div>
+        <div className="grid gap-3 lg:grid-cols-2">
+          {pharmacyRows.map((pharmacy) => {
+            const link = accessLinkRows.find((row) => row.pharmacy_id === pharmacy.id);
+            return (
+              <article key={pharmacy.id} className="flex flex-col justify-between gap-4 rounded-xl border border-[#0e1d31]/10 bg-white p-5 sm:flex-row sm:items-start">
+                <div className="min-w-0">
+                  <p className="font-extrabold text-[#0e1d31]">{pharmacy.name}</p>
+                  <p className="mt-1 text-xs text-[#69717d]">{pharmacy.city || "Ville non renseignée"}{pharmacy.contact_email ? " · " + pharmacy.contact_email : ""}</p>
+                </div>
+                <div className="w-full max-w-sm">
+                  <CatalogueAccessLinkManager
+                    pharmacyId={pharmacy.id}
+                    activeExpiresAt={link?.expires_at ?? null}
+                    lastUsedAt={link?.last_used_at ?? null}
+                  />
+                </div>
+              </article>
+            );
+          })}
+          {!pharmacyRows.length ? <p className="rounded-lg bg-white p-5 text-sm text-[#69717d]">Ajoutez d’abord une pharmacie pour créer un lien privé.</p> : null}
+        </div>
+      </section>
+
       <section aria-labelledby="invitations" className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 id="invitations" className="text-2xl font-black">Invitations préparées</h2>
@@ -267,7 +313,7 @@ export default async function CatalogueAdministration({
       </section>
 
       <section aria-labelledby="tiers" className="space-y-5">
-        <h2 id="tiers" className="text-2xl font-black">3. Barèmes par volume</h2>
+        <h2 id="tiers" className="text-2xl font-black">4. Barèmes par volume</h2>
         <p className="max-w-3xl text-sm leading-6 text-[#69717d]">Les fourchettes sont des indications commerciales indépendantes des prix de référence. Ne publiez pas un plancher confidentiel : saisissez uniquement les intervalles validés par le laboratoire. Les prix contractuels sont propres à chaque officine et restent invisibles aux autres.</p>
         <div className="grid gap-5 lg:grid-cols-2">
           <form action={setPrivateCatalogueIndicativeTier} className="space-y-4 rounded-xl border border-[#0e1d31]/10 bg-white p-5">
@@ -320,7 +366,7 @@ export default async function CatalogueAdministration({
       </section>
 
       <section aria-labelledby="publish" className="space-y-4">
-        <h2 id="publish" className="text-2xl font-black">4. Publication des marques</h2>
+        <h2 id="publish" className="text-2xl font-black">5. Publication des marques</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {brandRows.map((b) => (
             <form key={b.id} action={setPrivateCatalogueBrandPublished} className="flex items-center justify-between gap-3 rounded-xl border border-[#0e1d31]/10 bg-white p-4">
@@ -334,7 +380,7 @@ export default async function CatalogueAdministration({
       </section>
 
       <section aria-labelledby="requests" className="space-y-4">
-        <h2 id="requests" className="text-2xl font-black">5. Demandes des pharmacies</h2>
+        <h2 id="requests" className="text-2xl font-black">6. Demandes des pharmacies</h2>
         <p className="text-sm text-[#69717d]">Ces demandes n’alimentent pas automatiquement les commandes internes ou les laboratoires.</p>
         <div className="space-y-3">
           {requestRows.map((r) => (
@@ -342,7 +388,27 @@ export default async function CatalogueAdministration({
               <div>
                 <p className="text-sm font-bold">{pharmacyRows.find((p) => p.id === r.pharmacy_id)?.name ?? "Pharmacie"} · {brandRows.find((b) => b.id === r.brand_id)?.name ?? "Laboratoire"}</p>
                 <p className="mt-1 text-xs text-[#69717d]">{new Date(r.created_at).toLocaleDateString("fr-FR")} · {r.id.slice(0, 8).toUpperCase()}</p>
+                {r.requester_name && r.requester_email ? (
+                  <p className="mt-1 text-xs text-[#526071]">
+                    Demandeur : <strong>{r.requester_name}</strong> · <a className="underline" href={"mailto:" + r.requester_email}>{r.requester_email}</a>
+                  </p>
+                ) : null}
                 <p className="mt-1 font-black">{r.request_kind === "quote" ? "Demande de conditions · À chiffrer" : r.total_ht === null ? "Montant à confirmer" : euroHT(Number(r.total_ht)) + " HT"}</p>
+                {(requestItemsById.get(r.id) ?? []).length ? (
+                  <details className="mt-3 rounded-lg border border-[#e5e9eb] bg-[#faf9f6] p-3">
+                    <summary className="cursor-pointer text-xs font-bold text-[#142941]">
+                      Voir {(requestItemsById.get(r.id) ?? []).length} références demandées
+                    </summary>
+                    <ul className="mt-2 space-y-1 text-xs text-[#526071]">
+                      {(requestItemsById.get(r.id) ?? []).map((item, index) => (
+                        <li key={r.id + "-" + index}>
+                          {item.product_name} · Réf. {item.sku} · {item.quantity} unité{item.quantity > 1 ? "s" : ""}
+                          {item.unit_price_ht !== null ? " · " + euroHT(Number(item.unit_price_ht)) + " HT/u." : " · Tarif à confirmer"}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                ) : null}
               </div>
               <input name="request_id" type="hidden" value={r.id} />
               <div className="flex items-center gap-2">

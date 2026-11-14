@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { LockKeyhole, ShoppingBag, Store } from "lucide-react";
+import { FileSpreadsheet, LockKeyhole, ShoppingBag, Store } from "lucide-react";
 import { Tr1BrandLogo } from "@/components/brand/tr1-brand-logo";
 import "./catalogue-theme.css";
 
@@ -28,6 +28,7 @@ export default function PrivateCatalogueLayout({ children }: { children: React.R
             <Link href="/catalogue" className="inline-flex items-center gap-1.5 p-2 hover:text-[#ad4b08]">
               <ShoppingBag size={16} aria-hidden="true" /> Mes produits
             </Link>
+            <Link href="/catalogue/comparer" className="inline-flex items-center gap-1.5 p-2 hover:text-[#ad4b08]"><FileSpreadsheet size={16} aria-hidden="true" /> Comparer mes achats</Link>
             <Link href="/catalogue/mes-demandes" className="p-2 hover:text-[#ad4b08]">Mes demandes</Link>
             <Link href="/catalogue/connexion" className="inline-flex items-center gap-1.5 rounded-md border border-[#dce3ea] px-3 py-2.5 hover:bg-[#fff1e6]">
               <LockKeyhole size={15} aria-hidden="true" /> Connexion pro
