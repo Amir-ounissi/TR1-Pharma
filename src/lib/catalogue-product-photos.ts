@@ -552,4 +552,40 @@ export const productGalleryByEan: Record<string, string[]> = {
       "https://doctoraltheaglobal.com/cdn/shop/files/15_NiacinamidePuritySerum05.jpg?v=1782882013&width=200",
       "https://doctoraltheaglobal.com/cdn/shop/files/15_NiacinamidePuritySerum06.jpg?v=1782882013&width=200"
   ]
+  "8809968130130": [
+      "https://fr.beautyofjoseon.com/cdn/shop/files/5_fa4a5b2f-b344-4146-8e17-59834b8b1090.png?v=1745921857&width=1800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/8_56449e91-6dbf-44f2-b026-c191ee74ee33.png?v=1745921852&width=800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/9_8a10661f-7025-45e5-836b-ea0b3071dc1e.png?v=1745921852&width=800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/7_9df59305-a607-4a7e-9351-5de28a360d31.png?v=1745921854&width=800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/boj-key-ingredients-ginseng.webp?v=1774944339&width=1600"
+  ],
+  "8809738316146": [
+      "https://fr.beautyofjoseon.com/cdn/shop/files/Untitled_design_-_2025-04-29T145024.067.png?v=1745907456&width=1800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/4_dc164a9b-2cb3-48a5-8dd7-929e7bfd4353.png?v=1745907454&width=800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/5_d208d5c3-6bba-4bb4-a93c-63b2158965af.png?v=1745907454&width=800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/6_16a826f5-c8d2-4f85-b717-e1491778ec2c.png?v=1745907453&width=800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/boj-key-ingredients-ginseng.webp?v=1774944339&width=1600"
+  ],
+  "8809968130123": [
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/11_8750af02-e99f-4eff-8d37-8888e30fc878.png?v=1749371270",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/28.png?v=1749371552",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/29.png?v=1749371552",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/30.png?v=1749371552"
+  ],
+  "8809738316993": [
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/19_0883559c-0748-4ce1-af46-5d668ead6b96.png?v=1749448239",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/36.png?v=1749448491",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/34.png?v=1749448491",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/35.png?v=1749448491",
+      "https://cdn.shopify.com/s/files/1/0558/4135/7989/files/Untitled_design_-_2025-06-09T145658.980.png?v=1749448627"
+  ],
+  "8809738310960": [
+      "https://fr.beautyofjoseon.com/cdn/shop/files/Untitled_design_-_2025-05-29T161822.562.png?v=1748506537&width=1800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/19_b7a0e7c3-604d-4a93-9b69-64a87ea3f5ad.png?v=1748506529&width=800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/21_178f3b58-4443-4cf6-bcd7-aa0f5eb67e03.png?v=1748506528&width=800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/20_a971b8fa-f68d-4d52-9d40-5a6eaa683709.png?v=1748506529&width=800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/Untitled_design_-_2025-05-29T153141.358_f1183366-63e5-4548-b9c2-4d593a078ac5.png?v=1776931650&width=2200",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/Untitled_design_-_2025-05-29T162038.489.png?v=1748506534&width=1800",
+      "https://fr.beautyofjoseon.com/cdn/shop/files/Step2_Toner_1080_x_1500_px_1080_x_1500_px_10.png?v=1748506525&width=1200"
+  ]
 };
