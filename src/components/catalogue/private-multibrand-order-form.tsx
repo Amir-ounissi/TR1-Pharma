@@ -247,11 +247,13 @@ export function PrivateMultiBrandOrderForm({
       let minHt = 0;
       let maxHt = 0;
       let allPriced = items.length > 0;
+      let allFirm = items.length > 0;
       for (const product of items) {
         const quantity = quantities[product.id] ?? 0;
         const tier = findTierForQuantity(product.pricing.tiers,effectiveTierQuantity(product,quantity));
         const range = priceRangeForTier(tier);
-        if (!range) { allPriced = false; continue; }
+        if (!range) { allPriced = false; allFirm = false; continue; }
+        if (product.pricing.mode !== "contractual" || !tier || !("price_ht" in tier)) allFirm = false;
         minHt += Math.round(range.min * 100) * quantity / 100;
         maxHt += Math.round(range.max * 100) * quantity / 100;
       }
@@ -260,16 +262,16 @@ export function PrivateMultiBrandOrderForm({
         .sort((a,b)=>b.minimum_order_units-a.minimum_order_units)[0] ?? null;
       const missingUnits = supplier.conditions_verified && supplier.minimum_order_units
         ? Math.max(0,supplier.minimum_order_units-units) : 0;
-      const missingHt = supplier.conditions_verified && supplier.minimum_order_ht && allPriced
+      const missingHt = supplier.conditions_verified && supplier.minimum_order_ht && allFirm
         ? Math.max(0,supplier.minimum_order_ht-maxHt) : 0;
-      const shipping = supplier.conditions_verified && allPriced
+      const shipping = supplier.conditions_verified && allFirm
         ? supplier.free_shipping_from_ht !== null && minHt >= supplier.free_shipping_from_ht
           ? "Franco atteint"
           : supplier.shipping_fee_ht !== null
             ? "Port indicatif : "+euroHT(supplier.shipping_fee_ht)+" HT"
             : "Frais de livraison à confirmer"
         : "Frais de livraison à confirmer";
-      return { ...supplier,items,units,minHt,maxHt,allPriced,gift,missingUnits,missingHt,shipping };
+      return { ...supplier,items,units,minHt,maxHt,allPriced,allFirm,gift,missingUnits,missingHt,shipping };
     })
     .filter((summary) => summary.items.length > 0);
   const supplierErrors = supplierSummaries.flatMap((supplier) => [
@@ -562,7 +564,7 @@ export function PrivateMultiBrandOrderForm({
                           </div>
                           {quantity > 0 && nextTier ? (
                             <p className="mt-2 text-[10px] font-semibold leading-4 text-[#ad4b08]">
-                              Encore {nextTier.min_quantity - effectiveTierQuantity(product, referenceQuantity)} u. pour le palier {nextTier.min_quantity}
+                              Encore {nextTier.min_quantity - (groupByProduct.get(product.id) ? groupTotals.get(groupByProduct.get(product.id)!.id) ?? 0 : quantity)} u. pour le palier {nextTier.min_quantity}
                               {nextRange ? " · " + formatPriceRange(nextRange.min, nextRange.max) + " HT/u." : ""}
                             </p>
                           ) : null}
@@ -624,7 +626,7 @@ export function PrivateMultiBrandOrderForm({
                           {product.format || "Format non renseigné"} · Réf. {product.sku}
                         </p>
                         <p className="break-all text-[9px] leading-4 text-[#89939b]">
-                          {product.ean ? "EAN " + product.ean + " · " : ""}Min. {product.min_quantity} u. · TVA {product.vat_rate} %
+                          {product.ean ? "EAN " + product.ean + " · " : ""}{groupByProduct.has(product.id) ? "Minimum groupe "+groupByProduct.get(product.id)!.minimum_total_units+" u." : "Min. "+product.min_quantity+" u."} · TVA {product.vat_rate} %
                         </p>
                         {product.product_detail_href ? (
                           <Link href={product.product_detail_href}
@@ -644,7 +646,7 @@ export function PrivateMultiBrandOrderForm({
                         </div>
                         {quantity > 0 && nextTier ? (
                           <p className="text-right text-[9px] font-semibold text-[#ad4b08] md:mt-1 md:text-left">
-                            Encore {nextTier.min_quantity - effectiveTierQuantity(product, referenceQuantity)} u. pour {nextTier.min_quantity}
+                            Encore {nextTier.min_quantity - (groupByProduct.get(product.id) ? groupTotals.get(groupByProduct.get(product.id)!.id) ?? 0 : quantity)} u. pour {nextTier.min_quantity}
                             {nextRange ? " · " + formatPriceRange(nextRange.min, nextRange.max) + " HT/u." : ""}
                           </p>
                         ) : null}
@@ -775,7 +777,7 @@ export function PrivateMultiBrandOrderForm({
                       <>
                         {supplier.minimum_order_units !== null ? <p>Minimum : {supplier.minimum_order_units} unités cumulées</p> : null}
                         {supplier.minimum_order_ht !== null ? (
-                          <p>Minimum de commande : {euroHT(supplier.minimum_order_ht)} HT{supplier.allPriced ? "" : " · à vérifier sur devis"}</p>
+                          <p>Minimum de commande : {euroHT(supplier.minimum_order_ht)} HT{supplier.allFirm ? "" : " · à confirmer lors du devis"}</p>
                         ) : null}
                         <p>{supplier.shipping}</p>
                         {supplier.free_shipping_from_ht !== null ? <p>Franco dès {euroHT(supplier.free_shipping_from_ht)} HT</p> : null}
