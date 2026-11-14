@@ -90,7 +90,7 @@ export async function sendPrivateCatalogueRequest(
   if (loadError) return { error: "Les conditions ne sont momentanément pas disponibles." };
   const catalog = data as {
     pharmacy: { id: string };
-    products: { id: string; min_quantity: number; quantity_step: number }[];
+    products: { id: string; name: string; min_quantity: number }[];
     brand: { slug: string } | null;
   } | null;
   if (!catalog?.brand || catalog.pharmacy.id !== pharmacy.id) {
@@ -105,8 +105,8 @@ export async function sendPrivateCatalogueRequest(
       return { error: "Les quantités saisies sont invalides." };
     }
     const quantity = Number(raw);
-    if (!isAllowedQuantity(quantity, product.min_quantity, product.quantity_step)) {
-      return { error: "Vérifiez les minimums et les conditionnements." };
+    if (!isAllowedQuantity(quantity, product.min_quantity)) {
+      return { error: `Minimum de commande pour ${product.name} : ${product.min_quantity} unité(s). Quantité maximale : 5 000.` };
     }
     lines.push({ product_id: product.id, quantity });
   }
