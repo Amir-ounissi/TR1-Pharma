@@ -928,21 +928,41 @@ export const officialBeautyOfJoseonByEan: Record<string,OfficialEducation> = {
 // Fiches Dr. Althea rapprochées de sa documentation fabricant.
 export const officialDrAltheaByEan: Record<string,OfficialEducation> = {
   "8809447256221": {
-    "description": "Crème apaisante à texture légère, destinée aux peaux en recherche d’hydratation et de confort, notamment après les imperfections.",
+    "description": "Gel-crème quotidien à la texture légère, conçu pour hydrater et apaiser les peaux sensibles sujettes aux imperfections. Sa formule non comédogène aide à améliorer l’apparence des marques post-imperfections et du teint irrégulier, tout en soutenant la barrière cutanée sans fini lourd ni gras.",
     "benefits": [
-      "Hydratation",
-      "Confort",
-      "Soutien de la barrière cutanée"
+      "Hydratation légère et durable sans sensation de lourdeur",
+      "Apaise les peaux sensibilisées et sujettes aux rougeurs",
+      "Aide à améliorer l’apparence des marques laissées par les imperfections",
+      "Contribue à lisser visuellement le grain de peau",
+      "Soutient la barrière d’hydratation cutanée",
+      "Formule sans huiles ajoutées, testée non comédogène"
     ],
     "keyIngredients": [
-      "Céramide NP",
-      "Panthénol",
-      "Niacinamide",
-      "Eau de tea tree"
+      "Niacinamide : aide à améliorer l’apparence du teint irrégulier",
+      "Panthénol : hydrate et apaise la peau",
+      "Céramide NP : contribue au maintien de la barrière cutanée",
+      "Eau de feuille de Tea Tree : participe au confort des peaux à imperfections",
+      "Centella asiatica et madécassoside : actifs apaisants",
+      "Sodium DNA : composant de la formule issu de la technologie PDRN"
     ],
-    "sourceUrl": "https://doctoraltheaglobal.com/products/best-selling-recovery-duo",
-    "sourceName": "Dr. Althea (fabricant)",
-    "usage": "Appliquer en dernière étape de soin et terminer par une protection solaire le matin."
+    "sourceUrl": "https://doctoraltheaglobal.com/products/345-relief-cream",
+    "sourceName": "Dr. Althea — fabricant",
+    "usage": "Appliquer après le nettoyage, le toner et le sérum, en dernière ou avant-dernière étape de la routine.",
+    "skinTypes": [
+      "Tous types de peau",
+      "Peaux sensibles",
+      "Peaux à tendance acnéique ou sujettes aux imperfections"
+    ],
+    "usageSteps": [
+      "Nettoyer le visage et appliquer les soins les plus fluides de la routine.",
+      "Prélever une quantité adaptée de crème.",
+      "Répartir uniformément sur le visage, puis presser délicatement jusqu’à absorption.",
+      "Le matin, terminer la routine par une protection solaire.",
+      "En association avec des actifs potentiellement irritants, la marque décrit une application en sandwich : une fine couche de crème, le soin actif, puis une seconde couche de crème."
+    ],
+    "inci": "Aqua (Water), Melaleuca Alternifolia (Tea Tree) Leaf Water, Propanediol, Glycerin, 1,2-Hexanediol, Hydrogenated Polydecene, Vinyl Dimethicone, C14-22 Alcohols, Niacinamide, Caprylic/Capric Triglyceride, Panthenol, Dicaprylyl Carbonate, Butylene Glycol, Ammonium Acryloyldimethyltaurate/VP Copolymer, Caprylyl Methicone, Polymethylsilsesquioxane, C12-20 Alkyl Glucoside, Hydroxyacetophenone, Acrylates/C10-30 Alkyl Acrylate Crosspolymer, Polyquaternium-51, Ethylhexylglycerin, Tromethamine, Sodium Hyaluronate, Sodium Stearoyl Glutamate, Coptis Japonica Root Extract, Centella Asiatica Leaf Water, Beta-Glucan, Resveratrol, Hydrolyzed Hyaluronic Acid, Camellia Sinensis Leaf Water, Tocopherol, Madecassoside, Sodium DNA, Centella Asiatica Extract, Ceramide NP, Tannic Acid, Disodium EDTA, Sodium Phytate",
+    "packaging": "Tube de crème visage — 50 ml",
+    "origin": "Corée du Sud"
   },
   "8809447256795": {
     "description": "Crème riche pour renforcer le confort des peaux sèches et soutenir la fonction barrière.",
