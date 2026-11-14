@@ -125,3 +125,99 @@ export async function sendPrivateCatalogueRequest(
   revalidatePath("/catalogue/mes-demandes");
   redirect("/catalogue/mes-demandes?envoyee=1");
 }
+
+export async function sendMultiBrandCatalogueRequest(
+  _state: PrivateRequestState,
+  formData: FormData,
+): Promise<PrivateRequestState> {
+  const { admin, pharmacy, catalog: pharmacyCatalog } = await requirePharmacyCatalogue();
+
+  const seenIds = new Set<string>();
+  const quantities = new Map<string, number>();
+  for (const [key, value] of formData.entries()) {
+    if (!key.startsWith("quantity_")) continue;
+    const productId = key.slice("quantity_".length);
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(productId)
+      || seenIds.has(productId) || typeof value !== "string") {
+      return { error: "Le panier contient une référence ou une quantité invalide." };
+    }
+    seenIds.add(productId);
+    if (value === "" || value === "0") continue;
+    if (!/^[0-9]{1,5}$/.test(value)) {
+      return { error: "Les quantités saisies doivent être des nombres entiers." };
+    }
+    quantities.set(productId, Number(value));
+  }
+
+  if (quantities.size === 0 || quantities.size > 40) {
+    return { error: "Sélectionnez entre 1 et 40 références avant de transmettre votre panier." };
+  }
+
+  const brands = pharmacyCatalog.brands ?? [];
+  if (!brands.length || brands.length > 20) {
+    return { error: "Le catalogue de votre officine n'est pas disponible." };
+  }
+
+  const loadedCatalogues = await Promise.all(brands.map(async (brand) => {
+    const { data, error } = await admin.rpc("catalogue_my_data", { p_slug: brand.slug });
+    if (error) return { error: true as const, catalog: null };
+    return { error: false as const, catalog: data as {
+      pharmacy: { id: string };
+      brand: { slug: string } | null;
+      products: { id: string; name: string; min_quantity: number }[];
+    } | null };
+  }));
+
+  if (loadedCatalogues.some((result) => result.error || !result.catalog?.brand
+    || result.catalog.pharmacy.id !== pharmacy.id)) {
+    return { error: "Les références du catalogue n'ont pas pu être vérifiées. Actualisez la page et réessayez." };
+  }
+
+  const authorizedProducts = new Map<string, {
+    brandSlug: string;
+    name: string;
+    minQuantity: number;
+  }>();
+  for (const result of loadedCatalogues) {
+    const current = result.catalog!;
+    for (const product of current.products ?? []) {
+      authorizedProducts.set(product.id, {
+        brandSlug: current.brand!.slug,
+        name: product.name,
+        minQuantity: product.min_quantity,
+      });
+    }
+  }
+
+  const groupedLines = new Map<string, { product_id: string; quantity: number }[]>();
+  for (const [productId, quantity] of quantities) {
+    const product = authorizedProducts.get(productId);
+    if (!product) {
+      return { error: "Une référence sélectionnée n'est plus accessible à votre officine. Actualisez le catalogue." };
+    }
+    if (!isAllowedQuantity(quantity, product.minQuantity)) {
+      return { error: `Minimum de commande pour ${product.name} : ${product.minQuantity} unité(s). Quantité maximale : 5 000.` };
+    }
+    const lines = groupedLines.get(product.brandSlug) ?? [];
+    lines.push({ product_id: productId, quantity });
+    groupedLines.set(product.brandSlug, lines);
+  }
+
+  const groups = [...groupedLines.entries()].map(([slug, lines]) => ({ slug, lines }));
+  if (!groups.length || groups.length > 20) {
+    return { error: "Le nombre de marques sélectionnées n'est pas valide." };
+  }
+
+  // Une seule transaction PostgreSQL traite tous les groupes : en cas d'erreur
+  // sur une marque, aucune demande partielle n'est conservée.
+  const { error } = await admin.rpc("catalogue_submit_multibrand_request", {
+    p_groups: groups,
+  });
+  if (error) {
+    return { error: "Le panier n'a pas pu être transmis. Vérifiez les quantités et réessayez." };
+  }
+
+  revalidatePath("/catalogue/mes-demandes");
+  redirect(`/catalogue/mes-demandes?envoyee=1&marques=${groups.length}`);
+}
+
