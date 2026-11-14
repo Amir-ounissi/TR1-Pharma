@@ -306,10 +306,7 @@ export function PrivateMultiBrandOrderForm({
   // Persistance cote serveur entre les pages, appareils et sessions.
   // Debounce pour ne pas declencher un appel reseau a chaque clic +/−.
   useEffect(() => {
-    if (!enableAccountFeatures) {
-      setSaveStatus("saved");
-      return;
-    }
+    if (!enableAccountFeatures) return;
     if (!didMount.current) {
       didMount.current = true;
       // La reprise depuis un lien d'historique ajoute des lignes au panier initial.
