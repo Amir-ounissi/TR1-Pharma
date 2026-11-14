@@ -1,5 +1,5 @@
 import { publicPreviewProducts, type PublicPreviewProduct } from "@/lib/catalogue-public-preview";
-import { productPhotoByEan } from "@/lib/catalogue-product-photos";
+import { productPhotoByEan, biodancePhotoByName } from "@/lib/catalogue-product-photos";
 import { vkSwissMediaBySku } from "@/lib/catalogue-vk-swiss-media";
 
 export type PublicCatalogueProduct = PublicPreviewProduct & { sku?: string };
@@ -36,6 +36,7 @@ export function publicProductImage(p: PublicCatalogueProduct): {url:string; sour
   if (p.brand === "VK SWISS" && p.sku && vkSwissMediaBySku[p.sku]) {
     return { url: vkSwissMediaBySku[p.sku].url, source: "VK SWISS" };
   }
+  if (p.brand === "Biodance" && !p.ean) return biodancePhotoByName[p.name] ?? null;
   return p.ean ? productPhotoByEan[p.ean] ?? null : null;
 }
 
