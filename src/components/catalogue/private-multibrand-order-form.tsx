@@ -2,15 +2,14 @@
 
 import { useActionState, useMemo, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { LayoutGrid, List, Minus, Package, Plus, Search, ShoppingBag, ShoppingCart, SlidersHorizontal, Trash2 } from "lucide-react";
 import { sendMultiBrandCatalogueRequest } from "@/app/catalogue/actions";
 import type { CatalogProduct } from "@/lib/private-catalogue";
+import type { PharmacyProductWithVisuals } from "@/lib/catalogue-private-product-visuals";
 import { euroHT, indicativeRange, isAllowedQuantity } from "@/lib/private-catalogue-format";
 
-export type PrivateMultiBrandProduct = CatalogProduct & {
-  brand_slug: string;
-  brand_name: string;
-};
+export type PrivateMultiBrandProduct = PharmacyProductWithVisuals;
 
 type ProductTier = CatalogProduct["pricing"]["tiers"][number];
 
@@ -329,7 +328,13 @@ export function PrivateMultiBrandOrderForm({
                           ) : null}
                         </div>
 
-                        <div className="mt-auto pt-4">
+                        <div className="mt-auto space-y-3 pt-4">
+                          {product.product_detail_href ? (
+                            <Link href={product.product_detail_href}
+                              className="inline-flex min-h-8 items-center text-xs font-bold text-[#142941] underline underline-offset-4 hover:text-[#a14e14]">
+                              Fiche produit
+                            </Link>
+                          ) : null}
                           <ProductQuantityControl
                             product={product}
                             quantity={quantity}
@@ -381,6 +386,12 @@ export function PrivateMultiBrandOrderForm({
                         <p className="break-all text-[9px] leading-4 text-[#89939b]">
                           {product.ean ? "EAN " + product.ean + " · " : ""}Min. {product.min_quantity} u. · TVA {product.vat_rate} %
                         </p>
+                        {product.product_detail_href ? (
+                          <Link href={product.product_detail_href}
+                            className="mt-1 inline-flex min-h-6 items-center text-[10px] font-bold text-[#142941] underline underline-offset-2 hover:text-[#a14e14]">
+                            Fiche produit
+                          </Link>
+                        ) : null}
                       </div>
 
                       <div className="col-span-2 flex items-center justify-between gap-3 border-t border-[#edf0f1] pt-2 md:col-span-1 md:block md:border-0 md:pt-0">
