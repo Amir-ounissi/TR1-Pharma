@@ -1,5 +1,6 @@
 import { publicCatalogueProducts, publicProductImage, publicProductImages, publicProductKey } from "@/lib/catalogue-products";
 import type { CatalogProduct } from "@/lib/private-catalogue";
+import { preferredVerifiedPackshot } from "@/lib/catalogue-photo-quality";
 
 // Les images validées pour le catalogue public sont la référence visuelle commune.
 // Le catalogue pharmacie doit retrouver ces images même lorsque son champ image_url est vide.
@@ -27,8 +28,10 @@ export function withPharmacyProductVisuals(
 ): PharmacyProductWithVisuals {
   const original = (product.ean ? publicByEan.get(product.ean) : undefined)
     ?? publicByName.get(`${normalise(brand.name)}:${normalise(product.name)}`);
+  // Une image officielle est préférée seulement si la galerie est déjà
+  // rapprochée de la référence exacte (EAN/nom validé dans le catalogue).
   const originalPhoto = original
-    ? publicProductImage(original)?.url ?? publicProductImages(original)[0] ?? null
+    ? preferredVerifiedPackshot(publicProductImage(original)?.url ?? null, publicProductImages(original))
     : null;
 
   return {
