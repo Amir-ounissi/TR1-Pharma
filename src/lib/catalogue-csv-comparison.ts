@@ -193,6 +193,11 @@ export function buildPharmacyCsvRecords(
   });
 }
 
+function normalizeFormat(value: string): string {
+  const spaced = value.replace(/(\\d)([a-z])/gi, "$1 $2").replace(/([a-z])(\\d)/gi, "$1 $2");
+  return normalizeCsvText(spaced).replace(/\\b(?:boite|de|format|unite|unites)\\b/g, " ").replace(/\\s+/g, " ").trim();
+}
+
 function levenshteinSimilarity(left: string, right: string): number {
   if (left === right) return 1;
   if (!left || !right) return 0;
@@ -240,17 +245,26 @@ export function findProductMatch(
       const productName = normalizeCsvText(product.name);
       const score = (levenshteinSimilarity(name, productName) * 0.55)
         + (tokenSimilarity(name, productName) * 0.45);
-      const csvFormat = record.format ? normalizeCsvText(record.format) : null;
-      const productFormat = product.format ? normalizeCsvText(product.format) : null;
+      const csvFormat = record.format ? normalizeFormat(record.format) : null;
+      const productFormat = product.format ? normalizeFormat(product.format) : null;
       const formatMismatch = Boolean(csvFormat && productFormat && csvFormat !== productFormat);
       return { product, score, exact: name === productName, formatMismatch };
     })
     .sort((a, b) => b.score - a.score);
 
+  const exactMatches = candidates.filter((candidate) => candidate.exact && !candidate.formatMismatch);
+  if (exactMatches.length === 1) {
+    return { productId: exactMatches[0].product.id, suggestedProductId: null, method: "exact" };
+  }
+  if (exactMatches.length > 1) {
+    return { productId: null, suggestedProductId: null, method: "none" };
+  }
+
   const best = candidates[0];
   if (!best) return { productId: null, suggestedProductId: null, method: "none" };
-  if (best.exact && !best.formatMismatch) {
-    return { productId: best.product.id, suggestedProductId: null, method: "exact" };
+  const second = candidates[1];
+  if (second && best.score - second.score < 0.05 && second.score >= 0.86) {
+    return { productId: null, suggestedProductId: null, method: "none" };
   }
   if (best.exact || best.score >= 0.86) {
     return { productId: null, suggestedProductId: best.product.id, method: "suggested" };
