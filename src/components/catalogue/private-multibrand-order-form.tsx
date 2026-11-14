@@ -196,6 +196,8 @@ export function PrivateMultiBrandOrderForm({
   reorderHistory = [],
   initialReorderId,
   commercialConditions,
+  enableAccountFeatures = true,
+  requiresRequesterDetails = false,
 }: {
   products: PrivateMultiBrandProduct[];
   initialBrandSlug?: string;
@@ -205,6 +207,8 @@ export function PrivateMultiBrandOrderForm({
   reorderHistory?: ReorderRequest[];
   initialReorderId?: string;
   commercialConditions: CommercialContext;
+  enableAccountFeatures?: boolean;
+  requiresRequesterDetails?: boolean;
 }) {
   const [state, action, pending] = useActionState(sendMultiBrandCatalogueRequest, { error: "" });
   const [quantities, setQuantities] = useState<Record<string, number>>(() => {
@@ -302,6 +306,10 @@ export function PrivateMultiBrandOrderForm({
   // Persistance cote serveur entre les pages, appareils et sessions.
   // Debounce pour ne pas declencher un appel reseau a chaque clic +/−.
   useEffect(() => {
+    if (!enableAccountFeatures) {
+      setSaveStatus("saved");
+      return;
+    }
     if (!didMount.current) {
       didMount.current = true;
       // La reprise depuis un lien d'historique ajoute des lignes au panier initial.
@@ -317,7 +325,7 @@ export function PrivateMultiBrandOrderForm({
       if (!cancelled) setSaveStatus(result.saved ? "saved" : "error");
     }, 700);
     return () => { cancelled = true; window.clearTimeout(timeout); };
-  }, [quantities, pending, initialReorderId]);
+  }, [quantities, pending, initialReorderId, enableAccountFeatures]);
 
   const brandOptions = useMemo(() => {
     const unique = new Map<string, string>();
@@ -403,7 +411,7 @@ export function PrivateMultiBrandOrderForm({
   );
 
   const toggleFavorite = async (product: PrivateMultiBrandProduct) => {
-    if (favoriteUpdating.has(product.id)) return;
+    if (!enableAccountFeatures || favoriteUpdating.has(product.id)) return;
     const next = !favorites.has(product.id);
     setFavoriteError("");
     setFavoriteUpdating((previous) => new Set(previous).add(product.id));
@@ -559,7 +567,7 @@ export function PrivateMultiBrandOrderForm({
 
   const setQuantity = (product: PrivateMultiBrandProduct, next: number) => {
     const safeNext = Number.isFinite(next) ? Math.max(0, Math.min(5000, next)) : 0;
-    setSaveStatus("saving");
+    if (enableAccountFeatures) setSaveStatus("saving");
     setQuantities((previous) => ({ ...previous, [product.id]: safeNext }));
   };
 
@@ -584,7 +592,8 @@ export function PrivateMultiBrandOrderForm({
           Franco dès 250 € HT remisé sur le panier cumulé Biodance, Beauty of Joseon et Dr. Althea.
         </p>
         <p role="status" className="text-xs text-[#69717d]">
-          {saveStatus === "saving" ? "Enregistrement automatique du panier…" :
+          {!enableAccountFeatures ? "Panier temporaire · il sera transmis avec votre demande et ne sera pas conservé après fermeture." :
+            saveStatus === "saving" ? "Enregistrement automatique du panier…" :
             saveStatus === "error" ? "La sauvegarde a échoué. Vérifiez votre connexion." :
             selected.length ? "Panier sauvegardé · retrouvez-le à votre prochaine connexion." :
             "Vos sélections sont sauvegardées automatiquement."}
@@ -653,13 +662,15 @@ export function PrivateMultiBrandOrderForm({
                 <List size={16} aria-hidden="true" /> Liste
               </button>
             </div>
-            <button type="button" onClick={() => setFavoritesOnly((value) => !value)}
-              aria-pressed={favoritesOnly}
-              className={`inline-flex min-h-9 items-center gap-1.5 rounded-md border px-3 text-xs font-bold ${favoritesOnly ? "border-[#b87043] bg-[#fff1e6] text-[#9c4b18]" : "border-[#dce3ea] bg-white text-[#142941] hover:bg-[#f4f6f6]"}`}>
-              <Heart size={14} fill={favoritesOnly ? "currentColor" : "none"} aria-hidden="true" /> Mes favoris
-            </button>
+            {enableAccountFeatures ? (
+              <button type="button" onClick={() => setFavoritesOnly((value) => !value)}
+                aria-pressed={favoritesOnly}
+                className={`inline-flex min-h-9 items-center gap-1.5 rounded-md border px-3 text-xs font-bold ${favoritesOnly ? "border-[#b87043] bg-[#fff1e6] text-[#9c4b18]" : "border-[#dce3ea] bg-white text-[#142941] hover:bg-[#f4f6f6]"}`}>
+                <Heart size={14} fill={favoritesOnly ? "currentColor" : "none"} aria-hidden="true" /> Mes favoris
+              </button>
+            ) : null}
           </div>
-          {favoriteError ? <p role="alert" className="rounded-md bg-[#fff1e6] p-2 text-xs font-bold text-[#8c4212]">{favoriteError}</p> : null}
+          {enableAccountFeatures && favoriteError ? <p role="alert" className="rounded-md bg-[#fff1e6] p-2 text-xs font-bold text-[#8c4212]">{favoriteError}</p> : null}
 
           <div id="liste-produits" className="space-y-2">
             {viewMode === "cards" ? (
@@ -685,13 +696,13 @@ export function PrivateMultiBrandOrderForm({
                         <span className="absolute left-3 top-3 max-w-[80%] truncate rounded-full border border-white/70 bg-white/90 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[.1em] text-[#ad4b08] backdrop-blur">
                           {product.brand_name}
                         </span>
-                        <button type="button" onClick={() => void toggleFavorite(product)}
+                        {enableAccountFeatures ? (<button type="button" onClick={() => void toggleFavorite(product)}
                           disabled={favoriteUpdating.has(product.id)}
                           aria-pressed={favorites.has(product.id)}
                           aria-label={(favorites.has(product.id) ? "Retirer des favoris : " : "Ajouter aux favoris : ") + product.name}
                           className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full border border-[#dce3ea] bg-white/95 text-[#a75e2b] shadow-sm hover:bg-[#fff1e6] disabled:opacity-40">
                           <Heart size={17} fill={favorites.has(product.id) ? "currentColor" : "none"} aria-hidden="true" />
-                        </button>
+                        </button>) : null}
                       </div>
 
                       <div className="flex flex-1 flex-col p-3.5">
@@ -849,7 +860,7 @@ export function PrivateMultiBrandOrderForm({
               <p className="text-xs text-[#d5dde7]">{selected.length} référence{selected.length > 1 ? "s" : ""} · {quantityTotal} unité{quantityTotal > 1 ? "s" : ""} · {selectedByBrand.length} marque{selectedByBrand.length > 1 ? "s" : ""}</p>
             </div>
             {selected.length ? (
-              <button type="button" onClick={() => { setSaveStatus("saving"); setQuantities({}); }}
+              <button type="button" onClick={() => { if (enableAccountFeatures) setSaveStatus("saving"); setQuantities({}); }}
                 className="rounded-lg p-2 text-white/70 hover:bg-white/10 hover:text-white" aria-label="Vider le panier">
                 <Trash2 size={18} />
               </button>
@@ -989,6 +1000,26 @@ export function PrivateMultiBrandOrderForm({
               <span className="rounded-full bg-[#fff1e6] px-2.5 py-1 text-[10px] font-bold text-[#162a45]">B2B</span>
             </div>
 
+            {requiresRequesterDetails ? (
+              <section className="space-y-3 rounded-xl border border-[#dce3ea] bg-[#f9faf9] p-3" aria-label="Coordonnees du demandeur">
+                <div>
+                  <h3 className="text-sm font-extrabold text-[#142941]">Vos coordonnées</h3>
+                  <p className="mt-1 text-[11px] leading-5 text-[#69717d]">Indiquez qui transmet cette demande. Aucun compte ne sera créé.</p>
+                </div>
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-bold text-[#142941]">Nom et prénom</span>
+                  <input name="requester_name" required minLength={2} maxLength={120} autoComplete="name"
+                    className="w-full rounded-lg border border-[#dce3ea] bg-white px-3 py-2.5 text-sm outline-offset-2"
+                    placeholder="Votre nom" />
+                </label>
+                <label className="block space-y-1.5">
+                  <span className="text-xs font-bold text-[#142941]">Email professionnel</span>
+                  <input name="requester_email" type="email" required maxLength={254} autoComplete="email"
+                    className="w-full rounded-lg border border-[#dce3ea] bg-white px-3 py-2.5 text-sm outline-offset-2"
+                    placeholder="vous@pharmacie.fr" />
+                </label>
+              </section>
+            ) : null}
             <button type="submit" disabled={pending || !selected.length || !valid}
               className="shop-primary-action inline-flex min-h-12 w-full items-center justify-center gap-2 px-4 text-sm">
               {pending ? "Transmission en cours…" : "Transmettre mes demandes"}
