@@ -383,8 +383,8 @@ export function PrivateMultiBrandOrderForm({
 
   const visible = useMemo(() => {
     const normalized = (value: string) => value.normalize("NFD")
-      .replace(/\\p{Diacritic}/gu, "").toLocaleLowerCase("fr");
-    const terms = normalized(query.trim()).split(/\\s+/).filter(Boolean);
+      .replace(/\p{Diacritic}/gu, "").toLocaleLowerCase("fr");
+    const terms = normalized(query.trim()).split(/\s+/).filter(Boolean);
     return products
       .filter((product) => (
         (brandFilter === "all" || product.brand_slug === brandFilter) &&
