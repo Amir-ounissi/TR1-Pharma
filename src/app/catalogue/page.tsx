@@ -35,10 +35,10 @@ export default async function PrivateCatalogueHome({
         <div className="flex items-center gap-2 text-xs font-semibold text-[#69717d]">
           <Building2 size={16} aria-hidden="true" />
           <span>{pharmacy.name}{pharmacy.city ? " · " + pharmacy.city : ""}</span>
-          <span className="rounded-full bg-[#eaf1eb] px-2.5 py-1 text-[10px] font-bold text-[#476b55]">Accès professionnel actif</span>
+          <span className="rounded-full bg-[#eaf1eb] px-2.5 py-1 text-[10px] font-bold text-[#476b55]">{isLinkAccess ? "Accès privé actif" : "Accès professionnel actif"}</span>
         </div>
         <form action={disconnectPharmacyCatalogue}>
-          <button className="text-xs font-semibold text-[#69717d] underline-offset-4 hover:text-[#0e1d31] hover:underline">Se déconnecter</button>
+          <button className="text-xs font-semibold text-[#69717d] underline-offset-4 hover:text-[#0e1d31] hover:underline">{isLinkAccess ? "Quitter le catalogue" : "Se déconnecter"}</button>
         </form>
       </div>
 
