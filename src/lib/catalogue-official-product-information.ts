@@ -1147,3 +1147,139 @@ export const officialDrAltheaByEan: Record<string,OfficialEducation> = {
     "sourceName": "Dr. Althea (fabricant)"
   }
 };
+
+// Compléments 2026 : accessoires solaires et lots (conditionnements conservés du catalogue fournisseur).
+// Certaines sources sont explicitement des revendeurs, et ne constituent pas une confirmation par le fabricant.
+export const additionalBeautyOfJoseonByEan: Record<string,OfficialEducation> = {
+  "8809968135562": {
+    "description": "Stick solaire courbe de 14 g conçu pour des retouches pratiques au fil de la journée, sans fini blanc visible selon la marque.",
+    "benefits": [
+      "Protection solaire nomade",
+      "Retouches faciles",
+      "Fini lumineux et non gras"
+    ],
+    "keyIngredients": [],
+    "sourceUrl": "https://fr.beautyofjoseon.com/products/glow-sun-stick-sunscreen",
+    "sourceName": "Beauty of Joseon (fabricant)",
+    "usage": "Appliquer sur les zones exposées. Renouveler régulièrement et compléter la protection par les gestes habituels de photoprotection."
+  },
+  "8809968136026": {
+    "description": "Lotion solaire corps SPF50+ de 150 ml à texture légère, résistante à l'eau selon le fabricant, destinée à hydrater sans traces blanches visibles.",
+    "benefits": [
+      "Protection UV SPF50+",
+      "Hydratation sans fini collant",
+      "Formule corps résistante à l’eau"
+    ],
+    "keyIngredients": [
+      "Riz brun fermenté",
+      "Céramides"
+    ],
+    "sourceUrl": "https://fr.beautyofjoseon.com/products/hydra-shield-body-sun-lotion-spf-50-eu",
+    "sourceName": "Beauty of Joseon (fabricant)",
+    "usage": "Appliquer généreusement sur les zones exposées du corps avant le soleil et renouveler régulièrement."
+  },
+  "8809968136019": {
+    "description": "Lotion solaire corps minérale SPF40, texture confortable pensée pour les peaux sensibles. La version SPF40 est celle du catalogue fournisseur et ne doit pas être confondue avec la SPF30 actuellement affichée sur d'autres pages du fabricant.",
+    "benefits": [
+      "Protection solaire minérale SPF40",
+      "Confort cutané",
+      "Hydratation"
+    ],
+    "keyIngredients": [
+      "Riz brun fermenté"
+    ],
+    "sourceUrl": "https://beautyofjoseon.com/pages/tab-1-comfort-protection-relief-sun",
+    "sourceName": "Beauty of Joseon (fabricant, fiche SPF40)",
+    "usage": "Appliquer généreusement sur le corps et renouveler fréquemment lors de l'exposition."
+  },
+  "8809968134763": {
+    "description": "Solaire visage SPF50+ PA++++ à effet correcteur de teint vert pour atténuer visuellement l'apparence des rougeurs.",
+    "benefits": [
+      "Protection solaire SPF50+ PA++++",
+      "Correction optique des rougeurs",
+      "Base de maquillage légère"
+    ],
+    "keyIngredients": [
+      "Centella asiatica",
+      "Céramide NP"
+    ],
+    "sourceUrl": "https://www.yesstyle.com/en/beauty-of-joseon-stay-fresh-tone-up-sunscreen-2-types-green/info.html/pid.1137750152",
+    "sourceName": "YesStyle (revendeur, variante Green)",
+    "usage": "Dernière étape des soins du matin, appliquer uniformément. Réappliquer régulièrement selon les recommandations de photoprotection."
+  },
+  "8809968133933": {
+    "description": "Solaire visage SPF50+ PA++++ teinté violet destiné à corriger visuellement les tons jaunes et l'apparence d'un teint terne.",
+    "benefits": [
+      "Protection solaire SPF50+ PA++++",
+      "Effet correcteur violet",
+      "Base de maquillage légère"
+    ],
+    "keyIngredients": [
+      "Centella asiatica",
+      "Céramide NP"
+    ],
+    "sourceUrl": "https://www.yesstyle.com/fr/info.html/pid.1137750153",
+    "sourceName": "YesStyle (revendeur, variante Purple)",
+    "usage": "Dernière étape des soins du matin, appliquer uniformément. Réappliquer régulièrement selon les recommandations de photoprotection."
+  },
+  "8809975190561": {
+    "description": "Coffret comprenant deux sérums contour des yeux Revive Ginseng + Retinal, 30 ml chacun, selon le conditionnement du fournisseur.",
+    "benefits": [
+      "Hydratation du contour des yeux",
+      "Aspect des ridules",
+      "Souplesse"
+    ],
+    "keyIngredients": [
+      "Ginseng",
+      "Rétinal"
+    ],
+    "sourceUrl": "https://beautyofjoseon.com/products/revive-eye-serum-ginseng-retinal",
+    "sourceName": "Beauty of Joseon (fiche de la référence unitaire)",
+    "usage": "Introduire progressivement, éviter le contact direct avec les yeux et porter une protection solaire en journée."
+  },
+  "8809782558905": {
+    "description": "Lot de deux protections solaires visage Relief Sun Rice + Probiotics, tubes de 50 ml, selon le catalogue fournisseur.",
+    "benefits": [
+      "Protection solaire quotidienne",
+      "Hydratation",
+      "Texture confortable"
+    ],
+    "keyIngredients": [
+      "Riz",
+      "Extraits fermentés"
+    ],
+    "sourceUrl": "https://beautyofjoseon.com/collections/sunscreen",
+    "sourceName": "Beauty of Joseon (gamme du produit unitaire)",
+    "usage": "Appliquer en dernière étape de soin du matin ; renouveler régulièrement."
+  },
+  "8809968130864": {
+    "description": "Lot de deux solaires visage Relief Sun Aqua-Fresh Rice + B5, tubes de 50 ml, selon le conditionnement fournisseur.",
+    "benefits": [
+      "Protection solaire quotidienne",
+      "Hydratation légère",
+      "Confort"
+    ],
+    "keyIngredients": [
+      "Eau de riz",
+      "Panthénol (vitamine B5)"
+    ],
+    "sourceUrl": "https://beautyofjoseon.com/products/relief-sun-aqua-fresh",
+    "sourceName": "Beauty of Joseon (fiche du produit unitaire)",
+    "usage": "Appliquer généreusement avant exposition et renouveler régulièrement."
+  },
+  "8809968130383": {
+    "description": "Lot de deux sticks solaires Matte Sun Stick Mugwort + Camelia, 18 g chacun, selon le conditionnement fournisseur.",
+    "benefits": [
+      "Protection solaire nomade",
+      "Fini mat",
+      "Retouches pratiques"
+    ],
+    "keyIngredients": [
+      "Armoise (mugwort)",
+      "Thé vert"
+    ],
+    "sourceUrl": "https://fr.beautyofjoseon.com/products/matte-sun-stick-mugwort-camelia",
+    "sourceName": "Beauty of Joseon (fiche du produit unitaire)",
+    "usage": "Appliquer sur peau exposée puis renouveler régulièrement."
+  }
+};
