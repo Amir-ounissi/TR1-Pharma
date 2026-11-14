@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { isKoreanFrancoBrand } from "@/lib/catalogue-shipping";
 import { ChevronRight, LockKeyhole, ShoppingBag } from "lucide-react";
 import { getCatalogueBrands, getCatalogueBrandForPharmacy, requirePharmacyCatalogue } from "@/lib/private-catalogue";
 import { PrivateMultiBrandOrderForm } from "@/components/catalogue/private-multibrand-order-form";
@@ -57,6 +58,7 @@ export default async function PharmacyBrandPage({
           <p className="text-[11px] font-bold uppercase tracking-widest text-[#ad4b08]">Commande express</p>
           <h2 className="mt-1 text-xl font-black tracking-tight text-[#0e1d31] sm:text-2xl">Ajoutez vos références au panier</h2>
           <p className="mt-1 text-xs text-[#69717d]">Les prix et paliers se recalculent automatiquement selon les quantités.</p>
+          {isKoreanFrancoBrand(brand.slug) ? <p className="mt-2 text-xs font-semibold text-[#456a4f]">Franco dès 250 € HT remisé sur Biodance + Beauty of Joseon + Dr. Althea cumulées.</p> : null}
         </div>
         <Link href="/catalogue/mes-demandes" className="inline-flex items-center gap-2 text-xs font-extrabold text-[#0e1d31] underline underline-offset-4">
           <ShoppingBag size={16} aria-hidden="true" /> Mes demandes
