@@ -123,9 +123,10 @@ export const productPhotoByEan: Record<string, ProductPhoto> = {
     "url": "https://media.sephora.eu/content/dam/digital/pim/published/B/BIODANCE/BIODA/113639-media_principal.jpg?scaleHeight=585&scaleMode=fit&scaleWidth=585",
     "source": "Sephora"
   },
-  "8809891184613": {
-    "url": "https://cdn.shopify.com/s/files/1/0568/9802/7638/files/Biodance_RejuvenatingCaviarPDRNRealDeepMask_Packshot.jpg?v=1772611504",
-    "source": "Glass Skin Hub"
+  // Sachet individuel 34 g : le GTIN 8809891184613 correspond au coffret de quatre.
+  "8809891184606": {
+    "url": "https://korean-skincare.fr/cdn/shop/files/Biodance_RejuvenatingCaviarPDRNRealDeepMask_Packshot_785x.jpg?v=1772611504",
+    "source": "Korean Skincare France"
   },
   "8809968135562": {
     "url": "https://www.spacenk.com/on/demandware.static/-/Sites-spacenkmastercatalog/default/dw344b50a6/products/BEAUTY_JOS/UK200064518_BEAUTY_JOS.jpg",
