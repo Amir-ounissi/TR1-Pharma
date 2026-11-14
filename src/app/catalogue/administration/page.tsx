@@ -313,7 +313,7 @@ export default async function CatalogueAdministration({
       </section>
 
       <section aria-labelledby="tiers" className="space-y-5">
-        <h2 id="tiers" className="text-2xl font-black">3. Barèmes par volume</h2>
+        <h2 id="tiers" className="text-2xl font-black">4. Barèmes par volume</h2>
         <p className="max-w-3xl text-sm leading-6 text-[#69717d]">Les fourchettes sont des indications commerciales indépendantes des prix de référence. Ne publiez pas un plancher confidentiel : saisissez uniquement les intervalles validés par le laboratoire. Les prix contractuels sont propres à chaque officine et restent invisibles aux autres.</p>
         <div className="grid gap-5 lg:grid-cols-2">
           <form action={setPrivateCatalogueIndicativeTier} className="space-y-4 rounded-xl border border-[#0e1d31]/10 bg-white p-5">
@@ -366,7 +366,7 @@ export default async function CatalogueAdministration({
       </section>
 
       <section aria-labelledby="publish" className="space-y-4">
-        <h2 id="publish" className="text-2xl font-black">4. Publication des marques</h2>
+        <h2 id="publish" className="text-2xl font-black">5. Publication des marques</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {brandRows.map((b) => (
             <form key={b.id} action={setPrivateCatalogueBrandPublished} className="flex items-center justify-between gap-3 rounded-xl border border-[#0e1d31]/10 bg-white p-4">
@@ -380,7 +380,7 @@ export default async function CatalogueAdministration({
       </section>
 
       <section aria-labelledby="requests" className="space-y-4">
-        <h2 id="requests" className="text-2xl font-black">5. Demandes des pharmacies</h2>
+        <h2 id="requests" className="text-2xl font-black">6. Demandes des pharmacies</h2>
         <p className="text-sm text-[#69717d]">Ces demandes n’alimentent pas automatiquement les commandes internes ou les laboratoires.</p>
         <div className="space-y-3">
           {requestRows.map((r) => (
