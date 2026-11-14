@@ -2,18 +2,12 @@
 
 import { useState } from "react";
 import { Check, Copy } from "lucide-react";
+import { isValidEan13 } from "@/lib/ean13";
 
 const L = ["0001101","0011001","0010011","0111101","0100011","0110001","0101111","0111011","0110111","0001011"];
 const G = ["0100111","0110011","0011011","0100001","0011101","0111001","0000101","0010111"];
 const R = ["1110010","1100110","1101100","1000010","1011100","1010000","1000100","1001000","1110100"];
 const PARITY = ["LLLLLL","LLGLGG","LLGGLG","LLGGGL","LGLLGG","LGGLLG","LGGGLL","LGLGLG","LGLGGL","LGGLGL"];
-
-export function isValidEan13(ean: string): boolean {
-  if (!/^\d{13}$/.test(ean)) return false;
-  let sum = 0;
-  for (let index = 0; index < 12; index += 1) sum += Number(ean[index]) * (index % 2 ? 3 : 1);
-  return (10 - (sum % 10)) % 10 === Number(ean[12]);
-}
 
 function encodeEan13(ean: string): string {
   const parity = PARITY[Number(ean[0])];
