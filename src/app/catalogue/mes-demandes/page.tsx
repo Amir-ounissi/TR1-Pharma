@@ -43,9 +43,9 @@ export default async function PharmacyRequestsPage({
                   <p className="font-bold">{names.get(request.brand_id) ?? "Laboratoire"}</p>
                   <p className="mt-1 text-xs text-[#69717d]">{new Date(request.created_at).toLocaleDateString("fr-FR")} · Réf. {request.id.slice(0, 8).toUpperCase()}</p>
                   <p className="mt-2 text-xs font-bold text-[#69717d]">{request.request_kind === "quote" ? "Demande de conditions · " : "Demande de commande · "}{labels[request.status] ?? request.status}</p>
-                  {recentById.get(request.id)?.shipping_batch_id ? (
+                  {(recentById.get(request.id)?.shipping_batch_id ?? request.shipping_batch_id) ? (
                     <p className="mt-2 text-[11px] font-semibold text-[#416a4b]">
-                      Regroupement livraison coréenne · Lot {recentById.get(request.id)!.shipping_batch_id!.slice(0, 8).toUpperCase()} · Franco à 250 € HT remisé sur les marques cumulées, à confirmer après chiffrage.
+                      Regroupement livraison coréenne · Lot {(recentById.get(request.id)?.shipping_batch_id ?? request.shipping_batch_id)!.slice(0, 8).toUpperCase()} · Franco à 250 € HT remisé sur les marques cumulées, à confirmer après chiffrage.
                     </p>
                   ) : null}
                   {(recentById.get(request.id)?.items ?? request.items ?? []).length ? (
