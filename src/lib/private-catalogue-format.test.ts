@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { indicativeRange, isAllowedQuantity, sumOrderCents, tierForQuantity } from "@/lib/private-catalogue-format";
+import { indicativeRange, isAllowedQuantity, sumOrderCents, tierForQuantity, tierSavingsCents } from "@/lib/private-catalogue-format";
 
 describe("catalogue prive - contraintes des demandes", () => {
   it("autorise les commandes à l'unité tout en respectant le minimum", () => {
@@ -32,6 +32,27 @@ describe("catalogue prive - contraintes des demandes", () => {
     expect(tierForQuantity(tiers, 96)?.price_ht).toBe(8.5);
     expect(tierForQuantity(tiers, 6)).toBeNull();
     expect(tierForQuantity(tiers, Number.NaN)).toBeNull();
+  });
+
+  it("calcule une économie HT vs le premier palier, au volume commandé", () => {
+    const tiers = [
+      { min_quantity: 40, price_min_ht: 3.41, price_max_ht: 3.41 },
+      { min_quantity: 12, price_min_ht: 3.85, price_max_ht: 3.85 },
+      { min_quantity: 24, price_min_ht: 3.52, price_max_ht: 3.52 },
+    ];
+    expect(tierSavingsCents(tiers, tierForQuantity(tiers, 24), 24)).toBe(792);
+    expect(tierSavingsCents(tiers, tierForQuantity(tiers, 12), 12)).toBe(0);
+  });
+
+  it("ne présente pas d'économie lorsque le barème est ambigu ou non dégressif", () => {
+    const uncertain = [
+      { min_quantity: 1, price_min_ht: 10, price_max_ht: 12 },
+      { min_quantity: 24, price_min_ht: 9, price_max_ht: 10 },
+    ];
+    expect(tierSavingsCents(uncertain, uncertain[1], 24)).toBeNull();
+    expect(tierSavingsCents([{ min_quantity: 1, price_ht: 10 }], null, 2)).toBeNull();
+    expect(tierSavingsCents([{ min_quantity: 1, price_ht: 10 }, { min_quantity: 24, price_ht: 11 }], { min_quantity: 24, price_ht: 11 }, 24)).toBeNull();
+    expect(tierSavingsCents([{ min_quantity: 1, price_ht: 10 }], { min_quantity: 1, price_ht: 10 }, 1.5)).toBeNull();
   });
 
   it("ne transforme pas un prix indicatif absent en tarif ferme", () => {
