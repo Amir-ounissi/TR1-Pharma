@@ -217,7 +217,31 @@ export async function sendMultiBrandCatalogueRequest(
     return { error: "Le panier n'a pas pu être transmis. Vérifiez les quantités et réessayez." };
   }
 
+  // Une demande acceptée vide le brouillon serveur. Les demandes sont déjà
+  // enregistrées ; un échec de nettoyage ne peut pas créer de doublon.
+  await admin.rpc("catalogue_save_cart", { p_lines: [] });
   revalidatePath("/catalogue/mes-demandes");
+  revalidatePath("/catalogue");
   redirect(`/catalogue/mes-demandes?envoyee=1&marques=${groups.length}`);
 }
 
+
+/** Persiste un brouillon par utilisateur et officine, jamais des tarifs. */
+export async function savePharmacyCart(
+  lines: { product_id: string; quantity: number }[],
+): Promise<{ saved: boolean; error?: string }> {
+  const parsed = z.array(z.object({
+    product_id: z.uuid(),
+    quantity: z.number().int().min(1).max(5000),
+  })).max(40).safeParse(lines);
+
+  if (!parsed.success) return { saved: false, error: "Quantités invalides." };
+  try {
+    const { admin } = await requirePharmacyCatalogue();
+    const { error } = await admin.rpc("catalogue_save_cart", { p_lines: parsed.data });
+    if (error) return { saved: false, error: "Le panier n'a pas pu être enregistré." };
+    return { saved: true };
+  } catch {
+    return { saved: false, error: "Enregistrement du panier indisponible." };
+  }
+}
