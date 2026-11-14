@@ -353,6 +353,30 @@ export const productGalleryByName: Record<string, string[]> = {
   "Hydro Ceramide Cleansing Powder": [
       "https://ie.facethefuture.store/cdn/shop/files/Product-page-sizes_272e1e74-f52b-43bf-9270-5b210cb223e5.jpg?v=1748444845"
   ]
+  "Caviar PDRN Dual Gel Toner Pads": [
+      "https://cdn-image.oliveyoung.com/prdtImg/1505/28cfd091-b99f-4a16-a74c-8299da911f5d.jpg?AR=0&QT=80&RS=1500x1500"
+  ],
+  "Pore Perfecting Collagen Peptide Cream": [
+      "https://www.sephora.com/productimages/sku/s2920569-main-zoom.jpg"
+  ],
+  "Rejuvenating Caviar PDRN Capsule Cream": [
+      "https://d1flfk77wl2xk4.cloudfront.net/Assets/biodance-rejuvenating-caviar-pdrn-capsule-cream-50ml/89/328/XXL_p0225132889.jpg"
+  ],
+  "Skin-Glow Essence Cream": [
+      "https://biodance.com/cdn/shop/files/Review_47e63221-4bc0-4b0b-85db-01c234031b0a.jpg?v=1755766326&width=1600"
+  ],
+  "Radiant Vita Niacinamide Cream": [
+      "https://biodance.com/cdn/shop/files/2025070416071_crop.jpg?height=924&v=1756716631&width=924"
+  ],
+  "Skin Refining Mild PHA Toner": [
+      "https://www.sephora.com/productimages/sku/s2915270-main-zoom.jpg?imwidth=465"
+  ],
+  "Vita Niacinamide Gel Toner Pads": [
+      "https://cdn.shopify.com/s/files/1/1588/9573/files/Biodance_Vita_Niacinamide_Gel_Toner_Pads_60_Pads_1.jpg?v=1753328035"
+  ],
+  "Micro Dual Serum Toner": [
+      "https://www.perfumesecompanhia.pt/dw/image/v2/BGXV_PRD/on/demandware.static/-/Sites-master-catalog-pc/default/dw0aa74dff/images/hi-res/C07/430536_331825.jpg?sh=1080&sm=fit&sw=1080"
+  ]
 };
 
 // Packshots Biodance associés à la dénomination exacte : 24 articles sans EAN dans le catalogue fournisseur.
