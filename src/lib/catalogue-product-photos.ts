@@ -126,5 +126,45 @@ export const productPhotoByEan: Record<string, ProductPhoto> = {
   "8809891184613": {
     "url": "https://cdn.shopify.com/s/files/1/0568/9802/7638/files/Biodance_RejuvenatingCaviarPDRNRealDeepMask_Packshot.jpg?v=1772611504",
     "source": "Glass Skin Hub"
+  },
+  "8809968135562": {
+    "url": "https://www.spacenk.com/on/demandware.static/-/Sites-spacenkmastercatalog/default/dw344b50a6/products/BEAUTY_JOS/UK200064518_BEAUTY_JOS.jpg",
+    "source": "Space NK"
+  },
+  "8809968133476": {
+    "url": "https://beautyofjoseon.com/cdn/shop/files/01_0527__-US.jpg?v=1779933542",
+    "source": "Beauty of Joseon officiel"
+  },
+  "8809864752689": {
+    "url": "https://cdn-image.oliveyoung.com/prdtImg/1149/f7ab510f-8770-499b-9738-4151d0fc266d.jpg",
+    "source": "Olive Young"
+  },
+  "8809968133124": {
+    "url": "https://www.qaraca.com/cdn/shop/files/001_61356454-461b-424d-8ef7-32589fb88d92.png?v=1778850757",
+    "source": "Qaraca"
+  },
+  "8809738316993": {
+    "url": "https://www.koreanbeauty.fi/cdn/shop/files/RedBeanWaterGel_1.png?v=1743600561&width=900",
+    "source": "Koreanbeauty"
+  },
+  "8809606851663": {
+    "url": "https://www.beautybase.com/cdn/shop/files/1721637202-18484300.jpg?v=1763395417&width=1024",
+    "source": "Beauty Base"
+  },
+  "8809968130246": {
+    "url": "https://static.chemistwarehouse.com.au/ams/media/pi/151841/MP-1-800.jpg",
+    "source": "Chemist Warehouse"
+  },
+  "8809738316139": {
+    "url": "https://harmanis.lhscdn.com/uploads/resources/33584/beauty-of-joseon-revive-serum-30ml-huge.jpg?lm=E494D9874B800F5F25159C4BC4900CC2",
+    "source": "Harmanis"
+  },
+  "8809875906477": {
+    "url": "https://choicelegacy.com.bd/cdn/shop/files/BeautyofJoseonLightOnSerumCentella_VitaC30ml-2.jpg?v=1763722042&width=2000",
+    "source": "Choice Legacy"
+  },
+  "8809968132523": {
+    "url": "https://kbeautyforyou.hu/cdn/shop/files/Beauty-of-Joseon-Revive-Under-Eye-Patch-Ginseng-Retinal.jpg?v=1769418803",
+    "source": "KBeauty For You"
   }
 };
