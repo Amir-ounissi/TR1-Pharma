@@ -53,7 +53,7 @@ begin
     'lines',coalesce(v_lines,'[]'::jsonb),
     'recent_requests',coalesce(v_history,'[]'::jsonb)
   );
-end $function$
+end $function$;
 
 revoke all on function public.catalogue_buyer_workspace() from public,anon,authenticated;
 grant execute on function public.catalogue_buyer_workspace() to authenticated;
