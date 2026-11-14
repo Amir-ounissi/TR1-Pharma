@@ -3,12 +3,46 @@ export function euroHT(value: number) {
   return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(value);
 }
 
-export function isAllowedQuantity(quantity: number, minimum: number, _legacyStep?: number) {
-  // Les quantités sont commandables à l'unité après le minimum fournisseur.
-  // L'ancien pas de conditionnement reste accepté en argument pour compatibilité,
-  // mais ne bloque plus une commande entre deux multiples.
+/** Pas de commande par défaut, modifiable par référence dans l'administration. */
+export const DEFAULT_QUANTITY_STEP = 6;
+
+/** Premier colisage autorisé : au moins le minimum, arrondi au multiple du pas. */
+export function firstOrderQuantity(minimum: number, step = DEFAULT_QUANTITY_STEP) {
+  if (!Number.isSafeInteger(minimum) || minimum < 1 ||
+      !Number.isSafeInteger(step) || step < 1) return 0;
+  const quantity = Math.ceil(minimum / step) * step;
+  return quantity <= 5000 ? quantity : 0;
+}
+
+/** Chaque quantité commandée doit être un multiple entier du pas configuré. */
+export function isAllowedQuantity(quantity: number, minimum: number, step = DEFAULT_QUANTITY_STEP) {
   return Number.isSafeInteger(quantity) && quantity >= minimum && quantity <= 5000
-    && Number.isSafeInteger(minimum) && minimum > 0;
+    && Number.isSafeInteger(minimum) && minimum > 0
+    && Number.isSafeInteger(step) && step > 0
+    && quantity % step === 0;
+}
+
+/** Un clic ajoute/retire le pas configuré, sans proposer un colisage invalide. */
+export function steppedOrderQuantity(
+  current: number,
+  minimum: number,
+  step: number,
+  direction: 1 | -1,
+) {
+  const first = firstOrderQuantity(minimum, step);
+  if (!first) return 0;
+  if (current <= 0) return direction === 1 ? first : 0;
+  if (direction === -1 && current <= first) return 0;
+  const next = current + direction * step;
+  if (direction === 1 && next > 5000) return current;
+  if (next < first) return 0;
+  // Récupération d'un ancien panier dont la quantité n'était pas un multiple.
+  if (next % step !== 0) {
+    return direction === 1
+      ? Math.min(5000, Math.ceil((current + 1) / step) * step)
+      : Math.max(0, Math.floor((current - 1) / step) * step);
+  }
+  return next;
 }
 
 export function sumOrderCents(lines: { price_ht: number; quantity: number }[]) {
