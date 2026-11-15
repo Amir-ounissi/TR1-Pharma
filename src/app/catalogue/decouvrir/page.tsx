@@ -40,6 +40,9 @@ export default function PharmacieStorefront() {
             <Link href="/catalogue/connexion" className="inline-flex min-h-12 items-center gap-2 rounded-md border border-white/35 px-5 text-sm font-bold text-white transition hover:bg-white/10">
               <LockKeyhole size={16} aria-hidden="true" /> Connexion professionnelle
             </Link>
+            <Link href="/catalogue/demander-acces" className="inline-flex min-h-12 items-center gap-2 rounded-md border border-[#ffa460] bg-[#ea7015] px-5 text-sm font-extrabold text-[#0e1d31] transition hover:bg-[#f28331]">
+              <Building2 size={16} aria-hidden="true" /> Demander l’accès au catalogue
+            </Link>
           </div>
         </div>
         <div className="pointer-events-none absolute bottom-0 right-3 hidden w-60 rotate-[-8deg] rounded-md border border-white/15 bg-white/[.05] p-6 lg:block" aria-hidden="true">
@@ -73,6 +76,9 @@ export default function PharmacieStorefront() {
         <div className="flex flex-wrap gap-2">
           <Link href="/catalogue/connexion" className="shop-secondary-action inline-flex min-h-11 items-center gap-2 px-5 text-sm">
             Connexion pro <ArrowRight size={16} aria-hidden="true" />
+          </Link>
+          <Link href="/catalogue/demander-acces" className="inline-flex min-h-11 items-center rounded-lg bg-[#ea7015] px-5 text-sm font-extrabold text-[#0e1d31] hover:bg-[#f28331]">
+            Demander l’accès au catalogue
           </Link>
           <Link href="/catalogue/inscription" className="inline-flex min-h-11 items-center rounded-lg border border-[#dce3ea] px-5 text-sm font-bold text-[#0e1d31]">
             Activer mon invitation
