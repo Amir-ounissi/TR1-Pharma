@@ -15,18 +15,24 @@ export default async function PharmacyBrandPage({
 }) {
   const { slug } = await params;
   const { produit } = await searchParams;
-  const { admin, pharmacy } = await requirePharmacyCatalogue();
-  const commercialConditions = await getCommercialContext(admin);
-  const workspace = await getBuyerWorkspace(admin);
-  const { data: favoriteIds, error: favoritesError } = await admin.rpc("catalogue_my_favorites");
-  if (favoritesError) throw favoritesError;
-  const { brand, products } = await getCatalogueBrandForPharmacy(pharmacy.id, slug, admin);
-  const accessibleBrands = await getCatalogueBrands(pharmacy.id, admin);
+  const { admin, pharmacy, isLinkAccess, accessLinkHash } = await requirePharmacyCatalogue();
+  const commercialConditions = await getCommercialContext(admin, accessLinkHash);
+  const workspace = isLinkAccess
+    ? { lines: [], recent_requests: [] }
+    : await getBuyerWorkspace(admin);
+  const favoriteIds = isLinkAccess
+    ? []
+    : await admin.rpc("catalogue_my_favorites").then(({ data, error }) => {
+        if (error) throw error;
+        return data ?? [];
+      });
+  const { brand, products } = await getCatalogueBrandForPharmacy(pharmacy.id, slug, admin, accessLinkHash);
+  const accessibleBrands = await getCatalogueBrands(pharmacy.id, admin, accessLinkHash);
   const otherGroups = await Promise.all(accessibleBrands
     .filter((item) => item.slug !== brand.slug)
     .map(async (item) => ({
       brand: item,
-      products: (await getCatalogueBrandForPharmacy(pharmacy.id, item.slug, admin)).products,
+      products: (await getCatalogueBrandForPharmacy(pharmacy.id, item.slug, admin, accessLinkHash)).products,
     })));
   const orderProducts = [
     ...products.map((product) => withPharmacyProductVisuals(product, brand)),
@@ -64,7 +70,18 @@ export default async function PharmacyBrandPage({
           <ShoppingBag size={16} aria-hidden="true" /> Mes demandes
         </Link>
       </div>
-      <div id="produits"><PrivateMultiBrandOrderForm key={brand.slug} products={orderProducts} commercialConditions={commercialConditions} initialFavoriteIds={(favoriteIds ?? []) as string[]} initialBrandSlug={brand.slug} initialProductId={produit} initialCartLines={workspace.lines} reorderHistory={workspace.recent_requests} /></div>
+      <div id="produits"><PrivateMultiBrandOrderForm
+        key={brand.slug}
+        products={orderProducts}
+        commercialConditions={commercialConditions}
+        initialFavoriteIds={(favoriteIds ?? []) as string[]}
+        initialBrandSlug={brand.slug}
+        initialProductId={produit}
+        initialCartLines={workspace.lines}
+        reorderHistory={workspace.recent_requests}
+        enableAccountFeatures={!isLinkAccess}
+        requiresRequesterDetails={isLinkAccess}
+      /></div>
     </div>
   );
 }
