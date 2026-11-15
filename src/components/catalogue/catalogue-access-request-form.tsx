@@ -101,6 +101,7 @@ function TextField({
       <input
         {...props}
         id={id}
+        name={id}
         required={required}
         aria-invalid={Boolean(error)}
         aria-describedby={error ? errorId : undefined}
