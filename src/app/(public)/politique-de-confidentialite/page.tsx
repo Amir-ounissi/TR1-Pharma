@@ -5,7 +5,7 @@ export default function PrivacyPage() {
     ["Responsable du traitement", legalInformation.dataController],
     ["Finalités", "Répondre à une demande de diagnostic, qualifier le besoin et, si TR1 est adapté, préparer une démonstration ou un pilote contrôlé."],
     ["Base juridique", legalInformation.legalBasis],
-    ["Données collectées", "Nom et prénom, e-mail professionnel, marque ou laboratoire, puis informations de qualification communiquées pendant les échanges."],
+    ["Données collectées", "Nom et prénom, fonction professionnelle, e-mail professionnel, numéro de téléphone, nom et adresse de l’officine, code postal, commune, identifiant SIRET ou FINESS lorsqu’une pharmacie demande l’accès au catalogue, ainsi que la marque ou le laboratoire, les messages et les informations de qualification communiquées pendant les échanges."],
     ["Destinataires", "Responsables TR1 autorisés. Les données ne sont jamais mises à disposition des marques clientes."],
     ["Durée de conservation", legalInformation.leadRetentionDuration],
     ["Droits", `Accès, rectification, effacement, limitation, opposition et portabilité lorsque ces droits s’appliquent. Contact : ${legalInformation.privacyContactEmail}.`],
