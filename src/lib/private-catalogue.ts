@@ -104,6 +104,16 @@ export async function requirePharmacyCatalogue() {
   const supabase = await createClient();
   const { data: { user }, error: authError } = await supabase.auth.getUser();
 
+  // Un lien explicite prime sur tout compte déjà connecté, y compris un
+  // super-administrateur : il ouvre uniquement l'officine liée au jeton.
+  const cookieStore = await cookies();
+  const linkToken = cookieStore.get(PRIVATE_CATALOGUE_LINK_COOKIE)?.value;
+  if (linkToken) {
+    const context = await resolvePrivateCatalogueLink(linkToken);
+    if (context) return context;
+    if (!user) redirect("/catalogue/acces-invalide");
+  }
+
   if (!authError && user) {
     const { data: globalAdmin, error: adminError } = await supabase
       .from("memberships")
@@ -115,16 +125,6 @@ export async function requirePharmacyCatalogue() {
       .maybeSingle();
     if (adminError) throw adminError;
     if (globalAdmin) redirect("/catalogue/administration");
-  }
-
-  // Un lien explicite prime sur un éventuel compte déjà connecté : il ouvre
-  // toujours l'officine à laquelle le lien a été émis.
-  const cookieStore = await cookies();
-  const linkToken = cookieStore.get(PRIVATE_CATALOGUE_LINK_COOKIE)?.value;
-  if (linkToken) {
-    const context = await resolvePrivateCatalogueLink(linkToken);
-    if (context) return context;
-    if (!user) redirect("/catalogue/acces-invalide");
   }
 
   if (!authError && user) {

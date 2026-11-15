@@ -56,16 +56,20 @@ function detail(label: string, value: string, warning = false) {
 
 export default async function PharmacyCatalogueProductPage({ params }: ProductParams) {
   const { slug, ref } = await params;
-  const { admin, pharmacy } = await requirePharmacyCatalogue();
-  const { brand, products } = await getCatalogueBrandForPharmacy(pharmacy.id, slug, admin);
+  const { admin, pharmacy, isLinkAccess, accessLinkHash } = await requirePharmacyCatalogue();
+  const { brand, products } = await getCatalogueBrandForPharmacy(pharmacy.id, slug, admin, accessLinkHash);
   const product = findPublicProduct(ref);
   if (!product || product.brand !== brand.name) notFound();
   const privateProduct = products.find((item) => product.ean && item.ean === product.ean)
     ?? products.find((item) => normalizeProductName(item.name) === normalizeProductName(product.name));
   if (!privateProduct) notFound();
-  const commercial = await getCommercialContext(admin);
-  const { data: favoriteIds, error: favoriteError } = await admin.rpc("catalogue_my_favorites");
-  if (favoriteError) throw favoriteError;
+  const commercial = await getCommercialContext(admin, accessLinkHash);
+  const favoriteIds = isLinkAccess
+    ? []
+    : await admin.rpc("catalogue_my_favorites").then(({ data, error }) => {
+        if (error) throw error;
+        return data ?? [];
+      });
   const initialFavorite = ((favoriteIds ?? []) as string[]).includes(privateProduct.id);
   const quantityGroup = commercial.quantity_groups.find((group) => group.product_ids.includes(privateProduct.id));
   const visiblePriceTiers = orderablePricingTiers<CatalogProduct["pricing"]["tiers"][number]>(
@@ -175,15 +179,21 @@ export default async function PharmacyCatalogueProductPage({ params }: ProductPa
                 ? "Prix indicatifs. Le montant définitif est confirmé après vérification de la demande."
                 : "Conditions contractuelles de votre officine."}
             </p>
-            <PharmacyProductActions
-              productId={privateProduct.id}
-              name={privateProduct.name}
-              minQuantity={privateProduct.min_quantity}
-              quantityStep={privateProduct.quantity_step}
-              collectiveMinimum={quantityGroup?.minimum_total_units ?? null}
-              collectiveQuantityMultiple={quantityGroup?.quantity_multiple ?? null}
-              initialFavorite={initialFavorite}
-            />
+            {isLinkAccess ? (
+              <Link href="/catalogue" className="mt-5 inline-flex min-h-11 items-center rounded-lg bg-[#e99055] px-5 text-sm font-extrabold text-[#142941] hover:bg-[#f4a779]">
+                Ajouter depuis le catalogue
+              </Link>
+            ) : (
+              <PharmacyProductActions
+                productId={privateProduct.id}
+                name={privateProduct.name}
+                minQuantity={privateProduct.min_quantity}
+                quantityStep={privateProduct.quantity_step}
+                collectiveMinimum={quantityGroup?.minimum_total_units ?? null}
+                collectiveQuantityMultiple={quantityGroup?.quantity_multiple ?? null}
+                initialFavorite={initialFavorite}
+              />
+            )}
           </section>
         </div>
       </div>
