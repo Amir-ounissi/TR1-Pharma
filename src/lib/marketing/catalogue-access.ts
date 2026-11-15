@@ -34,7 +34,7 @@ export const catalogueAccessRequestSchema = z.object({
   fullName: z.string().trim().min(2, "Indiquez votre nom et prénom.").max(120),
   role: z.enum(catalogueAccessRoles, { error: "Sélectionnez votre fonction." }),
   professionalEmail: z.email("Indiquez une adresse e-mail valide.").max(254),
-  phone: z.string().trim().min(10).max(24).regex(
+  phone: z.string().trim().min(10, "Indiquez un numéro de téléphone français valide.").max(24).regex(
     /^(?:(?:\+|00)\s?33\s?|0)[1-9](?:[\s.-]?\d{2}){4}$/,
     "Indiquez un numéro de téléphone français valide.",
   ),
