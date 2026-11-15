@@ -97,7 +97,7 @@ describe("pharmacy catalogue access request", () => {
   });
 
   it("rejects an invalid French phone number", async () => {
-    const result = await requestCatalogueAccessAction({}, submission({ phone: "123" }));
+    const result = await requestCatalogueAccessAction({}, submission({ phone: "1234567890" }));
     expect(result.fieldErrors?.phone).toContain("téléphone français");
     expect(mocks.rpc).not.toHaveBeenCalled();
   });
