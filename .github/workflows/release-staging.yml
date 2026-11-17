@@ -12,6 +12,7 @@ on:
       - main
     paths:
       - ".ops/staging-release-request"
+      - ".ops/production-release-request"
 
 permissions:
   contents: read
