@@ -1,4 +1,4 @@
-release=mobile-pharmacy-ean-scanner-20261117
+release=mobile-pharmacy-ean-scanner-20261117-rerun-0911
 target=staging
 scope=mobile_ean13_scanner_and_exact_pharmacy_purchase_comparison
 request=user_authorized_mobile_pharmacy_scanner_release
