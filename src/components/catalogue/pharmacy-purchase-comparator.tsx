@@ -2,6 +2,7 @@
 
 import { type ChangeEvent, useMemo, useState } from "react";
 import Link from "next/link";
+import { PharmacyEanScanner } from "@/components/catalogue/pharmacy-ean-scanner";
 import { AlertCircle, ArrowLeft, CheckCircle2, FileSpreadsheet, Info, RefreshCw, ShieldCheck, UploadCloud } from "lucide-react";
 import type { PharmacyProductWithVisuals } from "@/lib/catalogue-private-product-visuals";
 import type { CommercialQuantityGroup } from "@/lib/catalogue-commercial";
@@ -303,7 +304,7 @@ export function PharmacyPurchaseComparator({
         <p className="text-xs font-extrabold uppercase tracking-[.18em] text-[#ad4b08]">Espace pharmacie · outil d’aide à l’achat</p>
         <h1 className="mt-2 text-3xl font-black tracking-tight text-[#0e1d31] sm:text-4xl">Comparer mes achats</h1>
         <p className="mt-3 text-sm leading-6 text-[#69717d]">
-          Importez votre export CSV pour rapprocher vos références de la sélection TR1 PHARMA et comparer les prix d’achat unitaires HT.
+          Scannez un code-barres sur votre téléphone pour comparer un produit, ou importez votre fichier CSV pour analyser toute votre gamme.
         </p>
       </header>
 
@@ -315,13 +316,15 @@ export function PharmacyPurchaseComparator({
         </div>
       </div>
 
+      <PharmacyEanScanner products={products} quantityGroups={quantityGroups} />
+
       <section className="space-y-4 rounded-2xl border border-[#e2e7ec] bg-white p-5 sm:p-7">
         <div className="flex items-center gap-3">
           <div className="flex size-11 items-center justify-center rounded-xl bg-[#edf3ef] text-[#315b47]">
             <FileSpreadsheet size={22} aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-lg font-extrabold text-[#142941]">1. Importer le catalogue de votre pharmacie</h2>
+            <h2 className="text-lg font-extrabold text-[#142941]">Ou importer le catalogue de votre pharmacie</h2>
             <p className="mt-1 text-xs text-[#69717d]">Format CSV · 8 Mo maximum · 5 000 lignes maximum</p>
           </div>
         </div>
@@ -349,7 +352,7 @@ export function PharmacyPurchaseComparator({
         <section className="space-y-5 rounded-2xl border border-[#e2e7ec] bg-white p-5 sm:p-7">
           <div>
             <p className="text-xs font-extrabold uppercase tracking-[.15em] text-[#ad4b08]">Configuration de l’import</p>
-            <h2 className="mt-1 text-xl font-extrabold text-[#142941]">2. Vérifier les colonnes détectées</h2>
+            <h2 className="mt-1 text-xl font-extrabold text-[#142941]">Vérifier les colonnes détectées</h2>
             <p className="mt-2 text-xs leading-5 text-[#69717d]">Les colonnes sont proposées automatiquement. Vérifiez surtout que le prix sélectionné correspond bien à votre prix d’achat net unitaire HT, et non au prix de vente.</p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">

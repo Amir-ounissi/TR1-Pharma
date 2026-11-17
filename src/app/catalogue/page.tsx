@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2, Clock3, FileSpreadsheet } from "lucide-react";
+import { Building2, Clock3, FileSpreadsheet, ScanBarcode } from "lucide-react";
 import { getCatalogueBrands, getCatalogueBrandForPharmacy, requirePharmacyCatalogue } from "@/lib/private-catalogue";
 import { disconnectPharmacyCatalogue } from "@/app/catalogue/actions";
 import { PrivateMultiBrandOrderForm } from "@/components/catalogue/private-multibrand-order-form";
@@ -43,6 +43,10 @@ export default async function PrivateCatalogueHome({
       </div>
 
       <div className="flex flex-wrap justify-end gap-2">
+        <Link href="/catalogue/comparer#scanner-ean"
+          className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-[#142941] px-4 text-sm font-extrabold text-white hover:bg-[#213c5c]">
+          <ScanBarcode size={18} aria-hidden="true" /> Scanner un produit
+        </Link>
         <Link href="/catalogue/comparer"
           className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#dce3e5] bg-white px-3 text-xs font-bold text-[#142941] hover:bg-[#f4f6f6]">
           <FileSpreadsheet size={16} aria-hidden="true" /> Comparer mes achats
