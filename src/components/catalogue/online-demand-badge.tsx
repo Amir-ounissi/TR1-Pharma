@@ -1,5 +1,3 @@
-import React from "react";
-
 type OnlineDemandSignal = {
   soldLabel: string;
   sourceUrl: string;
