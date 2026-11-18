@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { CataloguePackshot } from "@/components/catalogue/catalogue-packshot";
+import { OnlineDemandBadge } from "@/components/catalogue/online-demand-badge";
 import Link from "next/link";
 import { Check, LayoutGrid, List, Minus, Package, Plus, Heart, Search, ShoppingBag, ShoppingCart, SlidersHorizontal, Trash2 } from "lucide-react";
 import { savePharmacyCart, sendMultiBrandCatalogueRequest, setCatalogueFavorite } from "@/app/catalogue/actions";
@@ -706,6 +707,7 @@ export function PrivateMultiBrandOrderForm({
                         <div className="min-h-[86px]">
                           <h3 className="text-sm font-extrabold leading-5 text-[#0e1d31]">{product.name}</h3>
                           <p className="mt-1.5 text-[11px] text-[#69717d]">{product.format || "Format non renseigné"}</p>
+                          <OnlineDemandBadge ean={product.ean} productId={product.id} />
                           <p className="mt-1 break-all text-[10px] text-[#89939b]">
                             Réf. {product.sku}{product.ean ? " · EAN " + product.ean : ""}
                           </p>
@@ -784,6 +786,7 @@ export function PrivateMultiBrandOrderForm({
                         <p className="mt-1 text-[10px] leading-4 text-[#69717d]">
                           {product.format || "Format non renseigné"} · Réf. {product.sku}
                         </p>
+                        <OnlineDemandBadge ean={product.ean} productId={product.id} compact />
                         <p className="break-all text-[9px] leading-4 text-[#89939b]">
                           {product.ean ? "EAN " + product.ean + " · " : ""}TVA {product.vat_rate} %
                         </p>
