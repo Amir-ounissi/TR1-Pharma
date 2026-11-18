@@ -59,7 +59,7 @@ jobs:
       - name: Contrat HTTP MCP sur staging isolé
         if: github.event_name == 'pull_request' && github.head_ref == 'feat/chatgpt-connector-readonly'
         run: node scripts/smoke-chatgpt-mcp-staging.mjs
-      - name: Audit complet (exception temporaire braces non corrigé)
+      - name: Audit complet (exception temporaire picomatch sans correctif)
         run: node scripts/check-npm-security.mjs
       - name: Audit runtime
         run: npm audit --omit=dev --audit-level=high
