@@ -6,6 +6,7 @@ import Image from "next/image";
 import { ArrowUpRight, Check, ChevronLeft, ChevronRight, LockKeyhole, Search, SlidersHorizontal } from "lucide-react";
 import { publicCatalogueProducts, publicProductImage, publicProductHref, publicProductKey, type PublicCatalogueProduct } from "@/lib/catalogue-products";
 import { euroHT } from "@/lib/private-catalogue-format";
+import { OnlineDemandBadge } from "@/components/catalogue/online-demand-badge";
 
 type DisplayProduct = PublicCatalogueProduct;
 type BrandTheme = { bg: string; ink: string; border: string; short: string; detail: string };
@@ -242,6 +243,7 @@ export function PublicProductGrid({ privateProducts }: { privateProducts?: Priva
                   <p className="text-[10px] font-bold uppercase tracking-[.1em] text-[#b36a3d]">{product.brand}</p>
                   <h4 className="mt-2 min-h-12 text-sm font-extrabold leading-5 text-[#142941] sm:text-[15px]">{product.name}</h4>
                   <p className="mt-1.5 text-xs leading-5 text-[#7b8690]">{product.category}{product.format ? " · " + product.format : ""}</p>
+                  <OnlineDemandBadge ean={product.ean} productId={privateProduct?.id} compact />
                   <div className="mt-auto border-t border-[#eef0f0] pt-3">
                     {privateMode && privateProduct ? (
                       <>
