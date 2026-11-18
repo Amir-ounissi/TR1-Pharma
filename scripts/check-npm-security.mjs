@@ -1,11 +1,14 @@
+import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 
-// Temporary, reviewed exception: braces <=3.0.3 has no upstream patch
-// (GHSA-vfj7-8cjw-p6xm). Allow only vulnerabilities that are wholly
-// caused by that advisory; any other high/critical finding fails CI.
-// Runtime dependencies are audited separately with --omit=dev.
-const EXEMPT_ADVISORY = "GHSA-vfj7-8cjw-p6xm";
-const EXCEPTION_EXPIRES_AT = Date.parse("2026-11-15T00:00:00Z");
+// Temporary exception for GHSA-fc5q-39xc-vjpf (CVE-2026-112366).
+// As of 2026-11-18, the GitHub Advisory Database lists no patched picomatch
+// version. Permit only high/critical findings whose complete high-severity
+// dependency chain terminates exclusively at this advisory.
+// All picomatch copies must remain dev-only; the CI runtime audit below this
+// step independently blocks high/critical production dependency findings.
+const EXEMPT_ADVISORY = "GHSA-fc5q-39xc-vjpf";
+const EXCEPTION_EXPIRES_AT = Date.parse("2026-11-25T00:00:00Z");
 
 const npm = spawnSync("npm", ["audit", "--json", "--audit-level=high"], {
   encoding: "utf8",
@@ -15,6 +18,7 @@ if (npm.error || !npm.stdout.trim()) {
   console.error("npm audit did not provide a report:", npm.error ?? npm.stderr);
   process.exit(1);
 }
+
 let report;
 try {
   report = JSON.parse(npm.stdout);
@@ -28,47 +32,85 @@ if (report.error || !report.vulnerabilities || npm.status === null) {
 }
 
 const vulnerabilities = report.vulnerabilities;
-function derivesExclusivelyFromBraces(name, seen = new Set()) {
+const isHighSeverity = (severity) => severity === "high" || severity === "critical";
+
+function isAllowedAdvisory(reason) {
+  return (
+    reason &&
+    typeof reason === "object" &&
+    isHighSeverity(reason.severity) &&
+    String(reason.url ?? "").includes(EXEMPT_ADVISORY)
+  );
+}
+
+function highCausesAreAllowed(name, seen = new Set()) {
   if (seen.has(name)) return false;
   const item = vulnerabilities[name];
-  if (!item || !Array.isArray(item.via) || item.via.length === 0) return false;
-  const nextSeen = new Set([...seen, name]);
-  return item.via.every((reason) => {
+  if (!item || !Array.isArray(item.via)) return false;
+
+  const nextSeen = new Set(seen);
+  nextSeen.add(name);
+
+  // npm audit includes lower-severity causes in the same dependency chain.
+  // They do not justify an exception for a high/critical finding.
+  const highCauses = item.via.filter((reason) => {
     if (typeof reason === "string") {
-      return derivesExclusivelyFromBraces(reason, nextSeen);
+      return isHighSeverity(vulnerabilities[reason]?.severity);
     }
-    return (
-      reason &&
-      typeof reason === "object" &&
-      reason.name === "braces" &&
-      String(reason.url ?? "").includes(EXEMPT_ADVISORY)
-    );
+    return reason && typeof reason === "object" && isHighSeverity(reason.severity);
+  });
+
+  if (highCauses.length === 0) return false;
+  return highCauses.every((reason) => {
+    if (typeof reason === "string") {
+      return highCausesAreAllowed(reason, nextSeen);
+    }
+    return isAllowedAdvisory(reason);
   });
 }
 
 const blocking = [];
 const exempted = [];
 for (const [name, item] of Object.entries(vulnerabilities)) {
-  if (!["high", "critical"].includes(item.severity)) continue;
-  if (derivesExclusivelyFromBraces(name)) {
+  if (!isHighSeverity(item.severity)) continue;
+  if (highCausesAreAllowed(name)) {
     exempted.push(name);
   } else {
     blocking.push({ name, severity: item.severity, via: item.via });
   }
 }
-if (exempted.length && Date.now() >= EXCEPTION_EXPIRES_AT) {
-  console.error("The temporary braces exception expired. Review the upstream advisory.");
-  process.exit(1);
+
+if (exempted.length) {
+  const lock = JSON.parse(readFileSync(new URL("../package-lock.json", import.meta.url), "utf8"));
+  const picomatchEntries = Object.entries(lock.packages ?? {}).filter(
+    ([path]) => path === "node_modules/picomatch" || path.endsWith("/node_modules/picomatch"),
+  );
+  const advisoryPresent = vulnerabilities.picomatch?.via?.some(
+    (reason) => isAllowedAdvisory(reason),
+  );
+  if (!advisoryPresent || picomatchEntries.length === 0 || picomatchEntries.some(([, item]) => item.dev !== true)) {
+    console.error(
+      "The temporary picomatch exception is allowed only when the exact advisory is present " +
+      "and every installed picomatch copy is dev-only.",
+    );
+    process.exit(1);
+  }
+  if (Date.now() >= EXCEPTION_EXPIRES_AT) {
+    console.error("The temporary picomatch exception expired. Re-check upstream remediation.");
+    process.exit(1);
+  }
 }
+
 if (blocking.length) {
   console.error("Blocking npm security findings:", JSON.stringify(blocking, null, 2));
   process.exit(1);
 }
 if (npm.status !== 0 && !exempted.length) {
-  console.error("npm audit failed without any recognized high/critical exception:", npm.stderr);
+  console.error("npm audit failed without a recognized temporary exception:", npm.stderr);
   process.exit(1);
 }
+
 console.log(
-  `Full npm dependency audit passed: ${exempted.length} dev-only finding(s) ` +
-  `transitively attributable only to unpatched ${EXEMPT_ADVISORY}; exception expires 2026-11-15.`,
+  `Full npm dependency audit passed: ${exempted.length} package finding(s) are temporarily ` +
+  `attributable only to dev-only ${EXEMPT_ADVISORY}; exception expires 2026-11-25.`,
 );
