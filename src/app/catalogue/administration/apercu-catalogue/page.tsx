@@ -4,19 +4,22 @@ import { requirePlatformAdmin } from "@/lib/auth";
 import { CataloguePackshot } from "@/components/catalogue/catalogue-packshot";
 import { withPharmacyProductVisuals } from "@/lib/catalogue-private-product-visuals";
 import { adminPreviewFirstTierLabel,resolveAdminPreviewPricing } from "@/lib/catalogue-admin-preview";
+import { buildAdminCommercialPreviewContext } from "@/lib/catalogue-admin-commercial-context";
+import { PrivateMultiBrandOrderForm } from "@/components/catalogue/private-multibrand-order-form";
 import type { CatalogProduct } from "@/lib/private-catalogue";
 
 export const dynamic = "force-dynamic";
 
 export default async function SoloAgentCataloguePreview({
   searchParams,
-}: { searchParams: Promise<{ pharmacie?: string; marque?: string; categorie?: string; q?: string }> }) {
+}: { searchParams: Promise<{ pharmacie?: string; marque?: string; categorie?: string; q?: string; mode?: string }> }) {
   // Intentionally not the real pharmacy session: this is an authenticated
   // agent-only, strictly read-only rendering of the authorised B2B catalogue.
   const { supabase } = await requirePlatformAdmin();
   const [
     pharmaciesResult,brandsResult,productsResult,accessResult,
     indicativeResult,contractResult,flatResult,
+    quantityGroupsResult,quantityGroupItemsResult,suppliersResult,supplierBrandLinksResult,supplierTermsResult,
   ] = await Promise.all([
     supabase.from("private_catalog_pharmacies").select("id,name,city").order("name").limit(1000),
     supabase.from("private_catalog_brands").select("id,slug,name,description,logo_url,active").order("name").limit(500),
@@ -28,9 +31,16 @@ export default async function SoloAgentCataloguePreview({
     supabase.from("private_catalog_indicative_tiers").select("product_id,min_quantity,price_min_ht,price_max_ht").limit(5000),
     supabase.from("private_catalog_contract_tiers").select("pharmacy_id,product_id,min_quantity,price_ht").limit(5000),
     supabase.from("private_catalog_prices").select("pharmacy_id,product_id,price_ht").limit(5000),
+    supabase.from("private_catalog_quantity_groups").select("id,brand_id,name,active,minimum_total_units,quantity_multiple").eq("active",true).limit(500),
+    supabase.from("private_catalog_quantity_group_products").select("group_id,product_id").limit(3000),
+    supabase.from("private_catalog_suppliers").select("id,display_name,active").eq("active",true).limit(300),
+    supabase.from("private_catalog_supplier_brands").select("supplier_id,brand_id").limit(1000),
+    supabase.from("private_catalog_supplier_terms").select("supplier_id,active,verified_at,minimum_order_units,minimum_order_ht,shipping_fee_ht,free_shipping_from_ht,gift_rules").limit(300),
   ]);
   const error = pharmaciesResult.error ?? brandsResult.error ?? productsResult.error ??
-    accessResult.error ?? indicativeResult.error ?? contractResult.error ?? flatResult.error;
+    accessResult.error ?? indicativeResult.error ?? contractResult.error ?? flatResult.error ??
+    quantityGroupsResult.error ?? quantityGroupItemsResult.error ?? suppliersResult.error ??
+    supplierBrandLinksResult.error ?? supplierTermsResult.error;
   if (error) throw new Error("Prévisualisation privée indisponible : " + error.message);
 
   const pharmacies = pharmaciesResult.data ?? [];
@@ -42,6 +52,7 @@ export default async function SoloAgentCataloguePreview({
   const flat = flatResult.data ?? [];
   const params = await searchParams;
   const pharmacy = pharmacies.find(p=>p.id===params.pharmacie)??null;
+  const simulationMode = params.mode === "simulation";
   const permitted = new Map<string,"contractual"|"indicative">();
   if(pharmacy){
     for(const permission of access.filter(a=>a.pharmacy_id===pharmacy.id)){
@@ -71,6 +82,30 @@ export default async function SoloAgentCataloguePreview({
     return haystack.includes(normalizedQuery);
   });
   const currentPath="/catalogue/administration/apercu-catalogue";
+  const selectedPharmacyQuery = pharmacy ? "?pharmacie="+encodeURIComponent(pharmacy.id) : "";
+  const simulationProducts = baseProducts.map(p=>{
+    const brand = brandById.get(p.brand_id)!;
+    const pricing=resolveAdminPreviewPricing({
+      productId:p.id,minimumQuantity:p.min_quantity,
+      pricingMode:pharmacy?permitted.get(p.brand_id)??"indicative":"indicative",
+      indicative,
+      contractual:pharmacy?contract.filter(t=>t.pharmacy_id===pharmacy.id):[],
+      flat:pharmacy?flat.filter(t=>t.pharmacy_id===pharmacy.id):[],
+    });
+    const product: CatalogProduct={
+      id:p.id,brand_id:p.brand_id,sku:p.sku,ean:p.ean,name:p.name,description:p.description,
+      format:p.format,image_url:p.image_url,vat_rate:Number(p.vat_rate??0),
+      min_quantity:p.min_quantity,quantity_step:p.quantity_step,pricing,
+    };
+    return withPharmacyProductVisuals(product,brand);
+  });
+  const commercialConditions=buildAdminCommercialPreviewContext({
+    allowedBrandIds:accessibleBrands.map(b=>b.id),
+    brands:brandsResult.data??[],products:productsResult.data??[],
+    groups:quantityGroupsResult.data??[],groupProducts:quantityGroupItemsResult.data??[],
+    suppliers:suppliersResult.data??[],supplierBrands:supplierBrandLinksResult.data??[],
+    terms:supplierTermsResult.data??[],
+  });
   const field="h-11 w-full rounded-lg border border-[#dce3e7] bg-white px-3 text-sm text-[#142941] outline-none focus:border-[#b97950]";
 
   return (
@@ -125,6 +160,7 @@ export default async function SoloAgentCataloguePreview({
               className={field+" pl-9"}/>
           </span>
         </label>
+        <input type="hidden" name="mode" value={simulationMode?"simulation":"fiches"}/>
         <button type="submit" className="h-11 rounded-lg bg-[#142941] px-5 text-sm font-black text-white hover:bg-[#284660]">Afficher</button>
       </form>
 
@@ -143,6 +179,43 @@ export default async function SoloAgentCataloguePreview({
         ))}
       </div>
 
+      <nav aria-label="Modes de prévisualisation du catalogue privé" className="flex flex-wrap items-center gap-2 rounded-xl border border-[#e2e7e8] bg-white p-2">
+        <Link href={currentPath+selectedPharmacyQuery}
+          aria-current={!simulationMode?"page":undefined}
+          className={"rounded-lg px-4 py-2.5 text-xs font-extrabold "+(!simulationMode?"bg-[#142941] text-white":"text-[#526474] hover:bg-[#f3f6f6]")}>
+          Voir les fiches
+        </Link>
+        <Link href={currentPath+(pharmacy?selectedPharmacyQuery+"&mode=simulation":"?mode=simulation")}
+          aria-current={simulationMode?"page":undefined}
+          className={"rounded-lg px-4 py-2.5 text-xs font-extrabold "+(simulationMode?"bg-[#142941] text-white":"text-[#526474] hover:bg-[#f3f6f6]")}>
+          Simuler un panier
+        </Link>
+      </nav>
+
+      {simulationMode ? (
+        pharmacy ? (
+          <section aria-label="Panier de simulation privée" className="space-y-4">
+            <div className="rounded-xl border border-[#c8d8cb] bg-[#eef7f0] px-4 py-3 text-xs leading-5 text-[#395943]">
+              <strong>Mode agent · {pharmacy.name}</strong> — les références, les tarifs et les conditions confirmées sont limités à cette pharmacie.
+              Ajoutez des produits pour tester les paliers, les minimums, les offres et le franco. Aucune commande n&apos;est envoyée et le panier n&apos;est pas enregistré.
+            </div>
+            <PrivateMultiBrandOrderForm
+              key={"simulation-"+pharmacy.id}
+              products={simulationProducts}
+              initialBrandSlug={selectedBrand||undefined}
+              commercialConditions={commercialConditions}
+              enableAccountFeatures={false}
+              requiresRequesterDetails={false}
+              simulationOnly
+            />
+          </section>
+        ) : (
+          <section className="rounded-xl border border-[#e2e7e8] bg-white p-7 text-center">
+            <p className="font-extrabold text-[#142941]">Sélectionnez une pharmacie pour simuler son panier.</p>
+            <p className="mt-2 text-xs text-[#70818b]">La simulation doit utiliser les marques autorisées et les tarifs de l&apos;officine, pas les prix indicatifs d&apos;un catalogue général.</p>
+          </section>
+        )
+      ) : (
       <section aria-label="Produits du catalogue privé" className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-black text-[#142941]">{selectedBrand ? accessibleBrands.find(b=>b.slug===selectedBrand)?.name : "Produits visibles"}
@@ -201,9 +274,10 @@ export default async function SoloAgentCataloguePreview({
           </div>
         )}
       </section>
+      )}
       <p className="rounded-lg bg-[#f0f3f4] px-4 py-3 text-xs leading-5 text-[#637581]">
-        Aperçu de consultation, pas une session pharmacie. Le panier, les favoris, les remises collectives, le franco, les frais de port et la soumission de commande ne sont pas simulés ici.
-        Pour valider le parcours transactionnel complet, utilisez un compte pharmacie de test autorisé.
+        Cette vue ne remplace pas une session pharmacie réelle. La simulation réutilise le calcul du panier B2B et les conditions fournisseurs vérifiées, mais ne persiste aucune sélection et ne transmet aucune demande.
+        Vérifiez le parcours réel de validation et de commande avec un compte pharmacie de test autorisé.
       </p>
     </div>
   );
