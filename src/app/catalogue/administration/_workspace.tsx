@@ -45,7 +45,13 @@ export async function CatalogueAdminWorkspace({
   // The dashboard uses the authenticated user session plus strict super-admin RLS.
   // A shared service key must never be required to render this administration.
   const { supabase: admin } = await requirePlatformAdmin();
-  const service = createAdminClient();
+  // A valid service credential must not be a prerequisite to view the admin dashboard.
+  // Private link metadata is only used on the pharmacy access screen.
+  const accessLinkQuery = section === "pharmacies"
+    ? createAdminClient().from("private_catalog_access_links")
+      .select("id,pharmacy_id,expires_at,last_used_at,active")
+      .eq("active", true).gt("expires_at", new Date().toISOString())
+    : Promise.resolve({ data: [], error: null });
   const [
     { data: pharmacies, error: pharmaciesError },
     { data: brands, error: brandsError },
@@ -68,11 +74,15 @@ export async function CatalogueAdminWorkspace({
     admin.from("private_catalog_contract_tiers").select("pharmacy_id,product_id,min_quantity,price_ht").order("min_quantity"),
     admin.from("private_catalog_access").select("pharmacy_id,brand_id,active,pricing_mode"),
     admin.from("private_catalog_invitations").select("id,pharmacy_id,email,created_at,expires_at,claimed_at,active").order("created_at", { ascending: false }).limit(200),
-    service.from("private_catalog_access_links").select("id,pharmacy_id,expires_at,last_used_at,active").eq("active", true).gt("expires_at", new Date().toISOString()),
-    service.from("private_catalog_request_items").select("request_id,product_name,sku,quantity,unit_price_ht,line_total_ht").limit(5000),
+    accessLinkQuery,
+    admin.from("private_catalog_request_items").select("request_id,product_name,sku,quantity,unit_price_ht,line_total_ht").limit(5000),
   ]);
-  const queryError = pharmaciesError ?? brandsError ?? productsError ?? requestsError ?? membershipsError ?? indicativeError ?? contractError ?? accessError ?? invitationsError ?? accessLinksError ?? requestItemsError;
+  const queryError = pharmaciesError ?? brandsError ?? productsError ?? requestsError ?? membershipsError ?? indicativeError ?? contractError ?? accessError ?? invitationsError ?? requestItemsError;
   if (queryError) throw queryError;
+  // Staging may have an outdated Supabase service credential. Do not suppress
+  // unexpected failures; make the affected link feature unavailable explicitly.
+  const privateLinksUnavailable = Boolean(accessLinksError?.message === "Invalid API key");
+  if (accessLinksError && !privateLinksUnavailable) throw accessLinksError;
   const pharmacyRows = pharmacies ?? [];
   const brandRows = brands ?? [];
   const productRows = products ?? [];
@@ -413,11 +423,17 @@ export async function CatalogueAdminWorkspace({
                   <p className="mt-1 text-xs text-[#69717d]">{pharmacy.city || "Ville non renseignée"}{pharmacy.contact_email ? " · " + pharmacy.contact_email : ""}</p>
                 </div>
                 <div className="w-full max-w-sm">
-                  <CatalogueAccessLinkManager
-                    pharmacyId={pharmacy.id}
-                    activeExpiresAt={link?.expires_at ?? null}
-                    lastUsedAt={link?.last_used_at ?? null}
-                  />
+                  {privateLinksUnavailable ? (
+                    <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs font-bold text-amber-900">
+                      Liens privés indisponibles : la clé serveur Supabase de cet environnement doit être corrigée.
+                    </p>
+                  ) : (
+                    <CatalogueAccessLinkManager
+                      pharmacyId={pharmacy.id}
+                      activeExpiresAt={link?.expires_at ?? null}
+                      lastUsedAt={link?.last_used_at ?? null}
+                    />
+                  )}
                 </div>
               </article>
             );
