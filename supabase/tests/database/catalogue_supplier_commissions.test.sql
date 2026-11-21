@@ -28,14 +28,14 @@ insert into public.private_catalog_agent_mandates(
  brand_id,commission_rate,verified,verified_at,contract_reference,first_order,repeat_order,direct_repeat
 ) values ('b34a0000-0000-4000-8000-000000000001',18,true,now(),'Contrat fictif test de pgTAP',true,true,true);
 select throws_ok(
- $insert into public.private_catalog_agent_commissions(
+ $case$insert into public.private_catalog_agent_commissions(
  brand_id,pharmacy_id,origin,sale_kind,supplier_invoice_reference,
  supplier_invoice_date,supplier_invoiced_ht,commission_rate_snapshot,supporting_evidence
  ) values (
  'b34a0000-0000-4000-8000-000000000001',
  'b34a0000-0000-4000-8000-000000000002',
  'direct','reorder','INV-NON-ATTRIBUEE',current_date,300,18,'Relevé fictif non attribué'
- )$,
+ )$case$,
  '22023',null,'unattributed direct reorders cannot create a commission');
 
 insert into public.private_catalog_agent_accounts(
