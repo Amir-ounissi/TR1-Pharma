@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requirePlatformAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
-  saveAgentMandate, advanceSupplierRequest, recordSupplierInvoice, advanceCommissionSettlement,
+  saveAgentMandate, saveAgentClientAttribution, advanceSupplierRequest, recordSupplierInvoice, advanceCommissionSettlement,
 } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +34,7 @@ export default async function SupplierCommissionCockpit({
   const service = createAdminClient();
   const [
     brandsResult, pharmaciesResult, requestsResult, itemsResult,
-    fulfillmentsResult, mandatesResult, commissionsResult,
+    fulfillmentsResult, mandatesResult, attributionsResult, commissionsResult,
   ] = await Promise.all([
     admin.from("private_catalog_brands").select("id,name,slug").order("name"),
     admin.from("private_catalog_pharmacies").select("id,name,city").order("name"),
@@ -47,12 +47,13 @@ export default async function SupplierCommissionCockpit({
       .select("request_id,dispatch_reference,dispatched_at,confirmation_reference,confirmed_at").limit(100),
     admin.from("private_catalog_agent_mandates")
       .select("brand_id,commission_rate,first_order,repeat_order,direct_repeat,verified,contract_reference").limit(100),
+    admin.from("private_catalog_agent_accounts").select("brand_id,pharmacy_id,attribution_reference,verified").limit(500),
     admin.from("private_catalog_agent_commissions")
       .select("id,request_id,brand_id,pharmacy_id,origin,sale_kind,supplier_invoice_reference,supplier_invoice_date,supplier_invoiced_ht,commission_rate_snapshot,commission_ht,status,tr1_invoice_reference,payment_reference,created_at")
       .order("created_at",{ascending:false}).limit(200),
   ]);
   const errors = [brandsResult.error,pharmaciesResult.error,requestsResult.error,itemsResult.error,
-    fulfillmentsResult.error,mandatesResult.error,commissionsResult.error].filter(Boolean);
+    fulfillmentsResult.error,mandatesResult.error,attributionsResult.error,commissionsResult.error].filter(Boolean);
   if (errors.length) throw new Error("Cockpit indisponible : migration de suivi ou permissions manquantes. " + errors[0]!.message);
   const brands = brandsResult.data ?? [];
   const pharmacies = pharmaciesResult.data ?? [];
@@ -60,6 +61,7 @@ export default async function SupplierCommissionCockpit({
   const items = itemsResult.data ?? [];
   const fulfillments = fulfillmentsResult.data ?? [];
   const mandates = mandatesResult.data ?? [];
+  const attributions = attributionsResult.data ?? [];
   const commissions = commissionsResult.data ?? [];
   const mandateByBrand = new Map(mandates.map(m => [m.brand_id,m]));
   const fulfillmentByRequest = new Map(fulfillments.map(f => [f.request_id,f]));
@@ -216,9 +218,43 @@ export default async function SupplierCommissionCockpit({
         </div>
       </section>
 
+      <section className="space-y-4" aria-labelledby="agent-accounts">
+        <h2 id="agent-accounts" className="text-xl font-black text-[#142941]">3. Pharmacies attribuées à TR1</h2>
+        <p className="text-xs text-[#526071]">Avant de comptabiliser un réassort pris directement par un laboratoire, documentez la relation TR1 avec cette pharmacie pour la marque concernée. L'attribution est une vérification distincte du mandat.</p>
+        <form action={saveAgentClientAttribution} className="grid gap-3 rounded-xl border border-[#e1e7e8] bg-white p-4 sm:grid-cols-2">
+          <label className={label}>Marque représentée
+            <select name="brand_id" className={field} defaultValue="" required>
+              <option disabled value="">Choisir une marque</option>
+              {brands.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+          </label>
+          <label className={label}>Pharmacie du portefeuille
+            <select name="pharmacy_id" className={field} defaultValue="" required>
+              <option disabled value="">Choisir une pharmacie</option>
+              {pharmacies.map(p=><option key={p.id} value={p.id}>{p.name}{p.city?" — "+p.city:""}</option>)}
+            </select>
+          </label>
+          <label className={label+" sm:col-span-2"}>Preuve d'attribution (contrat, première commande, liste clients validée)
+            <input name="attribution_reference" className={field} minLength={8} maxLength={500} required/>
+          </label>
+          <label className="flex items-center gap-2 text-xs font-bold text-[#526071]">
+            <input type="checkbox" name="verified" value="true"/>
+            Attribution vérifiée avec justificatif
+          </label>
+          <button type="submit" className={action}>Enregistrer la pharmacie attribuée</button>
+        </form>
+        <div className="flex flex-wrap gap-2">
+          {attributions.map(a=><span key={a.brand_id+"-"+a.pharmacy_id}
+            className={"rounded-lg border px-3 py-2 text-xs font-bold "+(a.verified?"border-[#bbd8c2] bg-[#f0f8f1] text-[#315638]":"border-[#eed8c8] bg-[#fff8f3] text-[#905a32]")}>
+            {brandById.get(a.brand_id)?.name??"Marque"} · {pharmacyById.get(a.pharmacy_id)?.name??"Pharmacie"} · {a.verified?"Attribuée":"À vérifier"}
+          </span>)}
+          {!attributions.length?<p className="text-xs text-[#7b8791]">Aucun compte attribué à ce stade.</p>:null}
+        </div>
+      </section>
+
       <section className="space-y-4" aria-labelledby="direct-reorders">
-        <h2 id="direct-reorders" className="text-xl font-black text-[#142941]">3. Réassorts directs des laboratoires</h2>
-        <p className="text-xs text-[#526071]">Quand un laboratoire facture directement une pharmacie de ton portefeuille, enregistre le justificatif ici. Le calcul utilise le taux de mandat vérifié, jamais un taux modifiable dans le formulaire.</p>
+        <h2 id="direct-reorders" className="text-xl font-black text-[#142941]">4. Réassorts directs des laboratoires</h2>
+        <p className="text-xs text-[#526071]">Quand un laboratoire facture directement une pharmacie de ton portefeuille, enregistre le justificatif ici. Le calcul exige un mandat et une attribution pharmacie vérifiés. Il utilise le taux du mandat, jamais un taux modifiable dans le formulaire.</p>
         <form action={recordSupplierInvoice} className="grid gap-3 rounded-xl border border-[#e1e7e8] bg-white p-4 sm:grid-cols-2">
           <input type="hidden" name="origin" value="direct"/>
           <input type="hidden" name="sale_kind" value="reorder"/>
@@ -252,7 +288,7 @@ export default async function SupplierCommissionCockpit({
 
       <section className="space-y-4" aria-labelledby="commissions">
         <div>
-          <h2 id="commissions" className="text-xl font-black text-[#142941]">4. Registre des commissions</h2>
+          <h2 id="commissions" className="text-xl font-black text-[#142941]">5. Registre des commissions</h2>
           <p className="mt-1 text-xs text-[#526071]">Le taux est figé au moment de l'enregistrement de la facture. Le paiement doit être rapproché d'un justificatif bancaire.</p>
         </div>
         <div className="space-y-3">
