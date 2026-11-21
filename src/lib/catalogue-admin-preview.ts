@@ -2,6 +2,7 @@ import {
   euroHT, firstOrderQuantity, orderablePricingTiers,
 } from "@/lib/private-catalogue-format";
 import type { CataloguePricing } from "@/lib/private-catalogue";
+import type { IndicativeTier, ContractTier } from "@/lib/private-catalogue-format";
 
 export type AdminPreviewIndicativeTier = { product_id: string; min_quantity: number; price_min_ht: number; price_max_ht: number };
 export type AdminPreviewContractTier = { product_id: string; min_quantity: number; price_ht: number };
@@ -42,7 +43,7 @@ export function resolveAdminPreviewPricing({
 }
 
 export function adminPreviewFirstTierLabel(pricing: CataloguePricing, minQty: number, step: number) {
-  const first = orderablePricingTiers(pricing.tiers,minQty,step)[0];
+  const first = orderablePricingTiers<IndicativeTier | ContractTier>(pricing.tiers,minQty,step)[0];
   if(!first) return {amount:"Tarif sur demande",detail:"Prix et conditions à confirmer"};
   const quantity = firstOrderQuantity(first.threshold,step);
   const tier = first.tier;
