@@ -15,18 +15,11 @@ import {
   setPrivateCataloguePrice,
   setPrivateCatalogueIndicativeTier,
   setPrivateCatalogueContractTier,
-  updatePrivateCatalogueRequestStatus,
 } from "./actions";
 
 const field = "w-full rounded-md border border-[#0e1d31]/20 bg-white px-3 py-2 text-sm";
 const button = "rounded-md bg-[#0e1d31] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#162a45]";
 const label = "block text-xs font-bold uppercase tracking-wide text-[#69717d]";
-const statuses = [
-  ["received", "Reçue"], ["verifying", "En vérification"],
-  ["forwarded", "Transmise"], ["confirmed", "Confirmée"],
-  ["closed", "Clôturée"], ["declined", "Refusée"],
-] as const;
-
 export default async function CatalogueAdministration({
   searchParams,
 }: { searchParams: Promise<{ succes?: string }> }) {
@@ -45,7 +38,6 @@ export default async function CatalogueAdministration({
     { data: brandAccess, error: accessError },
     { data: invitations, error: invitationsError },
     { data: accessLinks, error: accessLinksError },
-    { data: requestItems, error: requestItemsError },
   ] = await Promise.all([
     admin.from("private_catalog_pharmacies").select("id,name,city,contact_email").order("name"),
     admin.from("private_catalog_brands").select("id,name,slug,active").order("name"),
@@ -57,9 +49,8 @@ export default async function CatalogueAdministration({
     admin.from("private_catalog_access").select("pharmacy_id,brand_id,active,pricing_mode"),
     admin.from("private_catalog_invitations").select("id,pharmacy_id,email,created_at,expires_at,claimed_at,active").order("created_at", { ascending: false }).limit(200),
     service.from("private_catalog_access_links").select("id,pharmacy_id,expires_at,last_used_at,active").eq("active", true).gt("expires_at", new Date().toISOString()),
-    service.from("private_catalog_request_items").select("request_id,product_name,sku,quantity,unit_price_ht,line_total_ht").limit(5000),
   ]);
-  const queryError = pharmaciesError ?? brandsError ?? productsError ?? requestsError ?? membershipsError ?? indicativeError ?? contractError ?? accessError ?? invitationsError ?? accessLinksError ?? requestItemsError;
+  const queryError = pharmaciesError ?? brandsError ?? productsError ?? requestsError ?? membershipsError ?? indicativeError ?? contractError ?? accessError ?? invitationsError ?? accessLinksError;
   if (queryError) throw queryError;
   const pharmacyRows = pharmacies ?? [];
   const brandRows = brands ?? [];
@@ -71,13 +62,6 @@ export default async function CatalogueAdministration({
   const accessRows = brandAccess ?? [];
   const invitationRows = invitations ?? [];
   const accessLinkRows = accessLinks ?? [];
-  const requestItemRows = requestItems ?? [];
-  const requestItemsById = new Map<string, typeof requestItemRows>();
-  for (const item of requestItemRows) {
-    const current = requestItemsById.get(item.request_id) ?? [];
-    current.push(item);
-    requestItemsById.set(item.request_id, current);
-  }
   const { succes } = await searchParams;
 
   return (
@@ -379,47 +363,17 @@ export default async function CatalogueAdministration({
         </div>
       </section>
 
-      <section aria-labelledby="requests" className="space-y-4">
-        <h2 id="requests" className="text-2xl font-black">6. Demandes des pharmacies</h2>
-        <p className="text-sm text-[#69717d]">Ces demandes n’alimentent pas automatiquement les commandes internes ou les laboratoires.</p>
-        <div className="space-y-3">
-          {requestRows.map((r) => (
-            <form action={updatePrivateCatalogueRequestStatus} key={r.id} className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[#0e1d31]/10 bg-white p-4">
-              <div>
-                <p className="text-sm font-bold">{pharmacyRows.find((p) => p.id === r.pharmacy_id)?.name ?? "Pharmacie"} · {brandRows.find((b) => b.id === r.brand_id)?.name ?? "Laboratoire"}</p>
-                <p className="mt-1 text-xs text-[#69717d]">{new Date(r.created_at).toLocaleDateString("fr-FR")} · {r.id.slice(0, 8).toUpperCase()}</p>
-                {r.requester_name && r.requester_email ? (
-                  <p className="mt-1 text-xs text-[#526071]">
-                    Demandeur : <strong>{r.requester_name}</strong> · <a className="underline" href={"mailto:" + r.requester_email}>{r.requester_email}</a>
-                  </p>
-                ) : null}
-                <p className="mt-1 font-black">{r.request_kind === "quote" ? "Demande de conditions · À chiffrer" : r.total_ht === null ? "Montant à confirmer" : euroHT(Number(r.total_ht)) + " HT"}</p>
-                {(requestItemsById.get(r.id) ?? []).length ? (
-                  <details className="mt-3 rounded-lg border border-[#e5e9eb] bg-[#faf9f6] p-3">
-                    <summary className="cursor-pointer text-xs font-bold text-[#142941]">
-                      Voir {(requestItemsById.get(r.id) ?? []).length} références demandées
-                    </summary>
-                    <ul className="mt-2 space-y-1 text-xs text-[#526071]">
-                      {(requestItemsById.get(r.id) ?? []).map((item, index) => (
-                        <li key={r.id + "-" + index}>
-                          {item.product_name} · Réf. {item.sku} · {item.quantity} unité{item.quantity > 1 ? "s" : ""}
-                          {item.unit_price_ht !== null ? " · " + euroHT(Number(item.unit_price_ht)) + " HT/u." : " · Tarif à confirmer"}
-                        </li>
-                      ))}
-                    </ul>
-                  </details>
-                ) : null}
-              </div>
-              <input name="request_id" type="hidden" value={r.id} />
-              <div className="flex items-center gap-2">
-                <select name="status" className={field} defaultValue={r.status}>
-                  {statuses.map(([key, title]) => <option key={key} value={key}>{title}</option>)}
-                </select>
-                <button type="submit" className={button}>Enregistrer</button>
-              </div>
-            </form>
-          ))}
-          {!requestRows.length ? <p className="rounded-xl bg-white p-6 text-sm text-[#69717d]">Aucune demande reçue.</p> : null}
+      <section aria-labelledby="requests" className="space-y-3">
+        <h2 id="requests" className="text-2xl font-black">6. Demandes et commissions</h2>
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[#e2e7ec] bg-white p-5">
+          <div>
+            <p className="text-sm font-extrabold text-[#142941]">{requestRows.length} demande(s) de pharmacie à suivre</p>
+            <p className="mt-1 text-xs text-[#69717d]">Transmission fournisseur documentée, confirmations, factures et commissions avec historique. Les changements de statut doivent passer par le cockpit sécurisé.</p>
+          </div>
+          <Link href="/catalogue/administration/commandes"
+            className="inline-flex min-h-10 items-center rounded-lg bg-[#142941] px-4 text-xs font-extrabold text-white hover:bg-[#213c5c]">
+            Piloter commandes et commissions
+          </Link>
         </div>
       </section>
       <p className="text-xs text-[#69717d]">{memberRows.filter((m) => m.active).length} accès utilisateur actif(s). L’activation des accès doit rester réservée aux professionnels vérifiés.</p>
