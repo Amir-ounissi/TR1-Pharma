@@ -4,6 +4,7 @@ const links = [
   { href: "/app/pharmacies", label: "Pharmacies" },
   { href: "/app/marques", label: "Marques & produits" },
   { href: "/app/commandes", label: "Demandes & commandes" },
+  { href: "/app/acces", label: "Accès B2B" },
   { href: "/app/terrain", label: "Terrain & missions" },
   { href: "/app/revenus", label: "Mes revenus" },
 ];

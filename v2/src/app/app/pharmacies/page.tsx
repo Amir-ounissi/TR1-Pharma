@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireOwner } from "@/lib/auth";
 import { createPharmacyAction } from "../actions";
 export default async function PharmaciesPage() {
@@ -6,7 +7,8 @@ export default async function PharmaciesPage() {
   if (error) throw new Error("Impossible de charger les pharmacies.");
   return <div className="space-y-6">
     <div><h1 className="text-3xl font-bold">Mes pharmacies</h1>
-      <p className="mt-2 text-sm text-[#69717d]">Répertoire officinal unique, partagé entre les marques.</p></div>
+      <p className="mt-2 text-sm text-[#69717d]">Répertoire officinal unique, partagé entre les marques.</p>
+      <Link href="/app/acces" className="mt-3 inline-block font-semibold underline">Gérer les marques autorisées par pharmacie</Link></div>
     <form action={createPharmacyAction} className="grid gap-3 rounded-xl border bg-white p-5 md:grid-cols-4">
       <input name="name" required minLength={2} placeholder="Nom de l'officine" className="rounded-lg border p-3"/>
       <input name="city" placeholder="Ville" className="rounded-lg border p-3"/>

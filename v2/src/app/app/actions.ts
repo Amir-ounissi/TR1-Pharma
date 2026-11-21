@@ -36,3 +36,44 @@ export async function createProductAction(form: FormData) {
   if (error) throw new Error("Impossible de créer le produit.");
   revalidatePath("/app/produits");
 }
+
+export async function setBrandActiveAction(form: FormData) {
+  const brandId = z.uuid().parse(form.get("brand_id"));
+  const active = form.get("active") === "true";
+  const { db } = await requireOwner();
+  const { error } = await db.from("brands").update({ active }).eq("id", brandId);
+  if (error) throw new Error("Impossible de modifier la publication de cette marque.");
+  revalidatePath("/app/marques");
+  revalidatePath("/catalogue");
+}
+export async function setProductPublishedAction(form: FormData) {
+  const productId = z.uuid().parse(form.get("product_id"));
+  const published = form.get("published") === "true";
+  const { db } = await requireOwner();
+  const { error } = await db.from("products").update({ published }).eq("id", productId);
+  if (error) throw new Error("Impossible de modifier la publication du produit.");
+  revalidatePath("/app/produits");
+  revalidatePath("/catalogue");
+}
+export async function authorizeBrandAction(form: FormData) {
+  const value = z.object({ pharmacy_id: z.uuid(), brand_id: z.uuid() })
+    .parse({ pharmacy_id: form.get("pharmacy_id"), brand_id: form.get("brand_id") });
+  const { db } = await requireOwner();
+  const { error } = await db.from("pharmacy_brand_access").upsert(
+    { ...value, active: true }, { onConflict: "pharmacy_id,brand_id" },
+  );
+  if (error) throw new Error("Impossible d'autoriser cette marque.");
+  revalidatePath("/app/acces");
+  revalidatePath("/catalogue");
+}
+export async function setBrandAccessActiveAction(form: FormData) {
+  const value = z.object({ pharmacy_id: z.uuid(), brand_id: z.uuid() })
+    .parse({ pharmacy_id: form.get("pharmacy_id"), brand_id: form.get("brand_id") });
+  const active = form.get("active") === "true";
+  const { db } = await requireOwner();
+  const { error } = await db.from("pharmacy_brand_access").update({ active })
+    .eq("pharmacy_id", value.pharmacy_id).eq("brand_id", value.brand_id);
+  if (error) throw new Error("Impossible de modifier cet accès.");
+  revalidatePath("/app/acces");
+  revalidatePath("/catalogue");
+}

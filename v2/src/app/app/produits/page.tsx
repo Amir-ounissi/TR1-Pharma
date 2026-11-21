@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireOwner } from "@/lib/auth";
-import { createProductAction } from "../actions";
+import { createProductAction, setProductPublishedAction } from "../actions";
 export default async function ProductsPage() {
   const { db } = await requireOwner();
   const [b, p] = await Promise.all([
@@ -28,7 +28,12 @@ export default async function ProductsPage() {
     <div className="overflow-hidden rounded-xl border bg-white">
       {(p.data ?? []).length ? p.data?.map(x=><div key={x.id} className="flex flex-wrap justify-between gap-3 border-b px-5 py-4">
         <div><strong>{x.name}</strong><p className="text-xs text-[#69717d]">{brands.find(b=>b.id===x.brand_id)?.name} · {x.sku}</p></div>
-        <span className="text-sm">{Number(x.price_ht).toFixed(2)} € HT · {x.published ? "Publié" : "Brouillon"}</span>
+        <form action={setProductPublishedAction} className="flex items-center gap-3">
+          <span className="text-sm">{Number(x.price_ht).toFixed(2)} € HT · {x.published ? "Publié" : "Brouillon"}</span>
+          <input type="hidden" name="product_id" value={x.id}/>
+          <input type="hidden" name="published" value={x.published ? "false" : "true"}/>
+          <button className="rounded-lg border px-3 py-2 text-xs font-semibold">{x.published ? "Masquer" : "Publier"}</button>
+        </form>
       </div>) : <p className="p-6 text-sm text-[#69717d]">Aucun produit créé.</p>}
     </div>
   </div>;
