@@ -44,6 +44,33 @@ export async function saveAgentMandate(formData: FormData) {
   finish("mandat");
 }
 
+/** L'attribution client conditionne les commissions sur les réassorts directs. */
+export async function saveAgentClientAttribution(formData: FormData) {
+  const input = z.object({
+    brand_id: uuid,
+    pharmacy_id: uuid,
+    attribution_reference: z.string().trim().max(500),
+  }).parse({
+    brand_id: formData.get("brand_id"),
+    pharmacy_id: formData.get("pharmacy_id"),
+    attribution_reference: formData.get("attribution_reference") ?? "",
+  });
+  const verified = formData.get("verified") === "true";
+  if (verified && input.attribution_reference.length < 8) {
+    throw new Error("La pharmacie ne peut être attribuée sans justificatif écrit.");
+  }
+  const { supabase, userId } = await requirePlatformAdmin();
+  const { error } = await supabase.from("private_catalog_agent_accounts").upsert({
+    ...input,
+    verified,
+    verified_at: verified ? new Date().toISOString() : null,
+    updated_by: userId,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: "brand_id,pharmacy_id" });
+  if (error) throw new Error("Attribution non enregistrée : " + error.message);
+  finish("attribution");
+}
+
 export async function advanceSupplierRequest(formData: FormData) {
   const input = z.object({
     request_id: uuid,
