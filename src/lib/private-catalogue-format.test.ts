@@ -63,6 +63,13 @@ describe("catalogue prive - contraintes des demandes", () => {
       .toBe("Minimum : 6 u. · Colisage : 6 u. · Tarif HT applicable dès 12 unités");
     expect(catalogueQuantityPricingLabel(6, 6, null))
       .toContain("Tarif à confirmer");
+    // Minimum et colisage sont indépendants : 7 minimum, lots de 6 => 12 d'abord.
+    expect(catalogueQuantityPricingLabel(7, 6, 1))
+      .toBe("Minimum : 7 u. · Colisage : 6 u. · Première quantité possible : 12 u. · Tarif HT applicable dès 12 unités");
+    expect(isAllowedQuantity(6, 7, 6)).toBe(false);
+    expect(isAllowedQuantity(12, 7, 6)).toBe(true);
+    expect(catalogueQuantityPricingLabel(8, 4, 1))
+      .toBe("Minimum : 8 u. · Colisage : 4 u. · Tarif HT applicable dès 8 unités");
   });
 
   it("regroupe les paliers non commandables sans changer le prix applicable", () => {
