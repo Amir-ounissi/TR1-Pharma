@@ -259,16 +259,27 @@ export async function invitePrivateCatalogueUser(formData: FormData) {
   finish();
 }
 
+/** Compatibilité avec les formulaires plus anciens : transitions obligatoirement auditées en base. */
 export async function updatePrivateCatalogueRequestStatus(formData: FormData) {
   const input = z.object({
     request_id: id,
-    status: z.enum(["received","verifying","forwarded","confirmed","closed","declined"]),
-  }).parse({ request_id: formData.get("request_id"), status: formData.get("status") });
+    status: z.enum(["verifying","forwarded","confirmed","closed","declined"]),
+    reference: z.string().trim().max(500),
+  }).parse({
+    request_id: formData.get("request_id"),
+    status: formData.get("status"),
+    reference: formData.get("reference") ?? "",
+  });
   const admin = await authorizedAdmin();
-  const { error } = await admin.from("private_catalog_requests")
-    .update({ status: input.status }).eq("id", input.request_id);
+  const { error } = await admin.rpc("catalogue_admin_transition_supplier_request", {
+    p_request_id: input.request_id,
+    p_next_status: input.status,
+    p_reference: input.reference || null,
+  });
   if (error) throw error;
-  finish();
+  revalidatePath("/catalogue/mes-demandes");
+  revalidatePath("/catalogue/administration/commandes");
+  redirect("/catalogue/administration/commandes?succes=suivi");
 }
 
 
