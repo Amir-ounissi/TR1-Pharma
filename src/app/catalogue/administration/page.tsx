@@ -1,6 +1,6 @@
 import Link from "next/link";
 import {
-  ArrowRight, CalendarClock, Check, ClipboardList, Coins,
+  ArrowRight, CalendarClock, Check, ClipboardList, Coins, Eye,
   Package, PhoneCall, Plus, Settings2, Store, Tags,
 } from "lucide-react";
 import { requirePlatformAdmin } from "@/lib/auth";
@@ -138,6 +138,33 @@ export default async function SoloAgentHome({
         {succes==="terminee"?"Action marquée terminée.":"Action planifiée."}
       </p> : null}
 
+      <section aria-label="Mon catalogue B2B privé" className="grid gap-3 md:grid-cols-2">
+        <Link href="/catalogue/administration/configuration"
+          className="group flex items-start justify-between gap-3 rounded-xl border border-[#dfe6e8] bg-white p-5 transition hover:border-[#bbccd5] hover:shadow-sm">
+          <div>
+            <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[.1em] text-[#b06f47]">
+              <Settings2 size={16} aria-hidden="true" /> Catalogue privé
+            </p>
+            <h2 className="mt-2 text-lg font-black text-[#142941]">Gérer mon catalogue</h2>
+            <p className="mt-1 text-xs leading-5 text-[#6b7c89]">Produits, marques, visuels, publication, prix professionnels et accès des pharmacies.</p>
+            <p className="mt-3 text-xs font-extrabold text-[#284963]">Ouvrir la gestion</p>
+          </div>
+          <ArrowRight size={19} aria-hidden="true" className="mt-2 shrink-0 text-[#81939f] group-hover:translate-x-1" />
+        </Link>
+        <Link href="/catalogue/administration/apercu-catalogue"
+          className="group flex items-start justify-between gap-3 rounded-xl border border-[#dfe6e8] bg-white p-5 transition hover:border-[#bbccd5] hover:shadow-sm">
+          <div>
+            <p className="flex items-center gap-2 text-xs font-black uppercase tracking-[.1em] text-[#b06f47]">
+              <Eye size={16} aria-hidden="true"/> Catalogue privé
+            </p>
+            <h2 className="mt-2 text-lg font-black text-[#142941]">Visualiser mon catalogue</h2>
+            <p className="mt-1 text-xs leading-5 text-[#6b7c89]">Aperçu des fiches et tarifs, en vue générale ou avec les accès d&apos;une pharmacie précise.</p>
+            <p className="mt-3 text-xs font-extrabold text-[#284963]">Ouvrir l&apos;aperçu sécurisé</p>
+          </div>
+          <ArrowRight size={19} aria-hidden="true" className="mt-2 shrink-0 text-[#81939f] group-hover:translate-x-1"/>
+        </Link>
+      </section>
+
       <section aria-label="Mes indicateurs" className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         {[
           {title:"Mes pharmacies",value:String(pharmacies.length),detail:"Officines du catalogue TR1",icon:Store},
@@ -190,8 +217,9 @@ export default async function SoloAgentHome({
               {href:"#pharmacies",label:"Mes pharmacies",icon:Store},
               {href:"/catalogue/administration/commandes#supplier-requests",label:"Commandes et fournisseurs",icon:Package},
               {href:"/catalogue/administration/commandes#commissions",label:"Mes commissions",icon:Coins},
-              {href:"/catalogue/decouvrir",label:"Catalogue des produits",icon:Tags},
-              {href:"/catalogue/administration/configuration",label:"Ajouter une pharmacie / marque",icon:Settings2},
+              {href:"/catalogue/administration/apercu-catalogue",label:"Visualiser le catalogue privé",icon:Eye},
+              {href:"/catalogue/administration/configuration",label:"Gérer le catalogue privé",icon:Settings2},
+              {href:"/catalogue/decouvrir",label:"Catalogue public",icon:Tags},
             ].map(item=>(
               <Link key={item.href} href={item.href} className="flex min-h-11 items-center justify-between gap-2 rounded-lg border border-[#e6ebed] px-3.5 text-xs font-extrabold text-[#304458] hover:bg-[#f5f7f6]">
                 <span className="flex items-center gap-2"><item.icon size={16} aria-hidden="true"/>{item.label}</span>
@@ -231,6 +259,10 @@ export default async function SoloAgentHome({
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 <span className="text-xs text-[#63737f]">{next?"Prochaine action : "+shortDate(next.next_action_date):"Relance non planifiée"}</span>
+                <Link href={"/catalogue/administration/apercu-catalogue?pharmacie="+encodeURIComponent(p.id)}
+                  className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-[#ccd9df] px-3 text-xs font-extrabold text-[#142941] hover:bg-[#f2f7f7]">
+                  <Eye size={14} aria-hidden="true"/> Voir le catalogue
+                </Link>
                 <Link href={"/catalogue/administration?pharmacie="+encodeURIComponent(p.id)+"#planifier"}
                   className="inline-flex min-h-9 items-center rounded-lg border border-[#ccd9df] px-3 text-xs font-extrabold text-[#142941] hover:bg-[#f2f7f7]">Planifier</Link>
               </div>
