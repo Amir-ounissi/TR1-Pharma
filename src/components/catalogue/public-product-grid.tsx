@@ -53,13 +53,13 @@ function privateTierPrice(
 const allProducts: DisplayProduct[] = publicCatalogueProducts;
 const brands = ["Toutes les marques", "Beauty of Joseon", "Dr. Althea", "Biodance", "Vitalora"];
 
-// Logos des marques partenaires : originaux recueillis sur leurs sites / supports,
-// hébergés sur le CDN média. Ne pas assimiler leur présence à une certification.
-const brandLogos: Record<string, { src: string; fit: "cover" | "contain"; position?: string }> = {
-  "Beauty of Joseon": { src: "https://cdn.shopify.com/s/files/1/1120/5050/4019/files/tr1-marque-logo-beauty-of-joseon.jpg?v=1795245423", fit: "cover", position: "center 54%" },
-  "Dr. Althea": { src: "https://cdn.shopify.com/s/files/1/1120/5050/4019/files/tr1-marque-logo-dr-althea.png?v=1795245428", fit: "cover" },
-  "Biodance": { src: "https://cdn.shopify.com/s/files/1/1120/5050/4019/files/tr1-marque-logo-biodance.jpg?v=1795245432", fit: "cover" },
-  "Vitalora": { src: "https://cdn.shopify.com/s/files/1/1120/5050/4019/files/tr1-marque-logo-vitalora.png?v=1795245438", fit: "contain" },
+// Logos de marques en haute définition : source, proportion et transparence préservées.
+// Pas de zoom ni de recadrage. Autorisations d'utilisation commerciale à confirmer.
+const brandLogos: Record<string, { src: string }> = {
+  "Beauty of Joseon": { src: "https://cdn.shopify.com/s/files/1/1120/5050/4019/files/tr1-marque-logo-hd-beauty-of-joseon.png?v=1795246073" },
+  "Dr. Althea": { src: "https://cdn.shopify.com/s/files/1/1120/5050/4019/files/tr1-marque-logo-hd-dr-althea.png?v=1795245963" },
+  "Biodance": { src: "https://cdn.shopify.com/s/files/1/1120/5050/4019/files/tr1-marque-logo-hd-biodance.png?v=1795245907" },
+  "Vitalora": { src: "https://cdn.shopify.com/s/files/1/1120/5050/4019/files/tr1-marque-logo-hd-vitalora.png?v=1795246078" },
 };
 
 const themes: Record<string, BrandTheme> = {
@@ -164,11 +164,10 @@ export function PublicProductGrid({ privateProducts }: { privateProducts?: Priva
               <div aria-hidden="true" className="pointer-events-none absolute -right-10 -top-12 size-44 rounded-full border-[24px] opacity-30" style={{ borderColor: look.border }} />
               <div className="relative flex h-full flex-col justify-between">
                 <div className="flex items-start justify-between gap-2">
-                  <span className="relative flex h-[74px] w-[190px] max-w-[calc(100%-32px)] shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/80 bg-white shadow-sm transition group-hover:shadow-md">
+                  <span className="relative flex h-[76px] w-[205px] max-w-[calc(100%-32px)] shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/80 bg-white shadow-sm transition group-hover:shadow-md">
                     {logo ? (
-                      <Image src={logo.src} alt={"Logo " + brand} width={380} height={148} unoptimized
-                        className={"h-full w-full " + (logo.fit === "contain" ? "object-contain p-2" : "object-cover")}
-                        style={logo.position ? { objectPosition: logo.position } : undefined} />
+                      <Image src={logo.src} alt={"Logo " + brand} width={410} height={152} unoptimized
+                        className="h-full w-full object-contain px-2.5 py-2" />
                     ) : (
                       <span className="px-2 text-[17px] font-black" style={{ color: look.ink }}>{look.short}</span>
                     )}
