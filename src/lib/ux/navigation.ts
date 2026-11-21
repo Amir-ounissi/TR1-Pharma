@@ -89,12 +89,12 @@ const facilitatorMobileItems: NavigationItem[] = [
 const platformAdminItems: NavigationItem[] = [
   { href: "/dashboard", label: "Vue globale", shortLabel: "Accueil", icon: "layout" },
   { href: "/dashboard/admin/access-requests", label: "Demandes d’accès", icon: "users" },
+  { href: "/dashboard/admin/leads", label: "Leads TR1", icon: "leads" },
+  { href: "/dashboard/admin/catalogue", label: "Catalogue B2B", icon: "boxes" },
   { href: "/dashboard/admin/onboarding", label: "Marques & déploiements", icon: "badge" },
   { href: "/dashboard/admin/users", label: "Utilisateurs & accès", icon: "users" },
   { href: "/dashboard/admin/saas", label: "Offres & capacités", icon: "boxes" },
   { href: "/dashboard/admin/saas-commercial", label: "Quotas & facturation", icon: "chart" },
-  { href: "/dashboard/admin/leads", label: "Leads TR1", icon: "leads" },
-  { href: "/catalogue/administration", label: "Catalogue privé", icon: "boxes" },
 ];
 
 function filterItems(items: NavigationItem[], enabledCapabilities?: readonly SaasCapability[]) {
@@ -134,9 +134,9 @@ export function getNavigationSections(
 
   if (scope === "platform") {
     return compactSections([
-      { label: "Pilotage plateforme", items: platformAdminItems.slice(0, 3) },
-      { label: "Administration", items: platformAdminItems.slice(3, 4) },
-      { label: "Offre & revenus", items: platformAdminItems.slice(4) },
+      { label: "À piloter", items: platformAdminItems.slice(0, 3) },
+      { label: "Activité", items: platformAdminItems.slice(3, 6) },
+      { label: "Configuration avancée", items: platformAdminItems.slice(6) },
     ], enabledCapabilities);
   }
 

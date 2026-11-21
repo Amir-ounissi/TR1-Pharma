@@ -28,9 +28,9 @@ describe("role navigation", () => {
   it("separates platform pilotage, administration and offer management", () => {
     const sections = getNavigationSections("super_admin", "platform");
     expect(sections.map((section) => section.label)).toEqual([
-      "Pilotage plateforme",
-      "Administration",
-      "Offre & revenus",
+      "À piloter",
+      "Activité",
+      "Configuration avancée",
     ]);
   });
 
@@ -41,12 +41,12 @@ describe("role navigation", () => {
     expect(globalLinks).toEqual([
       "/dashboard",
       "/dashboard/admin/access-requests",
+      "/dashboard/admin/leads",
+      "/dashboard/admin/catalogue",
       "/dashboard/admin/onboarding",
       "/dashboard/admin/users",
       "/dashboard/admin/saas",
       "/dashboard/admin/saas-commercial",
-      "/dashboard/admin/leads",
-      "/catalogue/administration",
     ]);
     expect(globalLinks).not.toContain("/dashboard/users");
     expect(globalLinks).not.toContain("/dashboard/imports");
@@ -68,7 +68,7 @@ describe("role navigation", () => {
     expect(brandAdminLinks).not.toContain("/dashboard/admin/leads");
     expect(brandAdminLinks).not.toContain("/dashboard/admin/saas");
     expect(brandAdminLinks).not.toContain("/dashboard/admin/saas-commercial");
-    expect(brandAdminLinks).not.toContain("/catalogue/administration");
+    expect(brandAdminLinks).not.toContain("/dashboard/admin/catalogue");
     expect(facilitatorLinks).toEqual(["/dashboard/field", "/dashboard/agenda", "/dashboard/missions", "/dashboard/reports", "/dashboard/account"]);
   });
 
