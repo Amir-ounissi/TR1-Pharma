@@ -88,7 +88,7 @@ export default async function SupplierCommissionCockpit({
   return (
     <div className="space-y-7 pb-7">
       <nav className="flex flex-wrap items-center justify-between gap-3 text-xs font-bold text-[#526071]">
-        <Link href="/catalogue/administration" className="underline underline-offset-4">← Retour à l'administration</Link>
+        <Link href="/catalogue/administration" className="underline underline-offset-4">← Retour à l&apos;administration</Link>
         <span>Accès super-administrateur uniquement</span>
       </nav>
       <header className="rounded-2xl bg-[#142941] px-6 py-7 text-white sm:px-8">
@@ -117,7 +117,7 @@ export default async function SupplierCommissionCockpit({
       <section className="space-y-4" aria-labelledby="supplier-requests">
         <div>
           <h2 id="supplier-requests" className="text-xl font-black text-[#142941]">1. Commandes à suivre</h2>
-          <p className="mt-1 text-xs text-[#526071]">La transmission au laboratoire est manuelle : ne validez « Transmise » qu'après envoi réel, avec une référence de preuve. Une demande reçue n'est pas une commande confirmée.</p>
+          <p className="mt-1 text-xs text-[#526071]">La transmission au laboratoire est manuelle : ne validez « Transmise » qu&apos;après envoi réel, avec une référence de preuve. Une demande reçue n&apos;est pas une commande confirmée.</p>
         </div>
         <div className="space-y-3">
           {requests.map(req=>{
@@ -194,7 +194,7 @@ export default async function SupplierCommissionCockpit({
       <section className="space-y-4" aria-labelledby="mandates">
         <div>
           <h2 id="mandates" className="text-xl font-black text-[#142941]">2. Mandats et taux de commission</h2>
-          <p className="mt-1 text-xs text-[#526071]">Un taux déclaré ne devient exploitable qu'une fois son mandat documenté et vérifié. Les réassorts directs nécessitent une clause contractuelle explicite.</p>
+          <p className="mt-1 text-xs text-[#526071]">Un taux déclaré ne devient exploitable qu&apos;une fois son mandat documenté et vérifié. Les réassorts directs nécessitent une clause contractuelle explicite.</p>
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           {brands.map(brand=>{
@@ -230,7 +230,7 @@ export default async function SupplierCommissionCockpit({
 
       <section className="space-y-4" aria-labelledby="agent-accounts">
         <h2 id="agent-accounts" className="text-xl font-black text-[#142941]">3. Pharmacies attribuées à TR1</h2>
-        <p className="text-xs text-[#526071]">Avant de comptabiliser un réassort pris directement par un laboratoire, documentez la relation TR1 avec cette pharmacie pour la marque concernée. L'attribution est une vérification distincte du mandat.</p>
+        <p className="text-xs text-[#526071]">Avant de comptabiliser un réassort pris directement par un laboratoire, documentez la relation TR1 avec cette pharmacie pour la marque concernée. L&apos;attribution est une vérification distincte du mandat.</p>
         <form action={saveAgentClientAttribution} className="grid gap-3 rounded-xl border border-[#e1e7e8] bg-white p-4 sm:grid-cols-2">
           <label className={label}>Marque représentée
             <select name="brand_id" className={field} defaultValue="" required>
@@ -244,7 +244,7 @@ export default async function SupplierCommissionCockpit({
               {pharmacies.map(p=><option key={p.id} value={p.id}>{p.name}{p.city?" — "+p.city:""}</option>)}
             </select>
           </label>
-          <label className={label+" sm:col-span-2"}>Preuve d'attribution (contrat, première commande, liste clients validée)
+          <label className={label+" sm:col-span-2"}>Preuve d&apos;attribution (contrat, première commande, liste clients validée)
             <input name="attribution_reference" className={field} minLength={8} maxLength={500} required/>
           </label>
           <label className="flex items-center gap-2 text-xs font-bold text-[#526071]">
@@ -299,7 +299,7 @@ export default async function SupplierCommissionCockpit({
       <section className="space-y-4" aria-labelledby="commissions">
         <div>
           <h2 id="commissions" className="text-xl font-black text-[#142941]">5. Registre des commissions</h2>
-          <p className="mt-1 text-xs text-[#526071]">Le taux est figé au moment de l'enregistrement de la facture. Le paiement doit être rapproché d'un justificatif bancaire.</p>
+          <p className="mt-1 text-xs text-[#526071]">Le taux est figé au moment de l&apos;enregistrement de la facture. Le paiement doit être rapproché d&apos;un justificatif bancaire.</p>
         </div>
         <div className="space-y-3">
           {commissions.map(c=>(
@@ -327,7 +327,7 @@ export default async function SupplierCommissionCockpit({
               ):null}
             </article>
           ))}
-          {!commissions.length?<p className="rounded-xl border border-[#e1e7e8] bg-white p-6 text-sm text-[#69717d]">Aucune commission documentée. Aucun montant n'est considéré acquis sans facture fournisseur et mandat validé.</p>:null}
+          {!commissions.length?<p className="rounded-xl border border-[#e1e7e8] bg-white p-6 text-sm text-[#69717d]">Aucune commission documentée. Aucun montant n&apos;est considéré acquis sans facture fournisseur et mandat validé.</p>:null}
         </div>
       </section>
     </div>
