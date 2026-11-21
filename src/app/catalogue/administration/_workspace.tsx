@@ -109,7 +109,7 @@ export async function CatalogueAdminWorkspace({
   const parsedPage = Number(page ?? "1");
   const currentPage = Number.isInteger(parsedPage) && parsedPage > 0 ? Math.min(parsedPage, pageCount) : 1;
   const visibleProducts = filteredProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-  const pageHref = (nextPage: number) => `/catalogue/administration?${new URLSearchParams({
+  const pageHref = (nextPage: number) => `/catalogue/administration/produits?${new URLSearchParams({
     ...(recherche ? { recherche } : {}),
     ...(marque ? { marque } : {}),
     ...(statut ? { statut } : {}),
@@ -121,14 +121,12 @@ export async function CatalogueAdminWorkspace({
     <div className="space-y-9">
       <header className="rounded-2xl bg-[#0e1d31] p-7 text-white sm:p-9">
         <p className="text-xs font-black uppercase tracking-[.18em] text-[#ffac78]">Administration TR1 PHARMA · Accès super-administrateur</p>
-        <h1 className="mt-3 text-4xl font-black tracking-tight">Piloter le catalogue privé.</h1>
-        <p className="mt-3 max-w-2xl text-sm leading-7 text-white/70">Publiez les marques, invitez les officines et contrôlez leurs demandes. Ces données restent séparées du CRM et des commandes existantes.</p>
+        <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">{adminSections.find((item) => item.id === section)?.label ?? "Catalogue B2B"}</h1>
+        <p className="mt-3 max-w-2xl text-sm leading-7 text-white/70">Gestion du catalogue professionnel : produits, marques, pharmacies et demandes. Les commandes internes et le CRM restent séparés.</p>
       </header>
-      <nav aria-label="Accès rapides catalogue" className="flex flex-wrap gap-2">
-        <Link href="/catalogue/administration/imports" className="rounded-lg border border-[#d9e1e8] bg-white px-4 py-2.5 text-sm font-bold text-[#142941] hover:border-[#ea7015]">Imports fournisseurs</Link>
-        <Link href="/catalogue/administration/conditions" className="rounded-lg border border-[#d9e1e8] bg-white px-4 py-2.5 text-sm font-bold text-[#142941] hover:border-[#ea7015]">Conditions fournisseurs</Link>
-        <Link href="/dashboard" className="rounded-lg border border-[#d9e1e8] bg-white px-4 py-2.5 text-sm font-bold text-[#142941] hover:border-[#ea7015]">Administration générale</Link>
-      </nav>
+      <div className="flex justify-end">
+        <Link href="/dashboard" className="text-sm font-bold text-[#526071] underline hover:text-[#142941]">Retour à l'administration générale</Link>
+      </div>
       {succes === "1" ? <div role="status" className="rounded-lg border border-[#4f7a58]/30 bg-[#edf7ee] p-4 text-sm font-semibold text-[#315638]">Action enregistrée.</div> : null}
 
       {section === "overview" ? (
@@ -226,30 +224,15 @@ export async function CatalogueAdminWorkspace({
       </section>
       ) : null}
 
-      {section === "overview" ? (
-      <section aria-labelledby="setup" className="space-y-4">
-        <h2 id="setup" className="text-2xl font-black">Ajouts rapides</h2>
-        <details className="rounded-xl border border-[#0e1d31]/10 bg-white p-5">
-          <summary className="cursor-pointer font-extrabold">Créer une marque, une pharmacie ou une référence</summary>
-          <div className="mt-5 grid gap-5 lg:grid-cols-3">
-          <form action={createPrivateCatalogueBrand} className="space-y-4 rounded-xl border border-[#0e1d31]/10 bg-white p-5">
-            <h3 className="text-lg font-extrabold">Créer une marque</h3>
-            <div><label htmlFor="brand_name" className={label}>Nom</label><input id="brand_name" name="name" required maxLength={180} className={field} placeholder="VK SWISS" /></div>
-            <div><label htmlFor="brand_slug" className={label}>Identifiant URL</label><input id="brand_slug" name="slug" required pattern="[a-z0-9]+(-[a-z0-9]+)*" className={field} placeholder="vk-swiss" /></div>
-            <div><label htmlFor="brand_description" className={label}>Présentation</label><textarea id="brand_description" name="description" rows={3} className={field} maxLength={1000} /></div>
-            <p className="text-xs text-[#69717d]">La marque est créée en brouillon, non visible aux officines.</p>
-            <button type="submit" className={button}>Créer le brouillon</button>
-          </form>
-
-          <form action={createPrivateCataloguePharmacy} className="space-y-4 rounded-xl border border-[#0e1d31]/10 bg-white p-5">
-            <h3 className="text-lg font-extrabold">Ajouter une officine</h3>
-            <div><label htmlFor="pharmacy_name" className={label}>Raison sociale</label><input id="pharmacy_name" name="name" required className={field} /></div>
-            <div><label htmlFor="pharmacy_siret" className={label}>SIRET (à vérifier)</label><input id="pharmacy_siret" name="siret" pattern="[0-9]{14}" maxLength={14} className={field} /></div>
-            <div><label htmlFor="pharmacy_city" className={label}>Ville</label><input id="pharmacy_city" name="city" className={field} /></div>
-            <div><label htmlFor="pharmacy_email" className={label}>Email professionnel</label><input id="pharmacy_email" name="email" type="email" className={field} /></div>
-            <button type="submit" className={button}>Enregistrer l’officine</button>
-          </form>
-
+      {section === "produits" ? (
+      <section aria-labelledby="edit-products" className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 id="edit-products" className="text-2xl font-black">Références produits</h2>
+          <span className="text-xs text-[#69717d]">{productRows.filter((p) => p.active).length} actives / {productRows.length} références</span>
+        </div>
+        <details className="rounded-xl border border-[#0e1d31]/10 bg-white p-4">
+          <summary className="cursor-pointer font-bold text-[#142941]">Ajouter une référence</summary>
+          <div className="mt-4">
           <form action={createPrivateCatalogueProduct} className="space-y-3 rounded-xl border border-[#0e1d31]/10 bg-white p-5">
             <h3 className="text-lg font-extrabold">Ajouter une référence</h3>
             <div><label htmlFor="product_brand" className={label}>Marque</label>
@@ -272,22 +255,13 @@ export async function CatalogueAdminWorkspace({
           </form>
           </div>
         </details>
-      </section>
-      ) : null}
-
-      {section === "produits" ? (
-      <section aria-labelledby="edit-products" className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 id="edit-products" className="text-2xl font-black">Références produits</h2>
-          <span className="text-xs text-[#69717d]">{productRows.filter((p) => p.active).length} actives / {productRows.length} références</span>
-        </div>
-        <form method="get" action="/catalogue/administration#edit-products" className="grid gap-3 rounded-xl border border-[#0e1d31]/10 bg-white p-4 md:grid-cols-[minmax(0,1fr)_minmax(0,190px)_minmax(0,160px)_auto] md:items-end">
+        <form method="get" action="/catalogue/administration/produits#edit-products" className="grid gap-3 rounded-xl border border-[#0e1d31]/10 bg-white p-4 md:grid-cols-[minmax(0,1fr)_minmax(0,190px)_minmax(0,160px)_auto] md:items-end">
           <div><label htmlFor="filter_product" className={label}>Rechercher</label><input id="filter_product" name="recherche" type="search" defaultValue={recherche ?? ""} placeholder="Produit, SKU, EAN, marque" className={field} /></div>
           <div><label htmlFor="filter_brand" className={label}>Marque</label><select id="filter_brand" name="marque" defaultValue={marque ?? ""} className={field}><option value="">Toutes les marques</option>{brandRows.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</select></div>
           <div><label htmlFor="filter_status" className={label}>État</label><select id="filter_status" name="statut" defaultValue={statut ?? ""} className={field}><option value="">Tous</option><option value="active">Publiés</option><option value="inactive">Masqués</option><option value="review">À vérifier</option></select></div>
           <div className="flex flex-wrap gap-2 md:flex-col">
             <button type="submit" className={button}>Filtrer</button>
-            <Link href="/catalogue/administration#edit-products" className="rounded-md border border-[#d9e1e8] px-3 py-2 text-center text-xs font-bold text-[#526071]">Réinitialiser</Link>
+            <Link href="/catalogue/administration/produits#edit-products" className="rounded-md border border-[#d9e1e8] px-3 py-2 text-center text-xs font-bold text-[#526071]">Réinitialiser</Link>
           </div>
         </form>
         <p className="text-sm text-[#69717d]">{filteredProducts.length} référence{filteredProducts.length !== 1 ? "s" : ""} trouvée{filteredProducts.length !== 1 ? "s" : ""}. Affichage de 24 références maximum par page.</p>
@@ -358,6 +332,19 @@ export async function CatalogueAdminWorkspace({
       {section === "marques" ? (
       <section aria-labelledby="publish" className="space-y-4">
         <h2 id="publish" className="text-2xl font-black">Marques & publication</h2>
+        <details className="rounded-xl border border-[#0e1d31]/10 bg-white p-4">
+          <summary className="cursor-pointer font-bold text-[#142941]">Créer une marque</summary>
+          <div className="mt-4">
+          <form action={createPrivateCatalogueBrand} className="space-y-4 rounded-xl border border-[#0e1d31]/10 bg-white p-5">
+            <h3 className="text-lg font-extrabold">Créer une marque</h3>
+            <div><label htmlFor="brand_name" className={label}>Nom</label><input id="brand_name" name="name" required maxLength={180} className={field} placeholder="VK SWISS" /></div>
+            <div><label htmlFor="brand_slug" className={label}>Identifiant URL</label><input id="brand_slug" name="slug" required pattern="[a-z0-9]+(-[a-z0-9]+)*" className={field} placeholder="vk-swiss" /></div>
+            <div><label htmlFor="brand_description" className={label}>Présentation</label><textarea id="brand_description" name="description" rows={3} className={field} maxLength={1000} /></div>
+            <p className="text-xs text-[#69717d]">La marque est créée en brouillon, non visible aux officines.</p>
+            <button type="submit" className={button}>Créer le brouillon</button>
+          </form>
+          </div>
+        </details>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {brandRows.map((b) => (
             <form key={b.id} action={setPrivateCatalogueBrandPublished} className="flex items-center justify-between gap-3 rounded-xl border border-[#0e1d31]/10 bg-white p-4">
@@ -374,6 +361,19 @@ export async function CatalogueAdminWorkspace({
       {section === "pharmacies" ? (
       <section aria-labelledby="rights" className="space-y-5">
         <h2 id="rights" className="text-2xl font-black">Pharmacies & autorisations</h2>
+        <details className="rounded-xl border border-[#0e1d31]/10 bg-white p-4">
+          <summary className="cursor-pointer font-bold text-[#142941]">Ajouter une pharmacie</summary>
+          <div className="mt-4">
+          <form action={createPrivateCataloguePharmacy} className="space-y-4 rounded-xl border border-[#0e1d31]/10 bg-white p-5">
+            <h3 className="text-lg font-extrabold">Ajouter une officine</h3>
+            <div><label htmlFor="pharmacy_name" className={label}>Raison sociale</label><input id="pharmacy_name" name="name" required className={field} /></div>
+            <div><label htmlFor="pharmacy_siret" className={label}>SIRET (à vérifier)</label><input id="pharmacy_siret" name="siret" pattern="[0-9]{14}" maxLength={14} className={field} /></div>
+            <div><label htmlFor="pharmacy_city" className={label}>Ville</label><input id="pharmacy_city" name="city" className={field} /></div>
+            <div><label htmlFor="pharmacy_email" className={label}>Email professionnel</label><input id="pharmacy_email" name="email" type="email" className={field} /></div>
+            <button type="submit" className={button}>Enregistrer l’officine</button>
+          </form>
+          </div>
+        </details>
         <div className="grid gap-5 lg:grid-cols-3">
           <form action={authorizePrivateCatalogueBrand} className="space-y-4 rounded-xl border border-[#0e1d31]/10 bg-white p-5">
             <h3 className="text-lg font-extrabold">Autoriser une marque</h3>
@@ -521,7 +521,7 @@ export async function CatalogueAdminWorkspace({
       </section>
       ) : null}
 
-      <p className="text-xs text-[#69717d]">{memberRows.filter((m) => m.active).length} accès utilisateur actif(s). L’activation des accès doit rester réservée aux professionnels vérifiés.</p>
+      {section === "pharmacies" ? <p className="text-xs text-[#69717d]">{memberRows.filter((m) => m.active).length} accès utilisateur actif(s). L’activation des accès doit rester réservée aux professionnels vérifiés.</p> : null}
     </div>
   );
 }
