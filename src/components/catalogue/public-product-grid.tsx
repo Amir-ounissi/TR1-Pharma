@@ -269,7 +269,7 @@ export function PublicProductGrid({ privateProducts, benefits = {} }: { privateP
             {activeFilterCount > 0 ? <button type="button" onClick={resetFilters} className="text-xs font-bold text-[#a25e34] underline underline-offset-4">Effacer les filtres</button> : null}
           </div>
       {shown.length ? (
-        <div className={privateMode ? "grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4" : "grid grid-cols-1 gap-4 min-[440px]:grid-cols-2 xl:grid-cols-3"}>
+        <div className={privateMode ? "grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4" : "grid grid-cols-1 gap-4 min-[440px]:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"}>
           {shown.map((product) => {
             const look = theme(product.brand);
             const photo = publicProductImage(product);
@@ -283,7 +283,7 @@ export function PublicProductGrid({ privateProducts, benefits = {} }: { privateP
             return (
               <article key={product.brand + product.name + product.ean}
                 className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-[#e5e9e9] bg-white transition hover:border-[#cbd5d6] hover:shadow-[0_18px_38px_-25px_rgba(18,38,57,.25)]">
-                <div className="relative flex h-40 items-center justify-center overflow-hidden sm:h-48"
+                <div className={"relative flex items-center justify-center overflow-hidden " + (privateMode ? "h-40 sm:h-48" : "h-48 sm:h-56 2xl:h-64")}
                   style={{ backgroundColor: privateMode ? look.bg : "#ffffff" }}>
                   {photo ? (
                     <Image src={photo.url} alt={product.brand + " " + product.name + " — " + product.format} width={700} height={700}
