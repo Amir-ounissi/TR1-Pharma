@@ -199,6 +199,7 @@ export function PrivateMultiBrandOrderForm({
   commercialConditions,
   enableAccountFeatures = true,
   requiresRequesterDetails = false,
+  simulationOnly = false,
 }: {
   products: PrivateMultiBrandProduct[];
   initialBrandSlug?: string;
@@ -210,7 +211,10 @@ export function PrivateMultiBrandOrderForm({
   commercialConditions: CommercialContext;
   enableAccountFeatures?: boolean;
   requiresRequesterDetails?: boolean;
+  simulationOnly?: boolean;
 }) {
+  // Simulation must never persist a cart, edit favorites or submit an order.
+  const canPersist = enableAccountFeatures && !simulationOnly;
   const [state, action, pending] = useActionState(sendMultiBrandCatalogueRequest, { error: "" });
   const [quantities, setQuantities] = useState<Record<string, number>>(() => {
     const allowed = new Map(products.map((product) => [product.id, product]));
@@ -307,7 +311,7 @@ export function PrivateMultiBrandOrderForm({
   // Persistance cote serveur entre les pages, appareils et sessions.
   // Debounce pour ne pas declencher un appel reseau a chaque clic +/−.
   useEffect(() => {
-    if (!enableAccountFeatures) return;
+    if (!canPersist) return;
     if (!didMount.current) {
       didMount.current = true;
       // La reprise depuis un lien d'historique ajoute des lignes au panier initial.
@@ -323,7 +327,7 @@ export function PrivateMultiBrandOrderForm({
       if (!cancelled) setSaveStatus(result.saved ? "saved" : "error");
     }, 700);
     return () => { cancelled = true; window.clearTimeout(timeout); };
-  }, [quantities, pending, initialReorderId, enableAccountFeatures]);
+  }, [quantities, pending, initialReorderId, canPersist]);
 
   const brandOptions = useMemo(() => {
     const unique = new Map<string, string>();
@@ -409,7 +413,7 @@ export function PrivateMultiBrandOrderForm({
   );
 
   const toggleFavorite = async (product: PrivateMultiBrandProduct) => {
-    if (!enableAccountFeatures || favoriteUpdating.has(product.id)) return;
+    if (!canPersist || favoriteUpdating.has(product.id)) return;
     const next = !favorites.has(product.id);
     setFavoriteError("");
     setFavoriteUpdating((previous) => new Set(previous).add(product.id));
@@ -565,7 +569,7 @@ export function PrivateMultiBrandOrderForm({
 
   const setQuantity = (product: PrivateMultiBrandProduct, next: number) => {
     const safeNext = Number.isFinite(next) ? Math.max(0, Math.min(5000, next)) : 0;
-    if (enableAccountFeatures) setSaveStatus("saving");
+    if (canPersist) setSaveStatus("saving");
     setQuantities((previous) => ({ ...previous, [product.id]: safeNext }));
   };
 
@@ -583,14 +587,17 @@ export function PrivateMultiBrandOrderForm({
   };
 
   return (
-    <form action={action} className="space-y-5 pb-24 lg:pb-0">
+    <form action={simulationOnly ? undefined : action}
+      onSubmit={simulationOnly ? (event) => event.preventDefault() : undefined}
+      className="space-y-5 pb-24 lg:pb-0">
       <header className="space-y-1 px-1">
-        <h2 className="text-xl font-black tracking-tight text-[#142941]">Catalogue produits</h2>
+        <h2 className="text-xl font-black tracking-tight text-[#142941]">{simulationOnly ? "Panier de simulation" : "Catalogue produits"}</h2>
         <p className="text-xs font-bold text-[#476b55]">
           Franco dès 250 € HT remisé sur le panier cumulé Biodance, Beauty of Joseon et Dr. Althea.
         </p>
         <p role="status" className="text-xs text-[#69717d]">
-          {!enableAccountFeatures ? "Panier temporaire · il sera transmis avec votre demande et ne sera pas conservé après fermeture." :
+          {simulationOnly ? "Simulation locale · aucune sauvegarde ni commande transmise." :
+            !canPersist ? "Panier temporaire · il sera transmis avec votre demande et ne sera pas conservé après fermeture." :
             saveStatus === "saving" ? "Enregistrement automatique du panier…" :
             saveStatus === "error" ? "La sauvegarde a échoué. Vérifiez votre connexion." :
             selected.length ? "Panier sauvegardé · retrouvez-le à votre prochaine connexion." :
@@ -638,7 +645,7 @@ export function PrivateMultiBrandOrderForm({
         </label>
       </div>
 
-      {state.error ? (
+      {!simulationOnly && state.error ? (
         <p role="alert" className="rounded-lg border border-[#e7c8b4] bg-[#fff5ee] p-3 text-xs font-semibold text-[#884c2b]">{state.error}</p>
       ) : null}
 
@@ -660,7 +667,7 @@ export function PrivateMultiBrandOrderForm({
                 <List size={16} aria-hidden="true" /> Liste
               </button>
             </div>
-            {enableAccountFeatures ? (
+            {canPersist ? (
               <button type="button" onClick={() => setFavoritesOnly((value) => !value)}
                 aria-pressed={favoritesOnly}
                 className={`inline-flex min-h-9 items-center gap-1.5 rounded-md border px-3 text-xs font-bold ${favoritesOnly ? "border-[#b87043] bg-[#fff1e6] text-[#9c4b18]" : "border-[#dce3ea] bg-white text-[#142941] hover:bg-[#f4f6f6]"}`}>
@@ -668,7 +675,7 @@ export function PrivateMultiBrandOrderForm({
               </button>
             ) : null}
           </div>
-          {enableAccountFeatures && favoriteError ? <p role="alert" className="rounded-md bg-[#fff1e6] p-2 text-xs font-bold text-[#8c4212]">{favoriteError}</p> : null}
+          {canPersist && favoriteError ? <p role="alert" className="rounded-md bg-[#fff1e6] p-2 text-xs font-bold text-[#8c4212]">{favoriteError}</p> : null}
 
           <div id="liste-produits" className="space-y-2">
             {viewMode === "cards" ? (
@@ -694,7 +701,7 @@ export function PrivateMultiBrandOrderForm({
                         <span className="absolute left-3 top-3 max-w-[80%] truncate rounded-full border border-white/70 bg-white/90 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[.1em] text-[#ad4b08] backdrop-blur">
                           {product.brand_name}
                         </span>
-                        {enableAccountFeatures ? (<button type="button" onClick={() => void toggleFavorite(product)}
+                        {canPersist ? (<button type="button" onClick={() => void toggleFavorite(product)}
                           disabled={favoriteUpdating.has(product.id)}
                           aria-pressed={favorites.has(product.id)}
                           aria-label={(favorites.has(product.id) ? "Retirer des favoris : " : "Ajouter aux favoris : ") + product.name}
@@ -732,7 +739,7 @@ export function PrivateMultiBrandOrderForm({
                         </div>
 
                         <div className="mt-auto space-y-3 pt-4">
-                          {product.product_detail_href ? (
+                          {!simulationOnly && product.product_detail_href ? (
                             <Link href={product.product_detail_href}
                               className="inline-flex min-h-8 items-center text-xs font-bold text-[#142941] underline underline-offset-4 hover:text-[#a14e14]">
                               Fiche produit
@@ -790,13 +797,13 @@ export function PrivateMultiBrandOrderForm({
                         <p className="break-all text-[9px] leading-4 text-[#89939b]">
                           {product.ean ? "EAN " + product.ean + " · " : ""}TVA {product.vat_rate} %
                         </p>
-                        {product.product_detail_href ? (
+                        {!simulationOnly && product.product_detail_href ? (
                           <Link href={product.product_detail_href}
                             className="mt-1 inline-flex min-h-6 items-center text-[10px] font-bold text-[#142941] underline underline-offset-2 hover:text-[#a14e14]">
                             Fiche produit
                           </Link>
                         ) : null}
-                        {enableAccountFeatures ? (
+                        {canPersist ? (
                           <button type="button" onClick={() => void toggleFavorite(product)}
                             disabled={favoriteUpdating.has(product.id)}
                             aria-pressed={favorites.has(product.id)}
@@ -858,11 +865,11 @@ export function PrivateMultiBrandOrderForm({
           <div className="flex items-center gap-3 bg-[#0e1d31] px-5 py-5 text-white">
             <ShoppingBag size={23} aria-hidden="true" />
             <div className="min-w-0 flex-1">
-              <h2 className="text-lg font-black">Mon panier</h2>
+              <h2 className="text-lg font-black">{simulationOnly ? "Panier simulé" : "Mon panier"}</h2>
               <p className="text-xs text-[#d5dde7]">{selected.length} référence{selected.length > 1 ? "s" : ""} · {quantityTotal} unité{quantityTotal > 1 ? "s" : ""} · {selectedByBrand.length} marque{selectedByBrand.length > 1 ? "s" : ""}</p>
             </div>
             {selected.length ? (
-              <button type="button" onClick={() => { if (enableAccountFeatures) setSaveStatus("saving"); setQuantities({}); }}
+              <button type="button" onClick={() => { if (canPersist) setSaveStatus("saving"); setQuantities({}); }}
                 className="rounded-lg p-2 text-white/70 hover:bg-white/10 hover:text-white" aria-label="Vider le panier">
                 <Trash2 size={18} />
               </button>
@@ -1002,7 +1009,7 @@ export function PrivateMultiBrandOrderForm({
               <span className="rounded-full bg-[#fff1e6] px-2.5 py-1 text-[10px] font-bold text-[#162a45]">B2B</span>
             </div>
 
-            {requiresRequesterDetails ? (
+            {requiresRequesterDetails && !simulationOnly ? (
               <section className="space-y-3 rounded-xl border border-[#dce3ea] bg-[#f9faf9] p-3" aria-label="Coordonnees du demandeur">
                 <div>
                   <h3 className="text-sm font-extrabold text-[#142941]">Vos coordonnées</h3>
@@ -1022,11 +1029,15 @@ export function PrivateMultiBrandOrderForm({
                 </label>
               </section>
             ) : null}
-            <button type="submit" disabled={pending || !selected.length || !valid}
-              className="shop-primary-action inline-flex min-h-12 w-full items-center justify-center gap-2 px-4 text-sm">
-              {pending ? "Transmission en cours…" : "Transmettre mes demandes"}
-              {!pending && <ShoppingBag size={17} aria-hidden="true" />}
-            </button>
+            {simulationOnly ? (
+              <div role="status" className="rounded-lg border border-[#c8dfd1] bg-[#edf7ef] px-4 py-3 text-center text-xs font-extrabold text-[#315f46]">Simulation uniquement · aucune commande transmise</div>
+            ) : (
+              <button type="submit" disabled={pending || !selected.length || !valid}
+                className="shop-primary-action inline-flex min-h-12 w-full items-center justify-center gap-2 px-4 text-sm">
+                {pending ? "Transmission en cours…" : "Transmettre mes demandes"}
+                {!pending && <ShoppingBag size={17} aria-hidden="true" />}
+              </button>
+            )}
             <p className="text-[11px] leading-5 text-[#69717d]">
               Économies calculées à quantité égale par rapport au premier palier. Franco multimarque dès 250 € HT remisé pour Biodance, Beauty of Joseon et Dr. Althea réunies. Une demande est créée par marque ; prix définitifs et éventuels frais de port confirmés avant validation.
             </p>
@@ -1044,12 +1055,16 @@ export function PrivateMultiBrandOrderForm({
             {priceSummary.savingsCents > 0 ? <p className="truncate text-[10px] font-semibold text-[#54705e]">Économie estimée : {euroHT(priceSummary.savingsCents / 100)} HT</p> : null}
           </div>
           <a href="#panier" className="shrink-0 px-2 py-2 text-xs font-bold text-[#0e1d31] underline underline-offset-4">Panier</a>
-          <button type="submit" disabled={pending || !selected.length || !valid}
-            aria-label="Transmettre mes demandes"
-            className="shop-primary-action inline-flex min-h-11 shrink-0 items-center justify-center gap-2 px-4 text-xs">
-            {pending ? "Envoi…" : "Transmettre"}
-            {!pending && <ShoppingBag size={15} aria-hidden="true" />}
-          </button>
+          {simulationOnly ? (
+            <span className="shrink-0 rounded-lg border border-[#bfdbc8] bg-[#e9f5eb] px-3 py-2.5 text-[11px] font-extrabold text-[#315f46]">Simulation</span>
+          ) : (
+            <button type="submit" disabled={pending || !selected.length || !valid}
+              aria-label="Transmettre mes demandes"
+              className="shop-primary-action inline-flex min-h-11 shrink-0 items-center justify-center gap-2 px-4 text-xs">
+              {pending ? "Envoi…" : "Transmettre"}
+              {!pending && <ShoppingBag size={15} aria-hidden="true" />}
+            </button>
+          )}
         </div>
       </div>
     </form>
