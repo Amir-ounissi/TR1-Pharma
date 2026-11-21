@@ -1095,16 +1095,9 @@ export function PrivateMultiBrandOrderForm({
             className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg border border-[#b4c7d1] bg-[#f5f8f8] px-3 text-xs font-extrabold text-[#0e1d31]">
             <ShoppingCart size={15} aria-hidden="true"/> Voir le panier
           </button>
-          {simulationOnly ? (
-            <span className="shrink-0 rounded-lg border border-[#bfdbc8] bg-[#e9f5eb] px-3 py-2.5 text-[11px] font-extrabold text-[#315f46]">Simulation</span>
-          ) : (
-            <button type="submit" disabled={pending || !selected.length || !valid}
-              aria-label="Transmettre mes demandes"
-              className="shop-primary-action inline-flex min-h-11 shrink-0 items-center justify-center gap-2 px-4 text-xs">
-              {pending ? "Envoi…" : "Transmettre"}
-              {!pending && <ShoppingBag size={15} aria-hidden="true" />}
-            </button>
-          )}
+          <span className="hidden min-[430px]:inline shrink-0 rounded-full bg-[#f1f5f1] px-2.5 py-1 text-[10px] font-extrabold text-[#4c7157]">
+            {simulationOnly ? "Simulation" : selected.length ? "À vérifier dans le panier" : "Choisissez des produits"}
+          </span>
         </div>
       </div>
     </form>
