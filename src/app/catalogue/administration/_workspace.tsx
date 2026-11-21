@@ -135,7 +135,7 @@ export async function CatalogueAdminWorkspace({
         <p className="mt-3 max-w-2xl text-sm leading-7 text-white/70">Gestion du catalogue professionnel : produits, marques, pharmacies et demandes. Les commandes internes et le CRM restent séparés.</p>
       </header>
       <div className="flex justify-end">
-        <Link href="/dashboard" className="text-sm font-bold text-[#526071] underline hover:text-[#142941]">Retour à l'administration générale</Link>
+        <Link href="/dashboard" className="text-sm font-bold text-[#526071] underline hover:text-[#142941]">Retour à l&apos;administration générale</Link>
       </div>
       {succes === "1" ? <div role="status" className="rounded-lg border border-[#4f7a58]/30 bg-[#edf7ee] p-4 text-sm font-semibold text-[#315638]">Action enregistrée.</div> : null}
 
@@ -408,7 +408,7 @@ export async function CatalogueAdminWorkspace({
       {section === "pharmacies" ? (
       <section aria-labelledby="guest-access" className="space-y-4">
         <div>
-          <h2 id="guest-access" className="text-2xl font-black">Liens d'accès privés sans compte</h2>
+          <h2 id="guest-access" className="text-2xl font-black">Liens d&apos;accès privés sans compte</h2>
           <p className="mt-1 max-w-3xl text-sm leading-6 text-[#69717d]">
             Générez un lien privé par pharmacie. Le pharmacien consulte ses marques et tarifs, prépare son panier et transmet une demande avec son nom et son email, sans inscription ni mot de passe. Chaque renouvellement révoque le lien précédent.
           </p>
