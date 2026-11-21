@@ -29,7 +29,7 @@ const statuses = [
 
 export default async function CatalogueAdministration({
   searchParams,
-}: { searchParams: Promise<{ succes?: string }> }) {
+}: { searchParams: Promise<{ succes?: string; recherche?: string; marque?: string; statut?: string; page?: string }> }) {
   // The dashboard uses the authenticated user session plus strict super-admin RLS.
   // A shared service key must never be required to render this administration.
   const { supabase: admin } = await requirePlatformAdmin();
@@ -78,7 +78,32 @@ export default async function CatalogueAdministration({
     current.push(item);
     requestItemsById.set(item.request_id, current);
   }
-  const { succes } = await searchParams;
+
+  const { succes, recherche, marque, statut, page } = await searchParams;
+  const normalizedSearch = (recherche ?? "").trim().toLocaleLowerCase("fr-FR");
+  const filteredProducts = productRows.filter((product) => {
+    const brandName = brandRows.find((brand) => brand.id === product.brand_id)?.name ?? "";
+    const matchesSearch = !normalizedSearch || [product.name, product.sku, product.ean ?? "", brandName]
+      .join(" ").toLocaleLowerCase("fr-FR").includes(normalizedSearch);
+    const matchesBrand = !marque || product.brand_id === marque;
+    const matchesStatus = !statut || statut === "all"
+      || (statut === "active" && product.active)
+      || (statut === "inactive" && !product.active)
+      || (statut === "review" && product.requires_review);
+    return matchesSearch && matchesBrand && matchesStatus;
+  });
+  const pageSize = 24;
+  const pageCount = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
+  const parsedPage = Number(page ?? "1");
+  const currentPage = Number.isInteger(parsedPage) && parsedPage > 0 ? Math.min(parsedPage, pageCount) : 1;
+  const visibleProducts = filteredProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const pageHref = (nextPage: number) => `/catalogue/administration?${new URLSearchParams({
+    ...(recherche ? { recherche } : {}),
+    ...(marque ? { marque } : {}),
+    ...(statut ? { statut } : {}),
+    page: String(nextPage),
+  }).toString()}#edit-products`;
+
 
   return (
     <div className="space-y-9">
@@ -87,34 +112,19 @@ export default async function CatalogueAdministration({
         <h1 className="mt-3 text-4xl font-black tracking-tight">Piloter le catalogue privé.</h1>
         <p className="mt-3 max-w-2xl text-sm leading-7 text-white/70">Publiez les marques, invitez les officines et contrôlez leurs demandes. Ces données restent séparées du CRM et des commandes existantes.</p>
       </header>
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#e2e7ec] bg-white p-4">
-        <div>
-          <p className="text-sm font-extrabold">Imports fournisseurs</p>
-          <p className="mt-1 text-xs text-[#69717d]">Retrouvez les références importées, les données à vérifier et les paliers fournisseurs confidentiels dans le contrôle des imports.</p>
-        </div>
-        <Link href="/catalogue/administration/imports"
-          className="rounded-md bg-[#ea7015] px-4 py-2.5 text-sm font-extrabold text-[#0e1d31]">
-          Consulter les imports
-        </Link>
-      </div>
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#e2e7ec] bg-white p-4">
-        <div>
-          <p className="text-sm font-extrabold">Conditions commerciales fournisseurs</p>
-          <p className="mt-1 text-xs text-[#69717d]">Associer marques et fournisseurs réels, confirmer les minimums, les paliers, les gratuités et les frais de livraison.</p>
-        </div>
-        <Link href="/catalogue/administration/conditions"
-          className="rounded-md bg-[#142941] px-4 py-2.5 text-sm font-extrabold text-white">
-          Paramétrer les conditions
-        </Link>
-      </div>
+      <nav aria-label="Accès rapides catalogue" className="flex flex-wrap gap-2">
+        <Link href="/catalogue/administration/imports" className="rounded-lg border border-[#d9e1e8] bg-white px-4 py-2.5 text-sm font-bold text-[#142941] hover:border-[#ea7015]">Imports fournisseurs</Link>
+        <Link href="/catalogue/administration/conditions" className="rounded-lg border border-[#d9e1e8] bg-white px-4 py-2.5 text-sm font-bold text-[#142941] hover:border-[#ea7015]">Conditions fournisseurs</Link>
+        <Link href="/dashboard" className="rounded-lg border border-[#d9e1e8] bg-white px-4 py-2.5 text-sm font-bold text-[#142941] hover:border-[#ea7015]">Administration générale</Link>
+      </nav>
       {succes === "1" ? <div role="status" className="rounded-lg border border-[#4f7a58]/30 bg-[#edf7ee] p-4 text-sm font-semibold text-[#315638]">Action enregistrée.</div> : null}
 
       <div className="grid gap-3 sm:grid-cols-4">
         {[
+          ["Demandes à traiter", requestRows.filter((r) => r.status === "received" || r.status === "verifying").length],
+          ["Références publiées", productRows.filter((p) => p.active).length],
+          ["Références à vérifier", productRows.filter((p) => p.requires_review).length],
           ["Pharmacies", pharmacyRows.length],
-          ["Marques publiées", brandRows.filter((b) => b.active).length],
-          ["Références", productRows.length],
-          ["Demandes reçues", requestRows.length],
         ].map(([title, count]) => (
           <div key={title} className="rounded-xl border border-[#0e1d31]/10 bg-white p-5">
             <p className="text-xs font-semibold text-[#69717d]">{title}</p>
@@ -123,9 +133,64 @@ export default async function CatalogueAdministration({
         ))}
       </div>
 
-      <section aria-labelledby="setup" className="space-y-5">
-        <h2 id="setup" className="text-2xl font-black">1. Alimenter le catalogue</h2>
-        <div className="grid gap-5 lg:grid-cols-3">
+      <nav aria-label="Rubriques du catalogue" className="flex flex-wrap gap-2 rounded-xl border border-[#e2e7ec] bg-white p-3 text-sm font-semibold">
+        <Link href="#requests" className="rounded-md px-3 py-2 hover:bg-[#f3f5f7]">Demandes</Link>
+        <Link href="#edit-products" className="rounded-md px-3 py-2 hover:bg-[#f3f5f7]">Produits</Link>
+        <Link href="#publish" className="rounded-md px-3 py-2 hover:bg-[#f3f5f7]">Marques</Link>
+        <Link href="#rights" className="rounded-md px-3 py-2 hover:bg-[#f3f5f7]">Pharmacies & accès</Link>
+        <Link href="#tiers" className="rounded-md px-3 py-2 hover:bg-[#f3f5f7]">Tarifs</Link>
+        <Link href="#setup" className="rounded-md px-3 py-2 hover:bg-[#f3f5f7]">Ajouter</Link>
+      </nav>
+
+      <section aria-labelledby="requests" className="space-y-4">
+        <h2 id="requests" className="text-2xl font-black">Demandes des pharmacies</h2>
+        <p className="text-sm text-[#69717d]">Ces demandes n’alimentent pas automatiquement les commandes internes ou les laboratoires.</p>
+        <div className="space-y-3">
+          {requestRows.map((r) => (
+            <form action={updatePrivateCatalogueRequestStatus} key={r.id} className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[#0e1d31]/10 bg-white p-4">
+              <div>
+                <p className="text-sm font-bold">{pharmacyRows.find((p) => p.id === r.pharmacy_id)?.name ?? "Pharmacie"} · {brandRows.find((b) => b.id === r.brand_id)?.name ?? "Laboratoire"}</p>
+                <p className="mt-1 text-xs text-[#69717d]">{new Date(r.created_at).toLocaleDateString("fr-FR")} · {r.id.slice(0, 8).toUpperCase()}</p>
+                {r.requester_name && r.requester_email ? (
+                  <p className="mt-1 text-xs text-[#526071]">
+                    Demandeur : <strong>{r.requester_name}</strong> · <a className="underline" href={"mailto:" + r.requester_email}>{r.requester_email}</a>
+                  </p>
+                ) : null}
+                <p className="mt-1 font-black">{r.request_kind === "quote" ? "Demande de conditions · À chiffrer" : r.total_ht === null ? "Montant à confirmer" : euroHT(Number(r.total_ht)) + " HT"}</p>
+                {(requestItemsById.get(r.id) ?? []).length ? (
+                  <details className="mt-3 rounded-lg border border-[#e5e9eb] bg-[#faf9f6] p-3">
+                    <summary className="cursor-pointer text-xs font-bold text-[#142941]">
+                      Voir {(requestItemsById.get(r.id) ?? []).length} références demandées
+                    </summary>
+                    <ul className="mt-2 space-y-1 text-xs text-[#526071]">
+                      {(requestItemsById.get(r.id) ?? []).map((item, index) => (
+                        <li key={r.id + "-" + index}>
+                          {item.product_name} · Réf. {item.sku} · {item.quantity} unité{item.quantity > 1 ? "s" : ""}
+                          {item.unit_price_ht !== null ? " · " + euroHT(Number(item.unit_price_ht)) + " HT/u." : " · Tarif à confirmer"}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                ) : null}
+              </div>
+              <input name="request_id" type="hidden" value={r.id} />
+              <div className="flex items-center gap-2">
+                <select name="status" className={field} defaultValue={r.status}>
+                  {statuses.map(([key, title]) => <option key={key} value={key}>{title}</option>)}
+                </select>
+                <button type="submit" className={button}>Enregistrer</button>
+              </div>
+            </form>
+          ))}
+          {!requestRows.length ? <p className="rounded-xl bg-white p-6 text-sm text-[#69717d]">Aucune demande reçue.</p> : null}
+        </div>
+      </section>
+
+      <section aria-labelledby="setup" className="space-y-4">
+        <h2 id="setup" className="text-2xl font-black">Ajouts rapides</h2>
+        <details className="rounded-xl border border-[#0e1d31]/10 bg-white p-5">
+          <summary className="cursor-pointer font-extrabold">Créer une marque, une pharmacie ou une référence</summary>
+          <div className="mt-5 grid gap-5 lg:grid-cols-3">
           <form action={createPrivateCatalogueBrand} className="space-y-4 rounded-xl border border-[#0e1d31]/10 bg-white p-5">
             <h3 className="text-lg font-extrabold">Créer une marque</h3>
             <div><label htmlFor="brand_name" className={label}>Nom</label><input id="brand_name" name="name" required maxLength={180} className={field} placeholder="VK SWISS" /></div>
@@ -164,23 +229,25 @@ export default async function CatalogueAdministration({
             <p className="text-xs text-[#69717d]">Deux règles distinctes : minimum de commande 6 unités et colisage par lots de 6 unités (6, 12, 18…). Vous pouvez modifier les deux par référence. Le prix de référence reste confidentiel.</p>
             <button type="submit" className={button} disabled={!brandRows.length}>Créer la fiche en brouillon</button>
           </form>
-        </div>
+          </div>
+        </details>
       </section>
 
       <section aria-labelledby="edit-products" className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 id="edit-products" className="text-2xl font-black">Fiches produits et publication</h2>
-          <p className="text-xs leading-5 text-[#576879]">
-            Défaut : minimum 6 unités, boutons +6/−6. Exception fournisseur :
-            les masques hydrogel Biodance sont commandables librement par référence,
-            avec boutons +4/−4 et un minimum de 12 masques cumulés, total par multiples de 4.
-            Le minimum et le colisage de chaque référence restent configurables séparément.
-          </p>
-          <span className="text-xs text-[#69717d]">{productRows.filter((p) => p.active).length} références actives</span>
+          <h2 id="edit-products" className="text-2xl font-black">Références produits</h2>
+          <span className="text-xs text-[#69717d]">{productRows.filter((p) => p.active).length} actives / {productRows.length} références</span>
         </div>
-        {productRows.length ? (
+        <form method="get" action="/catalogue/administration" className="grid gap-3 rounded-xl border border-[#0e1d31]/10 bg-white p-4 md:grid-cols-[minmax(0,1fr)_minmax(0,190px)_minmax(0,160px)_auto] md:items-end">
+          <div><label htmlFor="filter_product" className={label}>Rechercher</label><input id="filter_product" name="recherche" type="search" defaultValue={recherche ?? ""} placeholder="Produit, SKU, EAN, marque" className={field} /></div>
+          <div><label htmlFor="filter_brand" className={label}>Marque</label><select id="filter_brand" name="marque" defaultValue={marque ?? ""} className={field}><option value="">Toutes les marques</option>{brandRows.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</select></div>
+          <div><label htmlFor="filter_status" className={label}>État</label><select id="filter_status" name="statut" defaultValue={statut ?? ""} className={field}><option value="">Tous</option><option value="active">Publiés</option><option value="inactive">Masqués</option><option value="review">À vérifier</option></select></div>
+          <button type="submit" className={button}>Filtrer</button>
+        </form>
+        <p className="text-sm text-[#69717d]">{filteredProducts.length} référence{filteredProducts.length > 1 ? "s" : ""} trouvée{filteredProducts.length > 1 ? "s" : ""}. Affichage de 24 références maximum par page.</p>
+        {filteredProducts.length ? (
           <div className="grid gap-4 lg:grid-cols-2">
-            {productRows.map((product) => (
+            {visibleProducts.map((product) => (
               <div key={product.id} className="space-y-4 rounded-xl border border-[#0e1d31]/10 bg-white p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
@@ -229,11 +296,35 @@ export default async function CatalogueAdministration({
               </div>
             ))}
           </div>
-        ) : <p className="rounded-xl border border-dashed border-[#0e1d31]/15 bg-white p-7 text-sm text-[#69717d]">Aucune fiche produit créée. Utilisez le formulaire ci-dessus pour préparer les références.</p>}
+        ) : <p className="rounded-xl border border-dashed border-[#0e1d31]/15 bg-white p-7 text-sm text-[#69717d]">Aucune référence ne correspond aux filtres. Réinitialisez la recherche ou utilisez « Ajouts rapides ».</p>}
+        {pageCount > 1 ? (
+          <nav aria-label="Pagination des références" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#0e1d31]/10 bg-white p-4 text-sm">
+            <span>Page {currentPage} sur {pageCount}</span>
+            <div className="flex gap-2">
+              {currentPage > 1 ? <Link href={pageHref(currentPage - 1)} className="rounded-md border px-3 py-2 font-bold">Précédente</Link> : null}
+              {currentPage < pageCount ? <Link href={pageHref(currentPage + 1)} className="rounded-md border px-3 py-2 font-bold">Suivante</Link> : null}
+            </div>
+          </nav>
+        ) : null}
       </section>
 
+      <section aria-labelledby="publish" className="space-y-4">
+        <h2 id="publish" className="text-2xl font-black">Marques & publication</h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {brandRows.map((b) => (
+            <form key={b.id} action={setPrivateCatalogueBrandPublished} className="flex items-center justify-between gap-3 rounded-xl border border-[#0e1d31]/10 bg-white p-4">
+              <div><p className="font-bold">{b.name}</p><p className="mt-1 text-xs text-[#69717d]">{b.active ? "Publiée · Accès selon les pharmacies" : "Brouillon · Invisible"}</p></div>
+              <input type="hidden" name="brand_id" value={b.id} /><input type="hidden" name="published" value={b.active ? "false" : "true"} />
+              <button type="submit" className={button}>{b.active ? "Masquer" : "Publier"}</button>
+            </form>
+          ))}
+          {!brandRows.length ? <p className="text-sm text-[#69717d]">Aucune marque créée.</p> : null}
+        </div>
+      </section>
+
+
       <section aria-labelledby="rights" className="space-y-5">
-        <h2 id="rights" className="text-2xl font-black">2. Contrôler les accès et les tarifs</h2>
+        <h2 id="rights" className="text-2xl font-black">Pharmacies & autorisations</h2>
         <div className="grid gap-5 lg:grid-cols-3">
           <form action={authorizePrivateCatalogueBrand} className="space-y-4 rounded-xl border border-[#0e1d31]/10 bg-white p-5">
             <h3 className="text-lg font-extrabold">Autoriser une marque</h3>
@@ -250,21 +341,24 @@ export default async function CatalogueAdministration({
             <button type="submit" className={button} disabled={!pharmacyRows.length}>Préautoriser cette adresse</button>
             <Link href="/catalogue/inscription" target="_blank" rel="noopener noreferrer" className="block text-sm font-bold text-[#0e1d31] underline">Ouvrir le lien d’inscription à transmettre</Link>
           </form>
-          <form action={setPrivateCataloguePrice} className="space-y-4 rounded-xl border border-[#0e1d31]/10 bg-white p-5">
-            <h3 className="text-lg font-extrabold">Prix contractuel fixe (ancien modèle)</h3>
+          <details className="rounded-xl border border-[#0e1d31]/10 bg-white p-5">
+            <summary className="cursor-pointer text-sm font-bold text-[#526071]">Tarification héritée · ancien modèle</summary>
+            <form action={setPrivateCataloguePrice} className="mt-4 space-y-4">
+              <h3 className="text-lg font-extrabold">Prix contractuel fixe</h3>
             <div><label htmlFor="price_pharmacy" className={label}>Pharmacie</label><select id="price_pharmacy" name="pharmacy_id" required className={field}>{pharmacyRows.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
             <div><label htmlFor="price_product" className={label}>Produit</label><select id="price_product" name="product_id" required className={field}>{productRows.map((p) => <option key={p.id} value={p.id}>{p.name} · {p.sku}</option>)}</select></div>
             <div><label htmlFor="price_override" className={label}>Prix HT personnalisé</label><input id="price_override" name="price_ht" type="number" min="0" step="0.01" required className={field} /></div>
             <p className="text-xs text-[#69717d]">Ce prix est visible uniquement par l&apos;officine autorisée. Les nouveaux paliers ci-dessous prennent priorité si renseignés.</p>
-            <button type="submit" className={button} disabled={!pharmacyRows.length || !productRows.length}>Appliquer le prix</button>
-          </form>
+              <button type="submit" className={button} disabled={!pharmacyRows.length || !productRows.length}>Appliquer le prix</button>
+            </form>
+          </details>
         </div>
       </section>
 
 
       <section aria-labelledby="guest-access" className="space-y-4">
         <div>
-          <h2 id="guest-access" className="text-2xl font-black">3. Accès catalogue sans compte</h2>
+          <h2 id="guest-access" className="text-2xl font-black">Liens d'accès privés sans compte</h2>
           <p className="mt-1 max-w-3xl text-sm leading-6 text-[#69717d]">
             Générez un lien privé par pharmacie. Le pharmacien consulte ses marques et tarifs, prépare son panier et transmet une demande avec son nom et son email, sans inscription ni mot de passe. Chaque renouvellement révoque le lien précédent.
           </p>
@@ -313,7 +407,7 @@ export default async function CatalogueAdministration({
       </section>
 
       <section aria-labelledby="tiers" className="space-y-5">
-        <h2 id="tiers" className="text-2xl font-black">4. Barèmes par volume</h2>
+        <h2 id="tiers" className="text-2xl font-black">Tarifs & paliers par volume</h2>
         <p className="max-w-3xl text-sm leading-6 text-[#69717d]">Les fourchettes sont des indications commerciales indépendantes des prix de référence. Ne publiez pas un plancher confidentiel : saisissez uniquement les intervalles validés par le laboratoire. Les prix contractuels sont propres à chaque officine et restent invisibles aux autres.</p>
         <div className="grid gap-5 lg:grid-cols-2">
           <form action={setPrivateCatalogueIndicativeTier} className="space-y-4 rounded-xl border border-[#0e1d31]/10 bg-white p-5">
@@ -365,63 +459,6 @@ export default async function CatalogueAdministration({
         </div>
       </section>
 
-      <section aria-labelledby="publish" className="space-y-4">
-        <h2 id="publish" className="text-2xl font-black">5. Publication des marques</h2>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {brandRows.map((b) => (
-            <form key={b.id} action={setPrivateCatalogueBrandPublished} className="flex items-center justify-between gap-3 rounded-xl border border-[#0e1d31]/10 bg-white p-4">
-              <div><p className="font-bold">{b.name}</p><p className="mt-1 text-xs text-[#69717d]">{b.active ? "Publiée · Accès selon les pharmacies" : "Brouillon · Invisible"}</p></div>
-              <input type="hidden" name="brand_id" value={b.id} /><input type="hidden" name="published" value={b.active ? "false" : "true"} />
-              <button type="submit" className={button}>{b.active ? "Masquer" : "Publier"}</button>
-            </form>
-          ))}
-          {!brandRows.length ? <p className="text-sm text-[#69717d]">Aucune marque créée.</p> : null}
-        </div>
-      </section>
-
-      <section aria-labelledby="requests" className="space-y-4">
-        <h2 id="requests" className="text-2xl font-black">6. Demandes des pharmacies</h2>
-        <p className="text-sm text-[#69717d]">Ces demandes n’alimentent pas automatiquement les commandes internes ou les laboratoires.</p>
-        <div className="space-y-3">
-          {requestRows.map((r) => (
-            <form action={updatePrivateCatalogueRequestStatus} key={r.id} className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[#0e1d31]/10 bg-white p-4">
-              <div>
-                <p className="text-sm font-bold">{pharmacyRows.find((p) => p.id === r.pharmacy_id)?.name ?? "Pharmacie"} · {brandRows.find((b) => b.id === r.brand_id)?.name ?? "Laboratoire"}</p>
-                <p className="mt-1 text-xs text-[#69717d]">{new Date(r.created_at).toLocaleDateString("fr-FR")} · {r.id.slice(0, 8).toUpperCase()}</p>
-                {r.requester_name && r.requester_email ? (
-                  <p className="mt-1 text-xs text-[#526071]">
-                    Demandeur : <strong>{r.requester_name}</strong> · <a className="underline" href={"mailto:" + r.requester_email}>{r.requester_email}</a>
-                  </p>
-                ) : null}
-                <p className="mt-1 font-black">{r.request_kind === "quote" ? "Demande de conditions · À chiffrer" : r.total_ht === null ? "Montant à confirmer" : euroHT(Number(r.total_ht)) + " HT"}</p>
-                {(requestItemsById.get(r.id) ?? []).length ? (
-                  <details className="mt-3 rounded-lg border border-[#e5e9eb] bg-[#faf9f6] p-3">
-                    <summary className="cursor-pointer text-xs font-bold text-[#142941]">
-                      Voir {(requestItemsById.get(r.id) ?? []).length} références demandées
-                    </summary>
-                    <ul className="mt-2 space-y-1 text-xs text-[#526071]">
-                      {(requestItemsById.get(r.id) ?? []).map((item, index) => (
-                        <li key={r.id + "-" + index}>
-                          {item.product_name} · Réf. {item.sku} · {item.quantity} unité{item.quantity > 1 ? "s" : ""}
-                          {item.unit_price_ht !== null ? " · " + euroHT(Number(item.unit_price_ht)) + " HT/u." : " · Tarif à confirmer"}
-                        </li>
-                      ))}
-                    </ul>
-                  </details>
-                ) : null}
-              </div>
-              <input name="request_id" type="hidden" value={r.id} />
-              <div className="flex items-center gap-2">
-                <select name="status" className={field} defaultValue={r.status}>
-                  {statuses.map(([key, title]) => <option key={key} value={key}>{title}</option>)}
-                </select>
-                <button type="submit" className={button}>Enregistrer</button>
-              </div>
-            </form>
-          ))}
-          {!requestRows.length ? <p className="rounded-xl bg-white p-6 text-sm text-[#69717d]">Aucune demande reçue.</p> : null}
-        </div>
-      </section>
       <p className="text-xs text-[#69717d]">{memberRows.filter((m) => m.active).length} accès utilisateur actif(s). L’activation des accès doit rester réservée aux professionnels vérifiés.</p>
     </div>
   );
