@@ -6,11 +6,12 @@ import { PrivateMultiBrandOrderForm } from "@/components/catalogue/private-multi
 import { withPharmacyProductVisuals } from "@/lib/catalogue-private-product-visuals";
 import { getCommercialContext } from "@/lib/catalogue-commercial";
 import { getBuyerWorkspace } from "@/lib/catalogue-buyer-workspace";
+import { PharmacyWelcome } from "@/components/catalogue/pharmacy-welcome";
 
 export default async function PrivateCatalogueHome({
   searchParams,
-}: { searchParams: Promise<{ reprendre?: string }> }) {
-  const { reprendre } = await searchParams;
+}: { searchParams: Promise<{ reprendre?: string; favoris?: string }> }) {
+  const { reprendre, favoris } = await searchParams;
   const { admin, pharmacy, isLinkAccess, accessLinkHash } = await requirePharmacyCatalogue();
   const commercialConditions = await getCommercialContext(admin, accessLinkHash);
   const workspace = isLinkAccess
@@ -57,6 +58,15 @@ export default async function PrivateCatalogueHome({
         </Link>
       </div>
 
+      <PharmacyWelcome
+        pharmacyName={pharmacy.name}
+        brandCount={brands.length}
+        productCount={orderProducts.length}
+        favoriteCount={(favoriteIds as string[]).length}
+        recentRequests={workspace.recent_requests}
+        limitedAccess={isLinkAccess}
+      />
+
       <PrivateMultiBrandOrderForm
         key={isLinkAccess ? "private-link-catalogue" : reprendre ?? "catalogue"}
         products={orderProducts}
@@ -66,6 +76,7 @@ export default async function PrivateCatalogueHome({
         reorderHistory={workspace.recent_requests}
         initialReorderId={isLinkAccess ? undefined : reprendre}
         enableAccountFeatures={!isLinkAccess}
+        initialFavoritesOnly={!isLinkAccess && favoris === "1"}
         requiresRequesterDetails={isLinkAccess}
       />
     </div>
