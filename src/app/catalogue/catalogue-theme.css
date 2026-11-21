@@ -93,3 +93,15 @@
   .public-catalogue-intro p { font-size: 0.875rem; line-height: 1.5; }
   .public-catalogue-grid > p { font-size: 0.875rem; line-height: 1.5; }
 }
+
+/* CATALOGUE_WIDE_DESKTOP — only the public discovery page is wider.
+ * Keep professional/private routes at their existing max-w-7xl width.
+ * :has() is supported by current Chrome, Safari and Firefox.
+ */
+@media (min-width: 1280px) {
+  .tr1-catalogue #contenu:has(.public-catalogue-grid),
+  .tr1-catalogue:has(.public-catalogue-grid) > header > div,
+  .tr1-catalogue:has(.public-catalogue-grid) > footer {
+    max-width: 1600px;
+  }
+}
