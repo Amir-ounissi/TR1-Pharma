@@ -71,6 +71,66 @@ export async function saveAgentClientAttribution(formData: FormData) {
   finish("attribution");
 }
 
+/** A laboratory contact is deliberately not used for auto-send.
+ * Only a manually verified email can appear in an agent-created mail draft.
+ */
+export async function saveSupplierDispatchContact(formData: FormData) {
+  const input=z.object({
+    supplier_id:uuid,
+    contact_name:z.string().trim().max(160),
+    contact_email:z.email().max(254),
+    verification_source:z.string().trim().max(500),
+  }).parse({
+    supplier_id:formData.get("supplier_id"),
+    contact_name:formData.get("contact_name")??"",
+    contact_email:formData.get("contact_email"),
+    verification_source:formData.get("verification_source")??"",
+  });
+  const verified=formData.get("verified")==="true";
+  if(verified && input.verification_source.length<8) {
+    throw new Error("Une preuve du contact laboratoire est requise (8 caractères minimum).");
+  }
+  const { supabase,userId }=await requirePlatformAdmin();
+  const {error}=await supabase.from("private_catalog_supplier_contacts").upsert({
+    ...input,verified,
+    verified_at:verified?new Date().toISOString():null,
+    updated_at:new Date().toISOString(),updated_by:userId,
+  },{onConflict:"supplier_id"});
+  if(error)throw new Error("Contact laboratoire non enregistré : "+error.message);
+  finish("contact");
+}
+
+/** Tracks real supplier proofs; no synthetic delivery or automatic dispatch. */
+export async function recordSupplierShipment(formData: FormData) {
+  const input=z.object({
+    request_id:uuid,
+    event:z.enum(["shipped","delivered"]),
+    reference:z.string().trim().min(6).max(500),
+    carrier:z.string().trim().max(120),
+    expected_delivery_date:z.union([z.iso.date(),z.literal("")]),
+  }).parse({
+    request_id:formData.get("request_id"),
+    event:formData.get("event"),
+    reference:formData.get("reference"),
+    carrier:formData.get("carrier")??"",
+    expected_delivery_date:formData.get("expected_delivery_date")??"",
+  });
+  if(input.event==="shipped" && input.expected_delivery_date &&
+    input.expected_delivery_date<new Date().toISOString().slice(0,10)) {
+    throw new Error("La date de livraison prévue ne peut pas être passée.");
+  }
+  const {supabase}=await requirePlatformAdmin();
+  const {error}=await supabase.rpc("catalogue_admin_record_supplier_delivery",{
+    p_request_id:input.request_id,
+    p_event:input.event,
+    p_reference:input.reference,
+    p_carrier:input.event==="shipped"?(input.carrier||null):null,
+    p_expected_delivery_date:input.event==="shipped"?(input.expected_delivery_date||null):null,
+  });
+  if(error)throw new Error("Livraison non enregistrée : "+error.message);
+  finish(input.event==="shipped"?"expedition":"livraison");
+}
+
 export async function advanceSupplierRequest(formData: FormData) {
   const input = z.object({
     request_id: uuid,
