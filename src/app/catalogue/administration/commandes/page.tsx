@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requirePlatformAdmin } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
-  saveAgentMandate, saveAgentClientAttribution, advanceSupplierRequest, recordSupplierInvoice, advanceCommissionSettlement,
+  saveAgentMandate, saveAgentClientAttribution, saveSupplierDispatchContact, advanceSupplierRequest, recordSupplierShipment, recordSupplierInvoice, advanceCommissionSettlement,
 } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +18,7 @@ const transitions: Record<string, [string, string][]> = {
   received: [["verifying","En vérification"],["declined","Refuser"]],
   verifying: [["forwarded","Transmise au laboratoire"],["declined","Refuser"]],
   forwarded: [["confirmed","Confirmée par le laboratoire"],["declined","Refuser"]],
-  confirmed: [["closed","Clôturer"]],
+  confirmed: [], // Clôture uniquement après preuve de livraison via la procédure dédiée.
 };
 const statusLabel: Record<string, string> = {
   received:"Reçue",verifying:"En vérification",forwarded:"Transmise au laboratoire",
@@ -34,10 +34,10 @@ export default async function SupplierCommissionCockpit({
   const service = createAdminClient();
   const [
     brandsResult, pharmaciesResult, suppliersResult, supplierLinksResult, requestsResult, itemsResult,
-    fulfillmentsResult, mandatesResult, attributionsResult, commissionsResult,
+    fulfillmentsResult, supplierContactsResult, mandatesResult, attributionsResult, commissionsResult,
   ] = await Promise.all([
     admin.from("private_catalog_brands").select("id,name,slug").order("name"),
-    admin.from("private_catalog_pharmacies").select("id,name,city").order("name"),
+    admin.from("private_catalog_pharmacies").select("id,name,city,siret,contact_email").order("name"),
     admin.from("private_catalog_suppliers").select("id,display_name,active").order("display_name"),
     admin.from("private_catalog_supplier_brands").select("supplier_id,brand_id"),
     admin.from("private_catalog_requests")
@@ -46,7 +46,8 @@ export default async function SupplierCommissionCockpit({
     service.from("private_catalog_request_items")
       .select("request_id,product_name,sku,quantity").limit(5000),
     admin.from("private_catalog_supplier_fulfillment")
-      .select("request_id,dispatch_reference,dispatched_at,confirmation_reference,confirmed_at").limit(100),
+      .select("request_id,dispatch_reference,dispatched_at,confirmation_reference,confirmed_at,shipping_carrier,tracking_reference,shipped_at,expected_delivery_date,delivery_reference,delivered_at").limit(100),
+    admin.from("private_catalog_supplier_contacts").select("supplier_id,contact_name,contact_email,verification_source,verified,verified_at").limit(300),
     admin.from("private_catalog_agent_mandates")
       .select("brand_id,commission_rate,first_order,repeat_order,direct_repeat,verified,contract_reference").limit(100),
     admin.from("private_catalog_agent_accounts").select("brand_id,pharmacy_id,attribution_reference,verified").limit(500),
@@ -55,7 +56,7 @@ export default async function SupplierCommissionCockpit({
       .order("created_at",{ascending:false}).limit(200),
   ]);
   const errors = [brandsResult.error,pharmaciesResult.error,suppliersResult.error,supplierLinksResult.error,requestsResult.error,itemsResult.error,
-    fulfillmentsResult.error,mandatesResult.error,attributionsResult.error,commissionsResult.error].filter(Boolean);
+    fulfillmentsResult.error,supplierContactsResult.error,mandatesResult.error,attributionsResult.error,commissionsResult.error].filter(Boolean);
   if (errors.length) throw new Error("Cockpit indisponible : migration de suivi ou permissions manquantes. " + errors[0]!.message);
   const brands = brandsResult.data ?? [];
   const pharmacies = pharmaciesResult.data ?? [];
@@ -64,6 +65,7 @@ export default async function SupplierCommissionCockpit({
   const requests = requestsResult.data ?? [];
   const items = itemsResult.data ?? [];
   const fulfillments = fulfillmentsResult.data ?? [];
+  const supplierContacts = supplierContactsResult.data ?? [];
   const mandates = mandatesResult.data ?? [];
   const attributions = attributionsResult.data ?? [];
   const commissions = commissionsResult.data ?? [];
@@ -72,6 +74,7 @@ export default async function SupplierCommissionCockpit({
   const brandById = new Map(brands.map(b => [b.id,b]));
   const pharmacyById = new Map(pharmacies.map(p => [p.id,p]));
   const supplierById = new Map(suppliers.map(p => [p.id,p]));
+  const contactBySupplier = new Map(supplierContacts.map(c => [c.supplier_id,c]));
   const supplierIdByBrand = new Map(supplierLinks.map(p => [p.brand_id,p.supplier_id]));
   const itemsByRequest = new Map<string, typeof items>();
   for (const item of items) {
@@ -100,10 +103,11 @@ export default async function SupplierCommissionCockpit({
         </p>
       </header>
       {succes ? <p role="status" className="rounded-lg border border-[#bed5c2] bg-[#edf7ee] p-3 text-sm font-bold text-[#315638]">Opération enregistrée : {succes}.</p> : null}
-      <div className="grid gap-3 sm:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {[
           ["Demandes reçues",requests.length.toString()],
           ["En attente laboratoire",requests.filter(r=>r.status==="forwarded").length.toString()],
+          ["Livraisons à suivre",requests.filter(r=>r.request_kind==="order"&&r.status==="confirmed").length.toString()],
           ["Commissions non réglées",money(outstanding)],
           ["Commissions encaissées",money(paid)],
         ].map(([title,value])=>(
@@ -114,10 +118,48 @@ export default async function SupplierCommissionCockpit({
         ))}
       </div>
 
+      <section id="contacts" className="space-y-3" aria-labelledby="supplier-contacts">
+        <div>
+          <h2 id="supplier-contacts" className="text-xl font-black text-[#142941]">Mes contacts laboratoires</h2>
+          <p className="mt-1 text-xs text-[#63737f]">Vérifiez les adresses auprès de chaque partenaire avant de préparer un email. Une adresse non vérifiée ne sera pas proposée comme destinataire. Aucun message n&apos;est envoyé depuis TR1.</p>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          {suppliers.filter(s=>s.active).map(supplier=>{
+            const contact=contactBySupplier.get(supplier.id);
+            return <form key={supplier.id} action={saveSupplierDispatchContact}
+              className="grid gap-2 rounded-xl border border-[#e1e7e8] bg-white p-4 sm:grid-cols-2">
+              <input type="hidden" name="supplier_id" value={supplier.id}/>
+              <div className="sm:col-span-2 flex flex-wrap justify-between gap-2">
+                <h3 className="font-extrabold text-[#142941]">{supplier.display_name}</h3>
+                <span className={"rounded-lg px-2 py-1 text-[10px] font-bold "+(contact?.verified?"bg-[#eaf5eb] text-[#325b3f]":"bg-[#fff2e7] text-[#8c512d]")}>
+                  {contact?.verified?"Email vérifié":"Email non vérifié"}
+                </span>
+              </div>
+              <label className={label}>Nom du contact
+                <input name="contact_name" className={field} maxLength={160} defaultValue={contact?.contact_name??""} placeholder="ADV laboratoire"/>
+              </label>
+              <label className={label}>Email professionnel
+                <input type="email" name="contact_email" className={field} maxLength={254} required defaultValue={contact?.contact_email??""} placeholder="commandes@laboratoire.fr"/>
+              </label>
+              <label className={label+" sm:col-span-2"}>Preuve de vérification
+                <input name="verification_source" className={field} maxLength={500}
+                  defaultValue={contact?.verification_source??""} placeholder="Contrat, mail officiel, interlocuteur confirmé…"/>
+              </label>
+              <label className="flex items-center gap-2 text-xs font-bold text-[#526071]">
+                <input type="checkbox" name="verified" value="true" defaultChecked={contact?.verified??false}/>
+                Contact vérifié
+              </label>
+              <button type="submit" className={action}>Enregistrer</button>
+            </form>;
+          })}
+          {!suppliers.some(s=>s.active)?<p className="text-sm text-[#63737f]">Aucun fournisseur actif. Associez d&apos;abord un fournisseur aux marques dans les conditions commerciales.</p>:null}
+        </div>
+      </section>
+
       <section className="space-y-4" aria-labelledby="supplier-requests">
         <div>
           <h2 id="supplier-requests" className="text-xl font-black text-[#142941]">1. Commandes à suivre</h2>
-          <p className="mt-1 text-xs text-[#526071]">La transmission au laboratoire est manuelle : ne validez « Transmise » qu&apos;après envoi réel, avec une référence de preuve. Une demande reçue n&apos;est pas une commande confirmée.</p>
+          <p className="mt-1 text-xs text-[#526071]">Préparez le message au bon contact laboratoire, envoyez-le depuis votre messagerie puis enregistrez la preuve. La confirmation, l&apos;expédition et la livraison restent des étapes distinctes.</p>
         </div>
         <div className="space-y-3">
           {requests.map(req=>{
@@ -125,9 +167,12 @@ export default async function SupplierCommissionCockpit({
             const pharmacy=pharmacyById.get(req.pharmacy_id);
             const tracking=fulfillmentByRequest.get(req.id);
             const supplier=supplierById.get(supplierIdByBrand.get(req.brand_id)??"");
+            const supplierContact=supplier?contactBySupplier.get(supplier.id):undefined;
             const lines=itemsByRequest.get(req.id)??[];
-            const targets=transitions[req.status]??[];
-            const draft=[`Demande TR1 ${req.id}`,`Pharmacie : ${pharmacy?.name??"À préciser"}`,`Marque : ${brand?.name??"À préciser"}`,`Fournisseur : ${supplier?.display_name??"À associer"}`,...lines.map(l=>`- ${l.product_name} (réf. ${l.sku}) : ${l.quantity} unités`),`Montant indicatif : ${req.total_ht===null?"à confirmer":money(req.total_ht)} HT`,`Merci de confirmer les conditions, disponibilités, montant final, et référence de commande.`].join("\n");
+            const targets=req.status==="confirmed" && req.request_kind==="quote"
+              ? [["closed","Clôturer le devis"]] as [string,string][]
+              : transitions[req.status]??[];
+            const draft=[`Demande TR1 ${req.id}`,`Pharmacie : ${pharmacy?.name??"À préciser"}`,`SIRET : ${pharmacy?.siret??"À préciser"}`,`Ville : ${pharmacy?.city??"À préciser"}`,`Marque : ${brand?.name??"À préciser"}`,`Fournisseur : ${supplier?.display_name??"À associer"}`,...lines.map(l=>`- ${l.product_name} (réf. ${l.sku}) : ${l.quantity} unités`),`Montant indicatif : ${req.total_ht===null?"à confirmer":money(req.total_ht)} HT`,`Merci de confirmer les conditions, disponibilités, montant final, et référence de commande.`].join("\n");
             return <article key={req.id} className="rounded-xl border border-[#e1e7e8] bg-white p-4 sm:p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -146,8 +191,55 @@ export default async function SupplierCommissionCockpit({
                   aria-label={"Détail de la demande "+req.id} value={draft}
                   className="mt-3 w-full resize-y rounded-md border border-[#dce3e5] bg-white p-3 font-mono text-xs text-[#526071]" />
               </details>
+              {supplierContact?.verified && req.status==="verifying" ? (
+                <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-[#bfd5c4] bg-[#f2f9f2] p-3">
+                  <div className="flex-1">
+                    <p className="text-xs font-extrabold text-[#345c42]">Brouillon prêt pour {supplierContact.contact_email}</p>
+                    <p className="mt-1 text-[11px] text-[#526b58]">Ouvrir dans votre messagerie, contrôler le contenu puis envoyer vous-même. Ensuite enregistrer la preuve d&apos;envoi.</p>
+                  </div>
+                  {draft.length<=1800 ? (
+                    <a href={"mailto:"+supplierContact.contact_email+"?subject="+encodeURIComponent("TR1 PHARMA · "+(req.request_kind==="quote"?"Demande de devis":"Commande")+" "+req.id.slice(0,8))+"&body="+encodeURIComponent(draft)}
+                      className="inline-flex min-h-10 items-center rounded-lg bg-[#315943] px-3 text-xs font-extrabold text-white hover:bg-[#244b36]">
+                      Préparer l&apos;email
+                    </a>
+                  ) : <p className="text-xs font-bold text-[#6b5c2f]">Bon trop long pour un lien email : recopiez le texte intégral depuis « Bon de demande à copier ».</p>}
+                </div>
+              ):null}
+              {!supplierContact?.verified && req.status==="verifying" ? (
+                <p className="mt-3 rounded-lg bg-[#fff5e9] p-3 text-xs font-semibold text-[#87552d]">
+                  Adresse laboratoire non vérifiée — <a href="#contacts" className="underline">configurer le contact</a> avant tout envoi.
+                </p>
+              ):null}
               {tracking?.dispatch_reference? <p className="mt-3 text-xs text-[#536677]">Transmission : {tracking.dispatch_reference} ({shortDate(tracking.dispatched_at)})</p>:null}
               {tracking?.confirmation_reference? <p className="mt-1 text-xs text-[#536677]">Confirmation fournisseur : {tracking.confirmation_reference} ({shortDate(tracking.confirmed_at)})</p>:null}
+              {tracking?.tracking_reference ? <p className="mt-1 text-xs text-[#536677]">Expédition : {tracking.tracking_reference} · {tracking.shipping_carrier??"Transporteur non précisé"} ({shortDate(tracking.shipped_at)}){tracking.expected_delivery_date?" · Livraison prévue "+shortDate(tracking.expected_delivery_date):""}</p>:null}
+              {tracking?.delivery_reference ? <p className="mt-1 text-xs font-bold text-[#315638]">Livraison confirmée : {tracking.delivery_reference} ({shortDate(tracking.delivered_at)})</p>:null}
+              {req.request_kind==="order" && req.status==="confirmed" && tracking?.confirmed_at && !tracking.delivered_at ? (
+                <form action={recordSupplierShipment} className="mt-4 grid items-end gap-2 rounded-lg border border-[#d4e1e7] bg-[#f8fafb] p-3 sm:grid-cols-2">
+                  <input type="hidden" name="request_id" value={req.id}/>
+                  <input type="hidden" name="event" value={tracking.shipped_at?"delivered":"shipped"}/>
+                  <p className="sm:col-span-2 text-xs font-extrabold text-[#142941]">
+                    {tracking.shipped_at?"Enregistrer la preuve de livraison":"Enregistrer l&apos;expédition du laboratoire"}
+                  </p>
+                  <label className={label}>{tracking.shipped_at?"Preuve de réception / émargement":"Référence de suivi / bon d&apos;expédition"}
+                    <input name="reference" className={field} required minLength={6} maxLength={500}
+                      placeholder={tracking.shipped_at?"BL signé ou preuve de réception":"Référence transport ou numéro de BL"}/>
+                  </label>
+                  {!tracking.shipped_at ? (
+                    <label className={label}>Transporteur
+                      <input name="carrier" className={field} maxLength={120} placeholder="Colissimo, DHL, transporteur…"/>
+                    </label>
+                  ):null}
+                  {!tracking.shipped_at ? (
+                    <label className={label}>Date de livraison prévue (facultatif)
+                      <input type="date" name="expected_delivery_date" className={field} min={new Date().toISOString().slice(0,10)}/>
+                    </label>
+                  ):null}
+                  <button type="submit" className={action}>
+                    {tracking.shipped_at?"Confirmer la livraison":"Marquer expédiée"}
+                  </button>
+                </form>
+              ):null}
               {targets.length>0? <form action={advanceSupplierRequest} className="mt-4 grid items-end gap-2 sm:grid-cols-[minmax(170px,1fr)_minmax(210px,1.3fr)_auto]">
                 <input type="hidden" name="request_id" value={req.id}/>
                 <label className={label}>Étape

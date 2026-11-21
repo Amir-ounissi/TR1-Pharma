@@ -19,7 +19,7 @@ const actionLabels: Record<string,string> = {
 };
 const requestLabels: Record<string,string> = {
   received:"Demande reçue",verifying:"À vérifier",forwarded:"En attente du laboratoire",
-  confirmed:"Confirmée",closed:"Clôturée",declined:"Refusée",
+  confirmed:"Confirmée · livraison à suivre",closed:"Livrée / clôturée",declined:"Refusée",
 };
 const field = "min-h-10 w-full rounded-lg border border-[#dce3e7] bg-white px-3 py-2 text-sm text-[#142941] outline-none focus:border-[#c58152]";
 const label = "block space-y-1.5 text-xs font-bold text-[#5e6d7a]";
@@ -83,7 +83,7 @@ export default async function SoloAgentHome({
   for (const followup of followups) {
     if (!followupByPharmacy.has(followup.pharmacy_id)) followupByPharmacy.set(followup.pharmacy_id,followup);
   }
-  const pending = requests.filter(r=>["received","verifying","forwarded"].includes(r.status));
+  const pending = requests.filter(r=>["received","verifying","forwarded","confirmed"].includes(r.status));
   const unpaid = commissions.filter(c=>c.status!=="paid");
   const invoicedTracked = commissions.reduce((total,c)=>total+Number(c.supplier_invoiced_ht),0);
   const commissionOwed = unpaid.reduce((total,c)=>total+Number(c.commission_ht),0);
@@ -168,7 +168,7 @@ export default async function SoloAgentHome({
       <section aria-label="Mes indicateurs" className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         {[
           {title:"Mes pharmacies",value:String(pharmacies.length),detail:"Officines du catalogue TR1",icon:Store},
-          {title:"Commandes à suivre",value:String(pending.length),detail:"Demandes catalogue en cours",icon:ClipboardList},
+          {title:"Commandes à suivre",value:String(pending.length),detail:"Demandes, confirmations et livraisons",icon:ClipboardList},
           {title:"Commissions à percevoir",value:money(commissionOwed),detail:"Facturées ou à facturer par TR1",icon:Coins},
           {title:"Actions terrain à faire",value:String(dueFollowups.length),detail:"À réaliser aujourd'hui ou en retard",icon:CalendarClock},
         ].map(kpi=>(
