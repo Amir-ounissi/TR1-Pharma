@@ -2,10 +2,30 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileSpreadsheet, LockKeyhole, ShoppingBag, Store } from "lucide-react";
+import { ClipboardList, FileSpreadsheet, LayoutDashboard, LockKeyhole, Settings2, ShoppingBag, Store } from "lucide-react";
 
 export function CatalogueNavigation() {
   const pathname = usePathname();
+  if (pathname.startsWith("/catalogue/administration")) {
+    const entries = [
+      { href: "/catalogue/administration", title: "Mon activité", icon: LayoutDashboard, active: pathname === "/catalogue/administration" },
+      { href: "/catalogue/administration/commandes", title: "Commandes", icon: ClipboardList, active: pathname.startsWith("/catalogue/administration/commandes") },
+      { href: "/catalogue/decouvrir", title: "Produits", icon: Store, active: false },
+      { href: "/catalogue/administration/configuration", title: "Réglages", icon: Settings2, active: pathname.startsWith("/catalogue/administration/configuration") },
+    ];
+    return (
+      <nav aria-label="Navigation TR1 PHARMA" className="flex flex-wrap items-center gap-1 text-xs font-bold sm:gap-2">
+        {entries.map((item)=>(
+          <Link key={item.href} href={item.href} aria-current={item.active ? "page" : undefined}
+            className={"inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 py-2 transition sm:px-3 "+
+              (item.active ? "bg-[#eaf0f3] text-[#142941]" : "text-[#506170] hover:bg-[#f3f5f5]")}>
+            <item.icon size={15} aria-hidden="true" />
+            <span>{item.title}</span>
+          </Link>
+        ))}
+      </nav>
+    );
+  }
   const publicPage = pathname.startsWith("/catalogue/decouvrir") || pathname === "/catalogue/demander-acces";
   if (!publicPage) return (
           <nav className="flex flex-wrap items-center gap-2 text-xs font-extrabold sm:gap-5 sm:text-sm" aria-label="Navigation du catalogue">
