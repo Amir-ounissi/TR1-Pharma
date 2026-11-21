@@ -130,15 +130,15 @@ export default async function SoloAgentCataloguePreview({
 
       <div className="grid gap-3 sm:grid-cols-3">
         {[
-          ["Pharmacie simulée",pharmacy?.name??"Catalogue général",Store],
-          ["Marques visibles",String(accessibleBrands.length),LockKeyhole],
-          ["Références visibles",String(visible.length)+" / "+baseProducts.length,Package],
-        ].map(([key,value,Icon])=>(
-          <div key={String(key)} className="rounded-xl border border-[#e2e7e8] bg-white px-4 py-3">
+          {label:"Pharmacie simulée",value:pharmacy?.name??"Catalogue général",icon:Store},
+          {label:"Marques visibles",value:String(accessibleBrands.length),icon:LockKeyhole},
+          {label:"Références visibles",value:String(visible.length)+" / "+baseProducts.length,icon:Package},
+        ].map(kpi=>(
+          <div key={kpi.label} className="rounded-xl border border-[#e2e7e8] bg-white px-4 py-3">
             <p className="flex items-center gap-2 text-xs font-semibold text-[#73818c]">
-              <Icon size={15} aria-hidden="true"/>{String(key)}
+              <kpi.icon size={15} aria-hidden="true"/>{kpi.label}
             </p>
-            <p className="mt-1 truncate text-lg font-black text-[#142941]">{String(value)}</p>
+            <p className="mt-1 truncate text-lg font-black text-[#142941]">{kpi.value}</p>
           </div>
         ))}
       </div>
