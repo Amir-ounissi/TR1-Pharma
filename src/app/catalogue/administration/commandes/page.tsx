@@ -89,7 +89,7 @@ export default async function SupplierCommissionCockpit({
     <div className="space-y-7 pb-7">
       <nav className="flex flex-wrap items-center justify-between gap-3 text-xs font-bold text-[#526071]">
         <Link href="/catalogue/administration" className="underline underline-offset-4">← Retour à l&apos;administration</Link>
-        <span>Accès super-administrateur uniquement</span>
+        <span>Mon espace privé TR1</span>
       </nav>
       <header className="rounded-2xl bg-[#142941] px-6 py-7 text-white sm:px-8">
         <p className="text-xs font-extrabold uppercase tracking-[.15em] text-[#ffac78]">TR1 PHARMA · Opérations commerciales</p>
