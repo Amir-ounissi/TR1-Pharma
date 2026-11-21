@@ -3,10 +3,10 @@ export function euroHT(value: number) {
   return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(value);
 }
 
-/** Pas de commande par défaut, modifiable par référence dans l'administration. */
+/** Colisage par défaut, modifiable par référence dans l'administration. */
 export const DEFAULT_QUANTITY_STEP = 6;
 
-/** Premier colisage autorisé : au moins le minimum, arrondi au multiple du pas. */
+/** Première quantité commandable : minimum arrondi au multiple du colisage. */
 export function firstOrderQuantity(minimum: number, step = DEFAULT_QUANTITY_STEP) {
   if (!Number.isSafeInteger(minimum) || minimum < 1 ||
       !Number.isSafeInteger(step) || step < 1) return 0;
@@ -14,7 +14,7 @@ export function firstOrderQuantity(minimum: number, step = DEFAULT_QUANTITY_STEP
   return quantity <= 5000 ? quantity : 0;
 }
 
-/** Chaque quantité commandée doit être un multiple entier du pas configuré. */
+/** Chaque quantité commandée doit respecter le minimum et le colisage configurés. */
 export function isAllowedQuantity(quantity: number, minimum: number, step = DEFAULT_QUANTITY_STEP) {
   return Number.isSafeInteger(quantity) && quantity >= minimum && quantity <= 5000
     && Number.isSafeInteger(minimum) && minimum > 0
@@ -22,7 +22,7 @@ export function isAllowedQuantity(quantity: number, minimum: number, step = DEFA
     && quantity % step === 0;
 }
 
-/** Un clic ajoute/retire le pas configuré, sans proposer un colisage invalide. */
+/** Un clic ajoute/retire le colisage configuré, sans proposer une quantité invalide. */
 export function steppedOrderQuantity(
   current: number,
   minimum: number,
@@ -99,14 +99,13 @@ export function catalogueQuantityPricingLabel(
   collective?: CollectiveQuantityRule | null,
 ) {
   if (collective) {
-    const base = `Minimum ${collective.minimum_total_units} masques cumulés · Total par multiples de ${collective.quantity_multiple}`;
+    const base = `Minimum gamme : ${collective.minimum_total_units} u. · Colisage collectif : ${collective.quantity_multiple} u.`;
     return tierMinimum === null ? `${base} · Tarif à confirmer`
       : `${base} · Tarif HT dès ${orderablePricingThreshold(tierMinimum, minimum, step, collective)} masques cumulés`;
   }
   const first = firstOrderQuantity(minimum, step);
-  const orderRule = first === step
-    ? `Commande par ${step} unité${step > 1 ? "s" : ""}`
-    : `Minimum ${first} unités · Quantités par ${step}`;
+  const orderRule = `Minimum : ${minimum} u. · Colisage : ${step} u.` +
+    (first > minimum ? ` · Première quantité possible : ${first} u.` : "");
   return tierMinimum === null ? `${orderRule} · Tarif à confirmer`
     : `${orderRule} · Tarif HT applicable dès ${orderablePricingThreshold(tierMinimum, minimum, step)} unités`;
 }
