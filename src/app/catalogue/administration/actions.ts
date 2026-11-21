@@ -17,11 +17,15 @@ async function authorizedAdmin() {
   return supabase;
 }
 
-function finish() {
+type CatalogueDestination = "overview" | "produits" | "marques" | "pharmacies" | "tarifs" | "demandes";
+
+function finish(destination: CatalogueDestination) {
   revalidatePath("/catalogue/administration");
   revalidatePath("/catalogue/administration/imports");
+  revalidatePath("/catalogue/administration/conditions");
+  revalidatePath("/catalogue/administration/" + destination);
   revalidatePath("/catalogue");
-  redirect("/catalogue/administration?succes=1");
+  redirect(destination === "overview" ? "/catalogue/administration?succes=1" : `/catalogue/administration/${destination}?succes=1`);
 }
 
 export async function createPrivateCataloguePharmacy(formData: FormData) {
@@ -40,7 +44,7 @@ export async function createPrivateCataloguePharmacy(formData: FormData) {
     contact_email: input.email || null,
   });
   if (error) throw error;
-  finish();
+  finish("pharmacies");
 }
 
 export async function createPrivateCatalogueBrand(formData: FormData) {
@@ -55,7 +59,7 @@ export async function createPrivateCatalogueBrand(formData: FormData) {
   const admin = await authorizedAdmin();
   const { error } = await admin.from("private_catalog_brands").insert({ ...input, active: false });
   if (error) throw error;
-  finish();
+  finish("marques");
 }
 
 export async function createPrivateCatalogueProduct(formData: FormData) {
@@ -85,7 +89,7 @@ export async function createPrivateCatalogueProduct(formData: FormData) {
     ...input, ean: input.ean || null, image_url: input.image_url || null, active: false,
   });
   if (error) throw error;
-  finish();
+  finish("produits");
 }
 
 export async function updatePrivateCatalogueProduct(formData: FormData) {
@@ -114,7 +118,7 @@ export async function updatePrivateCatalogueProduct(formData: FormData) {
     .update({ ...values, ean: input.ean || null, image_url: input.image_url || null })
     .eq("id", productId);
   if (error) throw error;
-  finish();
+  finish("produits");
 }
 
 export async function setPrivateCatalogueProductPublished(formData: FormData) {
@@ -125,7 +129,7 @@ export async function setPrivateCatalogueProductPublished(formData: FormData) {
   const { error } = await admin.from("private_catalog_products")
     .update({ active: parsed.active === "true" }).eq("id", parsed.id);
   if (error) throw error;
-  finish();
+  finish("produits");
 }
 
 export async function authorizePrivateCatalogueBrand(formData: FormData) {
@@ -140,7 +144,7 @@ export async function authorizePrivateCatalogueBrand(formData: FormData) {
   const { error } = await admin.from("private_catalog_access")
     .upsert({ ...input, active: true }, { onConflict: "pharmacy_id,brand_id" });
   if (error) throw error;
-  finish();
+  finish("pharmacies");
 }
 
 export async function setPrivateCatalogueBrandPublished(formData: FormData) {
@@ -150,7 +154,7 @@ export async function setPrivateCatalogueBrandPublished(formData: FormData) {
   const { error } = await admin.from("private_catalog_brands")
     .update({ active: published }).eq("id", brandId);
   if (error) throw error;
-  finish();
+  finish("marques");
 }
 
 async function requireAuthorizedProduct(
@@ -183,7 +187,7 @@ export async function setPrivateCatalogueIndicativeTier(formData: FormData) {
   const { error } = await admin.from("private_catalog_indicative_tiers")
     .upsert(input, { onConflict: "product_id,min_quantity" });
   if (error) throw error;
-  finish();
+  finish("tarifs");
 }
 
 export async function setPrivateCatalogueContractTier(formData: FormData) {
@@ -204,7 +208,7 @@ export async function setPrivateCatalogueContractTier(formData: FormData) {
     .update({ pricing_mode: "contractual" })
     .eq("pharmacy_id", input.pharmacy_id).eq("brand_id", brandId);
   if (modeError) throw modeError;
-  finish();
+  finish("tarifs");
 }
 
 // Compatibilite avec les prix fixes deja prevus dans l'ancien formulaire.
@@ -224,7 +228,7 @@ export async function setPrivateCataloguePrice(formData: FormData) {
     .update({ pricing_mode: "contractual" })
     .eq("pharmacy_id", input.pharmacy_id).eq("brand_id", brandId);
   if (modeError) throw modeError;
-  finish();
+  finish("tarifs");
 }
 
 export async function invitePrivateCatalogueUser(formData: FormData) {
@@ -256,7 +260,7 @@ export async function invitePrivateCatalogueUser(formData: FormData) {
   if (error) {
     throw new Error("Impossible de préparer l'invitation. Vérifiez si cet email possède déjà une invitation active.");
   }
-  finish();
+  finish("pharmacies");
 }
 
 export async function updatePrivateCatalogueRequestStatus(formData: FormData) {
@@ -268,7 +272,7 @@ export async function updatePrivateCatalogueRequestStatus(formData: FormData) {
   const { error } = await admin.from("private_catalog_requests")
     .update({ status: input.status }).eq("id", input.request_id);
   if (error) throw error;
-  finish();
+  finish("demandes");
 }
 
 
