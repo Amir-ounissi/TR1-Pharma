@@ -263,6 +263,10 @@ export default async function SoloAgentHome({
                   className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-[#ccd9df] px-3 text-xs font-extrabold text-[#142941] hover:bg-[#f2f7f7]">
                   <Eye size={14} aria-hidden="true"/> Voir le catalogue
                 </Link>
+                <Link href={"/catalogue/administration/apercu-catalogue?pharmacie="+encodeURIComponent(p.id)+"&mode=simulation"}
+                  className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-[#d9dec4] bg-[#f6f8ee] px-3 text-xs font-extrabold text-[#3c5543] hover:bg-[#eef4e6]">
+                  <ClipboardList size={14} aria-hidden="true"/> Simuler un panier
+                </Link>
                 <Link href={"/catalogue/administration?pharmacie="+encodeURIComponent(p.id)+"#planifier"}
                   className="inline-flex min-h-9 items-center rounded-lg border border-[#ccd9df] px-3 text-xs font-extrabold text-[#142941] hover:bg-[#f2f7f7]">Planifier</Link>
               </div>
