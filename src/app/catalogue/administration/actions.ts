@@ -19,9 +19,10 @@ async function authorizedAdmin() {
 
 function finish() {
   revalidatePath("/catalogue/administration");
+  revalidatePath("/catalogue/administration/configuration");
   revalidatePath("/catalogue/administration/imports");
   revalidatePath("/catalogue");
-  redirect("/catalogue/administration?succes=1");
+  redirect("/catalogue/administration/configuration?succes=1");
 }
 
 export async function createPrivateCataloguePharmacy(formData: FormData) {
