@@ -63,7 +63,7 @@ export default async function PublicCatalogueProductPage({ params }: ProductPara
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.04fr)]">
         <section className="space-y-3">
-          <ProductImageGallery images={productImages} brand={product.brand} productName={product.name} format={product.format} />
+          <ProductImageGallery hideUnavailable images={productImages} brand={product.brand} productName={product.name} format={product.format} />
         </section>
 
         <div className="space-y-6">

@@ -10,14 +10,17 @@ type ProductImageGalleryProps = {
   brand: string;
   productName: string;
   format: string;
+  hideUnavailable?: boolean;
 };
 
-export function ProductImageGallery({ images, brand, productName, format }: ProductImageGalleryProps) {
+export function ProductImageGallery({ images, brand, productName, format, hideUnavailable = false }: ProductImageGalleryProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [failedImages, setFailedImages] = useState<Set<string>>(() => new Set());
   const [failedHdVariants, setFailedHdVariants] = useState<Set<string>>(() => new Set());
   const zoomRef = useRef<HTMLDialogElement>(null);
-  const activeImage = images[Math.min(activeIndex, images.length - 1)];
+  const visibleImages = images.map((url, index) => ({ url, index })).filter(({ url }) => !hideUnavailable || !failedImages.has(url));
+  const selectedImage = images[Math.min(activeIndex, images.length - 1)];
+  const activeImage = hideUnavailable && failedImages.has(selectedImage) ? visibleImages[0]?.url : selectedImage;
   const displayable = Boolean(activeImage && !failedImages.has(activeImage));
   const displaySrc = (url: string, width: number) =>
     failedHdVariants.has(url) ? url : shopifyResponsivePhoto(url, width);
@@ -68,16 +71,16 @@ export function ProductImageGallery({ images, brand, productName, format }: Prod
         ) : null}
       </div>
 
-      {images.length > 1 && (
+      {visibleImages.length > 1 && (
         <div className="flex gap-2 overflow-x-auto pb-1" aria-label={"Galerie de " + productName}>
-          {images.map((url, index) => (
+          {visibleImages.map(({ url, index }, position) => (
             <button
               key={url}
               type="button"
               onClick={() => setActiveIndex(index)}
-              aria-label={"Afficher la photo " + (index + 1) + " sur " + images.length}
-              aria-pressed={activeIndex === index}
-              className={"relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border bg-white transition focus-visible:outline-2 focus-visible:outline-[#b56d3e] " + (activeIndex === index
+              aria-label={"Afficher la photo " + (position + 1) + " sur " + visibleImages.length}
+              aria-pressed={activeImage === url}
+              className={"relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border bg-white transition focus-visible:outline-2 focus-visible:outline-[#b56d3e] " + (activeImage === url
                 ? "border-[#b56d3e] ring-2 ring-[#b56d3e]/20"
                 : "border-[#e6eaec] hover:border-[#aab6bd]")}
             >
