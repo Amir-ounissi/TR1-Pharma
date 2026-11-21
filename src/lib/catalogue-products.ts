@@ -13,10 +13,11 @@ const vkProducts: PublicCatalogueProduct[] = [
   { brand: "VK SWISS", name: "Tribulus", sku: "6467329", ean: "7629999149366", format: "30 gélules", category: "Compléments alimentaires" },
 ];
 
-// Gamme vitrine Vitalora. Trois références sensibles (Ashwagandha, Glycémie,
-// Shilajit) restent réservées au contrôle interne ; aucun prix ou panier public.
+// Gamme vitrine Vitalora : 18 références, sans prix ni panier public.
+// Certaines fiches présentent des précautions en attendant validation du laboratoire.
 const vitaloraProducts: PublicCatalogueProduct[] = [
   { brand: "Vitalora", name: "Acide Hyaluronique & Collagène", sku: "VIT-3770034273097", ean: "3770034273097", format: "60 gélules", category: "Beauté de la peau" },
+  { brand: "Vitalora", name: "Ashwagandha KSM-66® Biologique", sku: "VIT-3770034273042", ean: "3770034273042", format: "60 gélules", category: "Stress & équilibre" },
   { brand: "Vitalora", name: "Bacopa Safran", sku: "VIT-3770034273134", ean: "3770034273134", format: "60 gélules", category: "Concentration & humeur" },
   { brand: "Vitalora", name: "Coenzyme Q10", sku: "VIT-3770034273172", ean: "3770034273172", format: "", category: "Vitalité" },
   { brand: "Vitalora", name: "Collagène Beauté", sku: "VIT-3770034273226", ean: "3770034273226", format: "Poudre", category: "Beauté de la peau" },
@@ -25,10 +26,12 @@ const vitaloraProducts: PublicCatalogueProduct[] = [
   { brand: "Vitalora", name: "Curcuma Optimisé", sku: "VIT-3770034273073", ean: "3770034273073", format: "30 gélules", category: "Articulations" },
   { brand: "Vitalora", name: "Fer Bisglycinate", sku: "VIT-3770034273103", ean: "3770034273103", format: "60 gélules", category: "Minéraux" },
   { brand: "Vitalora", name: "Force Capillaire", sku: "VIT-3770034273202", ean: "3770034273202", format: "Gélules", category: "Cheveux & ongles" },
+  { brand: "Vitalora", name: "Glycémie", sku: "VIT-3770034273189", ean: "3770034273189", format: "60 gélules", category: "Métabolisme" },
   { brand: "Vitalora", name: "Magnésium Bisglycinate", sku: "VIT-3770034273080", ean: "3770034273080", format: "Conditionnement à confirmer", category: "Minéraux" },
   { brand: "Vitalora", name: "Multivitamines — 17 Nutriments Bioactifs", sku: "VIT-3770034273127", ean: "3770034273127", format: "30 gélules", category: "Vitamines & minéraux" },
   { brand: "Vitalora", name: "Oméga 3 Premium Epax®", sku: "VIT-3770034273066", ean: "3770034273066", format: "60 capsules", category: "Oméga 3" },
   { brand: "Vitalora", name: "Spiruline Française Biologique", sku: "VIT-3770034273059", ean: "3770034273059", format: "120 comprimés", category: "Vitalité" },
+  { brand: "Vitalora", name: "Shilajit", sku: "VIT-3770034273158", ean: "3770034273158", format: "60 gélules", category: "Vitalité" },
   { brand: "Vitalora", name: "Vitamine C Liposomale", sku: "VIT-3770034273165", ean: "3770034273165", format: "60 gélules", category: "Vitamines & minéraux" },
   { brand: "Vitalora", name: "Zinc Bisglycinate", sku: "VIT-3770034273110", ean: "3770034273110", format: "60 gélules", category: "Minéraux" },
 ];
