@@ -250,7 +250,7 @@ export default async function SoloAgentCataloguePreview({
                   <div className="mt-auto border-t border-[#eef0f0] pt-3">
                     <p className="text-sm font-black text-[#142941]">{price.amount}</p>
                     <p className="mt-1 text-[11px] leading-4 text-[#687b88]">{price.detail}</p>
-                    <p className="mt-1 text-[11px] text-[#81909b]">Minimum : {p.min_quantity} u. · Pas : {p.quantity_step} u.</p>
+                    <p className="mt-1 text-[11px] text-[#81909b]">Minimum : {p.min_quantity} u. · Colisage : {p.quantity_step} u.</p>
                   </div>
                   <details className="rounded-lg bg-[#f6f8f7] px-3 py-2">
                     <summary className="cursor-pointer text-xs font-extrabold text-[#41576a]">Détails de la référence</summary>
