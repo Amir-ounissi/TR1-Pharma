@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ClipboardList, FileSpreadsheet, LayoutDashboard, LockKeyhole, Settings2, ShoppingBag, Store } from "lucide-react";
+import { ClipboardList, Eye, FileSpreadsheet, LayoutDashboard, LockKeyhole, Settings2, ShoppingBag, Store } from "lucide-react";
 
 export function CatalogueNavigation() {
   const pathname = usePathname();
@@ -10,8 +10,9 @@ export function CatalogueNavigation() {
     const entries = [
       { href: "/catalogue/administration", title: "Mon activité", icon: LayoutDashboard, active: pathname === "/catalogue/administration" },
       { href: "/catalogue/administration/commandes", title: "Commandes", icon: ClipboardList, active: pathname.startsWith("/catalogue/administration/commandes") },
-      { href: "/catalogue/decouvrir", title: "Produits", icon: Store, active: false },
-      { href: "/catalogue/administration/configuration", title: "Réglages", icon: Settings2, active: pathname.startsWith("/catalogue/administration/configuration") },
+      { href: "/catalogue/administration/apercu-catalogue", title: "Voir le catalogue", icon: Eye, active: pathname.startsWith("/catalogue/administration/apercu-catalogue") },
+      { href: "/catalogue/administration/configuration", title: "Gérer le catalogue", icon: Settings2, active: pathname.startsWith("/catalogue/administration/configuration") },
+      { href: "/catalogue/decouvrir", title: "Catalogue public", icon: Store, active: false },
     ];
     return (
       <nav aria-label="Navigation TR1 PHARMA" className="flex flex-wrap items-center gap-1 text-xs font-bold sm:gap-2">

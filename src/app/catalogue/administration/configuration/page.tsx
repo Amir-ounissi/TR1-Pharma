@@ -66,7 +66,13 @@ export default async function CatalogueConfiguration({
 
   return (
     <div className="space-y-9">
-      <Link href="/catalogue/administration" className="text-xs font-bold text-[#526071] underline underline-offset-4">← Mon activité</Link>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link href="/catalogue/administration" className="text-xs font-bold text-[#526071] underline underline-offset-4">← Mon activité</Link>
+        <Link href="/catalogue/administration/apercu-catalogue"
+          className="inline-flex min-h-10 items-center rounded-lg border border-[#d7e1e3] bg-white px-4 text-xs font-extrabold text-[#142941] hover:bg-[#f5f7f7]">
+          Visualiser le catalogue privé
+        </Link>
+      </div>
       <header className="rounded-2xl bg-[#0e1d31] p-7 text-white sm:p-9">
         <p className="text-xs font-black uppercase tracking-[.18em] text-[#ffac78]">TR1 PHARMA · Réglages du catalogue</p>
         <h1 className="mt-3 text-4xl font-black tracking-tight">Configurer le catalogue.</h1>
