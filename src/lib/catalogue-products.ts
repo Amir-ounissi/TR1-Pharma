@@ -36,6 +36,29 @@ const vitaloraProducts: PublicCatalogueProduct[] = [
   { brand: "Vitalora", name: "Zinc Bisglycinate", sku: "VIT-3770034273110", ean: "3770034273110", format: "60 gélules", category: "Minéraux" },
 ];
 
+// Photographies extraites du catalogue Vitalora septembre 2026 (packshots associés par EAN).
+// Hébergement média externe : vérifier sa pérennité avant le lancement commercial.
+const vitaloraPhotoByEan: Record<string, string> = {
+  "3770034273042": "https://cdn.shopify.com/s/files/1/1120/5050/4019/files/tr1-vitalora-3770034273042-ashwagandha-ksm66-bio.webp?v=1795244710",
+  "3770034273059": "https://cdn.shopify.com/s/files/1/1120/5050/4019/files/tr1-vitalora-3770034273059-spiruline-bio-francaise.webp?v=1795244725",
+  "3770034273066": "https://cdn.shopify.com/s/files/1/1120/5050/4019/files/tr1-vitalora-3770034273066-omega3-premium-epax.webp?v=1795244729",
+  "3770034273073": "https://cdn.shopify.com/s/files/1/1120/5050/4019/files/tr1-vitalora-3770034273073-curcuma-optimise.webp?v=1795244734",
+  "3770034273080": "https://cdn.shopify.com/s/files/1/1120/5050/4019/files/tr1-vitalora-3770034273080-magnesium-bisglycinate.webp?v=1795244738",
+  "3770034273097": "https://cdn.shopify.com/s/files/1/1120/5050/4019/files/tr1-vitalora-3770034273097-acide-hyaluronique-collagene.webp?v=1795244742",
+  "3770034273103": "https://cdn.shopify.com/s/files/1/1120/5050/4019/files/tr1-vitalora-3770034273103-fer-bisglycinate.webp?v=1795244747",
+  "3770034273110": "https://cdn.shopify.com/s/files/1/1120/5050/4019/files/tr1-vitalora-3770034273110-zinc-bisglycinate.webp?v=1795244755",
+  "3770034273127": "https://cdn.shopify.com/s/files/1/1120/5050/4019/files/tr1-vitalora-3770034273127-multivitamines-17.webp?v=1795244759",
+  "3770034273134": "https://cdn.shopify.com/s/files/1/1120/5050/4019/files/tr1-vitalora-3770034273134-bacopa-safran.webp?v=1795244764",
+  "3770034273158": "https://cdn.shopify.com/s/files/1/1120/5050/4019/files/tr1-vitalora-3770034273158-shilajit.webp?v=1795244768",
+  "3770034273165": "https://cdn.shopify.com/s/files/1/1120/5050/4019/files/tr1-vitalora-3770034273165-vitamine-c-liposomale.webp?v=1795244772",
+  "3770034273172": "https://cdn.shopify.com/s/files/1/1120/5050/4019/files/tr1-vitalora-3770034273172-coenzyme-q10.webp?v=1795244777",
+  "3770034273189": "https://cdn.shopify.com/s/files/1/1120/5050/4019/files/tr1-vitalora-3770034273189-glycemie.webp?v=1795244787",
+  "3770034273196": "https://cdn.shopify.com/s/files/1/1120/5050/4019/files/tr1-vitalora-3770034273196-creatine-monohydrate.webp?v=1795244792",
+  "3770034273202": "https://cdn.shopify.com/s/files/1/1120/5050/4019/files/tr1-vitalora-3770034273202-force-capillaire.webp?v=1795244797",
+  "3770034273219": "https://cdn.shopify.com/s/files/1/1120/5050/4019/files/tr1-vitalora-3770034273219-confort-intestinal.webp?v=1795244801",
+  "3770034273226": "https://cdn.shopify.com/s/files/1/1120/5050/4019/files/tr1-vitalora-3770034273226-collagene-beaute.webp?v=1795244805",
+};
+
 // Visibilité publique des marques : les données produits restent conservées ci-dessous.
  // Passer une marque à false la masque du catalogue public sans supprimer ses références, EAN ou visuels.
 export const catalogueBrandVisibility: Record<string, boolean> = {
@@ -74,6 +97,9 @@ export function findPublicProduct(key: string): PublicCatalogueProduct | null {
 }
 
 export function publicProductImage(p: PublicCatalogueProduct): {url:string; source:string} | null {
+  if (p.brand === "Vitalora" && p.ean && vitaloraPhotoByEan[p.ean]) {
+    return { url: vitaloraPhotoByEan[p.ean], source: "Catalogue Vitalora septembre 2026" };
+  }
   if (p.brand === "VK SWISS" && p.sku && vkSwissMediaBySku[p.sku]) {
     return { url: vkSwissMediaBySku[p.sku].url, source: "VK SWISS" };
   }
