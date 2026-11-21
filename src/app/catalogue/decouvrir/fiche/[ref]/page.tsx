@@ -53,6 +53,12 @@ export default async function PublicCatalogueProductPage({ params }: ProductPara
   const productImages = publicProductImages(product);
   const eanIsValid = Boolean(product.ean && isValidEan13(product.ean));
   const cosmetics = product.brand !== "VK SWISS" && product.brand !== "Vitalora";
+  const vitaloraReviewNotes: Record<string, string> = {
+    "3770034273042": "Précautions d'emploi et recommandation d'âge de l'ashwagandha à confirmer auprès du laboratoire ; se référer à l'étiquetage final validé.",
+    "3770034273189": "La formule contient de la berbérine : précautions, interactions médicamenteuses et public cible à confirmer auprès du laboratoire avant commercialisation.",
+    "3770034273158": "Documents de traçabilité et analyses de contaminants du Shilajit à confirmer auprès du laboratoire avant commercialisation.",
+  };
+  const vitaloraReviewNote = product.brand === "Vitalora" ? vitaloraReviewNotes[product.ean] : undefined;
 
   return (
     <div className="space-y-7 pb-4">
@@ -103,6 +109,13 @@ export default async function PublicCatalogueProductPage({ params }: ProductPara
           </div>
         </div>
       </div>
+
+      {vitaloraReviewNote ? (
+        <section aria-label="Précautions de référencement" className="rounded-2xl border border-[#ead9c8] bg-[#fff9f3] px-5 py-4">
+          <h2 className="text-sm font-extrabold text-[#775039]">Référence en cours de validation</h2>
+          <p className="mt-2 text-sm leading-6 text-[#775039]">{vitaloraReviewNote}</p>
+        </section>
+      ) : null}
 
       {verifiedInfo && (
         <section aria-labelledby="more-product-information" className="rounded-2xl border border-[#e5e9eb] bg-white p-5 sm:p-7">
