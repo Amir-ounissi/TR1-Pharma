@@ -81,3 +81,9 @@
 @media (prefers-reduced-motion: reduce) {
   .tr1-catalogue :is(button, a) { transition: none; }
 }
+
+/* Public catalogue only: keep professional browsing labels comfortably readable. */
+.public-catalogue-grid :is(button, select, input) { font-size: 0.875rem; }
+.public-catalogue-grid input { font-size: 1rem; }
+.public-catalogue-grid article h4 { min-height: 0; font-size: 1rem; line-height: 1.5; }
+.public-catalogue-grid article h4 + p { font-size: 0.875rem; }

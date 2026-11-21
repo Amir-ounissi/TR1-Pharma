@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowUpRight, Check, ChevronLeft, ChevronRight, LockKeyhole, Search, SlidersHorizontal } from "lucide-react";
+import { ArrowUpRight, Check, ChevronLeft, ChevronRight, Search, SlidersHorizontal } from "lucide-react";
 import { publicCatalogueProducts, publicProductImage, publicProductHref, publicProductKey, type PublicCatalogueProduct } from "@/lib/catalogue-products";
 import { euroHT } from "@/lib/private-catalogue-format";
 import { OnlineDemandBadge } from "@/components/catalogue/online-demand-badge";
@@ -70,7 +70,7 @@ const themes: Record<string, BrandTheme> = {
   "Vitalora": { bg: "#e9ede5", ink: "#375443", border: "#c5d6c8", short: "VITALORA", detail: "Micronutrition, vitamines et actifs sélectionnés" },
 };
 
-export function PublicProductGrid({ privateProducts }: { privateProducts?: PrivateDisplayProduct[] } = {}) {
+export function PublicProductGrid({ privateProducts, benefits = {} }: { privateProducts?: PrivateDisplayProduct[]; benefits?: Record<string, string> } = {}) {
   const privateMode = privateProducts !== undefined;
   const privateProductMap = useMemo(() => {
     const map = new Map<string, PrivateDisplayProduct>();
@@ -104,7 +104,7 @@ export function PublicProductGrid({ privateProducts }: { privateProducts?: Priva
   const [selectedBrand, setSelectedBrand] = useState("Toutes les marques");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
-  const [sort, setSort] = useState("photos");
+  const [sort, setSort] = useState(privateMode ? "photos" : "discovery");
   const [page, setPage] = useState(1);
 
   const categories = useMemo(
@@ -120,6 +120,11 @@ export function PublicProductGrid({ privateProducts }: { privateProducts?: Priva
       [p.brand, p.name, p.category, p.format, p.ean, p.sku ?? ""]
         .some((value) => value.toLocaleLowerCase("fr").includes(needle))
     ));
+    if (sort === "discovery") {
+      // An editorial discovery order: rotate brands, with no implied sales ranking.
+      const groups = brands.slice(1).map(brand => matches.filter(p => p.brand === brand));
+      return Array.from({ length: Math.max(0, ...groups.map(group => group.length)) }, (_, i) => groups.flatMap(group => group[i] ? [group[i]] : [])).flat();
+    }
     return matches.sort((a, b) => sort === "photos"
       ? Number(Boolean(publicProductImage(b))) - Number(Boolean(publicProductImage(a))) || a.name.localeCompare(b.name, "fr")
       : sort === "brand"
@@ -196,7 +201,7 @@ export function PublicProductGrid({ privateProducts }: { privateProducts?: Priva
         <span className="mb-2 block text-[11px] font-extrabold uppercase tracking-[.12em] text-[#526272]">Trier les produits</span>
         <select value={sort} onChange={(e) => { setSort(e.target.value); setPage(1); }}
           className="h-10 w-full rounded-lg border border-[#dce3e5] bg-[#fafaf8] px-3 text-xs font-semibold text-[#142941]">
-          <option value="photos">Photos d’abord</option>
+          {privateMode ? <option value="photos">Photos d’abord</option> : <option value="discovery">Découvrir les gammes</option>}
           <option value="name">Nom A–Z</option>
           <option value="brand">Par marque</option>
         </select>
@@ -210,7 +215,7 @@ export function PublicProductGrid({ privateProducts }: { privateProducts?: Priva
   );
 
   return (
-    <section id="produits" aria-labelledby="public-products" className="space-y-4">
+    <section id="produits" aria-labelledby="public-products" className={"space-y-4 " + (!privateMode ? "public-catalogue-grid" : "")}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <p className="text-[10px] font-extrabold uppercase tracking-[.15em] text-[#b3683e]">{privateMode ? "Espace pharmacie" : "Sélection TR1 PHARMA"}</p>
@@ -219,11 +224,12 @@ export function PublicProductGrid({ privateProducts }: { privateProducts?: Priva
           </h2>
         </div>
         <span className="rounded-full border border-[#e2e7ec] bg-white px-3 py-1.5 text-xs font-bold text-[#5d6b77]">
-          {catalogueProducts.length} références · {catalogueProducts.filter((p) => Boolean(publicProductImage(p))).length} photos
+          {catalogueProducts.length} références{privateMode ? " · " + catalogueProducts.filter((p) => Boolean(publicProductImage(p))).length + " photos" : " · 4 marques"}
         </span>
       </div>
 
-      <div className="grid items-start gap-4 lg:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[252px_minmax(0,1fr)]">
+      {!privateMode ? <p className="text-sm leading-6 text-[#526272]">Catalogue en libre consultation. Tarifs et conditions réservés aux officines après validation de l’accès.</p> : null}
+      <div id="marques" className="scroll-mt-4 grid items-start gap-4 lg:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[252px_minmax(0,1fr)]">
         <aside aria-label="Filtres du catalogue" className="hidden rounded-xl border border-[#e2e7ec] bg-white p-4 lg:sticky lg:top-4 lg:block lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-base font-black text-[#142941]">Filtrer</h3>
@@ -248,6 +254,13 @@ export function PublicProductGrid({ privateProducts }: { privateProducts?: Priva
               <div className="border-t border-[#e8ecec] px-4 py-4">{filterControls(false)}</div>
             </details>
           </div>
+          {!privateMode && selectedBrand === "Vitalora" ? (
+            <div className="rounded-xl border border-[#c5d6c8] bg-[#edf3ed] p-4 text-sm leading-6 text-[#375443]">
+              <p className="font-extrabold">Vitalora · En avant-première</p>
+              <p>Découvrez la gamme en cours de référencement. Les commandes ne sont pas encore ouvertes.</p>
+              <Link href="/catalogue/demander-acces" className="mt-2 inline-flex min-h-10 items-center font-bold underline underline-offset-4">Manifester mon intérêt</Link>
+            </div>
+          ) : null}
           <div className="flex flex-wrap items-center justify-between gap-2 px-1">
             <div>
               <h3 className="text-base font-black text-[#142941] sm:text-lg">{selectedBrand === "Toutes les marques" ? "Toutes les références" : selectedBrand}</h3>
@@ -256,7 +269,7 @@ export function PublicProductGrid({ privateProducts }: { privateProducts?: Priva
             {activeFilterCount > 0 ? <button type="button" onClick={resetFilters} className="text-xs font-bold text-[#a25e34] underline underline-offset-4">Effacer les filtres</button> : null}
           </div>
       {shown.length ? (
-        <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
+        <div className={privateMode ? "grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4" : "grid grid-cols-1 gap-4 min-[440px]:grid-cols-2 xl:grid-cols-3"}>
           {shown.map((product) => {
             const look = theme(product.brand);
             const photo = publicProductImage(product);
@@ -271,7 +284,7 @@ export function PublicProductGrid({ privateProducts }: { privateProducts?: Priva
               <article key={product.brand + product.name + product.ean}
                 className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-[#e5e9e9] bg-white transition hover:border-[#cbd5d6] hover:shadow-[0_18px_38px_-25px_rgba(18,38,57,.25)]">
                 <div className="relative flex h-40 items-center justify-center overflow-hidden sm:h-48"
-                  style={{ backgroundColor: look.bg }}>
+                  style={{ backgroundColor: privateMode ? look.bg : "#ffffff" }}>
                   {photo ? (
                     <Image src={photo.url} alt={product.brand + " " + product.name + " — " + product.format} width={700} height={700}
                       unoptimized className="h-full w-full object-contain p-4" />
@@ -289,8 +302,9 @@ export function PublicProductGrid({ privateProducts }: { privateProducts?: Priva
                   <p className="text-[10px] font-bold uppercase tracking-[.1em] text-[#b36a3d]">{product.brand}</p>
                   <h4 className="mt-2 min-h-12 text-sm font-extrabold leading-5 text-[#142941] sm:text-[15px]">{product.name}</h4>
                   <p className="mt-1.5 text-xs leading-5 text-[#7b8690]">{product.category}{product.format ? " · " + product.format : ""}</p>
-                  {product.brand !== "Vitalora" ? <OnlineDemandBadge ean={product.ean} productId={privateProduct?.id} compact /> : null}
-                  {product.brand === "Vitalora" ? <p className="mt-1 text-[11px] font-semibold text-[#617c67]">Vitrine · Commandes non ouvertes</p> : null}
+                  {privateMode && product.brand !== "Vitalora" ? <OnlineDemandBadge ean={product.ean} productId={privateProduct?.id} compact /> : null}
+                  {product.brand === "Vitalora" ? <p className="my-2 text-sm font-semibold text-[#617c67]">En avant-première · Commandes non ouvertes</p> : null}
+                  {!privateMode && benefits[publicProductKey(product)] ? <p className="my-3 text-sm leading-6 text-[#526272]">{benefits[publicProductKey(product)]}</p> : null}
                   <div className="mt-auto border-t border-[#eef0f0] pt-3">
                     {privateMode && privateProduct ? (
                       <>
@@ -328,13 +342,9 @@ export function PublicProductGrid({ privateProducts }: { privateProducts?: Priva
                       </>
                     ) : (
                       <>
-                        <p className="flex items-center gap-1.5 text-[11px] font-semibold text-[#64717e]">
-                          <LockKeyhole size={13} aria-hidden="true" /> Tarifs professionnels non publics
-                        </p>
-                        <p className="mt-2 text-[11px] text-[#8a9299]">{product.ean ? "EAN " + product.ean : ""}</p>
                         <Link href={publicProductHref(product)}
                           className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#142941] px-3 text-center text-xs font-extrabold text-white hover:bg-[#1e405f]">
-                          Fiche produit <ArrowUpRight size={14} aria-hidden="true"/>
+                          Découvrir le produit
                         </Link>
                       </>
                     )}
@@ -385,23 +395,7 @@ export function PublicProductGrid({ privateProducts }: { privateProducts?: Priva
             </Link>
           </div>
         </>
-      ) : (
-        <>
-          <div className="rounded-xl border border-[#e9e2d6] bg-[#f7f4ee] px-5 py-4 text-xs leading-6 text-[#6d6a64]">
-            <p><Check size={15} aria-hidden="true" className="mr-2 inline" />
-              Les prix et remises ne sont jamais affichés dans ce catalogue public.</p>
-          </div>
-          <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-[#142941] p-6 text-white sm:p-8">
-            <div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-[#e3a474]">Vous êtes pharmacien ?</p>
-              <h3 className="mt-2 text-xl font-black sm:text-2xl">Les conditions sont réservées aux officines.</h3>
-              <p className="mt-2 max-w-xl text-xs leading-5 text-[#bdcbd7]">Une fois votre compte professionnel autorisé, retrouvez votre sélection et les tarifs validés par TR1 PHARMA.</p>
-            </div>
-            <Link href="/catalogue/connexion" className="shop-primary-action inline-flex min-h-11 items-center gap-2 px-4 text-sm">
-              Connexion pro <ArrowUpRight size={16}/>
-            </Link>
-          </div>
-        </>
-      )}
+      ) : null}
     </section>
   );
 }

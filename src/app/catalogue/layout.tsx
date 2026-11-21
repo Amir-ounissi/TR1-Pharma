@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { FileSpreadsheet, LockKeyhole, ShoppingBag, Store } from "lucide-react";
+import { CatalogueNavigation } from "@/components/catalogue/catalogue-navigation";
 import { Tr1BrandLogo } from "@/components/brand/tr1-brand-logo";
 import "./catalogue-theme.css";
 
@@ -21,19 +21,7 @@ export default function PrivateCatalogueLayout({ children }: { children: React.R
               Catalogue professionnel
             </span>
           </Link>
-          <nav className="flex flex-wrap items-center gap-2 text-xs font-extrabold sm:gap-5 sm:text-sm" aria-label="Navigation du catalogue">
-            <Link href="/catalogue/decouvrir" className="inline-flex items-center gap-1.5 p-2 hover:text-[#ad4b08]">
-              <Store size={16} aria-hidden="true" /> <span className="hidden sm:inline">Découvrir</span><span className="sm:hidden">Boutique</span>
-            </Link>
-            <Link href="/catalogue" className="inline-flex items-center gap-1.5 p-2 hover:text-[#ad4b08]">
-              <ShoppingBag size={16} aria-hidden="true" /> Mes produits
-            </Link>
-            <Link href="/catalogue/comparer" className="inline-flex items-center gap-1.5 p-2 hover:text-[#ad4b08]"><FileSpreadsheet size={16} aria-hidden="true" /> Comparer mes achats</Link>
-            <Link href="/catalogue/mes-demandes" className="p-2 hover:text-[#ad4b08]">Mes demandes</Link>
-            <Link href="/catalogue/connexion" className="inline-flex items-center gap-1.5 rounded-md border border-[#dce3ea] px-3 py-2.5 hover:bg-[#fff1e6]">
-              <LockKeyhole size={15} aria-hidden="true" /> Connexion pro
-            </Link>
-          </nav>
+          <CatalogueNavigation />
         </div>
       </header>
       <main id="contenu" className="mx-auto max-w-7xl px-5 py-8 sm:px-8 sm:py-12">{children}</main>

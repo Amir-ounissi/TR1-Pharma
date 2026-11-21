@@ -1,63 +1,45 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Building2, ClipboardList, ShoppingBasket } from "lucide-react";
+import { Building2, Layers, Handshake } from "lucide-react";
 import { PublicProductGrid } from "@/components/catalogue/public-product-grid";
+import { publicCatalogueProducts, publicProductKey } from "@/lib/catalogue-products";
+import { publicProductInformation } from "@/lib/catalogue-public-information";
 
 export const metadata: Metadata = {
   title: "Catalogue professionnel multimarque | TR1 PHARMA",
-  description: "Explorez les gammes Beauty of Joseon, Dr. Althea, Biodance et Vitalora dans le catalogue professionnel TR1 PHARMA.",
+  description: "Découvrez les soins coréens et la micronutrition sélectionnés par TR1 PHARMA pour votre officine.",
   robots: { index: false, follow: false },
 };
 
 export default function PharmacieStorefront() {
+  const benefits = Object.fromEntries(publicCatalogueProducts.map(product => [publicProductKey(product), publicProductInformation(product)?.benefits[0] ?? ""]));
   return (
-    <div className="-mt-3 space-y-6 pb-4 sm:-mt-5">
-      <header className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#e2e7ec] bg-white px-4 py-3 sm:px-6 sm:py-4">
-        <div>
-          <p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-[#b3683e]">TR1 PHARMA · Sélection multimarque</p>
-          <h1 className="mt-1 text-xl font-black tracking-[-.035em] text-[#0e1d31] sm:text-2xl">Catalogue professionnel</h1>
-          <p className="mt-1 text-xs leading-5 text-[#66717d]">Parcourez les produits et filtrez par marque, catégorie ou référence.</p>
+    <div className="-mt-3 space-y-5 pb-4 sm:-mt-5">
+      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-[#e2e7ec] pb-5">
+        <div className="max-w-2xl">
+          <h1 className="text-2xl font-black tracking-tight sm:text-3xl">Des marques à découvrir pour votre officine.</h1>
+          <p className="mt-2 text-base leading-6 text-[#526272]">Soins coréens et micronutrition : une sélection multimarque, avec un interlocuteur pour accompagner votre implantation.</p>
         </div>
-        <Link href="/catalogue/demander-acces"
-          className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-[#142941] px-3.5 text-xs font-extrabold text-white hover:bg-[#1e405f]">
-          Demander un accès <ArrowRight size={15} aria-hidden="true" />
-        </Link>
+        <Link href="/catalogue/demander-acces" className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[#ea7015] px-5 text-sm font-extrabold hover:bg-[#f28331]">Demander mes tarifs professionnels</Link>
       </header>
-      <PublicProductGrid />
-
-      <section aria-labelledby="customer-benefits" className="grid gap-4 rounded-lg bg-white p-6 shadow-sm sm:grid-cols-3 sm:p-7">
-        <h2 id="customer-benefits" className="sr-only">Services pour votre pharmacie</h2>
+      <PublicProductGrid benefits={benefits} />
+      <section aria-labelledby="customer-benefits" className="grid gap-6 rounded-2xl border border-[#e2e7ec] bg-white p-6 sm:grid-cols-3">
+        <h2 id="customer-benefits" className="sr-only">TR1 PHARMA accompagne votre officine</h2>
         {[
-          { Icon: Building2, title: "Sélection pour votre officine", description: "Retrouvez les marques et références accessibles à votre pharmacie." },
-          { Icon: ShoppingBasket, title: "Commande par quantités", description: "Composez votre panier et consultez vos paliers avant de transmettre une demande." },
-          { Icon: ClipboardList, title: "Suivi des demandes", description: "Retrouvez l’historique de vos demandes de prix et de réassort dans votre espace." },
+          { Icon: Layers, title: "Une sélection multimarque", description: "Explorez les gammes et identifiez les références adaptées à votre officine." },
+          { Icon: Building2, title: "Vos conditions professionnelles", description: "Demandez les tarifs et conditions applicables à votre pharmacie, selon les gammes et les volumes." },
+          { Icon: Handshake, title: "Un interlocuteur terrain", description: "Échangez avec TR1 PHARMA sur votre sélection, votre implantation et l’accompagnement de votre équipe." },
         ].map(({ Icon, title, description }) => (
-          <div key={title} className="flex gap-3 py-2">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-[#fff1e6] text-[#162a45]"><Icon size={19} aria-hidden="true" /></div>
-            <div><h3 className="text-sm font-extrabold text-[#0e1d31]">{title}</h3><p className="mt-1 text-xs leading-5 text-[#69717d]">{description}</p></div>
+          <div key={title} className="flex gap-3">
+            <Icon size={23} className="mt-1 shrink-0 text-[#ad4b08]" aria-hidden="true" />
+            <div><h3 className="text-base font-extrabold">{title}</h3><p className="mt-2 text-sm leading-6 text-[#526272]">{description}</p></div>
           </div>
         ))}
       </section>
-
-      <section className="flex flex-wrap items-center justify-between gap-5 rounded-lg bg-[#f4f0e7] px-6 py-8 sm:px-9">
-        <div>
-          <p className="text-xs font-black uppercase tracking-widest text-[#515d6b]">Votre espace pharmacie</p>
-          <h2 className="mt-2 text-2xl font-black tracking-tight text-[#0e1d31]">Connectez-vous pour consulter vos tarifs.</h2>
-          <p className="mt-2 text-sm text-[#515d6b]">Votre accès est lié aux marques et aux conditions accordées à votre officine.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Link href="/catalogue/connexion" className="shop-secondary-action inline-flex min-h-11 items-center gap-2 px-5 text-sm">
-            Connexion pro <ArrowRight size={16} aria-hidden="true" />
-          </Link>
-          <Link href="/catalogue/demander-acces" className="inline-flex min-h-11 items-center rounded-lg bg-[#ea7015] px-5 text-sm font-extrabold text-[#0e1d31] hover:bg-[#f28331]">
-            Demander l’accès au catalogue
-          </Link>
-          <Link href="/catalogue/inscription" className="inline-flex min-h-11 items-center rounded-lg border border-[#dce3ea] px-5 text-sm font-bold text-[#0e1d31]">
-            Activer mon invitation
-          </Link>
-        </div>
+      <section className="flex flex-wrap items-center justify-between gap-5 rounded-2xl bg-[#142941] p-6 text-white sm:p-8">
+        <div><h2 className="text-2xl font-black">Une gamme vous intéresse ?</h2><p className="mt-2 max-w-xl text-base leading-6 text-[#d5dde7]">Présentez-nous votre officine. Après vérification, vous recevrez une invitation pour consulter vos conditions professionnelles.</p></div>
+        <Link href="/catalogue/demander-acces" className="inline-flex min-h-11 items-center rounded-lg bg-[#ea7015] px-5 text-sm font-extrabold text-[#0e1d31] hover:bg-[#f28331]">Demander mes tarifs professionnels</Link>
       </section>
-
     </div>
   );
 }

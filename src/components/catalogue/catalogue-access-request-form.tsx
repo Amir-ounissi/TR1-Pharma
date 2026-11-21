@@ -75,7 +75,7 @@ export function CatalogueAccessRequestForm() {
         <button type="submit" disabled={pending} className="shop-primary-action min-h-12 w-full px-5 py-3 text-sm">
           {pending ? "Transmission en cours…" : "Envoyer ma demande d’accès"}
         </button>
-        <p className="text-center text-xs leading-5 text-[#69717d]">L’envoi de ce formulaire ne crée pas automatiquement un compte et ne donne pas immédiatement accès aux tarifs.</p>
+        <p className="text-center text-xs leading-5 text-[#69717d]">Nous vérifions votre officine puis vous adressons une invitation par e-mail si votre demande est validée.</p>
       </div>
     </form>
   );

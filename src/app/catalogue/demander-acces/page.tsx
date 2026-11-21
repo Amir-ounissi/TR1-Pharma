@@ -24,13 +24,13 @@ export default async function CatalogueAccessRequestPage({
 
       <section className="rounded-lg bg-[#0e1d31] px-6 py-8 text-white sm:px-9 sm:py-10">
         <p className="text-[11px] font-extrabold uppercase tracking-[.2em] text-[#ffa460]">Espace réservé aux officines</p>
-        <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Demander l’accès au catalogue.</h1>
+        <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Demander mes tarifs professionnels.</h1>
         <p className="mt-4 max-w-2xl text-sm leading-7 text-[#d5dde7]">
           Renseignez les coordonnées de votre pharmacie et un identifiant officiel.
           Chaque demande est vérifiée par TR1 PHARMA avant l’envoi d’une invitation.
         </p>
         <p className="mt-5 inline-flex items-center gap-2 text-xs font-semibold text-[#f5c59f]">
-          <ShieldCheck size={16} aria-hidden="true" /> Aucun accès ni compte n’est créé automatiquement.
+          <ShieldCheck size={16} aria-hidden="true" /> Après validation de votre officine, recevez votre invitation par e-mail.
         </p>
       </section>
 
@@ -41,7 +41,7 @@ export default async function CatalogueAccessRequestPage({
             TR1 PHARMA va vérifier les informations de votre officine. Si la demande est validée,
             vous recevrez une invitation à l’adresse e-mail professionnelle indiquée.
           </p>
-          <p className="mt-3 text-sm font-semibold">Cette confirmation ne constitue pas encore une ouverture d’accès au catalogue.</p>
+
           <Link href="/catalogue/decouvrir" className="mt-5 inline-flex min-h-10 items-center font-bold underline underline-offset-4">
             Revenir au catalogue
           </Link>
@@ -49,7 +49,7 @@ export default async function CatalogueAccessRequestPage({
       ) : (
         <>
           <div className="space-y-2">
-            <h2 className="text-xl font-black text-[#0e1d31]">Informations de vérification</h2>
+            <h2 className="text-xl font-black text-[#0e1d31]">Les coordonnées de votre officine</h2>
             <p className="text-sm leading-6 text-[#69717d]">Les champs marqués d’un astérisque sont obligatoires. Un SIRET valide ou un numéro FINESS est requis.</p>
           </div>
           <CatalogueAccessRequestForm />

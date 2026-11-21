@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowUpRight, Barcode, Building2, Check, ClipboardList, LockKeyhole, PackageSearch } from "lucide-react";
+import { ArrowLeft, Barcode, Building2, Check, ClipboardList, LockKeyhole,  } from "lucide-react";
 import { Ean13Barcode } from "@/components/catalogue/ean13-barcode";
 import { ProductImageGallery } from "@/components/catalogue/product-image-gallery";
 import { ExternalCompositionAnalysis } from "@/components/catalogue/external-composition-analysis";
 import { isValidEan13 } from "@/lib/ean13";
-import { faireProductInformationByEan } from "@/lib/catalogue-faire-product-information";
-import { officialBiodanceByName, officialBeautyOfJoseonByEan, officialDrAltheaByEan, additionalBeautyOfJoseonByEan, additionalDrAltheaByEan } from "@/lib/catalogue-official-product-information";
+import { publicProductInformation } from "@/lib/catalogue-public-information";
 import { findPublicProduct, publicCatalogueProducts, publicProductFamily, publicProductImages, publicProductKey } from "@/lib/catalogue-products";
 
 type ProductParams = { params: Promise<{ ref: string }> };
@@ -41,15 +40,7 @@ export default async function PublicCatalogueProductPage({ params }: ProductPara
   const { ref } = await params;
   const product = findPublicProduct(ref);
   if (!product) notFound();
-  const officialInfo = product.brand === "Biodance"
-    ? officialBiodanceByName[product.name]
-    : product.brand === "Beauty of Joseon"
-      ? officialBeautyOfJoseonByEan[product.ean] ?? additionalBeautyOfJoseonByEan[product.ean]
-      : product.brand === "Dr. Althea"
-        ? officialDrAltheaByEan[product.ean] ?? additionalDrAltheaByEan[product.ean]
-        : undefined;
-  const faireInfo = product.ean ? faireProductInformationByEan[product.ean] : undefined;
-  const verifiedInfo = officialInfo ?? faireInfo;
+  const verifiedInfo = publicProductInformation(product);
   const productImages = publicProductImages(product);
   const eanIsValid = Boolean(product.ean && isValidEan13(product.ean));
   const cosmetics = product.brand !== "VK SWISS" && product.brand !== "Vitalora";
@@ -86,27 +77,32 @@ export default async function PublicCatalogueProductPage({ params }: ProductPara
             </div>
           </header>
 
-          <section aria-labelledby="scannable-title" className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Barcode size={19} className="text-[#b56d3e]" aria-hidden="true" />
-              <h2 id="scannable-title" className="text-lg font-black text-[#122a41]">Code-barres pour le référencement</h2>
-            </div>
-            <Ean13Barcode ean={product.ean} />
-          </section>
+          {verifiedInfo ? (
+            <section aria-label="L’essentiel du produit" className="space-y-4">
+              <p className="text-base leading-7 text-[#526676]">{verifiedInfo.description}</p>
+              {verifiedInfo.skinTypes?.length ? <p className="text-sm font-semibold text-[#375443]">Pour : {verifiedInfo.skinTypes.join(" · ")}</p> : null}
+              <ul className="space-y-2">{verifiedInfo.benefits.slice(0, 3).map(benefit => <li key={benefit} className="flex gap-2 text-sm leading-6 text-[#21384b]"><Check size={17} className="mt-1 shrink-0 text-[#698275]" aria-hidden="true" />{benefit}</li>)}</ul>
+            </section>
+          ) : null}
 
           <div className="rounded-2xl bg-[#142941] p-5 text-white sm:p-6">
             <div className="flex gap-3">
               <LockKeyhole size={19} className="mt-0.5 shrink-0 text-[#e6b18e]" aria-hidden="true"/>
               <div>
-                <p className="text-sm font-black">Conditions de vente réservées aux officines</p>
-                <p className="mt-2 text-xs leading-6 text-[#c1cdd8]">Les tarifs, paliers de commande et disponibilités sont communiqués uniquement après validation du compte professionnel.</p>
+                <p className="text-sm font-black">Cette référence pour votre officine</p>
+                <p className="mt-2 text-xs leading-6 text-[#c1cdd8]">Demandez vos tarifs et conditions par volume. TR1 PHARMA vérifie votre officine avant de vous adresser une invitation.</p>
                 {product.brand === "Vitalora" ? <p className="mt-2 text-xs font-semibold leading-6 text-[#f5d4b9]">Présentation indicative de la gamme Vitalora. Référencement en préparation : aucune commande n’est ouverte pour ces références.</p> : null}
               </div>
             </div>
-            <Link href="/catalogue/connexion" className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-lg bg-[#e99055] px-5 text-sm font-extrabold text-[#142941] hover:bg-[#f4a779]">
-              Accès professionnel <ArrowUpRight size={16} aria-hidden="true" />
+            <Link href="/catalogue/demander-acces" className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-lg bg-[#e99055] px-5 text-sm font-extrabold text-[#142941] hover:bg-[#f4a779]">
+              {product.brand === "Vitalora" ? "Manifester mon intérêt" : "Demander mes tarifs professionnels"}
             </Link>
+            <Link href="/catalogue/connexion" className="mt-3 block w-fit py-2 text-sm font-semibold text-white underline underline-offset-4">Déjà client ? Me connecter</Link>
           </div>
+          {eanIsValid ? <details className="rounded-xl border border-[#e1e7e8] bg-white p-4">
+            <summary className="cursor-pointer text-sm font-bold text-[#526272]"><Barcode size={17} className="mr-2 inline" aria-hidden="true" />EAN {product.ean} · Afficher / copier le code-barres</summary>
+            <div className="mt-3 max-w-sm"><Ean13Barcode ean={product.ean} /></div>
+          </details> : null}
         </div>
       </div>
 
