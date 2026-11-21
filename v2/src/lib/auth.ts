@@ -18,7 +18,7 @@ export async function getViewer() {
 }
 export async function requireOwner() {
   const viewer = await getViewer();
-  if (!viewer || viewer.role !== "owner") redirect("/app/connexion");
+  if (!viewer || viewer.role !== "owner") redirect("/connexion/tr1");
   return viewer;
 }
 export async function requirePharmacy() {
