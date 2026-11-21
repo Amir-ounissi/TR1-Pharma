@@ -105,3 +105,14 @@
     max-width: 1600px;
   }
 }
+
+/* Wider buying workspace only: four legible cards beside a persistent desktop cart.
+ * Public catalogue and administration pages keep their existing layout behavior.
+ */
+@media (min-width: 1536px) {
+  .tr1-catalogue #contenu:has(.private-catalogue-buyer),
+  .tr1-catalogue:has(.private-catalogue-buyer) > header > div,
+  .tr1-catalogue:has(.private-catalogue-buyer) > footer {
+    max-width: 1640px;
+  }
+}

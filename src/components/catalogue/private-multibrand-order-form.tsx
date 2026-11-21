@@ -4,7 +4,7 @@ import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { CataloguePackshot } from "@/components/catalogue/catalogue-packshot";
 import { OnlineDemandBadge } from "@/components/catalogue/online-demand-badge";
 import Link from "next/link";
-import { Check, LayoutGrid, List, Minus, Package, Plus, Heart, Search, ShoppingBag, ShoppingCart, SlidersHorizontal, Trash2 } from "lucide-react";
+import { Check, LayoutGrid, List, Minus, Package, Plus, Heart, Search, ShoppingBag, ShoppingCart, SlidersHorizontal, Trash2, X } from "lucide-react";
 import { savePharmacyCart, sendMultiBrandCatalogueRequest, setCatalogueFavorite } from "@/app/catalogue/actions";
 import type { ReorderRequest, SavedCartLine } from "@/lib/catalogue-buyer-workspace";
 import type { CatalogProduct } from "@/lib/private-catalogue";
@@ -194,6 +194,7 @@ export function PrivateMultiBrandOrderForm({
   initialProductId,
   initialCartLines = [],
   initialFavoriteIds = [],
+  initialFavoritesOnly = false,
   reorderHistory = [],
   initialReorderId,
   commercialConditions,
@@ -206,6 +207,7 @@ export function PrivateMultiBrandOrderForm({
   initialProductId?: string;
   initialCartLines?: SavedCartLine[];
   initialFavoriteIds?: string[];
+  initialFavoritesOnly?: boolean;
   reorderHistory?: ReorderRequest[];
   initialReorderId?: string;
   commercialConditions: CommercialContext;
@@ -251,13 +253,44 @@ export function PrivateMultiBrandOrderForm({
   const [query, setQuery] = useState("");
   const [brandFilter, setBrandFilter] = useState(initialBrandSlug ?? "all");
   const [categoryFilter, setCategoryFilter] = useState("all");
-  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [favoritesOnly, setFavoritesOnly] = useState(initialFavoritesOnly);
   const [favorites, setFavorites] = useState<Set<string>>(() => new Set(initialFavoriteIds));
   const [favoriteUpdating, setFavoriteUpdating] = useState<Set<string>>(new Set());
   const [favoriteError, setFavoriteError] = useState("");
   const [sort, setSort] = useState("brand");
   const [viewMode, setViewMode] = useState<"cards" | "list">("cards");
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "error">("saved");
+  const [mobileCartOpen, setMobileCartOpen] = useState(false);
+  const cartPanelRef = useRef<HTMLElement>(null);
+  const cartCloseRef = useRef<HTMLButtonElement>(null);
+  const cartOpenRef = useRef<HTMLButtonElement>(null);
+  const wasCartOpen = useRef(false);
+
+  useEffect(() => {
+    if (wasCartOpen.current && !mobileCartOpen) cartOpenRef.current?.focus();
+    wasCartOpen.current = mobileCartOpen;
+  }, [mobileCartOpen]);
+
+  useEffect(() => {
+    if (!mobileCartOpen) return;
+    const oldOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    cartCloseRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileCartOpen(false);
+      if (event.key !== "Tab" || !cartPanelRef.current) return;
+      const focusable = [...cartPanelRef.current.querySelectorAll<HTMLElement>(
+        "a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])",
+      )].filter((node) => node.getClientRects().length > 0);
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => { document.body.style.overflow = oldOverflow; window.removeEventListener("keydown", onKeyDown); };
+  }, [mobileCartOpen]);
 
   // Le nombre total d'une collection mutualisée (ex. cinq masques Biodance)
   // détermine les paliers de toutes ses références.
@@ -649,7 +682,7 @@ export function PrivateMultiBrandOrderForm({
         <p role="alert" className="rounded-lg border border-[#e7c8b4] bg-[#fff5ee] p-3 text-xs font-semibold text-[#884c2b]">{state.error}</p>
       ) : null}
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px] 2xl:gap-6">
         <div className="min-w-0 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-[#69717d]">
             <div>
@@ -679,7 +712,7 @@ export function PrivateMultiBrandOrderForm({
 
           <div id="liste-produits" className="space-y-2">
             {viewMode === "cards" ? (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-4">
                 {visible.map((product) => {
                   const quantity = quantities[product.id] ?? 0;
                   const referenceQuantity = quantity || product.min_quantity;
@@ -697,7 +730,7 @@ export function PrivateMultiBrandOrderForm({
                     <article key={product.id}
                       className="group flex min-w-0 flex-col overflow-hidden rounded-xl border border-[#e2e7ec] bg-white transition hover:border-[#cbd5d6] hover:shadow-[0_12px_28px_-24px_rgba(14,29,49,.45)]">
                       <div className="relative overflow-hidden bg-[#fbfaf8]">
-                        <CataloguePackshot src={product.image_url} alt={product.brand_name + " " + product.name} />
+                        <CataloguePackshot src={product.image_url} alt={product.brand_name + " " + product.name} variant="compact" />
                         <span className="absolute left-3 top-3 max-w-[80%] truncate rounded-full border border-white/70 bg-white/90 px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[.1em] text-[#ad4b08] backdrop-blur">
                           {product.brand_name}
                         </span>
@@ -711,9 +744,11 @@ export function PrivateMultiBrandOrderForm({
                       </div>
 
                       <div className="flex flex-1 flex-col p-3.5">
-                        <div className="min-h-[86px]">
-                          <h3 className="text-sm font-extrabold leading-5 text-[#0e1d31]">{product.name}</h3>
-                          <p className="mt-1.5 text-[11px] text-[#69717d]">{product.format || "Format non renseigné"}</p>
+                        <div className="min-h-[106px]">
+                          <h3 className="line-clamp-2 text-sm font-extrabold leading-5 text-[#0e1d31]" title={product.name}>{product.name}</h3>
+                          {product.category ? <p className="mt-1 line-clamp-1 text-[10px] font-bold text-[#a45c35]">{product.category}</p> : null}
+                          <p className="mt-1 text-[11px] text-[#69717d]">{product.format || "Format non renseigné"}</p>
+                          {product.pricing.tiers.length>1 ? <span className="mt-1 inline-block rounded bg-[#f0f4ed] px-1.5 py-0.5 text-[9px] font-bold text-[#376044]">Prix dégressifs</span> : null}
                           <OnlineDemandBadge ean={product.ean} productId={product.id} />
                           <p className="mt-1 break-all text-[10px] text-[#89939b]">
                             Réf. {product.sku}{product.ean ? " · EAN " + product.ean : ""}
@@ -745,6 +780,7 @@ export function PrivateMultiBrandOrderForm({
                               Fiche produit
                             </Link>
                           ) : null}
+                          {quantity > 0 ? <p className="text-[10px] font-bold text-[#426b4c]">{quantity} unité{quantity>1?"s":""} dans mon panier</p> : null}
                           <ProductQuantityControl
                             product={product}
                             quantity={quantity}
@@ -861,13 +897,21 @@ export function PrivateMultiBrandOrderForm({
           {!products.length ? <p className="rounded-lg bg-white p-6 text-sm">Aucune référence disponible pour le moment.</p> : null}
         </div>
 
-        <aside id="panier" aria-label="Panier multimarque" className="scroll-mt-6 overflow-hidden rounded-xl border border-[#e2e7ec] bg-white shadow-[0_16px_35px_-25px_rgba(20,52,40,.3)] lg:sticky lg:top-6">
+        <aside id="panier" aria-label="Panier multimarque" ref={cartPanelRef}
+          role={mobileCartOpen ? "dialog" : undefined} aria-modal={mobileCartOpen ? "true" : undefined}
+          className={"scroll-mt-6 border border-[#e2e7ec] bg-white shadow-[0_16px_35px_-25px_rgba(20,52,40,.3)] lg:sticky lg:top-6 lg:block lg:max-h-none lg:overflow-hidden lg:rounded-xl "+
+            (mobileCartOpen ? "fixed inset-0 z-[60] max-h-[100dvh] overflow-y-auto rounded-none" : "hidden")}>
+
           <div className="flex items-center gap-3 bg-[#0e1d31] px-5 py-5 text-white">
             <ShoppingBag size={23} aria-hidden="true" />
             <div className="min-w-0 flex-1">
               <h2 className="text-lg font-black">{simulationOnly ? "Panier simulé" : "Mon panier"}</h2>
               <p className="text-xs text-[#d5dde7]">{selected.length} référence{selected.length > 1 ? "s" : ""} · {quantityTotal} unité{quantityTotal > 1 ? "s" : ""} · {selectedByBrand.length} marque{selectedByBrand.length > 1 ? "s" : ""}</p>
             </div>
+            <button type="button" ref={cartCloseRef} onClick={() => setMobileCartOpen(false)}
+              className="rounded-lg p-2 text-white hover:bg-white/10 lg:hidden" aria-label="Fermer le panier">
+              <X size={20} aria-hidden="true" />
+            </button>
             {selected.length ? (
               <button type="button" onClick={() => { if (canPersist) setSaveStatus("saving"); setQuantities({}); }}
                 className="rounded-lg p-2 text-white/70 hover:bg-white/10 hover:text-white" aria-label="Vider le panier">
@@ -1045,7 +1089,7 @@ export function PrivateMultiBrandOrderForm({
         </aside>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#dce3ea] bg-white/95 px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-10px_30px_-20px_rgba(14,29,49,.35)] backdrop-blur lg:hidden">
+      <div className={"fixed inset-x-0 bottom-0 z-40 border-t border-[#dce3ea] bg-white/95 px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-10px_30px_-20px_rgba(14,29,49,.35)] backdrop-blur lg:hidden "+(mobileCartOpen?"hidden":"")}>
         <div className="mx-auto flex max-w-7xl items-center gap-3">
           <div className="min-w-0 flex-1">
             <p className="truncate text-[11px] font-extrabold text-[#0e1d31]">
@@ -1054,17 +1098,13 @@ export function PrivateMultiBrandOrderForm({
             <p className="truncate text-[11px] text-[#69717d]">{priceSummaryValue}</p>
             {priceSummary.savingsCents > 0 ? <p className="truncate text-[10px] font-semibold text-[#54705e]">Économie estimée : {euroHT(priceSummary.savingsCents / 100)} HT</p> : null}
           </div>
-          <a href="#panier" className="shrink-0 px-2 py-2 text-xs font-bold text-[#0e1d31] underline underline-offset-4">Panier</a>
-          {simulationOnly ? (
-            <span className="shrink-0 rounded-lg border border-[#bfdbc8] bg-[#e9f5eb] px-3 py-2.5 text-[11px] font-extrabold text-[#315f46]">Simulation</span>
-          ) : (
-            <button type="submit" disabled={pending || !selected.length || !valid}
-              aria-label="Transmettre mes demandes"
-              className="shop-primary-action inline-flex min-h-11 shrink-0 items-center justify-center gap-2 px-4 text-xs">
-              {pending ? "Envoi…" : "Transmettre"}
-              {!pending && <ShoppingBag size={15} aria-hidden="true" />}
-            </button>
-          )}
+          <button type="button" ref={cartOpenRef} onClick={() => setMobileCartOpen(true)}
+            className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg border border-[#b4c7d1] bg-[#f5f8f8] px-3 text-xs font-extrabold text-[#0e1d31]">
+            <ShoppingCart size={15} aria-hidden="true"/> Voir le panier
+          </button>
+          <span className="hidden min-[430px]:inline shrink-0 rounded-full bg-[#f1f5f1] px-2.5 py-1 text-[10px] font-extrabold text-[#4c7157]">
+            {simulationOnly ? "Simulation" : selected.length ? "À vérifier dans le panier" : "Choisissez des produits"}
+          </span>
         </div>
       </div>
     </form>

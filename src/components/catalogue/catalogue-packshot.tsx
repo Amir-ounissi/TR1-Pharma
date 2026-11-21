@@ -14,12 +14,13 @@ export function CataloguePackshot({
 }: {
   src: string | null;
   alt: string;
-  variant?: "card" | "list";
+  variant?: "card" | "list" | "compact";
   priority?: boolean;
 }) {
   const [failedHighRes, setFailedHighRes] = useState<string | null>(null);
   const [failedOriginal, setFailedOriginal] = useState<string | null>(null);
   const isList = variant === "list";
+  const isCompact = variant === "compact";
   const highResUrl = src ? shopifyResponsivePhoto(src, isList ? 320 : 960) : null;
   const displayUrl = src && failedHighRes === src ? src : highResUrl;
   const canShowPhoto = Boolean(src && src !== failedOriginal);
@@ -32,7 +33,9 @@ export function CataloguePackshot({
   return (
     <div className={isList
       ? "relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-[#eceeef] bg-white"
-      : "relative flex h-[220px] w-full items-center justify-center overflow-hidden bg-white sm:h-[250px] xl:h-[270px]"}>
+      : isCompact
+        ? "relative flex h-[178px] w-full items-center justify-center overflow-hidden bg-white sm:h-[196px] 2xl:h-[205px]"
+        : "relative flex h-[220px] w-full items-center justify-center overflow-hidden bg-white sm:h-[250px] xl:h-[270px]"}>
       {canShowPhoto && src ? (
         <Image
           src={displayUrl ?? src}
@@ -41,7 +44,7 @@ export function CataloguePackshot({
           unoptimized
           priority={priority && !isList}
           loading={priority && !isList ? "eager" : "lazy"}
-          sizes={isList ? "64px" : "(max-width: 640px) calc(100vw - 36px), (max-width: 1024px) 45vw, 480px"}
+          sizes={isList ? "64px" : isCompact ? "(max-width: 640px) calc(100vw - 36px), (max-width: 1536px) 45vw, 280px" : "(max-width: 640px) calc(100vw - 36px), (max-width: 1024px) 45vw, 480px"}
           onError={handleError}
           className={isList
             ? "object-contain p-1"

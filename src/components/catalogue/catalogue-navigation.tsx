@@ -27,6 +27,27 @@ export function CatalogueNavigation() {
       </nav>
     );
   }
+  const buyerPage = pathname === "/catalogue" || pathname.startsWith("/catalogue/mes-demandes") || pathname.startsWith("/catalogue/comparer");
+  if (buyerPage) {
+    const items = [
+      { href:"/catalogue", label:"Mon officine", icon:Store, current:pathname==="/catalogue" },
+      { href:"/catalogue#liste-produits", label:"Catalogue", icon:ShoppingBag, current:false },
+      { href:"/catalogue/mes-demandes", label:"Commandes et réassorts", icon:ClipboardList, current:pathname.startsWith("/catalogue/mes-demandes") },
+      { href:"/catalogue/comparer", label:"Comparer mes achats", icon:FileSpreadsheet, current:pathname.startsWith("/catalogue/comparer") },
+    ];
+    return (
+      <nav aria-label="Espace pharmacie TR1" className="flex flex-wrap items-center gap-1 text-xs font-bold sm:gap-2">
+        {items.map(item=>(
+          <Link key={item.href} href={item.href} aria-current={item.current?"page":undefined}
+            className={"inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 py-2 sm:px-3 "+
+              (item.current?"bg-[#eaf0f3] text-[#142941]":"text-[#506170] hover:bg-[#f3f5f5]")}>
+            <item.icon size={15} aria-hidden="true" />
+            <span>{item.label}</span>
+          </Link>
+        ))}
+      </nav>
+    );
+  }
   const publicPage = pathname.startsWith("/catalogue/decouvrir") || pathname === "/catalogue/demander-acces";
   if (!publicPage) return (
           <nav className="flex flex-wrap items-center gap-2 text-xs font-extrabold sm:gap-5 sm:text-sm" aria-label="Navigation du catalogue">

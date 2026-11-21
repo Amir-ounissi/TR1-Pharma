@@ -150,9 +150,9 @@ export default async function CatalogueConfiguration({
               <div><label htmlFor="product_price" className={label}>Prix de référence HT (€) · interne</label><input id="product_price" name="price_ht" type="number" min="0" step="0.01" required className={field} /></div>
               <div><label htmlFor="product_vat" className={label}>TVA (%)</label><input id="product_vat" name="vat_rate" type="number" min="0" max="100" step="0.01" required className={field} /></div>
               <div><label htmlFor="product_min" className={label}>Minimum de commande (u.)</label><input id="product_min" name="min_quantity" type="number" min="1" defaultValue="6" className={field} /></div>
-              <div><label htmlFor="product_step" className={label}>Pas des boutons + / − (u.)</label><input id="product_step" name="quantity_step" type="number" min="1" defaultValue="6" className={field} /></div>
+              <div><label htmlFor="product_step" className={label}>Colisage de commande (u.)</label><input id="product_step" name="quantity_step" type="number" min="1" defaultValue="6" className={field} /></div>
             </div>
-            <p className="text-xs text-[#69717d]">Par défaut : 6 unités au premier ajout, puis +6 / −6. Modifiez librement minimum et pas pour chaque référence. Le prix de référence reste confidentiel.</p>
+            <p className="text-xs text-[#69717d]">Deux règles distinctes : minimum de commande 6 unités et colisage par lots de 6 unités (6, 12, 18…). Vous pouvez modifier les deux par référence. Le prix de référence reste confidentiel.</p>
             <button type="submit" className={button} disabled={!brandRows.length}>Créer la fiche en brouillon</button>
           </form>
         </div>
@@ -165,7 +165,7 @@ export default async function CatalogueConfiguration({
             Défaut : minimum 6 unités, boutons +6/−6. Exception fournisseur :
             les masques hydrogel Biodance sont commandables librement par référence,
             avec boutons +4/−4 et un minimum de 12 masques cumulés, total par multiples de 4.
-            Le minimum et le pas individuel de validation restent configurables par fiche.
+            Le minimum et le colisage de chaque référence restent configurables séparément.
           </p>
           <span className="text-xs text-[#69717d]">{productRows.filter((p) => p.active).length} références actives</span>
         </div>
@@ -212,7 +212,7 @@ export default async function CatalogueConfiguration({
                       <div><label className={label}>Prix référence HT (confidentiel)</label><input name="price_ht" type="number" min="0" step="0.0001" required defaultValue={Number(product.price_ht)} className={field} /></div>
                       <div><label className={label}>TVA (%)</label><input name="vat_rate" type="number" min="0" max="100" step="0.01" required defaultValue={product.vat_rate === null ? "" : Number(product.vat_rate)} className={field} /></div>
                       <div><label className={label}>Minimum unités</label><input name="min_quantity" type="number" min="1" max="5000" required defaultValue={product.min_quantity} className={field} /></div>
-                      <div><label className={label}>Pas individuel de commande (u.) · défaut 6</label><input name="quantity_step" type="number" min="1" max="5000" required defaultValue={product.quantity_step} className={field} /><p className="mt-1 text-[11px] text-[#69717d]">Pas individuel actuel : {product.quantity_step} u. Les groupes fournisseurs peuvent proposer un pas de boutons différent (ex. Biodance +4/−4 collectif).</p></div>
+                      <div><label className={label}>Colisage par référence (u.) · défaut 6</label><input name="quantity_step" type="number" min="1" max="5000" required defaultValue={product.quantity_step} className={field} /><p className="mt-1 text-[11px] text-[#69717d]">Colisage actuel : {product.quantity_step} u. La quantité doit atteindre le minimum et respecter ce multiple. Certaines gammes peuvent aussi avoir un colisage collectif (ex. Biodance par 4).</p></div>
                     </div>
                     <button type="submit" className={button}>Enregistrer les modifications</button>
                   </form>
