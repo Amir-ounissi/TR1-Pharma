@@ -51,13 +51,14 @@ function privateTierPrice(
 }
 
 const allProducts: DisplayProduct[] = publicCatalogueProducts;
-const brands = ["Toutes les marques", "Beauty of Joseon", "Dr. Althea", "Biodance"];
+const brands = ["Toutes les marques", "Beauty of Joseon", "Dr. Althea", "Biodance", "Vitalora"];
 
 const themes: Record<string, BrandTheme> = {
   "Beauty of Joseon": { bg: "#eee9de", ink: "#5d4a36", border: "#c6b496", short: "BEAUTY OF JOSEON", detail: "Soins coréens inspirés des rituels traditionnels" },
   "Dr. Althea": { bg: "#e7eee9", ink: "#3d6757", border: "#b7cabc", short: "Dr. Althea", detail: "Soins visage, sérums et rituels apaisants" },
   "Biodance": { bg: "#f2e8ec", ink: "#8b5a6c", border: "#d9bfca", short: "BIODANCE", detail: "Masques hydrogel et soins du visage" },
   "VK SWISS": { bg: "#e9edf1", ink: "#263d56", border: "#c6d0db", short: "VK SWISS", detail: "Compléments alimentaires" },
+  "Vitalora": { bg: "#e9ede5", ink: "#375443", border: "#c5d6c8", short: "VITALORA", detail: "Micronutrition, vitamines et actifs sélectionnés" },
 };
 
 export function PublicProductGrid({ privateProducts }: { privateProducts?: PrivateDisplayProduct[] } = {}) {
@@ -232,7 +233,7 @@ export function PublicProductGrid({ privateProducts }: { privateProducts?: Priva
                   ) : (
                     <div className="relative flex h-full w-full flex-col items-center justify-center p-4 text-center" style={{ color: look.ink }}>
                       <span className="absolute -right-10 top-0 size-36 rounded-full border-[26px] opacity-25" style={{ borderColor: look.border }} aria-hidden="true"/>
-                      <span className="relative text-[10px] font-semibold uppercase tracking-[.18em] opacity-65">Soin & beauté</span>
+                      <span className="relative text-[10px] font-semibold uppercase tracking-[.18em] opacity-65">{product.brand === "Vitalora" ? "Micronutrition" : "Soin & beauté"}</span>
                       <span className="relative mt-3 max-w-[190px] text-lg font-black leading-6 tracking-[-.04em]">{look.short}</span>
                       <span className="relative mt-4 h-px w-10 opacity-40" style={{ backgroundColor: look.ink }}/>
                       <span className="absolute bottom-2 left-3 text-[9px] font-semibold uppercase opacity-60">Visuel à venir</span>
@@ -243,7 +244,8 @@ export function PublicProductGrid({ privateProducts }: { privateProducts?: Priva
                   <p className="text-[10px] font-bold uppercase tracking-[.1em] text-[#b36a3d]">{product.brand}</p>
                   <h4 className="mt-2 min-h-12 text-sm font-extrabold leading-5 text-[#142941] sm:text-[15px]">{product.name}</h4>
                   <p className="mt-1.5 text-xs leading-5 text-[#7b8690]">{product.category}{product.format ? " · " + product.format : ""}</p>
-                  <OnlineDemandBadge ean={product.ean} productId={privateProduct?.id} compact />
+                  {product.brand !== "Vitalora" ? <OnlineDemandBadge ean={product.ean} productId={privateProduct?.id} compact /> : null}
+                  {product.brand === "Vitalora" ? <p className="mt-1 text-[11px] font-semibold text-[#617c67]">Vitrine · Commandes non ouvertes</p> : null}
                   <div className="mt-auto border-t border-[#eef0f0] pt-3">
                     {privateMode && privateProduct ? (
                       <>
