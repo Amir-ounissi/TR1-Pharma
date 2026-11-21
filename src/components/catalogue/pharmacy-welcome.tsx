@@ -2,7 +2,6 @@ import Link from "next/link";
 import { ArrowRight, Heart, RotateCcw, ShoppingBasket, Store } from "lucide-react";
 import type { ReorderRequest } from "@/lib/catalogue-buyer-workspace";
 
-type Brand = { name: string };
 export function PharmacyWelcome({
   pharmacyName,brandCount,productCount,favoriteCount,recentRequests,
   limitedAccess,
