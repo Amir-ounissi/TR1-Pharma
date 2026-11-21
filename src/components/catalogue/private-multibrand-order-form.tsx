@@ -263,6 +263,13 @@ export function PrivateMultiBrandOrderForm({
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const cartPanelRef = useRef<HTMLElement>(null);
   const cartCloseRef = useRef<HTMLButtonElement>(null);
+  const cartOpenRef = useRef<HTMLButtonElement>(null);
+  const wasCartOpen = useRef(false);
+
+  useEffect(() => {
+    if (wasCartOpen.current && !mobileCartOpen) cartOpenRef.current?.focus();
+    wasCartOpen.current = mobileCartOpen;
+  }, [mobileCartOpen]);
 
   useEffect(() => {
     if (!mobileCartOpen) return;
@@ -1091,7 +1098,7 @@ export function PrivateMultiBrandOrderForm({
             <p className="truncate text-[11px] text-[#69717d]">{priceSummaryValue}</p>
             {priceSummary.savingsCents > 0 ? <p className="truncate text-[10px] font-semibold text-[#54705e]">Économie estimée : {euroHT(priceSummary.savingsCents / 100)} HT</p> : null}
           </div>
-          <button type="button" onClick={() => setMobileCartOpen(true)}
+          <button type="button" ref={cartOpenRef} onClick={() => setMobileCartOpen(true)}
             className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg border border-[#b4c7d1] bg-[#f5f8f8] px-3 text-xs font-extrabold text-[#0e1d31]">
             <ShoppingCart size={15} aria-hidden="true"/> Voir le panier
           </button>
