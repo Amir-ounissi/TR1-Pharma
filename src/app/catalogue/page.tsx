@@ -31,7 +31,7 @@ export default async function PrivateCatalogueHome({
   );
 
   return (
-    <div className="space-y-4">
+    <div className="private-catalogue-buyer space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-2 text-xs font-semibold text-[#69717d]">
           <Building2 size={16} aria-hidden="true" />
@@ -42,6 +42,15 @@ export default async function PrivateCatalogueHome({
           <button className="text-xs font-semibold text-[#69717d] underline-offset-4 hover:text-[#0e1d31] hover:underline">{isLinkAccess ? "Quitter le catalogue" : "Se déconnecter"}</button>
         </form>
       </div>
+
+      <PharmacyWelcome
+        pharmacyName={pharmacy.name}
+        brandCount={brands.length}
+        productCount={orderProducts.length}
+        favoriteCount={(favoriteIds as string[]).length}
+        recentRequests={workspace.recent_requests}
+        limitedAccess={isLinkAccess}
+      />
 
       <div className="flex flex-wrap justify-end gap-2">
         <Link href="/catalogue/comparer#scanner-ean"
@@ -57,15 +66,6 @@ export default async function PrivateCatalogueHome({
           <Clock3 size={16} aria-hidden="true" /> Mes demandes
         </Link>
       </div>
-
-      <PharmacyWelcome
-        pharmacyName={pharmacy.name}
-        brandCount={brands.length}
-        productCount={orderProducts.length}
-        favoriteCount={(favoriteIds as string[]).length}
-        recentRequests={workspace.recent_requests}
-        limitedAccess={isLinkAccess}
-      />
 
       <PrivateMultiBrandOrderForm
         key={isLinkAccess ? "private-link-catalogue" : reprendre ?? "catalogue"}
