@@ -52,7 +52,7 @@ export default async function PublicCatalogueProductPage({ params }: ProductPara
   const verifiedInfo = officialInfo ?? faireInfo;
   const productImages = publicProductImages(product);
   const eanIsValid = Boolean(product.ean && isValidEan13(product.ean));
-  const cosmetics = product.brand !== "VK SWISS";
+  const cosmetics = product.brand !== "VK SWISS" && product.brand !== "Vitalora";
 
   return (
     <div className="space-y-7 pb-4">
@@ -94,6 +94,7 @@ export default async function PublicCatalogueProductPage({ params }: ProductPara
               <div>
                 <p className="text-sm font-black">Conditions de vente réservées aux officines</p>
                 <p className="mt-2 text-xs leading-6 text-[#c1cdd8]">Les tarifs, paliers de commande et disponibilités sont communiqués uniquement après validation du compte professionnel.</p>
+                {product.brand === "Vitalora" ? <p className="mt-2 text-xs font-semibold leading-6 text-[#f5d4b9]">Présentation indicative de la gamme Vitalora. Référencement en préparation : aucune commande n’est ouverte pour ces références.</p> : null}
               </div>
             </div>
             <Link href="/catalogue/connexion" className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-lg bg-[#e99055] px-5 text-sm font-extrabold text-[#142941] hover:bg-[#f4a779]">
