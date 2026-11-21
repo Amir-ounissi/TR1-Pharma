@@ -33,11 +33,13 @@ export default async function SupplierCommissionCockpit({
   const { supabase: admin } = await requirePlatformAdmin();
   const service = createAdminClient();
   const [
-    brandsResult, pharmaciesResult, requestsResult, itemsResult,
+    brandsResult, pharmaciesResult, suppliersResult, supplierLinksResult, requestsResult, itemsResult,
     fulfillmentsResult, mandatesResult, attributionsResult, commissionsResult,
   ] = await Promise.all([
     admin.from("private_catalog_brands").select("id,name,slug").order("name"),
     admin.from("private_catalog_pharmacies").select("id,name,city").order("name"),
+    admin.from("private_catalog_suppliers").select("id,display_name,active").order("display_name"),
+    admin.from("private_catalog_supplier_brands").select("supplier_id,brand_id"),
     admin.from("private_catalog_requests")
       .select("id,pharmacy_id,brand_id,request_kind,status,created_at,total_ht")
       .order("created_at",{ascending:false}).limit(100),
@@ -52,11 +54,13 @@ export default async function SupplierCommissionCockpit({
       .select("id,request_id,brand_id,pharmacy_id,origin,sale_kind,supplier_invoice_reference,supplier_invoice_date,supplier_invoiced_ht,commission_rate_snapshot,commission_ht,status,tr1_invoice_reference,payment_reference,created_at")
       .order("created_at",{ascending:false}).limit(200),
   ]);
-  const errors = [brandsResult.error,pharmaciesResult.error,requestsResult.error,itemsResult.error,
+  const errors = [brandsResult.error,pharmaciesResult.error,suppliersResult.error,supplierLinksResult.error,requestsResult.error,itemsResult.error,
     fulfillmentsResult.error,mandatesResult.error,attributionsResult.error,commissionsResult.error].filter(Boolean);
   if (errors.length) throw new Error("Cockpit indisponible : migration de suivi ou permissions manquantes. " + errors[0]!.message);
   const brands = brandsResult.data ?? [];
   const pharmacies = pharmaciesResult.data ?? [];
+  const suppliers = suppliersResult.data ?? [];
+  const supplierLinks = supplierLinksResult.data ?? [];
   const requests = requestsResult.data ?? [];
   const items = itemsResult.data ?? [];
   const fulfillments = fulfillmentsResult.data ?? [];
@@ -67,6 +71,8 @@ export default async function SupplierCommissionCockpit({
   const fulfillmentByRequest = new Map(fulfillments.map(f => [f.request_id,f]));
   const brandById = new Map(brands.map(b => [b.id,b]));
   const pharmacyById = new Map(pharmacies.map(p => [p.id,p]));
+  const supplierById = new Map(suppliers.map(p => [p.id,p]));
+  const supplierIdByBrand = new Map(supplierLinks.map(p => [p.brand_id,p.supplier_id]));
   const itemsByRequest = new Map<string, typeof items>();
   for (const item of items) {
     const group = itemsByRequest.get(item.request_id) ?? [];
@@ -118,14 +124,18 @@ export default async function SupplierCommissionCockpit({
             const brand=brandById.get(req.brand_id);
             const pharmacy=pharmacyById.get(req.pharmacy_id);
             const tracking=fulfillmentByRequest.get(req.id);
+            const supplier=supplierById.get(supplierIdByBrand.get(req.brand_id)??"");
             const lines=itemsByRequest.get(req.id)??[];
             const targets=transitions[req.status]??[];
-            const draft=[`Demande TR1 ${req.id}`,`Pharmacie : ${pharmacy?.name??"À préciser"}`,`Marque : ${brand?.name??"À préciser"}`,...lines.map(l=>`- ${l.product_name} (réf. ${l.sku}) : ${l.quantity} unités`),`Montant indicatif : ${req.total_ht===null?"à confirmer":money(req.total_ht)} HT`,`Merci de confirmer les conditions, disponibilités, montant final, et référence de commande.`].join("\n");
+            const draft=[`Demande TR1 ${req.id}`,`Pharmacie : ${pharmacy?.name??"À préciser"}`,`Marque : ${brand?.name??"À préciser"}`,`Fournisseur : ${supplier?.display_name??"À associer"}`,...lines.map(l=>`- ${l.product_name} (réf. ${l.sku}) : ${l.quantity} unités`),`Montant indicatif : ${req.total_ht===null?"à confirmer":money(req.total_ht)} HT`,`Merci de confirmer les conditions, disponibilités, montant final, et référence de commande.`].join("\n");
             return <article key={req.id} className="rounded-xl border border-[#e1e7e8] bg-white p-4 sm:p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="font-extrabold text-[#142941]">{pharmacy?.name??"Pharmacie"} · {brand?.name??"Marque"}</p>
                   <p className="mt-1 text-xs text-[#667782]">{req.id.slice(0,8).toUpperCase()} · {shortDate(req.created_at)} · {req.request_kind==="quote"?"Devis":"Commande"}</p>
+                  <p className="mt-1 text-xs text-[#536677]">Laboratoire destinataire : <strong>{supplier?.display_name??"Non associé"}</strong>
+                    {!supplier?<Link className="ml-2 underline" href="/catalogue/administration/conditions">Configurer</Link>:null}
+                  </p>
                   <p className="mt-1 text-sm font-black">{req.total_ht===null?"À chiffrer":money(req.total_ht)+" HT"}</p>
                 </div>
                 <span className="rounded-full bg-[#f0f3f4] px-3 py-1.5 text-xs font-bold text-[#425466]">{statusLabel[req.status]??req.status}</span>
