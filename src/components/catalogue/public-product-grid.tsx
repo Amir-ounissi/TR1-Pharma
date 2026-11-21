@@ -53,6 +53,15 @@ function privateTierPrice(
 const allProducts: DisplayProduct[] = publicCatalogueProducts;
 const brands = ["Toutes les marques", "Beauty of Joseon", "Dr. Althea", "Biodance", "Vitalora"];
 
+// Logos des marques partenaires : originaux recueillis sur leurs sites / supports,
+// hébergés sur le CDN média. Ne pas assimiler leur présence à une certification.
+const brandLogos: Record<string, { src: string; fit: "cover" | "contain"; position?: string }> = {
+  "Beauty of Joseon": { src: "https://cdn.shopify.com/s/files/1/1120/5050/4019/files/tr1-marque-logo-beauty-of-joseon.jpg?v=1795245423", fit: "cover", position: "center 54%" },
+  "Dr. Althea": { src: "https://cdn.shopify.com/s/files/1/1120/5050/4019/files/tr1-marque-logo-dr-althea.png?v=1795245428", fit: "cover" },
+  "Biodance": { src: "https://cdn.shopify.com/s/files/1/1120/5050/4019/files/tr1-marque-logo-biodance.jpg?v=1795245432", fit: "cover" },
+  "Vitalora": { src: "https://cdn.shopify.com/s/files/1/1120/5050/4019/files/tr1-marque-logo-vitalora.png?v=1795245438", fit: "contain" },
+};
+
 const themes: Record<string, BrandTheme> = {
   "Beauty of Joseon": { bg: "#eee9de", ink: "#5d4a36", border: "#c6b496", short: "BEAUTY OF JOSEON", detail: "Soins coréens inspirés des rituels traditionnels" },
   "Dr. Althea": { bg: "#e7eee9", ink: "#3d6757", border: "#b7cabc", short: "Dr. Althea", detail: "Soins visage, sérums et rituels apaisants" },
@@ -145,17 +154,26 @@ export function PublicProductGrid({ privateProducts }: { privateProducts?: Priva
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {availableBrands.slice(1).map((brand) => {
           const look = theme(brand);
+          const logo = brandLogos[brand];
           return (
             <button type="button" key={brand} onClick={() => chooseBrand(brand)}
               aria-pressed={selectedBrand === brand}
-              className={"group relative min-h-44 overflow-hidden rounded-2xl border p-5 text-left transition hover:-translate-y-0.5 hover:shadow-lg " +
+              className={"group relative min-h-52 overflow-hidden rounded-2xl border p-5 text-left transition hover:-translate-y-0.5 hover:shadow-lg " +
                 (selectedBrand === brand ? "ring-2 ring-[#de8e5e] ring-offset-2 " : "")}
               style={{ backgroundColor: look.bg, borderColor: look.border }}>
               <div aria-hidden="true" className="pointer-events-none absolute -right-10 -top-12 size-44 rounded-full border-[24px] opacity-30" style={{ borderColor: look.border }} />
               <div className="relative flex h-full flex-col justify-between">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="max-w-[180px] text-[17px] font-black leading-5 tracking-[-.035em] sm:text-lg" style={{ color: look.ink }}>{look.short}</p>
-                  <ArrowUpRight size={16} aria-hidden="true" style={{ color: look.ink }} />
+                  <span className="relative flex h-[74px] w-[190px] max-w-[calc(100%-32px)] shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/80 bg-white shadow-sm transition group-hover:shadow-md">
+                    {logo ? (
+                      <Image src={logo.src} alt={"Logo " + brand} width={380} height={148} unoptimized
+                        className={"h-full w-full " + (logo.fit === "contain" ? "object-contain p-2" : "object-cover")}
+                        style={logo.position ? { objectPosition: logo.position } : undefined} />
+                    ) : (
+                      <span className="px-2 text-[17px] font-black" style={{ color: look.ink }}>{look.short}</span>
+                    )}
+                  </span>
+                  <ArrowUpRight size={16} aria-hidden="true" className="shrink-0" style={{ color: look.ink }} />
                 </div>
                 <div>
                   <p className="max-w-[200px] text-[11px] leading-5" style={{ color: look.ink }}>{look.detail}</p>
