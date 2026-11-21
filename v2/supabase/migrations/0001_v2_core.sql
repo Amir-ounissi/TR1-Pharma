@@ -182,8 +182,9 @@ create policy products_read on public.products for select to authenticated
   using (public.tr1_is_owner() or (
     published and exists (
       select 1 from public.pharmacy_brand_access a
+      join public.brands b on b.id=a.brand_id
       join public.pharmacy_memberships m on m.pharmacy_id=a.pharmacy_id
-      where a.brand_id=products.brand_id and a.active and m.active and m.user_id=(select auth.uid())
+      where a.brand_id=products.brand_id and b.active and a.active and m.active and m.user_id=(select auth.uid())
     )
   ));
 create policy products_owner_write on public.products for all to authenticated
@@ -193,6 +194,9 @@ alter table public.price_rules enable row level security;
 create policy prices_read on public.price_rules for select to authenticated
   using (public.tr1_is_owner() or exists (
     select 1 from public.pharmacy_memberships m
+    join public.pharmacy_brand_access a on a.pharmacy_id=m.pharmacy_id and a.active
+    join public.products p on p.brand_id=a.brand_id and p.id=price_rules.product_id and p.published
+    join public.brands b on b.id=a.brand_id and b.active
     where m.pharmacy_id=price_rules.pharmacy_id and m.active and m.user_id=(select auth.uid())
   ));
 create policy prices_owner_write on public.price_rules for all to authenticated
