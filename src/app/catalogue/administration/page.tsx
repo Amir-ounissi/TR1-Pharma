@@ -238,13 +238,16 @@ export default async function CatalogueAdministration({
           <h2 id="edit-products" className="text-2xl font-black">Références produits</h2>
           <span className="text-xs text-[#69717d]">{productRows.filter((p) => p.active).length} actives / {productRows.length} références</span>
         </div>
-        <form method="get" action="/catalogue/administration" className="grid gap-3 rounded-xl border border-[#0e1d31]/10 bg-white p-4 md:grid-cols-[minmax(0,1fr)_minmax(0,190px)_minmax(0,160px)_auto] md:items-end">
+        <form method="get" action="/catalogue/administration#edit-products" className="grid gap-3 rounded-xl border border-[#0e1d31]/10 bg-white p-4 md:grid-cols-[minmax(0,1fr)_minmax(0,190px)_minmax(0,160px)_auto] md:items-end">
           <div><label htmlFor="filter_product" className={label}>Rechercher</label><input id="filter_product" name="recherche" type="search" defaultValue={recherche ?? ""} placeholder="Produit, SKU, EAN, marque" className={field} /></div>
           <div><label htmlFor="filter_brand" className={label}>Marque</label><select id="filter_brand" name="marque" defaultValue={marque ?? ""} className={field}><option value="">Toutes les marques</option>{brandRows.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</select></div>
           <div><label htmlFor="filter_status" className={label}>État</label><select id="filter_status" name="statut" defaultValue={statut ?? ""} className={field}><option value="">Tous</option><option value="active">Publiés</option><option value="inactive">Masqués</option><option value="review">À vérifier</option></select></div>
-          <button type="submit" className={button}>Filtrer</button>
+          <div className="flex flex-wrap gap-2 md:flex-col">
+            <button type="submit" className={button}>Filtrer</button>
+            <Link href="/catalogue/administration#edit-products" className="rounded-md border border-[#d9e1e8] px-3 py-2 text-center text-xs font-bold text-[#526071]">Réinitialiser</Link>
+          </div>
         </form>
-        <p className="text-sm text-[#69717d]">{filteredProducts.length} référence{filteredProducts.length > 1 ? "s" : ""} trouvée{filteredProducts.length > 1 ? "s" : ""}. Affichage de 24 références maximum par page.</p>
+        <p className="text-sm text-[#69717d]">{filteredProducts.length} référence{filteredProducts.length !== 1 ? "s" : ""} trouvée{filteredProducts.length !== 1 ? "s" : ""}. Affichage de 24 références maximum par page.</p>
         {filteredProducts.length ? (
           <div className="grid gap-4 lg:grid-cols-2">
             {visibleProducts.map((product) => (
@@ -345,7 +348,7 @@ export default async function CatalogueAdministration({
             <summary className="cursor-pointer text-sm font-bold text-[#526071]">Tarification héritée · ancien modèle</summary>
             <form action={setPrivateCataloguePrice} className="mt-4 space-y-4">
               <h3 className="text-lg font-extrabold">Prix contractuel fixe</h3>
-            <div><label htmlFor="price_pharmacy" className={label}>Pharmacie</label><select id="price_pharmacy" name="pharmacy_id" required className={field}>{pharmacyRows.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
+              <div><label htmlFor="price_pharmacy" className={label}>Pharmacie</label><select id="price_pharmacy" name="pharmacy_id" required className={field}>{pharmacyRows.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></div>
             <div><label htmlFor="price_product" className={label}>Produit</label><select id="price_product" name="product_id" required className={field}>{productRows.map((p) => <option key={p.id} value={p.id}>{p.name} · {p.sku}</option>)}</select></div>
             <div><label htmlFor="price_override" className={label}>Prix HT personnalisé</label><input id="price_override" name="price_ht" type="number" min="0" step="0.01" required className={field} /></div>
             <p className="text-xs text-[#69717d]">Ce prix est visible uniquement par l&apos;officine autorisée. Les nouveaux paliers ci-dessous prennent priorité si renseignés.</p>
@@ -455,7 +458,7 @@ export default async function CatalogueAdministration({
             <span>{pharmacyRows.find((p) => p.id === a.pharmacy_id)?.name ?? "Pharmacie"} · {brandRows.find((b) => b.id === a.brand_id)?.name ?? "Marque"}</span>
             <strong>{a.pricing_mode === "contractual" ? "Contractuelle · si prix renseignés" : "Indicative"}</strong>
           </div>)}
-          {!accessRows.length ? <p className="text-sm text-[#69717d]">Aucun accès de marque accordé.</p> : null}
+          {!accessRows.some((a) => a.active) ? <p className="text-sm text-[#69717d]">Aucun accès de marque actif.</p> : null}
         </div>
       </section>
 
