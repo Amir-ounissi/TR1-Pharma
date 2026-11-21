@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Eye, LockKeyhole, Search, Settings2, ShieldCheck, Store } from "lucide-react";
+import { ArrowLeft, Eye, LockKeyhole, Package, Search, Settings2, ShieldCheck, Store } from "lucide-react";
 import { requirePlatformAdmin } from "@/lib/auth";
 import { CataloguePackshot } from "@/components/catalogue/catalogue-packshot";
 import { withPharmacyProductVisuals } from "@/lib/catalogue-private-product-visuals";
@@ -132,7 +132,7 @@ export default async function SoloAgentCataloguePreview({
         {[
           ["Pharmacie simulée",pharmacy?.name??"Catalogue général",Store],
           ["Marques visibles",String(accessibleBrands.length),LockKeyhole],
-          ["Références visibles",String(visible.length)+" / "+baseProducts.length,TagsIcon],
+          ["Références visibles",String(visible.length)+" / "+baseProducts.length,Package],
         ].map(([key,value,Icon])=>(
           <div key={String(key)} className="rounded-xl border border-[#e2e7e8] bg-white px-4 py-3">
             <p className="flex items-center gap-2 text-xs font-semibold text-[#73818c]">
@@ -207,8 +207,4 @@ export default async function SoloAgentCataloguePreview({
       </p>
     </div>
   );
-}
-
-function TagsIcon({size,className,...rest}:{size?:number;className?:string;"aria-hidden"?:boolean}){
-  return <Store size={size} className={className} {...rest}/>;
 }
