@@ -103,10 +103,11 @@ export default async function SupplierCommissionCockpit({
         </p>
       </header>
       {succes ? <p role="status" className="rounded-lg border border-[#bed5c2] bg-[#edf7ee] p-3 text-sm font-bold text-[#315638]">Opération enregistrée : {succes}.</p> : null}
-      <div className="grid gap-3 sm:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {[
           ["Demandes reçues",requests.length.toString()],
           ["En attente laboratoire",requests.filter(r=>r.status==="forwarded").length.toString()],
+          ["Livraisons à suivre",requests.filter(r=>r.request_kind==="order"&&r.status==="confirmed").length.toString()],
           ["Commissions non réglées",money(outstanding)],
           ["Commissions encaissées",money(paid)],
         ].map(([title,value])=>(
@@ -168,7 +169,9 @@ export default async function SupplierCommissionCockpit({
             const supplier=supplierById.get(supplierIdByBrand.get(req.brand_id)??"");
             const supplierContact=supplier?contactBySupplier.get(supplier.id):undefined;
             const lines=itemsByRequest.get(req.id)??[];
-            const targets=transitions[req.status]??[];
+            const targets=req.status==="confirmed" && req.request_kind==="quote"
+              ? [["closed","Clôturer le devis"]] as [string,string][]
+              : transitions[req.status]??[];
             const draft=[`Demande TR1 ${req.id}`,`Pharmacie : ${pharmacy?.name??"À préciser"}`,`SIRET : ${pharmacy?.siret??"À préciser"}`,`Ville : ${pharmacy?.city??"À préciser"}`,`Marque : ${brand?.name??"À préciser"}`,`Fournisseur : ${supplier?.display_name??"À associer"}`,...lines.map(l=>`- ${l.product_name} (réf. ${l.sku}) : ${l.quantity} unités`),`Montant indicatif : ${req.total_ht===null?"à confirmer":money(req.total_ht)} HT`,`Merci de confirmer les conditions, disponibilités, montant final, et référence de commande.`].join("\n");
             return <article key={req.id} className="rounded-xl border border-[#e1e7e8] bg-white p-4 sm:p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -194,10 +197,12 @@ export default async function SupplierCommissionCockpit({
                     <p className="text-xs font-extrabold text-[#345c42]">Brouillon prêt pour {supplierContact.contact_email}</p>
                     <p className="mt-1 text-[11px] text-[#526b58]">Ouvrir dans votre messagerie, contrôler le contenu puis envoyer vous-même. Ensuite enregistrer la preuve d&apos;envoi.</p>
                   </div>
-                  <a href={"mailto:"+supplierContact.contact_email+"?subject="+encodeURIComponent("TR1 PHARMA · "+(req.request_kind==="quote"?"Demande de devis":"Commande")+" "+req.id.slice(0,8))+"&body="+encodeURIComponent(draft.slice(0,1800))}
-                    className="inline-flex min-h-10 items-center rounded-lg bg-[#315943] px-3 text-xs font-extrabold text-white hover:bg-[#244b36]">
-                    Préparer l&apos;email
-                  </a>
+                  {draft.length<=1800 ? (
+                    <a href={"mailto:"+supplierContact.contact_email+"?subject="+encodeURIComponent("TR1 PHARMA · "+(req.request_kind==="quote"?"Demande de devis":"Commande")+" "+req.id.slice(0,8))+"&body="+encodeURIComponent(draft)}
+                      className="inline-flex min-h-10 items-center rounded-lg bg-[#315943] px-3 text-xs font-extrabold text-white hover:bg-[#244b36]">
+                      Préparer l&apos;email
+                    </a>
+                  ) : <p className="text-xs font-bold text-[#6b5c2f]">Bon trop long pour un lien email : recopiez le texte intégral depuis « Bon de demande à copier ».</p>}
                 </div>
               ):null}
               {!supplierContact?.verified && req.status==="verifying" ? (
