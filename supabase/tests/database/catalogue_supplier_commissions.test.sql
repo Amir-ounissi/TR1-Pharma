@@ -27,6 +27,13 @@ values ('b34a0000-0000-4000-8000-000000000002','Officine de test','Istres');
 insert into public.private_catalog_agent_mandates(
  brand_id,commission_rate,verified,verified_at,contract_reference,first_order,repeat_order,direct_repeat
 ) values ('b34a0000-0000-4000-8000-000000000001',18,true,now(),'Contrat fictif test de pgTAP',true,true,true);
+insert into public.private_catalog_agent_accounts(
+ brand_id,pharmacy_id,attribution_reference,verified,verified_at
+) values (
+ 'b34a0000-0000-4000-8000-000000000001',
+ 'b34a0000-0000-4000-8000-000000000002',
+ 'Test attribution pharmacie validée',true,now()
+);
 insert into public.private_catalog_agent_commissions(
  id,brand_id,pharmacy_id,origin,sale_kind,supplier_invoice_reference,
  supplier_invoice_date,supplier_invoiced_ht,commission_rate_snapshot,supporting_evidence
