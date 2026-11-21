@@ -18,7 +18,7 @@ export default function PrivateCatalogueLayout({ children }: { children: React.R
           <Link href="/catalogue/decouvrir" className="inline-flex items-center gap-3" aria-label="TR1 PHARMA — Accueil catalogue">
             <Tr1BrandLogo className="h-12 w-20 shrink-0" />
             <span className="hidden border-l border-[#e2e7ec] pl-4 text-xs font-bold uppercase tracking-[.13em] text-[#0e1d31] sm:block">
-              Catalogue professionnel
+              Espace TR1 PHARMA
             </span>
           </Link>
           <CatalogueNavigation />
