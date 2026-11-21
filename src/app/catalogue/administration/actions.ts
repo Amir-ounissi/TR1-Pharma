@@ -20,12 +20,14 @@ async function authorizedAdmin() {
 type CatalogueDestination = "overview" | "produits" | "marques" | "pharmacies" | "tarifs" | "demandes";
 
 function finish(destination: CatalogueDestination) {
+  revalidatePath("/dashboard/admin/catalogue");
   revalidatePath("/catalogue/administration");
   revalidatePath("/catalogue/administration/imports");
+  revalidatePath("/dashboard/admin/catalogue/conditions");
   revalidatePath("/catalogue/administration/conditions");
   revalidatePath("/catalogue/administration/" + destination);
   revalidatePath("/catalogue");
-  redirect(destination === "overview" ? "/catalogue/administration?succes=1" : `/catalogue/administration/${destination}?succes=1`);
+  redirect(destination === "overview" ? "/dashboard/admin/catalogue?succes=1" : `/dashboard/admin/catalogue/${destination}?succes=1`);
 }
 
 export async function createPrivateCataloguePharmacy(formData: FormData) {
@@ -279,7 +281,7 @@ export async function updatePrivateCatalogueRequestStatus(formData: FormData) {
 function returnCommercialConditions() {
   revalidatePath("/catalogue/administration/conditions");
   revalidatePath("/catalogue");
-  redirect("/catalogue/administration/conditions?enregistre=1");
+  redirect("/dashboard/admin/catalogue/conditions?enregistre=1");
 }
 
 const numericOptional = (raw: FormDataEntryValue | null) => {

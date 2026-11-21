@@ -1,7 +1,5 @@
-import { CatalogueAdminWorkspace, type CatalogueAdminSearchParams } from "../_workspace";
+import { redirect } from "next/navigation";
 
-export default function CatalogueAdministrationPage({
-  searchParams,
-}: { searchParams: Promise<CatalogueAdminSearchParams> }) {
-  return <CatalogueAdminWorkspace section="produits" searchParams={searchParams} />;
+export default function LegacyCatalogueAdministration() {
+  redirect("/dashboard/admin/catalogue/produits");
 }

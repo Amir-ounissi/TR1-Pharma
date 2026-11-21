@@ -31,12 +31,12 @@ export type CatalogueAdminSection = "overview" | "demandes" | "produits" | "marq
 export type CatalogueAdminSearchParams = { succes?: string; recherche?: string; marque?: string; statut?: string; page?: string };
 
 const adminSections: { id: CatalogueAdminSection; label: string; href: string }[] = [
-  { id: "overview", label: "Vue d'ensemble", href: "/catalogue/administration" },
-  { id: "demandes", label: "Demandes", href: "/catalogue/administration/demandes" },
-  { id: "produits", label: "Produits", href: "/catalogue/administration/produits" },
-  { id: "marques", label: "Marques", href: "/catalogue/administration/marques" },
-  { id: "pharmacies", label: "Pharmacies & accès", href: "/catalogue/administration/pharmacies" },
-  { id: "tarifs", label: "Tarifs", href: "/catalogue/administration/tarifs" },
+  { id: "overview", label: "Vue d'ensemble", href: "/dashboard/admin/catalogue" },
+  { id: "demandes", label: "Demandes", href: "/dashboard/admin/catalogue/demandes" },
+  { id: "produits", label: "Produits", href: "/dashboard/admin/catalogue/produits" },
+  { id: "marques", label: "Marques", href: "/dashboard/admin/catalogue/marques" },
+  { id: "pharmacies", label: "Pharmacies & accès", href: "/dashboard/admin/catalogue/pharmacies" },
+  { id: "tarifs", label: "Tarifs", href: "/dashboard/admin/catalogue/tarifs" },
 ];
 
 export async function CatalogueAdminWorkspace({
@@ -119,7 +119,7 @@ export async function CatalogueAdminWorkspace({
   const parsedPage = Number(page ?? "1");
   const currentPage = Number.isInteger(parsedPage) && parsedPage > 0 ? Math.min(parsedPage, pageCount) : 1;
   const visibleProducts = filteredProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-  const pageHref = (nextPage: number) => `/catalogue/administration/produits?${new URLSearchParams({
+  const pageHref = (nextPage: number) => `/dashboard/admin/catalogue/produits?${new URLSearchParams({
     ...(recherche ? { recherche } : {}),
     ...(marque ? { marque } : {}),
     ...(statut ? { statut } : {}),
@@ -167,21 +167,21 @@ export async function CatalogueAdminWorkspace({
               : "rounded-md px-3 py-2 hover:bg-[#f3f5f7]"}
           >{item.label}</Link>
         ))}
-        <Link href="/catalogue/administration/imports" className="rounded-md px-3 py-2 hover:bg-[#f3f5f7]">Imports</Link>
-        <Link href="/catalogue/administration/conditions" className="rounded-md px-3 py-2 hover:bg-[#f3f5f7]">Fournisseurs</Link>
+        <Link href="/dashboard/admin/catalogue/imports" className="rounded-md px-3 py-2 hover:bg-[#f3f5f7]">Imports</Link>
+        <Link href="/dashboard/admin/catalogue/conditions" className="rounded-md px-3 py-2 hover:bg-[#f3f5f7]">Fournisseurs</Link>
       </nav>
 
       {section === "overview" ? (
         <div className="grid gap-4 lg:grid-cols-3">
-          <Link href="/catalogue/administration/demandes" className="rounded-xl border border-[#e2e7ec] bg-white p-5 hover:border-[#ea7015]">
+          <Link href="/dashboard/admin/catalogue/demandes" className="rounded-xl border border-[#e2e7ec] bg-white p-5 hover:border-[#ea7015]">
             <p className="font-extrabold">Traiter les demandes</p>
             <p className="mt-2 text-sm text-[#69717d]">Suivre les demandes des pharmacies et leurs statuts.</p>
           </Link>
-          <Link href="/catalogue/administration/produits" className="rounded-xl border border-[#e2e7ec] bg-white p-5 hover:border-[#ea7015]">
+          <Link href="/dashboard/admin/catalogue/produits" className="rounded-xl border border-[#e2e7ec] bg-white p-5 hover:border-[#ea7015]">
             <p className="font-extrabold">Gérer les produits</p>
             <p className="mt-2 text-sm text-[#69717d]">Rechercher, modifier et publier les références.</p>
           </Link>
-          <Link href="/catalogue/administration/pharmacies" className="rounded-xl border border-[#e2e7ec] bg-white p-5 hover:border-[#ea7015]">
+          <Link href="/dashboard/admin/catalogue/pharmacies" className="rounded-xl border border-[#e2e7ec] bg-white p-5 hover:border-[#ea7015]">
             <p className="font-extrabold">Gérer les accès</p>
             <p className="mt-2 text-sm text-[#69717d]">Autoriser les marques et inviter les officines.</p>
           </Link>
@@ -265,13 +265,13 @@ export async function CatalogueAdminWorkspace({
           </form>
           </div>
         </details>
-        <form method="get" action="/catalogue/administration/produits#edit-products" className="grid gap-3 rounded-xl border border-[#0e1d31]/10 bg-white p-4 md:grid-cols-[minmax(0,1fr)_minmax(0,190px)_minmax(0,160px)_auto] md:items-end">
+        <form method="get" action="/dashboard/admin/catalogue/produits#edit-products" className="grid gap-3 rounded-xl border border-[#0e1d31]/10 bg-white p-4 md:grid-cols-[minmax(0,1fr)_minmax(0,190px)_minmax(0,160px)_auto] md:items-end">
           <div><label htmlFor="filter_product" className={label}>Rechercher</label><input id="filter_product" name="recherche" type="search" defaultValue={recherche ?? ""} placeholder="Produit, SKU, EAN, marque" className={field} /></div>
           <div><label htmlFor="filter_brand" className={label}>Marque</label><select id="filter_brand" name="marque" defaultValue={marque ?? ""} className={field}><option value="">Toutes les marques</option>{brandRows.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</select></div>
           <div><label htmlFor="filter_status" className={label}>État</label><select id="filter_status" name="statut" defaultValue={statut ?? ""} className={field}><option value="">Tous</option><option value="active">Publiés</option><option value="inactive">Masqués</option><option value="review">À vérifier</option></select></div>
           <div className="flex flex-wrap gap-2 md:flex-col">
             <button type="submit" className={button}>Filtrer</button>
-            <Link href="/catalogue/administration/produits#edit-products" className="rounded-md border border-[#d9e1e8] px-3 py-2 text-center text-xs font-bold text-[#526071]">Réinitialiser</Link>
+            <Link href="/dashboard/admin/catalogue/produits#edit-products" className="rounded-md border border-[#d9e1e8] px-3 py-2 text-center text-xs font-bold text-[#526071]">Réinitialiser</Link>
           </div>
         </form>
         <p className="text-sm text-[#69717d]">{filteredProducts.length} référence{filteredProducts.length !== 1 ? "s" : ""} trouvée{filteredProducts.length !== 1 ? "s" : ""}. Affichage de 24 références maximum par page.</p>

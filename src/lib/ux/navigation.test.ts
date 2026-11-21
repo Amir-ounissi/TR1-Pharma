@@ -42,7 +42,7 @@ describe("role navigation", () => {
       "/dashboard",
       "/dashboard/admin/access-requests",
       "/dashboard/admin/leads",
-      "/catalogue/administration",
+      "/dashboard/admin/catalogue",
       "/dashboard/admin/onboarding",
       "/dashboard/admin/users",
       "/dashboard/admin/saas",
@@ -68,7 +68,7 @@ describe("role navigation", () => {
     expect(brandAdminLinks).not.toContain("/dashboard/admin/leads");
     expect(brandAdminLinks).not.toContain("/dashboard/admin/saas");
     expect(brandAdminLinks).not.toContain("/dashboard/admin/saas-commercial");
-    expect(brandAdminLinks).not.toContain("/catalogue/administration");
+    expect(brandAdminLinks).not.toContain("/dashboard/admin/catalogue");
     expect(facilitatorLinks).toEqual(["/dashboard/field", "/dashboard/agenda", "/dashboard/missions", "/dashboard/reports", "/dashboard/account"]);
   });
 
