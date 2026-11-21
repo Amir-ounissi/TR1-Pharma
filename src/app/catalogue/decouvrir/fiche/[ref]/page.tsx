@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Barcode, Building2, Check, ClipboardList, LockKeyhole,  } from "lucide-react";
+import { ArrowLeft, Barcode, Building2, Check, ClipboardList, LockKeyhole } from "lucide-react";
 import { Ean13Barcode } from "@/components/catalogue/ean13-barcode";
 import { ProductImageGallery } from "@/components/catalogue/product-image-gallery";
 import { ExternalCompositionAnalysis } from "@/components/catalogue/external-composition-analysis";
@@ -94,7 +94,7 @@ export default async function PublicCatalogueProductPage({ params }: ProductPara
                 {product.brand === "Vitalora" ? <p className="mt-2 text-xs font-semibold leading-6 text-[#f5d4b9]">Présentation indicative de la gamme Vitalora. Référencement en préparation : aucune commande n’est ouverte pour ces références.</p> : null}
               </div>
             </div>
-            <Link href="/catalogue/demander-acces" className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-lg bg-[#e99055] px-5 text-sm font-extrabold text-[#142941] hover:bg-[#f4a779]">
+            <Link href={"/catalogue/demander-acces?interet=" + encodeURIComponent(product.brand + " — " + product.name)} className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-lg bg-[#e99055] px-5 text-sm font-extrabold text-[#142941] hover:bg-[#f4a779]">
               {product.brand === "Vitalora" ? "Manifester mon intérêt" : "Demander mes tarifs professionnels"}
             </Link>
             <Link href="/catalogue/connexion" className="mt-3 block w-fit py-2 text-sm font-semibold text-white underline underline-offset-4">Déjà client ? Me connecter</Link>

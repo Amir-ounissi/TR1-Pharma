@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   catalogueAccessRequestSchema,
   isValidSiret,
+  formatCatalogueAccessRequest,
   normalizeCatalogueAccessRequest,
 } from "./catalogue-access";
 
@@ -49,5 +50,20 @@ describe("catalogue pharmacy access identifiers", () => {
     const normalized = normalizeCatalogueAccessRequest(parsed);
     expect(normalized.phone).toBe("0612345678");
     expect(normalized.professionalEmail).toBe("marie@pharmacie.example");
+  });
+});
+
+
+describe("public catalogue product interest", () => {
+  it("preserves a selected product in the request received by TR1", () => {
+    const input = normalizeCatalogueAccessRequest(catalogueAccessRequestSchema.parse({ ...validRequest, interest: " Vitalora  —  Magnésium " }));
+    expect(formatCatalogueAccessRequest(input, "2026-11-21")).toContain("Marque ou produit souhaité : Vitalora — Magnésium");
+  });
+  it("keeps generic access requests valid without a selection", () => {
+    const input = catalogueAccessRequestSchema.parse(validRequest);
+    expect(formatCatalogueAccessRequest(input, "2026-11-21")).not.toContain("Marque ou produit souhaité");
+  });
+  it("rejects oversized selections before lead capture", () => {
+    expect(catalogueAccessRequestSchema.safeParse({ ...validRequest, interest: "x".repeat(201) }).success).toBe(false);
   });
 });

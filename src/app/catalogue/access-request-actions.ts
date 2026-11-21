@@ -13,6 +13,7 @@ import { readRuntimeEnvironment } from "@/lib/runtime-environment";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 type AccessField =
+  | "interest"
   | "fullName"
   | "role"
   | "professionalEmail"
@@ -41,6 +42,7 @@ export async function requestCatalogueAccessAction(
   if (website) redirect("/catalogue/demander-acces?confirmation=1");
 
   const fields = {
+    interest: String(formData.get("interest") ?? ""),
     fullName: String(formData.get("fullName") ?? ""),
     role: String(formData.get("role") ?? ""),
     professionalEmail: String(formData.get("professionalEmail") ?? ""),
@@ -63,6 +65,7 @@ export async function requestCatalogueAccessAction(
       error: "Vérifiez les informations de votre officine avant de transmettre la demande.",
       fields,
       fieldErrors: {
+        interest: errors.interest?.[0],
         fullName: errors.fullName?.[0],
         role: errors.role?.[0],
         professionalEmail: errors.professionalEmail?.[0],

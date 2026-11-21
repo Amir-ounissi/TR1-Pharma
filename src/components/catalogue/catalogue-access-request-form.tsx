@@ -9,7 +9,7 @@ import {
 
 const initialState: CatalogueAccessRequestState = {};
 
-export function CatalogueAccessRequestForm() {
+export function CatalogueAccessRequestForm({ interest = "" }: { interest?: string }) {
   const [state, action, pending] = useActionState(requestCatalogueAccessAction, initialState);
   const errorSummary = useRef<HTMLParagraphElement>(null);
 
@@ -25,6 +25,11 @@ export function CatalogueAccessRequestForm() {
         </p>
       ) : null}
 
+      <div className="grid gap-2">
+        <label htmlFor="interest" className="text-sm font-bold">Marque ou produit qui vous intéresse <span className="font-normal text-[#69717d]">(facultatif)</span></label>
+        <input id="interest" name="interest" maxLength={200} defaultValue={state.fields?.interest ?? interest} aria-invalid={Boolean(state.fieldErrors?.interest)} aria-describedby={state.fieldErrors?.interest ? "interest-error" : undefined} className="h-12 w-full rounded-md border border-[#cbd3dc] bg-white px-3 text-base" />
+        {state.fieldErrors?.interest ? <p id="interest-error" className="text-sm text-red-800">{state.fieldErrors.interest}</p> : null}
+      </div>
       <fieldset className="grid gap-4">
         <legend className="mb-1 text-lg font-black text-[#0e1d31]">1. Votre officine</legend>
         <TextField id="pharmacyName" label="Nom commercial de la pharmacie" autoComplete="organization" maxLength={160} defaultValue={state.fields?.pharmacyName} error={state.fieldErrors?.pharmacyName} />

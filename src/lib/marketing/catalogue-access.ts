@@ -31,6 +31,7 @@ export function isValidSiret(value: string) {
 }
 
 export const catalogueAccessRequestSchema = z.object({
+  interest: z.string().trim().max(200, "Limitez votre sélection à 200 caractères.").optional().default(""),
   fullName: z.string().trim().min(2, "Indiquez votre nom et prénom.").max(120),
   role: z.enum(catalogueAccessRoles, { error: "Sélectionnez votre fonction." }),
   professionalEmail: z.email("Indiquez une adresse e-mail valide.").max(254),
@@ -87,6 +88,7 @@ export function normalizeCatalogueAccessRequest(input: CatalogueAccessRequest) {
     professionalEmail: input.professionalEmail.trim().toLowerCase(),
     pharmacyName: input.pharmacyName.replace(/\s+/g, " "),
     phone,
+    interest: input.interest.replace(/\s+/g, " "),
     addressLine: input.addressLine.replace(/\s+/g, " "),
     city: input.city.replace(/\s+/g, " "),
   };
@@ -95,6 +97,7 @@ export function normalizeCatalogueAccessRequest(input: CatalogueAccessRequest) {
 export function formatCatalogueAccessRequest(input: CatalogueAccessRequest, submittedOn: string) {
   return [
     "DEMANDE D’ACCÈS AU CATALOGUE PROFESSIONNEL TR1 PHARMA",
+    ...(input.interest ? ["Marque ou produit souhaité : " + input.interest] : []),
     "Fonction : " + catalogueAccessRoleLabels[input.role],
     "Téléphone : " + input.phone,
     "Adresse de l’officine : " + input.addressLine + ", " + input.postalCode + " " + input.city,

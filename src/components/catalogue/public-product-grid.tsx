@@ -218,13 +218,13 @@ export function PublicProductGrid({ privateProducts, benefits = {} }: { privateP
     <section id="produits" aria-labelledby="public-products" className={"space-y-4 " + (!privateMode ? "public-catalogue-grid" : "")}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <p className="text-[10px] font-extrabold uppercase tracking-[.15em] text-[#b3683e]">{privateMode ? "Espace pharmacie" : "Sélection TR1 PHARMA"}</p>
-          <h2 id="public-products" className="mt-1 text-2xl font-black tracking-[-.035em] text-[#0e1d31] sm:text-3xl">
+          <p className={"text-[10px] font-extrabold uppercase tracking-[.15em] text-[#b3683e] " + (!privateMode ? "hidden sm:block" : "")}>{privateMode ? "Espace pharmacie" : "Sélection TR1 PHARMA"}</p>
+          <h2 id="public-products" className={"mt-1 font-black tracking-[-.035em] text-[#0e1d31] sm:text-3xl " + (privateMode ? "text-2xl" : "text-xl")}>
             {privateMode ? "Vos références" : "Tous les produits"}
           </h2>
         </div>
         <span className="rounded-full border border-[#e2e7ec] bg-white px-3 py-1.5 text-xs font-bold text-[#5d6b77]">
-          {catalogueProducts.length} références{privateMode ? " · " + catalogueProducts.filter((p) => Boolean(publicProductImage(p))).length + " photos" : " · 4 marques"}
+          {catalogueProducts.length} références{privateMode ? " · " + catalogueProducts.filter((p) => Boolean(publicProductImage(p))).length + " photos" : " · " + (availableBrands.length - 1) + " marques"}
         </span>
       </div>
 
@@ -258,7 +258,7 @@ export function PublicProductGrid({ privateProducts, benefits = {} }: { privateP
             <div className="rounded-xl border border-[#c5d6c8] bg-[#edf3ed] p-4 text-sm leading-6 text-[#375443]">
               <p className="font-extrabold">Vitalora · En avant-première</p>
               <p>Découvrez la gamme en cours de référencement. Les commandes ne sont pas encore ouvertes.</p>
-              <Link href="/catalogue/demander-acces" className="mt-2 inline-flex min-h-10 items-center font-bold underline underline-offset-4">Manifester mon intérêt</Link>
+              <Link href="/catalogue/demander-acces?interet=Vitalora" className="mt-2 inline-flex min-h-10 items-center font-bold underline underline-offset-4">Manifester mon intérêt</Link>
             </div>
           ) : null}
           <div className="flex flex-wrap items-center justify-between gap-2 px-1">

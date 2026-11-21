@@ -15,7 +15,7 @@ export default function PharmacieStorefront() {
   const benefits = Object.fromEntries(publicCatalogueProducts.map(product => [publicProductKey(product), publicProductInformation(product)?.benefits[0] ?? ""]));
   return (
     <div className="-mt-3 space-y-5 pb-4 sm:-mt-5">
-      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-[#e2e7ec] pb-5">
+      <header className="public-catalogue-intro flex flex-wrap items-center justify-between gap-4 border-b border-[#e2e7ec] pb-5">
         <div className="max-w-2xl">
           <h1 className="text-2xl font-black tracking-tight sm:text-3xl">Des marques à découvrir pour votre officine.</h1>
           <p className="mt-2 text-base leading-6 text-[#526272]">Soins coréens et micronutrition : une sélection multimarque, avec un interlocuteur pour accompagner votre implantation.</p>

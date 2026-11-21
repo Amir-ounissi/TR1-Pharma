@@ -22,12 +22,19 @@ export function CatalogueNavigation() {
             </Link>
           </nav>
   );
+  const publicLinks = <>
+    <Link href="/catalogue/decouvrir" className="px-2 py-2.5 hover:text-[#ad4b08]">Catalogue</Link>
+    <Link href="/catalogue/decouvrir#marques" className="px-2 py-2.5 hover:text-[#ad4b08]">Les marques</Link>
+    <Link href="/catalogue/demander-acces" className="rounded-lg bg-[#ea7015] px-4 py-2.5 text-[#0e1d31] hover:bg-[#f28331]">Demander un accès</Link>
+    <Link href="/catalogue/connexion" className="inline-flex items-center gap-1.5 px-2 py-2.5 font-medium text-[#596a79] hover:text-[#ad4b08]"><LockKeyhole size={15} aria-hidden="true" /> Connexion pro</Link>
+  </>;
   return (
-    <nav aria-label="Navigation du catalogue" className="flex flex-wrap items-center gap-2 text-sm font-bold sm:gap-4">
-      <Link href="/catalogue/decouvrir" className="px-2 py-2.5 hover:text-[#ad4b08]">Catalogue</Link>
-      <Link href="/catalogue/decouvrir#marques" className="px-2 py-2.5 hover:text-[#ad4b08]">Les marques</Link>
-      <Link href="/catalogue/demander-acces" className="rounded-lg bg-[#ea7015] px-4 py-2.5 text-[#0e1d31] hover:bg-[#f28331]">Demander un accès</Link>
-      <Link href="/catalogue/connexion" className="inline-flex items-center gap-1.5 px-2 py-2.5 font-medium text-[#596a79] hover:text-[#ad4b08]"><LockKeyhole size={15} aria-hidden="true" /> Connexion pro</Link>
+    <nav aria-label="Navigation du catalogue" className="text-sm font-bold">
+      <div className="hidden flex-wrap items-center gap-2 sm:flex sm:gap-4">{publicLinks}</div>
+      <details key={pathname} className="relative sm:hidden">
+        <summary className="cursor-pointer rounded-lg border border-[#dce3ea] px-4 py-3">Menu</summary>
+        <div className="absolute right-0 top-full z-30 mt-2 grid w-60 gap-1 rounded-xl border border-[#dce3ea] bg-white p-3 shadow-lg">{publicLinks}</div>
+      </details>
     </nav>
   );
 }

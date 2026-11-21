@@ -12,9 +12,9 @@ export const metadata: Metadata = {
 export default async function CatalogueAccessRequestPage({
   searchParams,
 }: {
-  searchParams: Promise<{ confirmation?: string }>;
+  searchParams: Promise<{ confirmation?: string; interet?: string }>;
 }) {
-  const { confirmation } = await searchParams;
+  const { confirmation, interet } = await searchParams;
 
   return (
     <div className="mx-auto max-w-3xl space-y-7">
@@ -52,7 +52,7 @@ export default async function CatalogueAccessRequestPage({
             <h2 className="text-xl font-black text-[#0e1d31]">Les coordonnées de votre officine</h2>
             <p className="text-sm leading-6 text-[#69717d]">Les champs marqués d’un astérisque sont obligatoires. Un SIRET valide ou un numéro FINESS est requis.</p>
           </div>
-          <CatalogueAccessRequestForm />
+          <CatalogueAccessRequestForm interest={typeof interet === "string" ? interet.slice(0, 200) : ""} />
         </>
       )}
     </div>
