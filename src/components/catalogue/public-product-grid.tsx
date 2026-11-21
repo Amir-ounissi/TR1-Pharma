@@ -131,102 +131,130 @@ export function PublicProductGrid({ privateProducts }: { privateProducts?: Priva
   const shown = visible.slice((Math.min(page, maxPage) - 1) * pageSize, Math.min(page, maxPage) * pageSize);
   const chooseBrand = (name: string) => { setSelectedBrand(name); setCategory("all"); setPage(1); };
   const theme = (name: string) => themes[name] ?? themes["VK SWISS"];
+  const resetFilters = () => { setSelectedBrand("Toutes les marques"); setCategory("all"); setQuery(""); setPage(1); };
+  const activeFilterCount = Number(selectedBrand !== "Toutes les marques") + Number(category !== "all") + Number(Boolean(query.trim()));
+  const selectedBrandCount = (name: string) => name === "Toutes les marques" ? catalogueProducts.length : formatBrandCount(name);
+  const categoryCount = (name: string) => catalogueProducts.filter(
+    (p) => (selectedBrand === "Toutes les marques" || p.brand === selectedBrand) && p.category === name,
+  ).length;
 
-  return (
-    <section id="produits" aria-labelledby="public-products" className="space-y-7">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-[.17em] text-[#b3683e]">
-            {privateMode ? "Commande professionnelle" : "Les collections TR1"}
-          </p>
-          <h2 id="public-products" className="mt-2 text-3xl font-black tracking-[-.045em] text-[#0e1d31] sm:text-[38px]">
-            {privateMode ? "Commandez vos références." : "Explorez les marques."}
-          </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-[#66717d]">
-            {privateMode
-              ? "Recherchez par nom, référence ou EAN. Consultez votre tarif et préparez directement votre réassort."
-              : "Parcourez les fiches produits pour découvrir les bénéfices, les actifs, les conseils d’utilisation et les compositions des soins sélectionnés."}
-          </p>
-        </div>
-        <span className="rounded-full border border-[#e2e7ec] bg-white px-3.5 py-2 text-xs font-bold text-[#5d6b77]">{catalogueProducts.length} références · {catalogueProducts.filter((p) => !!publicProductImage(p)).length} photos</span>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {availableBrands.slice(1).map((brand) => {
-          const look = theme(brand);
-          const logo = brandLogos[brand];
-          return (
-            <button type="button" key={brand} onClick={() => chooseBrand(brand)}
-              aria-pressed={selectedBrand === brand}
-              className={"group relative min-h-52 overflow-hidden rounded-2xl border p-5 text-left transition hover:-translate-y-0.5 hover:shadow-lg " +
-                (selectedBrand === brand ? "ring-2 ring-[#de8e5e] ring-offset-2 " : "")}
-              style={{ backgroundColor: look.bg, borderColor: look.border }}>
-              <div aria-hidden="true" className="pointer-events-none absolute -right-10 -top-12 size-44 rounded-full border-[24px] opacity-30" style={{ borderColor: look.border }} />
-              <div className="relative flex h-full flex-col justify-between">
-                <div className="flex items-start justify-between gap-2">
-                  <span className="relative flex h-[76px] w-[205px] max-w-[calc(100%-32px)] shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/80 bg-white shadow-sm transition group-hover:shadow-md">
-                    {logo ? (
-                      <Image src={logo.src} alt={"Logo " + brand} width={410} height={152} unoptimized
-                        className="h-full w-full object-contain px-2.5 py-2" />
-                    ) : (
-                      <span className="px-2 text-[17px] font-black" style={{ color: look.ink }}>{look.short}</span>
-                    )}
+  const filterControls = (includeSearch: boolean) => (
+    <div className="space-y-5">
+      {includeSearch ? (
+        <label className="block">
+          <span className="mb-2 block text-[11px] font-extrabold uppercase tracking-[.12em] text-[#526272]">Nom, référence ou EAN</span>
+          <span className="relative block">
+            <Search size={17} aria-hidden="true" className="pointer-events-none absolute left-3 top-3.5 text-[#83919a]" />
+            <input type="search" value={query} onChange={(e) => { setQuery(e.target.value); setPage(1); }}
+              placeholder="Rechercher un produit…"
+              className="h-11 w-full rounded-lg border border-[#dce3e5] bg-[#fafaf8] pl-9 pr-3 text-sm text-[#142941] outline-none focus:border-[#bb855c]" />
+          </span>
+        </label>
+      ) : null}
+      <div>
+        <h3 className="mb-2 text-[11px] font-extrabold uppercase tracking-[.12em] text-[#526272]">Marques</h3>
+        <div className="space-y-1">
+          {availableBrands.map((brand) => {
+            const logo = brandLogos[brand];
+            const selected = selectedBrand === brand;
+            return (
+              <button type="button" key={brand} onClick={() => chooseBrand(brand)} aria-pressed={selected}
+                className={"flex min-h-10 w-full items-center gap-2 rounded-lg border px-2 py-1.5 text-left text-[12px] font-bold transition " +
+                  (selected ? "border-[#cad7e5] bg-[#142941] text-white" : "border-transparent text-[#384b5d] hover:border-[#e0e6e6] hover:bg-[#f5f7f6]")}>
+                {logo ? (
+                  <span className="flex h-7 w-14 shrink-0 items-center justify-center rounded bg-white p-1">
+                    <Image src={logo.src} alt="" width={112} height={56} unoptimized className="h-full w-full object-contain" />
                   </span>
-                  <ArrowUpRight size={16} aria-hidden="true" className="shrink-0" style={{ color: look.ink }} />
-                </div>
-                <div>
-                  <p className="max-w-[200px] text-[11px] leading-5" style={{ color: look.ink }}>{look.detail}</p>
-                  <p className="mt-3 text-xs font-bold" style={{ color: look.ink }}>{formatBrandCount(brand)} références</p>
-                </div>
-              </div>
-            </button>
-          );
-        })}
+                ) : null}
+                <span className="min-w-0 flex-1 leading-4">{brand === "Toutes les marques" ? "Toutes les marques" : brand}</span>
+                <span className={"shrink-0 text-[11px] tabular-nums " + (selected ? "text-white/75" : "text-[#8d999f]")}>{selectedBrandCount(brand)}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
-
-      <div className="space-y-4 rounded-2xl border border-[#e4e8e8] bg-white p-3 sm:p-4">
-        <div className="flex gap-1.5 overflow-x-auto pb-1">
-          {availableBrands.map((b) => (
-            <button type="button" key={b} onClick={() => chooseBrand(b)} aria-pressed={selectedBrand === b}
-              className={"min-h-10 shrink-0 rounded-full px-4 text-xs font-bold transition " +
-                (selectedBrand === b ? "bg-[#142941] text-white" : "bg-[#f7f7f5] text-[#5b6875] hover:bg-[#eff1f1]")}>
-              {b}
+      <div>
+        <h3 className="mb-2 text-[11px] font-extrabold uppercase tracking-[.12em] text-[#526272]">Catégories</h3>
+        <div className="max-h-[250px] space-y-0.5 overflow-y-auto pr-1">
+          <button type="button" onClick={() => { setCategory("all"); setPage(1); }} aria-pressed={category === "all"}
+            className={"flex min-h-9 w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs font-bold " +
+              (category === "all" ? "bg-[#eaf0ec] text-[#254c3a]" : "text-[#536677] hover:bg-[#f5f7f6]")}>
+            <span>Toutes les catégories</span>
+            <span className="text-[11px] tabular-nums opacity-70">{selectedBrandCount(selectedBrand)}</span>
+          </button>
+          {categories.map((name) => (
+            <button type="button" key={name} onClick={() => { setCategory(name); setPage(1); }} aria-pressed={category === name}
+              className={"flex min-h-9 w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs font-semibold " +
+                (category === name ? "bg-[#eaf0ec] text-[#254c3a]" : "text-[#536677] hover:bg-[#f5f7f6]")}>
+              <span className="min-w-0 leading-4">{name}</span>
+              <span className="shrink-0 text-[11px] tabular-nums opacity-70">{categoryCount(name)}</span>
             </button>
           ))}
         </div>
-        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_195px_145px]">
-          <label className="relative block">
-            <span className="sr-only">Recherche produit</span>
-            <Search size={18} aria-hidden="true" className="absolute left-3.5 top-3 text-[#8c959d]" />
-            <input type="search" value={query} onChange={(e) => { setQuery(e.target.value); setPage(1); }}
-              placeholder="Rechercher une référence ou un EAN…"
-              className="h-11 w-full rounded-xl border border-[#e4e8e8] bg-[#fafaf8] pl-11 pr-3 text-sm outline-none focus:border-[#c6b7a7]" />
-          </label>
-          <label className="relative">
-            <span className="sr-only">Catégorie</span>
-            <SlidersHorizontal size={15} aria-hidden="true" className="pointer-events-none absolute left-3 top-3.5 text-[#8c959d]" />
-            <select value={category} onChange={(e) => { setCategory(e.target.value); setPage(1); }}
-              className="h-11 w-full rounded-xl border border-[#e4e8e8] bg-[#fafaf8] pl-9 pr-3 text-sm">
-              <option value="all">Toutes catégories</option>
-              {categories.map((c) => <option value={c} key={c}>{c}</option>)}
-            </select>
-          </label>
-          <label>
-            <span className="sr-only">Trier</span>
-            <select value={sort} onChange={(e) => { setSort(e.target.value); setPage(1); }}
-              className="h-11 w-full rounded-xl border border-[#e4e8e8] bg-[#fafaf8] px-3 text-sm">
-              <option value="photos">Photos d’abord</option><option value="name">Nom A–Z</option><option value="brand">Par marque</option>
-            </select>
-          </label>
+      </div>
+      <label className="block">
+        <span className="mb-2 block text-[11px] font-extrabold uppercase tracking-[.12em] text-[#526272]">Trier les produits</span>
+        <select value={sort} onChange={(e) => { setSort(e.target.value); setPage(1); }}
+          className="h-10 w-full rounded-lg border border-[#dce3e5] bg-[#fafaf8] px-3 text-xs font-semibold text-[#142941]">
+          <option value="photos">Photos d’abord</option>
+          <option value="name">Nom A–Z</option>
+          <option value="brand">Par marque</option>
+        </select>
+      </label>
+      {activeFilterCount > 0 ? (
+        <button type="button" onClick={resetFilters} className="w-full rounded-lg border border-[#e1e7e7] px-3 py-2.5 text-xs font-bold text-[#596a79] hover:bg-[#f5f7f6]">
+          Réinitialiser les filtres
+        </button>
+      ) : null}
+    </div>
+  );
+
+  return (
+    <section id="produits" aria-labelledby="public-products" className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="text-[10px] font-extrabold uppercase tracking-[.15em] text-[#b3683e]">{privateMode ? "Espace pharmacie" : "Sélection TR1 PHARMA"}</p>
+          <h2 id="public-products" className="mt-1 text-2xl font-black tracking-[-.035em] text-[#0e1d31] sm:text-3xl">
+            {privateMode ? "Vos références" : "Tous les produits"}
+          </h2>
         </div>
+        <span className="rounded-full border border-[#e2e7ec] bg-white px-3 py-1.5 text-xs font-bold text-[#5d6b77]">
+          {catalogueProducts.length} références · {catalogueProducts.filter((p) => Boolean(publicProductImage(p))).length} photos
+        </span>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 px-1">
-        <div><p className="text-[10px] font-extrabold uppercase tracking-[.15em] text-[#ad693c]">Aperçu du catalogue</p>
-          <h3 className="mt-1 text-xl font-black text-[#142941]">{selectedBrand === "Toutes les marques" ? "Toutes les références" : selectedBrand}</h3></div>
-        <p className="text-xs font-semibold text-[#7b8791]">{visible.length} produits</p>
-      </div>
-
+      <div className="grid items-start gap-4 lg:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[252px_minmax(0,1fr)]">
+        <aside aria-label="Filtres du catalogue" className="hidden rounded-xl border border-[#e2e7ec] bg-white p-4 lg:sticky lg:top-4 lg:block lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-base font-black text-[#142941]">Filtrer</h3>
+            {activeFilterCount > 0 ? <span className="rounded-full bg-[#eaf0ec] px-2 py-1 text-[10px] font-bold text-[#254c3a]">{activeFilterCount} actif(s)</span> : null}
+          </div>
+          {filterControls(true)}
+        </aside>
+        <div className="min-w-0 space-y-4">
+          <div className="space-y-2 lg:hidden">
+            <label className="relative block">
+              <span className="sr-only">Rechercher un produit par nom, référence ou EAN</span>
+              <Search size={17} aria-hidden="true" className="pointer-events-none absolute left-3.5 top-3.5 text-[#83919a]" />
+              <input type="search" value={query} onChange={(e) => { setQuery(e.target.value); setPage(1); }}
+                placeholder="Nom, référence ou EAN…"
+                className="h-11 w-full rounded-lg border border-[#dce3e5] bg-white pl-10 pr-3 text-sm outline-none focus:border-[#bb855c]" />
+            </label>
+            <details className="group rounded-xl border border-[#e2e7ec] bg-white">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 px-4 text-sm font-bold text-[#142941] [&::-webkit-details-marker]:hidden">
+                <span className="flex items-center gap-2"><SlidersHorizontal size={16} aria-hidden="true" /> Marques et catégories</span>
+                <span className="text-xs font-semibold text-[#6e7e8c]">{activeFilterCount ? activeFilterCount + " filtre(s)" : "Afficher les filtres"}</span>
+              </summary>
+              <div className="border-t border-[#e8ecec] px-4 py-4">{filterControls(false)}</div>
+            </details>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+            <div>
+              <h3 className="text-base font-black text-[#142941] sm:text-lg">{selectedBrand === "Toutes les marques" ? "Toutes les références" : selectedBrand}</h3>
+              <p className="text-xs text-[#788591]">{visible.length} produit{visible.length > 1 ? "s" : ""}{category !== "all" ? " · " + category : ""}</p>
+            </div>
+            {activeFilterCount > 0 ? <button type="button" onClick={resetFilters} className="text-xs font-bold text-[#a25e34] underline underline-offset-4">Effacer les filtres</button> : null}
+          </div>
       {shown.length ? (
         <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
           {shown.map((product) => {
@@ -338,6 +366,9 @@ export function PublicProductGrid({ privateProducts }: { privateProducts?: Priva
           </div>
         </nav>
       )}
+        </div>
+      </div>
+
       {privateMode ? (
         <>
           <div className="rounded-xl border border-[#e9e2d6] bg-[#f7f4ee] px-5 py-4 text-xs leading-6 text-[#6d6a64]">
