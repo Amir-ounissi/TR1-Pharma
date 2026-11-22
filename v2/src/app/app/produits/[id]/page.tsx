@@ -61,6 +61,10 @@ export default async function ProductDetails({
         <p><strong>Document :</strong> {product.source_document||"Non renseigné"}</p>
         <p><strong>Ancien statut :</strong> {product.source_active===null?"Non applicable":product.source_active?"Actif":"Inactif"}</p>
         <p><strong>Vérification prix :</strong> {product.price_verified?"Confirmée":"À effectuer"}</p>
+        <p><strong>Fiche officielle :</strong> {product.editorial_source_url
+          ? <a href={product.editorial_source_url} target="_blank" rel="noopener noreferrer" className="underline">Consulter la source</a>
+          : "Non renseignée"}</p>
+        <p><strong>Compléments à valider :</strong> étiquetage physique, conformité des allégations et conditions commerciales</p>
       </div>
       <p className="mt-3 text-xs text-[#69717d]">Les données importées ne constituent pas une autorisation de publication. Le tarif saisi doit être vérifié auprès du partenaire avant validation.</p>
     </section>
