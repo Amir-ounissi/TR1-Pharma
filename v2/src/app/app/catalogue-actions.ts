@@ -155,3 +155,51 @@ export async function updateOrderRequestStatusAction(form: FormData) {
   if (error) throw new Error("Mise à jour du statut impossible.");
   revalidatePath("/app/commandes");
 }
+
+export async function savePharmacyPriceAction(form: FormData) {
+  const data = z.object({
+    pharmacy_id: z.uuid(),
+    product_id: z.uuid(),
+    min_qty: z.coerce.number().int().positive().max(5000),
+    price_ht: money,
+  }).parse({
+    pharmacy_id: form.get("pharmacy_id"), product_id: form.get("product_id"),
+    min_qty: form.get("min_qty"), price_ht: form.get("price_ht"),
+  });
+  if (form.get("confirmed_price") !== "yes") {
+    throw new Error("Confirmer que le prix négocié avec la pharmacie est vérifié.");
+  }
+  const { db } = await requireOwner();
+  const { data: product, error: loadError } = await db.from("products")
+    .select("brand_id,min_qty,qty_step").eq("id",data.product_id).single();
+  if (loadError || !product) throw new Error("Produit introuvable.");
+  if (data.min_qty < product.min_qty ||
+      (data.min_qty-product.min_qty) % product.qty_step !== 0) {
+    throw new Error("Le palier spécifique doit respecter le minimum et le pas du produit.");
+  }
+  const { error } = await db.from("price_rules").upsert(
+    data, { onConflict:"pharmacy_id,product_id,min_qty" },
+  );
+  if (error) throw new Error("Tarif officinal non enregistré.");
+  revalidatePath("/app/acces");
+  revalidatePath("/catalogue");
+  redirect("/app/acces?tarif=enregistre");
+}
+export async function deletePharmacyPriceAction(form: FormData) {
+  const data = z.object({
+    pharmacy_id: z.uuid(),
+    product_id: z.uuid(),
+    min_qty: z.coerce.number().int().positive(),
+  }).parse({
+    pharmacy_id: form.get("pharmacy_id"),
+    product_id: form.get("product_id"),
+    min_qty: form.get("min_qty"),
+  });
+  const { db } = await requireOwner();
+  const { error } = await db.from("price_rules").delete()
+    .eq("pharmacy_id",data.pharmacy_id).eq("product_id",data.product_id).eq("min_qty",data.min_qty);
+  if (error) throw new Error("Suppression du tarif impossible.");
+  revalidatePath("/app/acces");
+  revalidatePath("/catalogue");
+  redirect("/app/acces?tarif=supprime");
+}
