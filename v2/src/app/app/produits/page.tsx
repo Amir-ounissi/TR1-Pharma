@@ -6,7 +6,7 @@ export default async function ProductsPage({searchParams}:{searchParams:Promise<
   const filters=await searchParams;
   const [b,p]=await Promise.all([
     db.from("brands").select("id,name,active").order("name"),
-    db.from("products").select("id,name,sku,ean,brand_id,price_ht,published,requires_review,price_verified,image_url,description,source_active").order("name").limit(500),
+    db.from("products").select("id,name,sku,ean,brand_id,price_ht,published,requires_review,price_verified,image_url,description,source_active,fr_market_checked,fr_label_checked,fr_market_document").order("name").limit(500),
   ]);
   if(b.error||p.error)throw new Error("Impossible de charger les produits.");
   const brands=b.data??[],all=p.data??[];
@@ -38,12 +38,13 @@ export default async function ProductsPage({searchParams}:{searchParams:Promise<
     </form>
     <div className="overflow-hidden rounded-xl border bg-white">
       {shown.length ? shown.map(x=>{
-        const ready=!x.requires_review&&x.price_verified&&!!x.ean&&!!x.image_url&&(x.description||"").trim().length>=10;
+        const ready=!x.requires_review&&x.price_verified&&!!x.ean&&!!x.image_url&&(x.description||"").trim().length>=10
+          &&x.fr_market_checked&&x.fr_label_checked&&(x.fr_market_document||"").trim().length>=6;
         return <div key={x.id} className="flex flex-wrap items-center justify-between gap-4 border-b px-5 py-4">
           <div className="min-w-0 flex-1">
             <Link href={"/app/produits/"+x.id} className="font-semibold underline-offset-4 hover:underline">{x.name}</Link>
             <p className="mt-1 break-all text-xs text-[#69717d]">{brands.find(b=>b.id===x.brand_id)?.name} · {x.sku} · {x.ean||"EAN manquant"}</p>
-            <p className="mt-1 text-xs text-[#69717d]">{!x.image_url?"Visuel manquant · ":""}{!x.description?"Description manquante · ":""}{x.requires_review?"Fiche à vérifier":"Fiche vérifiée"}</p>
+            <p className="mt-1 text-xs text-[#69717d]">{!x.image_url?"Visuel manquant · ":""}{!x.description?"Description manquante · ":""}{x.requires_review?"Fiche à vérifier":"Fiche vérifiée"} · {x.fr_market_checked&&x.fr_label_checked?"Conformité vérifiée":"Conformité France à vérifier"}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="whitespace-nowrap text-sm">{Number(x.price_ht).toFixed(2)} € HT</span>

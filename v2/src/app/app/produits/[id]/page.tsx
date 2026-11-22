@@ -34,7 +34,9 @@ export default async function ProductDetails({
   const product=p.data;
   const brand=b.data?.find(x=>x.id===product.brand_id);
   const ready=!product.requires_review && product.price_verified
-    && !!product.ean && !!product.image_url && (product.description||"").trim().length>=10;
+    && !!product.ean && !!product.image_url && (product.description||"").trim().length>=10
+    && product.fr_market_checked && product.fr_label_checked
+    && (product.fr_market_document||"").trim().length>=6;
   return <div className="space-y-6">
     <Link href="/app/produits" className="text-sm font-semibold underline">← Retour aux produits</Link>
     <div className="flex flex-wrap items-start justify-between gap-4">
@@ -48,7 +50,7 @@ export default async function ProductDetails({
           className="rounded-lg bg-[#142941] px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-[#d6d9dc] disabled:text-[#69717d]">
           {product.published?"Retirer du catalogue":"Publier la fiche"}
         </button>
-        {!ready?<p className="mt-2 max-w-xs text-xs text-[#69717d]">EAN, description, visuel HTTPS et prix doivent être vérifiés avant publication.</p>:null}
+        {!ready?<p className="mt-2 max-w-xs text-xs text-[#69717d]">EAN, description, visuel HTTPS, prix, dossier réglementaire et étiquette française doivent être vérifiés avant publication.</p>:null}
       </form>
     </div>
     {status.enregistre==="1" ? <p role="status" className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm font-bold text-green-800">Fiche enregistrée en brouillon.</p>:null}
@@ -64,7 +66,8 @@ export default async function ProductDetails({
         <p><strong>Fiche officielle :</strong> {product.editorial_source_url
           ? <a href={product.editorial_source_url} target="_blank" rel="noopener noreferrer" className="underline">Consulter la source</a>
           : "Non renseignée"}</p>
-        <p><strong>Compléments à valider :</strong> étiquetage physique, conformité des allégations et conditions commerciales</p>
+        <p><strong>Justificatif marché français :</strong> {product.fr_market_document||"Non renseigné"}</p>
+        <p><strong>Étiquette française :</strong> {product.fr_label_checked?"Vérifiée par TR1":"À vérifier"}</p>
       </div>
       <p className="mt-3 text-xs text-[#69717d]">Les données importées ne constituent pas une autorisation de publication. Le tarif saisi doit être vérifié auprès du partenaire avant validation.</p>
     </section>
@@ -102,6 +105,22 @@ export default async function ProductDetails({
         <LongField label="Conseils d'utilisation" name="usage_advice" value={product.usage_advice}/>
         <LongField label="Précautions" name="precautions" value={product.precautions}/>
       </div>
+      <section className="space-y-3 rounded-xl border border-[#eadcc2] bg-[#fffcf7] p-4">
+        <h3 className="text-base font-bold">Contrôle réglementaire — marché français</h3>
+        <p className="text-sm text-[#69717d]">Pour les compléments alimentaires : vérifier la déclaration de mise sur le marché, les allégations autorisées et l'étiquette française. Pour les cosmétiques : vérifier les obligations applicables, notamment la personne responsable et la notification CPNP. Le site du fournisseur seul ne constitue pas un justificatif.</p>
+        <label className="block text-xs font-semibold">Référence ou dossier justificatif contrôlé
+          <input name="fr_market_document" defaultValue={product.fr_market_document||""} placeholder="Référence Compl'Alim, CPNP ou dossier réglementaire" className="mt-1 w-full rounded-lg border bg-white p-3 text-sm"/>
+        </label>
+        <label className="flex items-start gap-2 text-sm">
+          <input type="checkbox" name="fr_market_checked" value="yes" defaultChecked={product.fr_market_checked} className="mt-1"/>
+          Je confirme avoir vérifié les justificatifs du marché français et les allégations commerciales applicables.
+        </label>
+        <label className="flex items-start gap-2 text-sm">
+          <input type="checkbox" name="fr_label_checked" value="yes" defaultChecked={product.fr_label_checked} className="mt-1"/>
+          Je confirme avoir vérifié l'étiquetage destiné au marché français.
+        </label>
+        <p className="text-xs text-[#ad4b08]">Aucun de ces contrôles n'est effectué automatiquement : une validation manuelle et documentée reste indispensable.</p>
+      </section>
       <div className="space-y-3 border-t pt-5">
         <label className="flex items-start gap-3 text-sm"><input type="checkbox" name="confirm_review" value="yes" className="mt-1"/>
           Je confirme avoir contrôlé la fiche, son EAN, son descriptif et son visuel.</label>

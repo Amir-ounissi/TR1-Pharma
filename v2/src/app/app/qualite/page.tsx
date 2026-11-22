@@ -6,7 +6,7 @@ export default async function CatalogueQuality({searchParams}:{searchParams:Prom
   const filters = await searchParams;
   const [b,p] = await Promise.all([
     db.from("brands").select("id,name,slug,active").order("name"),
-    db.from("products").select("id,brand_id,name,sku,ean,description,image_url,source_active,source_document,editorial_source_url,price_verified,requires_review,published").order("name").limit(500),
+    db.from("products").select("id,brand_id,name,sku,ean,description,image_url,source_active,source_document,editorial_source_url,price_verified,requires_review,published,fr_market_checked,fr_label_checked,fr_market_document").order("name").limit(500),
   ]);
   if(b.error||p.error)throw new Error("Impossible de charger l'audit catalogue.");
   const brands=b.data||[], products=p.data||[];
@@ -20,6 +20,7 @@ export default async function CatalogueQuality({searchParams}:{searchParams:Prom
     if(!x.editorial_source_url&&!x.source_document)problems.push("Source");
     if(x.requires_review)problems.push("Contrôle fiche");
     if(!x.price_verified)problems.push("Prix");
+    if(!x.fr_market_checked||!x.fr_label_checked||(x.fr_market_document||"").trim().length<6)problems.push("Conformité marché français");
     return problems;
   };
   const score=(id:string)=>products.filter(x=>x.brand_id===id);

@@ -22,6 +22,7 @@ export async function saveProductAction(form: FormData) {
     inci: optionalText(10000),
     usage_advice: optionalText(4000),
     precautions: optionalText(4000),
+    fr_market_document: optionalText(400),
     image_url: z.union([z.string().url().startsWith("https://"), z.literal("")]),
     price_ht: money,
     vat_rate: z.coerce.number().min(0).max(100),
@@ -29,9 +30,14 @@ export async function saveProductAction(form: FormData) {
     qty_step: z.coerce.number().int().positive().max(5000),
   }).parse(Object.fromEntries([
     "product_id","name","sku","ean","format","category","description",
-    "benefits","actives","inci","usage_advice","precautions","image_url",
+    "benefits","actives","inci","usage_advice","precautions","fr_market_document","image_url",
     "price_ht","vat_rate","min_qty","qty_step",
   ].map(key => [key, form.get(key) ?? ""])));
+  const frMarketChecked = form.get("fr_market_checked") === "yes";
+  const frLabelChecked = form.get("fr_label_checked") === "yes";
+  if (frMarketChecked && data.fr_market_document.length < 6) {
+    throw new Error("La conformité du marché français exige une référence de dossier ou un justificatif précis.");
+  }
   const reviewConfirmed = form.get("confirm_review") === "yes";
   const priceConfirmed = form.get("confirm_price") === "yes";
   if (reviewConfirmed && (!data.ean || data.description.length < 10 || !data.image_url)) {
@@ -48,6 +54,8 @@ export async function saveProductAction(form: FormData) {
     benefits: fields.benefits || null, actives: fields.actives || null,
     inci: fields.inci || null, usage_advice: fields.usage_advice || null,
     precautions: fields.precautions || null, image_url: fields.image_url || null,
+    fr_market_document: fields.fr_market_document || null,
+    fr_market_checked: frMarketChecked, fr_label_checked: frLabelChecked,
     requires_review: !reviewConfirmed, price_verified: priceConfirmed,
     published: false,
   }).eq("id",product_id);
