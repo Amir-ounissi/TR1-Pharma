@@ -4,7 +4,9 @@
 - Landing page reprise à l'identique de l'application historique : `/`
 - Cockpit multimarque propriétaire : `/app`, réservé au rôle `owner`
 - Catalogue professionnel : `/catalogue`, réservé au rôle `pharmacy`
-- Une nouvelle base Supabase PostgreSQL indépendante doit être créée et initialisée par `supabase/migrations/0001_v2_core.sql`.
+- Une nouvelle base Supabase PostgreSQL indépendante doit être créée et initialisée par `supabase/migrations/20261122094204_v2_core_initial_schema.sql`.
+
+Les migrations sont suivies par Supabase : `20261122094204_v2_core_initial_schema.sql` puis `20261122094351_v2_rls_policy_and_index_optimization.sql`. Ne pas réappliquer les migrations sur la base V2 : elles y sont déjà installées.
 
 ## État
 Première fondation, **non destinée à la production**. Formulaires, connexion et parcours
