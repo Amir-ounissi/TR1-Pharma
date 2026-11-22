@@ -23,6 +23,7 @@ export default async function AccessPage({searchParams}:{searchParams:Promise<{c
     {qs.compte==="lie" ? <p role="status" className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm font-bold text-green-800">Compte pharmacie associé et autorisé à se connecter.</p>:null}
     <section className="rounded-xl border bg-white p-5">
       <h2 className="text-xl font-bold">1. Relier un compte à une pharmacie</h2>
+      <p className="mt-3 text-sm"><Link href="/app/acces/compte-test" className="inline-block rounded-lg bg-[#142941] px-4 py-3 font-semibold text-white">Créer / rattacher le compte pharmacie test Plein Sud</Link></p>
       <p className="mt-2 text-sm text-[#69717d]">Créer d'abord l'utilisateur et confirmer son email dans <Link href="https://supabase.com/dashboard/project/evkvbjnftffstcqxgard/auth/users" target="_blank" className="font-semibold underline">Supabase Auth V2</Link>, puis associer ici son adresse professionnelle. Aucun compte n'est créé automatiquement.</p>
       <form action={linkPharmacyAccountAction} className="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_auto]">
         <select name="pharmacy_id" required className="rounded-lg border p-3 text-sm">
