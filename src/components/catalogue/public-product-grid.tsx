@@ -25,6 +25,7 @@ const brandSlugs: Record<string, string> = {
   "Beauty of Joseon": "beauty-of-joseon",
   "Dr. Althea": "dr-althea",
   "Biodance": "biodance",
+  "Medicube": "medicube",
 };
 const normalizeProductName = (value: string) => value.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLocaleLowerCase("fr").replace(/[^a-z0-9]+/g, " ").trim();
 function privateTierForQuantity(product: PrivateDisplayProduct, quantity: number) {
@@ -51,12 +52,13 @@ function privateTierPrice(
 }
 
 const allProducts: DisplayProduct[] = publicCatalogueProducts;
-const brands = ["Toutes les marques", "Beauty of Joseon", "Dr. Althea", "Biodance"];
+const brands = ["Toutes les marques", "Beauty of Joseon", "Dr. Althea", "Biodance", "Medicube"];
 
 const themes: Record<string, BrandTheme> = {
   "Beauty of Joseon": { bg: "#eee9de", ink: "#5d4a36", border: "#c6b496", short: "BEAUTY OF JOSEON", detail: "Soins coréens inspirés des rituels traditionnels" },
   "Dr. Althea": { bg: "#e7eee9", ink: "#3d6757", border: "#b7cabc", short: "Dr. Althea", detail: "Soins visage, sérums et rituels apaisants" },
   "Biodance": { bg: "#f2e8ec", ink: "#8b5a6c", border: "#d9bfca", short: "BIODANCE", detail: "Masques hydrogel et soins du visage" },
+  "Medicube": { bg: "#f4e8ed", ink: "#8b4167", border: "#d9bac9", short: "MEDICUBE", detail: "PDRN Pink, collagène et soins dermocosmétiques" },
   "VK SWISS": { bg: "#e9edf1", ink: "#263d56", border: "#c6d0db", short: "VK SWISS", detail: "Compléments alimentaires" },
 };
 
