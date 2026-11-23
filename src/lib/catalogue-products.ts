@@ -1,3 +1,4 @@
+import { medicubePhotosByEan } from "@/lib/medicube-catalogue";
 import { publicPreviewProducts, type PublicPreviewProduct } from "@/lib/catalogue-public-preview";
 import { productPhotoByEan, productGalleryByEan, productGalleryByName, biodancePhotoByName } from "@/lib/catalogue-product-photos";
 import { vkSwissMediaBySku } from "@/lib/catalogue-vk-swiss-media";
@@ -49,6 +50,7 @@ export function findPublicProduct(key: string): PublicCatalogueProduct | null {
 }
 
 export function publicProductImage(p: PublicCatalogueProduct): {url:string; source:string} | null {
+  if (p.brand === "Medicube" && p.ean && medicubePhotosByEan[p.ean]) return { url: medicubePhotosByEan[p.ean], source: "Medicube officiel" };
   if (p.brand === "VK SWISS" && p.sku && vkSwissMediaBySku[p.sku]) {
     return { url: vkSwissMediaBySku[p.sku].url, source: "VK SWISS" };
   }
