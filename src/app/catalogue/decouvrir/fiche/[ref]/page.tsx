@@ -1,3 +1,4 @@
+import { officialMedicubeByEan } from "@/lib/medicube-product-information";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -47,7 +48,7 @@ export default async function PublicCatalogueProductPage({ params }: ProductPara
       ? officialBeautyOfJoseonByEan[product.ean] ?? additionalBeautyOfJoseonByEan[product.ean]
       : product.brand === "Dr. Althea"
         ? officialDrAltheaByEan[product.ean] ?? additionalDrAltheaByEan[product.ean]
-        : undefined;
+        : product.brand === "Medicube" ? officialMedicubeByEan[product.ean] : undefined;
   const faireInfo = product.ean ? faireProductInformationByEan[product.ean] : undefined;
   const verifiedInfo = officialInfo ?? faireInfo;
   const productImages = publicProductImages(product);
