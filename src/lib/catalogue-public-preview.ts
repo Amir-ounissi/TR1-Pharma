@@ -1,3 +1,4 @@
+import { medicubePreviewProducts } from "@/lib/medicube-catalogue";
 // Aperçu public éditorial TR1 PHARMA : aucune donnée de coûts fournisseurs ni conditions commerciales.
 // Références en cours de validation ; aucun acte de vente dans cette section.
 export type PublicPreviewProduct = {
@@ -646,3 +647,6 @@ export const publicPreviewProducts: PublicPreviewProduct[] = [
     "ean": "8809447256658"
   }
 ];
+
+// Enrichissement éditorial des soins Medicube sans exposition des tarifs fournisseurs.
+publicPreviewProducts.push(...medicubePreviewProducts);
