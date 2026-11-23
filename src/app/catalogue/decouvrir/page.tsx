@@ -24,7 +24,7 @@ export default function PharmacieStorefront() {
         <div aria-hidden="true" className="pointer-events-none absolute -right-15 -top-25 size-100 rounded-full border-[45px] border-white/5" />
         <div className="relative max-w-[660px]">
           <p className="text-[11px] font-extrabold uppercase tracking-[.24em] text-[#ffa460]">
-            TR1 PHARMA · Collection professionnelle
+            TR1 PHARMA · Signature Coréenne
           </p>
           <h1 className="mt-4 text-[32px] font-black leading-[1.08] tracking-[-.045em] sm:text-5xl lg:text-[56px]">
             Découvrez notre sélection multimarque.
