@@ -129,7 +129,7 @@ export function PublicProductGrid({ privateProducts }: { privateProducts?: Priva
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[.17em] text-[#b3683e]">
-            {privateMode ? "Commande professionnelle" : "Les collections TR1"}
+            {privateMode ? "Commande professionnelle" : "Signature Coréenne"}
           </p>
           <h2 id="public-products" className="mt-2 text-3xl font-black tracking-[-.045em] text-[#0e1d31] sm:text-[38px]">
             {privateMode ? "Commandez vos références." : "Explorez les marques."}
