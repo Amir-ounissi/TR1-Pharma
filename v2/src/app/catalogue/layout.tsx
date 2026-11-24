@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ClipboardList, LayoutGrid, LockKeyhole, MessageCircle, Compass, Building2 } from "lucide-react";
+import { ClipboardList, LayoutGrid, LockKeyhole, MessageCircle, Compass, Building2, Newspaper, Library } from "lucide-react";
 import { Tr1BrandLogo } from "@/components/brand/tr1-brand-logo";
 
 export default function CatalogueLayout({ children }: { children: React.ReactNode }) {
@@ -16,6 +16,8 @@ export default function CatalogueLayout({ children }: { children: React.ReactNod
           <Link href="/catalogue" className="inline-flex items-center gap-1.5 hover:text-[#0e1d31]"><LayoutGrid size={15}/> Accueil</Link>
           <Link href="/catalogue/mes-marques" className="inline-flex items-center gap-1.5 hover:text-[#0e1d31]"><Building2 size={15}/> Mes marques</Link>
           <Link href="/catalogue/decouvrir" className="inline-flex items-center gap-1.5 hover:text-[#0e1d31]"><Compass size={15}/> Découvrir</Link>
+          <Link href="/catalogue/actualites" className="inline-flex items-center gap-1.5 hover:text-[#0e1d31]"><Newspaper size={15}/> Actualités</Link>
+          <Link href="/catalogue/ressources" className="inline-flex items-center gap-1.5 hover:text-[#0e1d31]"><Library size={15}/> Ressources</Link>
           <Link href="/catalogue/mes-demandes" className="inline-flex items-center gap-1.5 hover:text-[#0e1d31]"><ClipboardList size={15}/> Commandes</Link>
           <Link href="/catalogue/contact" className="inline-flex items-center gap-1.5 rounded-md bg-[#142941] px-3 py-2 text-white"><MessageCircle size={15}/> Mon interlocuteur TR1</Link>
           <Link href="/catalogue/connexion" className="inline-flex items-center gap-1.5 hover:text-[#0e1d31]"><LockKeyhole size={14}/> Connexion</Link>

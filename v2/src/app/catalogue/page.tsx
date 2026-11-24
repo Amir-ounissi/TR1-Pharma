@@ -1,9 +1,17 @@
 import Link from "next/link";
 import {ArrowRight,Building2,Compass,PackageCheck,ShieldCheck,MessageCircle,Calendar,GraduationCap,FileText} from "lucide-react";
 import {loadPharmacyBrandDirectory} from "@/lib/pharmacy-brands";
+import {announcementCategoryLabel} from "@/lib/communication-labels";
 
 export default async function PharmacyHome() {
-  const {brands}=await loadPharmacyBrandDirectory();
+  const {brands,db,user}=await loadPharmacyBrandDirectory();
+  const [newsResult,readsResult,resourcesResult]=await Promise.all([
+    db.from("tr1_announcements").select("id,title,summary,category,brand_id,published_at").eq("status","published").order("published_at",{ascending:false}).limit(3),
+    db.from("tr1_announcement_reads").select("announcement_id").eq("user_id",user.id),
+    db.from("tr1_resources").select("id",{count:"exact",head:true}).eq("published",true),
+  ]);
+  if(newsResult.error||readsResult.error||resourcesResult.error)throw new Error("Impossible de charger les communications TR1.");
+  const news=newsResult.data??[],seen=new Set((readsResult.data??[]).map(x=>x.announcement_id));
   const installed=brands.filter(b=>b.status==="implanted");
   const other=brands.filter(b=>b.status!=="implanted");
   return <div className="space-y-7 pb-12">
@@ -15,6 +23,11 @@ export default async function PharmacyHome() {
     <section className="rounded-2xl border border-[#d9e2e6] bg-white p-6 sm:p-7">
       <div className="flex flex-wrap items-start justify-between gap-4"><div><h2 className="flex items-center gap-2 text-xl font-extrabold"><MessageCircle size={22}/> Mon interlocuteur TR1</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-[#6b7a86]">Une question, un projet de référencement, un besoin de formation ou un litige ? Échangez directement avec TR1 et suivez vos demandes dans un espace unique. Vous pouvez déposer une demande à tout moment.</p></div><Link href="/catalogue/contact" className="rounded-lg bg-[#142941] px-5 py-3 text-sm font-bold text-white">Contacter TR1</Link></div>
       <div className="mt-5 grid gap-3 sm:grid-cols-3">{[{label:"Prendre rendez-vous",category:"appointment",Icon:Calendar},{label:"Formation / animation",category:"training",Icon:GraduationCap},{label:"Documentation / PLV",category:"resources",Icon:FileText}].map(({label,category,Icon})=><Link key={category} href={"/catalogue/contact?type="+category} className="flex items-center gap-2 rounded-xl border p-4 text-sm font-semibold hover:bg-[#f6f8f8]"><Icon size={18}/>{label}</Link>)}</div>
+    </section>
+    <section className="space-y-4 rounded-2xl border border-[#d9e2e6] bg-white p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-widest text-[#9c5a29]">Votre fil d'information</p><h2 className="mt-1 text-xl font-extrabold">Actualités et opportunités</h2><p className="mt-1 text-sm text-[#6b7a86]">Les nouveautés et opérations concernant votre officine.</p></div><Link href="/catalogue/actualites" className="text-sm font-bold underline">{news.filter(x=>!seen.has(x.id)).length} non lue(s) · Tout voir</Link></div>
+      {news.length?<div className="grid gap-3 md:grid-cols-3">{news.map(x=><Link key={x.id} href={"/catalogue/actualites#"+x.id} className="rounded-xl border p-4 hover:bg-[#f7f9fa]"><div className="flex items-center gap-2"><span className="text-[10px] font-bold uppercase tracking-wide text-[#59768a]">{announcementCategoryLabel(x.category)}</span>{!seen.has(x.id)&&<span className="rounded-full bg-[#fff1df] px-2 py-0.5 text-[10px] font-bold text-[#92521e]">Nouveau</span>}</div><h3 className="mt-2 font-bold">{x.title}</h3><p className="mt-2 line-clamp-3 text-xs leading-5 text-[#697b87]">{x.summary}</p></Link>)}</div>:<p className="rounded-lg bg-[#f6f8f8] p-4 text-sm text-[#697b87]">Aucune actualité disponible pour le moment.</p>}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-3"><p className="text-xs text-[#6b7a86]">{resourcesResult.count??0} ressource(s) documentaire(s) disponibles</p><Link href="/catalogue/ressources" className="text-sm font-semibold text-[#1a526f] underline">Ouvrir la bibliothèque</Link></div>
     </section>
     <div className="grid gap-5 md:grid-cols-2">
       <Link href="/catalogue/mes-marques" className="group rounded-2xl border border-[#d9e2e6] bg-white p-7 shadow-[0_5px_20px_rgb(14_29_49/0.045)] transition hover:border-[#93afbd] hover:shadow-lg">

@@ -2,6 +2,7 @@ import Link from "next/link";
 
 const main=[
  {href:"/app",label:"Vue d'ensemble"},
+ {href:"/app/communication",label:"Communication & contenus"},
  {href:"/app/relation-client",label:"Relation client · demandes"},
  {href:"/app/marques",label:"Gestion des marques"},
  {href:"/app/implantations",label:"Pharmacies & implantations"},
