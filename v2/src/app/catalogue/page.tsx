@@ -1,5 +1,5 @@
 import Link from "next/link";
-import {ArrowRight,Building2,Compass,PackageCheck,ShieldCheck} from "lucide-react";
+import {ArrowRight,Building2,Compass,PackageCheck,ShieldCheck,MessageCircle,Calendar,GraduationCap,FileText} from "lucide-react";
 import {loadPharmacyBrandDirectory} from "@/lib/pharmacy-brands";
 
 export default async function PharmacyHome() {
@@ -9,9 +9,13 @@ export default async function PharmacyHome() {
   return <div className="space-y-7 pb-12">
     <div className="rounded-2xl bg-[#142941] px-6 py-8 text-white sm:px-9">
       <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#e8b180]">TR1 PHARMA · ESPACE OFFICINE</p>
-      <h1 className="mt-3 text-3xl font-extrabold sm:text-4xl">Votre espace marques</h1>
-      <p className="mt-3 max-w-2xl text-sm leading-6 text-[#dce4ea]">Deux parcours adaptés à votre officine : suivre les marques déjà référencées ou découvrir de nouvelles gammes à implanter.</p>
+      <h1 className="mt-3 text-3xl font-extrabold sm:text-4xl">Votre partenaire commercial au quotidien</h1>
+      <p className="mt-3 max-w-2xl text-sm leading-6 text-[#dce4ea]">Retrouvez vos marques, découvrez les nouveautés et sollicitez votre interlocuteur TR1 pour tout besoin commercial ou accompagnement de votre équipe.</p>
     </div>
+    <section className="rounded-2xl border border-[#d9e2e6] bg-white p-6 sm:p-7">
+      <div className="flex flex-wrap items-start justify-between gap-4"><div><h2 className="flex items-center gap-2 text-xl font-extrabold"><MessageCircle size={22}/> Mon interlocuteur TR1</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-[#6b7a86]">Une question, un projet de référencement, un besoin de formation ou un litige ? Échangez directement avec TR1 et suivez vos demandes dans un espace unique. Vous pouvez déposer une demande à tout moment.</p></div><Link href="/catalogue/contact" className="rounded-lg bg-[#142941] px-5 py-3 text-sm font-bold text-white">Contacter TR1</Link></div>
+      <div className="mt-5 grid gap-3 sm:grid-cols-3">{[{label:"Prendre rendez-vous",category:"appointment",Icon:Calendar},{label:"Formation / animation",category:"training",Icon:GraduationCap},{label:"Documentation / PLV",category:"resources",Icon:FileText}].map(({label,category,Icon})=><Link key={category} href={"/catalogue/contact?type="+category} className="flex items-center gap-2 rounded-xl border p-4 text-sm font-semibold hover:bg-[#f6f8f8]"><Icon size={18}/>{label}</Link>)}</div>
+    </section>
     <div className="grid gap-5 md:grid-cols-2">
       <Link href="/catalogue/mes-marques" className="group rounded-2xl border border-[#d9e2e6] bg-white p-7 shadow-[0_5px_20px_rgb(14_29_49/0.045)] transition hover:border-[#93afbd] hover:shadow-lg">
         <div className="flex items-start justify-between gap-4">
@@ -38,11 +42,11 @@ export default async function PharmacyHome() {
         <p className="mt-2 text-sm text-[#6a7a85]">{installed.length?installed.map(x=>x.name).join(" · "):"Aucune marque officiellement renseignée comme implantée."}</p>
         <p className="mt-2 text-xs text-[#71818c]">Votre statut d'implantation est tenu à jour par TR1, indépendamment des accès au catalogue test.</p>
       </div>
-      <Link href="/catalogue/mes-demandes" className="rounded-lg border border-[#d4dde2] px-4 py-3 text-sm font-semibold text-[#284d65]">Historique des demandes</Link>
+      <Link href="/catalogue/mes-demandes" className="rounded-lg border border-[#d4dde2] px-4 py-3 text-sm font-semibold text-[#284d65]">Mes demandes de commande</Link>
     </section>
     <div className="flex items-start gap-3 rounded-xl border border-[#ebdfca] bg-[#fff9ef] p-4 text-xs leading-5 text-[#795b3b]">
       <ShieldCheck size={18} className="mt-0.5 shrink-0"/>
-      <p>TR1 PHARMA agit en tant qu'intermédiaire commercial. Les demandes de présentation ne constituent pas des commandes. Le référencement réel et l'accès au catalogue sont deux paramètres distincts.</p>
+      <p>TR1 PHARMA est votre interlocuteur commercial. Les demandes de commande sont contrôlées puis transmises à la marque concernée. Celle-ci assure la disponibilité, la livraison et la facturation des produits.</p>
     </div>
   </div>;
 }

@@ -2,13 +2,15 @@ import Link from "next/link";
 
 const main=[
  {href:"/app",label:"Vue d'ensemble"},
+ {href:"/app/relation-client",label:"Relation client · demandes"},
  {href:"/app/marques",label:"Gestion des marques"},
  {href:"/app/implantations",label:"Pharmacies & implantations"},
- {href:"/app/commandes",label:"Demandes & commandes"},
+ {href:"/app/commandes",label:"Transmission commandes"},
  {href:"/app/terrain",label:"Terrain & missions"},
- {href:"/app/revenus",label:"Mes revenus"},
+
 ];
 const advanced=[
+ {href:"/app/revenus",label:"Mes revenus"},
  {href:"/app/produits",label:"Tous les produits"},
  {href:"/app/offres-implantation",label:"Offres et packs"},
  {href:"/app/conditions",label:"Conditions fournisseurs"},
