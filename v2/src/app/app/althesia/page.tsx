@@ -44,7 +44,7 @@ export default async function AlthesiaQuality({searchParams}:{searchParams:Promi
       {[
         ["Fiches source",products.length],
         ["Visuels manquants",products.filter(x=>!x.image_url).length],
-        ["Références CBD bloquées",specs.filter(x=>x.market_status==="food_cbd_blocked").length],
+        ["Références sous vigilance CBD",specs.filter(x=>x.market_status==="food_cbd_blocked").length],
         ["Offres à reconfirmer",offers.filter(x=>!x.price_confirmed).length],
       ].map(([name,value])=><div key={name} className="rounded-xl border bg-white p-5">
         <p className="text-xs font-semibold text-[#687986]">{name}</p>
@@ -88,7 +88,7 @@ export default async function AlthesiaQuality({searchParams}:{searchParams:Promi
               <div className="mt-2 flex flex-wrap gap-3 text-xs">
                 {!p.image_url?<span className="inline-flex items-center gap-1 text-[#9a5b2a]"><ImageOff size={13}/> Photo manquante</span>:null}
                 {!s?.ingredients_and_doses?<span className="inline-flex items-center gap-1 text-[#9a5b2a]"><FileText size={13}/> Composition à obtenir</span>:null}
-                {s?.market_status==="food_cbd_blocked"?<span className="inline-flex items-center gap-1 font-bold text-red-700"><ShieldAlert size={13}/> CBD alimentaire bloqué</span>:
+                {s?.market_status==="food_cbd_blocked"?<span className="inline-flex items-center gap-1 font-bold text-red-700"><ShieldAlert size={13}/> Cannabinoïdes · vérification juridique</span>:
                   <span className="text-[#ac692c]">Validation de conformité requise</span>}
               </div>
             </div>

@@ -25,7 +25,7 @@ export default function CatalogueLayout({ children }: { children: React.ReactNod
     <main className="mx-auto max-w-7xl px-4 py-6 sm:px-7 sm:py-8">{children}</main>
     <footer className="mx-auto mt-10 max-w-7xl border-t border-[#e1e7e9] px-5 py-7 text-xs leading-6 text-[#697782]">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <span>TR1 PHARMA · Espace B2B réservé aux pharmacies autorisées</span>
+        <span>TR1 PHARMA · Intermédiaire commercial · Espace privé pour les pharmacies</span>
         <span>Vitalora TEST : prix fictifs · aucune commande transmise</span>
       </div>
     </footer>

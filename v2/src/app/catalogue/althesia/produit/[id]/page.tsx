@@ -20,8 +20,8 @@ export default async function AlthesiaDetails({params}:{params:Promise<{id:strin
     <Link href="/catalogue/althesia" className="inline-flex items-center gap-2 text-sm font-semibold text-[#235571] hover:underline"><ArrowLeft size={15}/> Catalogue multimarque</Link>
     <div className={`rounded-xl border px-5 py-4 text-xs leading-5 ${blocked?"border-red-200 bg-red-50 text-red-800":"border-[#eadbc2] bg-[#fff9ef] text-[#81532b]"}`}>
       <div className="flex items-start gap-2"><ShieldAlert size={18} className="mt-0.5 shrink-0"/>
-        <p><strong>{blocked?"Produit CBD alimentaire : non proposé à la vente.":"Information de catalogue historique, non commercialisée."}</strong>
-        {" "}Composition, prix et allégations doivent être reconfirmés. Les conditions affichées ne constituent ni une offre ferme ni un bon de commande.</p>
+        <p><strong>{blocked?"Référence contenant des cannabinoïdes : présentation documentaire uniquement.":"Produit présenté par TR1 en qualité d'intermédiaire commercial."}</strong>
+        {" "}TR1 ne vend ni ne facture ces produits. Les compositions et allégations nécessitent une vérification ; les éventuels tarifs du fournisseur ne valent pas offre ferme. Aucune commande n'est possible sur cette page.</p>
       </div>
     </div>
 
@@ -64,13 +64,23 @@ export default async function AlthesiaDetails({params}:{params:Promise<{id:strin
             <div><dt className="text-xs font-semibold text-[#647887]">Document</dt><dd className="mt-1 break-words font-medium">{p.source_document}</dd></div>
             <div><dt className="text-xs font-semibold text-[#647887]">Page</dt><dd className="mt-1 font-medium">{p.source_page??"Non précisée"}</dd></div>
             <div><dt className="text-xs font-semibold text-[#647887]">Période du tarif</dt><dd className="mt-1 font-medium">Septembre 2026 (source) — à actualiser</dd></div>
-            <div><dt className="text-xs font-semibold text-[#647887]">Conformité commerciale</dt><dd className="mt-1 font-medium">{blocked?"Bloquée — CBD alimentaire":"En attente de contrôle"}</dd></div>
+            <div><dt className="text-xs font-semibold text-[#647887]">Conformité commerciale</dt><dd className="mt-1 font-medium">{blocked?"Vigilance renforcée — cannabinoïdes":"En attente de contrôle"}</dd></div>
+            <div><dt className="text-xs font-semibold text-[#647887]">Statut de TR1</dt><dd className="mt-1 font-medium">Agent commercial intermédiaire, non vendeur</dd></div>
           </dl>
         </section>
       </div>
       <aside className="space-y-5 lg:sticky lg:top-5">
-        <section className="rounded-xl border border-[#d5e0e5] bg-white p-5 shadow-[0_5px_20px_rgb(14_29_49/0.06)]">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-[#946038]">Tarifs du catalogue — non reconfirmés</p>
+        {blocked?<section className="rounded-xl border border-[#eadac8] bg-[#fffaf2] p-5">
+          <h2 className="text-sm font-bold text-[#7f4c25]">Référence documentaire — statut réglementaire à vérifier</h2>
+          <p className="mt-3 text-xs leading-6 text-[#785c47]">
+            Les informations de prix d'achat, les offres et les marges ne sont pas diffusées pour cette référence.
+            Les denrées alimentaires contenant du CBD ne sont pas autorisées à la vente en France selon les autorités.
+            Le régime applicable à cette forme de produit doit être confirmé avant toute prospection commerciale.
+          </p>
+          <a href="https://agriculture.gouv.fr/node/110883" target="_blank" rel="noopener noreferrer"
+            className="mt-4 inline-block text-xs font-semibold underline">Consulter le ministère de l'Agriculture</a>
+        </section>:<section className="rounded-xl border border-[#d5e0e5] bg-white p-5 shadow-[0_5px_20px_rgb(14_29_49/0.06)]">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-[#946038]">Conditions fournisseur historiques — à reconfirmer</p>
           <p className="mt-4 text-xs text-[#6e7c88]">Prix de vente conseillé TTC (source)</p>
           <p className="mt-1 text-3xl font-extrabold text-[#142941]">{euro(pvc)}</p>
           <p className="mt-1 text-xs text-[#73828d]">TVA indiquée : {vat.toLocaleString("fr-FR")}%</p>
@@ -102,9 +112,9 @@ export default async function AlthesiaDetails({params}:{params:Promise<{id:strin
             </div>
           </div>}
           <p className="mt-4 rounded-lg border border-[#eadbc4] bg-[#fff9ef] p-3 text-[11px] leading-5 text-[#82552d]">
-            {blocked?"Cette référence ne peut pas être commandée depuis TR1.":"Ces tarifs ne sont pas confirmés pour une commande."}
+            Ces tarifs du fournisseur ne sont pas confirmés et ne constituent pas une offre d'achat.
           </p>
-        </section>
+        </section>}
         <section className="rounded-xl border border-[#e1e7e9] bg-white p-5">
           <h2 className="flex items-center gap-2 text-sm font-bold text-[#142941]"><Truck size={17}/> Conditions logistiques Althesia (source)</h2>
           <div className="mt-3 space-y-2 text-xs leading-5 text-[#647684]">
@@ -115,6 +125,6 @@ export default async function AlthesiaDetails({params}:{params:Promise<{id:strin
         </section>
       </aside>
     </div>
-    <p className="text-xs text-[#788691]">Fiche documentaire privée, sans fonction d'achat. Toute mise en vente demande la validation de la marque, du tarif, de l'étiquetage et des obligations réglementaires.</p>
+    <p className="text-xs text-[#788691]">TR1 PHARMA : présentation et négociation pour le compte des marques représentées, sans facturation ni livraison des produits. Aucune commande possible ici. Avant toute prospection ou vente : confirmer le mandat, le tarif, l'étiquetage, les allégations et le cadre réglementaire applicable.</p>
   </div>;
 }

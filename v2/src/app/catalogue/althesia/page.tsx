@@ -28,8 +28,9 @@ export default async function AlthesiaPreview({searchParams}:{searchParams:Promi
       <p className="text-xs font-bold uppercase tracking-[0.17em] text-[#efbf91]">TR1 PHARMA / OFFICINE PILOTE</p>
       <h1 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">Les marques Althesia</h1>
       <p className="mt-3 max-w-3xl text-sm leading-6 text-[#d7e0e7]">
-        {products.length} références documentées dans trois gammes. Accédez à la composition connue,
-        aux formats, aux prix issus des catalogues et aux conditions par quantité.
+        {products.length} références des marques représentées, y compris celles sous contrôle réglementaire.
+        TR1 PHARMA intervient comme agent commercial : présentation et mise en relation,
+        sans vente, facturation ni livraison par TR1.
       </p>
       <div className="mt-5 flex flex-wrap gap-3">
         {[
@@ -46,10 +47,12 @@ export default async function AlthesiaPreview({searchParams}:{searchParams:Promi
     <section className="rounded-xl border border-[#eedcc3] bg-[#fff9ee] px-5 py-4">
       <div className="flex gap-3"><ShieldAlert className="mt-0.5 shrink-0 text-[#9c5923]" size={20}/>
         <div>
-          <h2 className="text-sm font-bold text-[#7a4c26]">Catalogue documentaire privé — pas une offre de vente</h2>
+          <h2 className="text-sm font-bold text-[#7a4c26]">Toutes les références du fournisseur · consultation professionnelle</h2>
           <p className="mt-1 text-xs leading-5 text-[#835c36]">
-            Prix historiques septembre 2026, non reconfirmés. Les compositions et allégations sont en cours de vérification.
-            Les produits contenant du CBD alimentaire ne sont pas proposés à la vente. Aucune commande possible depuis ces fiches.
+            Les données présentées proviennent des catalogues fournisseurs et ne constituent pas une offre ferme.
+            Les tarifs historiques sont à reconfirmer auprès du mandant. Les références contenant des cannabinoïdes
+            restent consultables pour identification, sans prix d'achat ni parcours de commande.
+            TR1 ne vend ni ne facture les produits.
           </p>
         </div>
       </div>
@@ -102,13 +105,16 @@ export default async function AlthesiaPreview({searchParams}:{searchParams:Promi
             <p className="text-xs text-[#73838e]">{p.format||"Format à confirmer"} · EAN {p.ean||"—"}</p>
             <div className="mt-1 flex flex-wrap gap-1.5">
               <span className={`rounded-md px-2 py-1 text-[10px] font-semibold ${blocked?"bg-red-50 text-red-800":"bg-[#fff4e4] text-[#955822]"}`}>
-                {blocked?"Commercialisation interdite : CBD alimentaire":"Données à vérifier"}
+                {blocked?"Cannabinoïdes · statut réglementaire à vérifier":"Conditions fournisseur à confirmer"}
               </span>
             </div>
             <div className="mt-2 border-t border-[#edf1f2] pt-3">
-              <p className="text-[11px] text-[#73828d]">PA HT source · 1er palier</p>
-              <p className="text-xl font-extrabold text-[#142941]">{first?euro(first.price_ht):"Non renseigné"} <span className="text-xs font-normal text-[#697782]">/ unité</span></p>
-              <p className="mt-1 text-xs text-[#6e7d88]">PVC TTC source : {euro(p.retail_ttc)} · Minimum : {first?.paid_quantity??"—"} u.</p>
+              {blocked?
+                <><p className="text-[11px] font-semibold text-[#985326]">Informations d'achat non diffusées</p>
+                  <p className="mt-1 text-xs leading-5 text-[#6e7d88]">Référence documentaire soumise à une revue réglementaire spécifique.</p></>:
+                <><p className="text-[11px] text-[#73828d]">PA HT du fournisseur · 1er palier</p>
+                  <p className="text-xl font-extrabold text-[#142941]">{first?euro(first.price_ht):"Non renseigné"} <span className="text-xs font-normal text-[#697782]">/ unité</span></p>
+                  <p className="mt-1 text-xs text-[#6e7d88]">PVC TTC source : {euro(p.retail_ttc)} · Minimum : {first?.paid_quantity??"—"} u.</p></>}
             </div>
             <Link href={`/catalogue/althesia/produit/${p.id}`} className="mt-auto inline-flex items-center justify-center gap-2 rounded-lg bg-[#142941] px-4 py-3 text-sm font-semibold text-white hover:bg-[#26425b]">
               <BookOpen size={15}/> Consulter la fiche <ArrowUpRight size={14}/>
@@ -120,6 +126,6 @@ export default async function AlthesiaPreview({searchParams}:{searchParams:Promi
       <p className="mt-3 text-sm font-semibold">Aucun produit ne correspond à ces filtres.</p>
       <Link href="/catalogue/althesia" className="mt-3 inline-block text-sm underline">Réinitialiser les filtres</Link>
     </div>}
-    <p className="text-xs leading-6 text-[#74828d]">Données extraites des documents Althesia (septembre 2026), Vitalora (septembre 2026) et Bloomster (septembre 2025). Aucun statut de conformité n'est déduit de ces seuls documents.</p>
+    <p className="text-xs leading-6 text-[#74828d]">TR1 PHARMA : intermédiaire commercial, non vendeur des références affichées. Les éventuels devis, disponibilités, contrats et facturations relèvent du fournisseur selon le mandat convenu. Sources : Althesia et Vitalora (septembre 2026), Bloomster (septembre 2025). Aucune conformité n'est présumée.</p>
   </div>;
 }
