@@ -34,8 +34,17 @@ export function althesiaPricing(o:AlthesiaOffer,retailTTC:number|null,vatPercent
   const retailHT=retailTTC===null?null:retailTTC/(1+vatPercent/100);
   const marginHT=retailHT===null?null:retailHT-effectiveUnit;
   const marginRate=retailHT && retailHT>0?100*marginHT!/retailHT:null;
-  return {delivered,lineCost,effectiveUnit,retailHT,marginHT,marginRate};
+  // Coefficient multiplicateur officinal (PVC TTC / coût net HT par boîte livrée).
+  // Unités gratuites réduisent le coût moyen ; ne pas confondre avec le taux de marque HT.
+  const multiplier=retailTTC!==null && retailTTC>0 && effectiveUnit>0
+    ? retailTTC/effectiveUnit : null;
+  return {delivered,lineCost,effectiveUnit,retailHT,marginHT,marginRate,multiplier};
 }
 export function isBlocked(p:AlthesiaProduct){
   return p.market_status==="food_cbd_blocked";
+}
+
+export function formatMultiplicateur(value:number|null){
+ return value===null||!Number.isFinite(value)?"n.d.":
+ "× "+value.toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2});
 }

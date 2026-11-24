@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, BookOpen, PackageOpen, ShieldAlert, Info, Calculator, Truck } from "lucide-react";
-import { loadAlthesiaShowroom, euro, althesiaPricing, isBlocked } from "@/lib/althesia-showroom";
+import { loadAlthesiaShowroom, euro, althesiaPricing, formatMultiplicateur, isBlocked } from "@/lib/althesia-showroom";
 
 export default async function AlthesiaDetails({params}:{params:Promise<{id:string}>}) {
   const {id}=await params;
@@ -87,26 +87,27 @@ export default async function AlthesiaDetails({params}:{params:Promise<{id:strin
           <div className="mt-4 overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="border-y border-[#e2e8ec] bg-[#f5f7f8] text-[#566c7d]">
-                <tr><th className="px-2 py-3">Achat</th><th className="px-2 py-3">UG</th><th className="px-2 py-3 text-right">PA HT/u.</th></tr>
+                <tr><th className="px-2 py-3">Achat</th><th className="px-2 py-3">UG</th><th className="px-2 py-3 text-right">PA HT/u.</th><th className="px-2 py-3 text-right">Coef.</th></tr>
               </thead>
               <tbody className="divide-y divide-[#e9eef1]">
                 {p.offers.map(x=><tr key={x.paid_quantity}>
                   <td className="px-2 py-3 font-semibold">{x.paid_quantity} u.</td>
                   <td className="px-2 py-3">{x.free_quantity?"+"+x.free_quantity:"—"}</td>
                   <td className="px-2 py-3 text-right font-semibold tabular-nums">{euro(x.price_ht)}</td>
+                  <td className="px-2 py-3 text-right font-extrabold tabular-nums text-[#1c5975]">{formatMultiplicateur(althesiaPricing(x,pvc,vat).multiplier)}</td>
                 </tr>)}
               </tbody>
             </table>
           </div>
           {p.offers.length>0 && pvc!==null && <div className="mt-4 rounded-lg bg-[#f6f8f9] p-4">
-            <div className="flex items-center gap-2"><Calculator size={17} className="text-[#5e7383]"/><h3 className="text-xs font-bold text-[#142941]">Marge indicative par palier</h3></div>
-            <p className="mt-2 text-[11px] leading-5 text-[#788690]">Marge théorique calculée sur le PVC HT et le coût net des unités livrées, sans franco, frais, remises multi-marques ni autres coûts.</p>
+            <div className="flex items-center gap-2"><Calculator size={17} className="text-[#5e7383]"/><h3 className="text-xs font-bold text-[#142941]">Coefficient et marge par palier</h3></div>
+            <p className="mt-2 text-[11px] leading-5 text-[#788690]">Coefficient multiplicateur = PVC TTC ÷ coût d'achat HT net par unité livrée, UG comprises. Taux de marque indicatif calculé sur le PVC HT. Hors frais, remise multi-marques et autres coûts. Prix source non reconfirmés.</p>
             <div className="mt-3 space-y-2">
               {p.offers.map(o=>{
                 const cal=althesiaPricing(o,pvc,vat);
                 return <div key={o.paid_quantity} className="flex justify-between gap-2 border-t border-[#e3e8ea] pt-2 text-xs">
                   <span>{o.paid_quantity} payées + {o.free_quantity} UG</span>
-                  <strong className="text-[#314f64]">{cal.marginRate===null?"n.d.":cal.marginRate.toFixed(1).replace(".",",")+" %"} estimés</strong>
+                  <strong className="text-right text-[#314f64]">{formatMultiplicateur(cal.multiplier)}<span className="block font-normal text-[#6d7f8c]">{cal.marginRate===null?"n.d.":cal.marginRate.toFixed(1).replace(".",",")+" %"} de taux de marque HT</span></strong>
                 </div>;
               })}
             </div>

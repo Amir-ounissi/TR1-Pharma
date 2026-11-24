@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Search, PackageOpen, ShieldAlert, ArrowUpRight, BookOpen, ClipboardList } from "lucide-react";
-import { loadAlthesiaShowroom, euro, isBlocked } from "@/lib/althesia-showroom";
+import { loadAlthesiaShowroom, euro, althesiaPricing, formatMultiplicateur, isBlocked } from "@/lib/althesia-showroom";
 import { normalizedSearch } from "@/lib/demo-display";
 
 type Filters = { q?:string; marque?:string; rayon?:string };
@@ -94,6 +94,7 @@ export default async function AlthesiaPreview({searchParams}:{searchParams:Promi
     {visible.length?<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {visible.map(p=>{
         const first=p.offers[0],blocked=isBlocked(p);
+        const coefficient=first?althesiaPricing(first,p.retail_ttc===null?null:Number(p.retail_ttc),Number(p.vat_rate??5.5)).multiplier:null;
         return <article key={p.id} className="flex flex-col overflow-hidden rounded-xl border border-[#e0e6e8] bg-white shadow-[0_2px_12px_rgb(14_29_49/0.035)]">
           <Link href={`/catalogue/althesia/produit/${p.id}`} className="group flex h-44 items-center justify-center border-b bg-[#f7f9f9] px-6 py-4">
             {p.image_url?<img src={p.image_url} alt={p.name} className="h-full max-w-full object-contain transition group-hover:scale-105" loading="lazy"/>:
@@ -114,7 +115,8 @@ export default async function AlthesiaPreview({searchParams}:{searchParams:Promi
                   <p className="mt-1 text-xs leading-5 text-[#6e7d88]">Référence documentaire soumise à une revue réglementaire spécifique.</p></>:
                 <><p className="text-[11px] text-[#73828d]">PA HT du fournisseur · 1er palier</p>
                   <p className="text-xl font-extrabold text-[#142941]">{first?euro(first.price_ht):"Non renseigné"} <span className="text-xs font-normal text-[#697782]">/ unité</span></p>
-                  <p className="mt-1 text-xs text-[#6e7d88]">PVC TTC source : {euro(p.retail_ttc)} · Minimum : {first?.paid_quantity??"—"} u.</p></>}
+                  <p className="mt-1 text-xs text-[#6e7d88]">PVC TTC source : {euro(p.retail_ttc)} · Minimum : {first?.paid_quantity??"—"} u.</p>
+                  <p className="mt-2 rounded-md bg-[#e9f1f4] px-3 py-2 text-xs font-semibold text-[#274d64]">Coefficient multiplicateur : <span className="font-extrabold">{formatMultiplicateur(coefficient)}</span> <span className="font-normal">(indicatif)</span></p></>}
             </div>
             <Link href={`/catalogue/althesia/produit/${p.id}`} className="mt-auto inline-flex items-center justify-center gap-2 rounded-lg bg-[#142941] px-4 py-3 text-sm font-semibold text-white hover:bg-[#26425b]">
               <BookOpen size={15}/> Consulter la fiche <ArrowUpRight size={14}/>
