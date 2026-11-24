@@ -32,6 +32,7 @@ export default async function CockpitHome() {
         <Link href="/app/pharmacies" className="rounded-lg bg-[#142941] px-4 py-3 text-sm font-bold text-white">Mes pharmacies</Link>
         <Link href="/app/marques" className="rounded-lg border px-4 py-3 text-sm font-bold">Mes marques</Link>
         <Link href="/app/commandes" className="rounded-lg border px-4 py-3 text-sm font-bold">Demandes reçues</Link>
+        <Link href="/app/demo" className="rounded-lg border border-[#e4c89f] bg-[#fff8ec] px-4 py-3 text-sm font-bold">Pilote Vitalora · TEST</Link>
       </div>
     </section>
   </div>;

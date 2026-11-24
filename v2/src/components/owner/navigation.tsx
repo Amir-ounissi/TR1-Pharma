@@ -5,7 +5,7 @@ const links = [
   { href: "/app/marques", label: "Marques" },
   { href: "/app/produits", label: "Catalogue produits" },
   { href: "/app/qualite", label: "Contrôle qualité" },
-  { href: "/app/pilote", label: "Pilote VK SWISS" },
+  { href: "/app/demo", label: "Pilote Vitalora · TEST" },
   { href: "/app/conditions", label: "Conditions commerciales" },
   { href: "/app/commandes", label: "Demandes & commandes" },
   { href: "/app/acces", label: "Accès B2B" },

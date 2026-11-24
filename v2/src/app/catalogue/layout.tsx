@@ -6,6 +6,8 @@ export default function CatalogueLayout({ children }: { children: React.ReactNod
       <Link href="/" aria-label="Retour au site TR1"><Tr1BrandLogo className="h-12 w-24"/></Link>
       <nav aria-label="Navigation pharmacie" className="flex flex-wrap gap-4 text-sm font-semibold">
         <Link href="/catalogue">Catalogue B2B</Link>
+        <Link href="/catalogue/demo" className="text-[#ad4b08]">Vitalora TEST</Link>
+        <Link href="/catalogue/demo/panier">Panier test</Link>
         <Link href="/catalogue/mes-demandes">Mes demandes</Link>
         <Link href="/catalogue/connexion">Connexion pharmacie</Link>
       </nav>

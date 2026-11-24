@@ -41,6 +41,12 @@ export default async function PharmacyCatalogue() {
       <h1 className="mt-2 text-3xl font-bold">Votre catalogue professionnel</h1>
       <p className="mt-2 text-sm text-[#69717d]">Uniquement les marques et les prix autorisés pour votre pharmacie.</p>
       <Link href="/catalogue/mes-demandes" className="mt-3 inline-block text-sm font-bold underline">Mes demandes de réassort</Link>
+      <section className="mt-5 rounded-lg border border-[#e4c89f] bg-[#fff8ec] p-4">
+        <p className="text-xs font-extrabold uppercase tracking-wide text-[#ad4b08]">Démonstration réservée aux comptes pilotes</p>
+        <h2 className="mt-2 text-lg font-bold">Tester Vitalora sans commander</h2>
+        <p className="mt-2 text-sm">18 références, visuels, paliers de prix fictifs, panier et demande simulée. Aucun achat ni transmission au fournisseur.</p>
+        <Link href="/catalogue/demo" className="mt-3 inline-block rounded-lg bg-[#142941] px-4 py-3 text-sm font-bold text-white">Ouvrir Vitalora en mode TEST</Link>
+      </section>
     </div>
     {products.length?<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {products.map(p=>{
