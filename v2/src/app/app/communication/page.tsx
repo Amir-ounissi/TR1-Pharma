@@ -1,0 +1,45 @@
+import Link from "next/link";
+import {requireOwner} from "@/lib/auth";
+import {announcementCategories,resourceCategories,audienceLabels} from "@/lib/communication-labels";
+import {createAnnouncement,updateAnnouncementStatus,createResource,updateResourceStatus} from "@/app/communication-actions";
+export default async function CommunicationAdmin({searchParams}:{searchParams:Promise<{ok?:string;erreur?:string}>}){
+ const {db}=await requireOwner();const params=await searchParams;
+ const [brands,pharmacies,posts,resources]=await Promise.all([db.from("brands").select("id,name").order("name"),db.from("pharmacies").select("id,name,city").order("name").limit(1000),db.from("tr1_announcements").select("id,title,category,status,audience_scope,brand_id,starts_on,ends_on,created_at").order("created_at",{ascending:false}).limit(100),db.from("tr1_resources").select("id,title,category,published,audience_scope,brand_id,created_at").order("created_at",{ascending:false}).limit(100)]);
+ if(brands.error||pharmacies.error||posts.error||resources.error)throw new Error("Impossible de charger les contenus TR1.");
+ const bs=brands.data??[],ps=pharmacies.data??[],news=posts.data??[],docs=resources.data??[];
+ const field="w-full rounded-lg border bg-white p-2.5 text-sm";const label="grid gap-1 text-xs font-semibold";
+ const targetOptions=<>{ps.map(p=><option key={p.id} value={p.id}>{p.name} · {p.city}</option>)}</>;
+ const audienceOptions=<>{Object.entries(audienceLabels).map(([k,v])=><option key={k} value={k}>{v}</option>)}</>;
+ return <div className="space-y-7 pb-12"><header><p className="text-xs font-bold uppercase tracking-widest text-[#a55925]">Communication officinale</p><h1 className="mt-2 text-3xl font-bold">Actualités et ressources</h1><p className="mt-2 max-w-3xl text-sm text-[#69717d]">Préparer des publications utiles aux pharmacies, cibler selon les implantations et partager une bibliothèque documentaire. Publier ici ne transmet aucune commande au fournisseur.</p></header>
+ {params.ok&&<p role="status" className="rounded-lg bg-green-50 p-3 text-sm text-green-800">Contenu enregistré.</p>}{params.erreur&&<p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">Enregistrement refusé. Vérifier les champs, la cible et les dates.</p>}
+ <section className="rounded-xl border bg-white p-5"><h2 className="text-xl font-bold">Créer une actualité ou une offre</h2><form action={createAnnouncement} className="mt-4 grid gap-3 md:grid-cols-2">
+ <label className={label}>Titre<input name="title" required minLength={3} maxLength={180} className={field}/></label>
+ <label className={label}>Type<select name="category" className={field}>{Object.entries(announcementCategories).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></label>
+ <label className={label+" md:col-span-2"}>Résumé visible dans l'aperçu<textarea name="summary" required minLength={3} maxLength={500} rows={2} className={field}/></label>
+ <label className={label+" md:col-span-2"}>Contenu<textarea name="body" required minLength={3} maxLength={8000} rows={5} className={field}/></label>
+ <label className={label}>Marque concernée<select name="brand_id" className={field}><option value="">TR1 / toutes marques</option>{bs.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></label>
+ <label className={label}>Ciblage<select name="audience_scope" className={field}>{audienceOptions}</select></label>
+ <label className={label+" md:col-span-2"}>Pharmacies ciblées (uniquement si « pharmacies sélectionnées »)<select name="target_pharmacy_ids" multiple size={Math.min(6,Math.max(3,ps.length))} className={field}>{targetOptions}</select><span className="font-normal text-[#71818c]">Maintenir Ctrl / Cmd pour sélectionner plusieurs pharmacies.</span></label>
+ <label className={label}>Image HTTPS (facultatif)<input name="cover_image_url" type="url" placeholder="https://" className={field}/></label>
+ <label className={label}>Début de publication<input name="starts_on" type="date" required defaultValue={new Date().toISOString().slice(0,10)} className={field}/></label>
+ <label className={label}>Fin de publication (facultatif)<input name="ends_on" type="date" className={field}/></label>
+ <label className={label}>Libellé du lien (facultatif)<input name="cta_label" maxLength={60} className={field}/></label>
+ <label className={label+" md:col-span-2"}>URL du lien (HTTPS ou page interne /catalogue/)<input name="cta_url" placeholder="https://… ou /catalogue/contact" className={field}/></label>
+ <label className={label}>État initial<select name="status" className={field}><option value="draft">Enregistrer en brouillon</option><option value="published">Publier immédiatement</option></select></label>
+ <button className="self-end rounded-lg bg-[#142941] p-3 text-sm font-bold text-white">Enregistrer l’actualité</button></form></section>
+ <section className="rounded-xl border bg-white p-5"><h2 className="text-xl font-bold">Ajouter une ressource documentaire</h2><form action={createResource} className="mt-4 grid gap-3 md:grid-cols-2">
+ <label className={label}>Titre<input name="title" required minLength={3} maxLength={180} className={field}/></label>
+ <label className={label}>Type<select name="category" className={field}>{Object.entries(resourceCategories).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></label>
+ <label className={label+" md:col-span-2"}>Description<textarea name="description" required minLength={3} maxLength={1000} rows={2} className={field}/></label>
+ <label className={label}>Marque<select name="brand_id" className={field}><option value="">TR1 / toutes marques</option>{bs.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></label>
+ <label className={label}>Ciblage<select name="audience_scope" className={field}>{audienceOptions}</select></label>
+ <label className={label+" md:col-span-2"}>Pharmacies ciblées (uniquement si « pharmacies sélectionnées »)<select name="target_pharmacy_ids" multiple size={Math.min(6,Math.max(3,ps.length))} className={field}>{targetOptions}</select><span className="font-normal text-[#71818c]">Maintenir Ctrl / Cmd pour sélectionner plusieurs pharmacies.</span></label>
+ <label className={label+" md:col-span-2"}>Lien HTTPS vers le document<input name="resource_url" type="url" required placeholder="https://…" className={field}/></label>
+ <label className={label}>Début<input name="starts_on" type="date" required defaultValue={new Date().toISOString().slice(0,10)} className={field}/></label>
+ <label className={label}>Fin (facultatif)<input name="ends_on" type="date" className={field}/></label>
+ <label className={label}>Publication<select name="published" className={field}><option value="false">Brouillon</option><option value="true">Publié</option></select></label>
+ <button className="self-end rounded-lg bg-[#142941] p-3 text-sm font-bold text-white">Enregistrer la ressource</button></form></section>
+ <section className="space-y-3"><h2 className="text-xl font-bold">Publications ({news.length})</h2>{news.map(n=><article key={n.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white p-4"><div><p className="text-xs text-[#71818c]">{announcementCategories[n.category as keyof typeof announcementCategories]??n.category} · {audienceLabels[n.audience_scope as keyof typeof audienceLabels]??n.audience_scope} · {bs.find(b=>b.id===n.brand_id)?.name??"Toutes marques"}</p><h3 className="mt-1 font-bold">{n.title}</h3><p className="text-xs text-[#71818c]">{n.starts_on}{n.ends_on?" → "+n.ends_on:""} · {n.status}</p></div><form action={updateAnnouncementStatus} className="flex items-center gap-2"><input type="hidden" name="id" value={n.id}/><select name="status" defaultValue={n.status} className="rounded-lg border bg-white p-2 text-xs"><option value="draft">Brouillon</option><option value="published">Publié</option><option value="archived">Archivé</option></select><button className="rounded-lg border px-3 py-2 text-xs font-bold">Mettre à jour</button></form></article>)}</section>
+ <section className="space-y-3"><h2 className="text-xl font-bold">Ressources ({docs.length})</h2>{docs.map(r=><article key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white p-4"><div><p className="text-xs text-[#71818c]">{resourceCategories[r.category as keyof typeof resourceCategories]??r.category} · {audienceLabels[r.audience_scope as keyof typeof audienceLabels]??r.audience_scope} · {bs.find(b=>b.id===r.brand_id)?.name??"Toutes marques"}</p><h3 className="mt-1 font-bold">{r.title}</h3></div><form action={updateResourceStatus} className="flex items-center gap-2"><input type="hidden" name="id" value={r.id}/><select name="published" defaultValue={String(r.published)} className="rounded-lg border bg-white p-2 text-xs"><option value="false">Brouillon</option><option value="true">Publié</option></select><button className="rounded-lg border px-3 py-2 text-xs font-bold">Mettre à jour</button></form></article>)}</section>
+ </div>;
+}
