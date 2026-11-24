@@ -20,6 +20,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
             <Link className="py-3 transition hover:text-[var(--tr1-orange)]" href="/#terrain">Suivi terrain</Link>
             <Link className="py-3 transition hover:text-[var(--tr1-orange)]" href="/#reseau">Le réseau TR1</Link>
             <Link className="py-3 transition hover:text-[var(--tr1-orange)]" href="/#pharmacies">Pharmacies</Link>
+            <Link className="rounded-md border border-[var(--tr1-navy)]/20 px-3 py-2.5 text-[12px] font-bold transition hover:bg-[#f4f6f6]" href="/vitrine">Catalogue officines</Link>
           </nav>
           <MarketingTrackedLink className="ml-auto inline-flex min-h-11 items-center gap-2 rounded-[5px] bg-[var(--tr1-orange)] px-3 text-xs font-bold text-[var(--tr1-navy)] transition hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--tr1-orange)] sm:gap-3 sm:px-4 lg:ml-3" event="primary_cta_click" href="/#contact-marque" properties={{ placement: "header" }}>
             <span className="sm:hidden">Votre marque</span><span className="hidden sm:inline">Parlons de votre marque</span> <ArrowUpRight size={16} aria-hidden="true" />
@@ -36,6 +37,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
             <p className="mt-4 text-xs leading-6 text-[#515d6b]">Votre partenaire terrain, du sell-in au sell-out.<br/>PACA · Gard · Hérault</p>
           </div>
           <div className="flex flex-wrap gap-x-6 gap-y-3 text-xs text-[#515d6b]">
+            <Link className="py-2 transition hover:text-[var(--tr1-orange)]" href="/vitrine">Catalogue officines</Link>
             <Link className="py-2 transition hover:text-[var(--tr1-orange)]" href="/connexion">Connexion</Link>
             <Link className="py-2 transition hover:text-[var(--tr1-orange)]" href="/mentions-legales">Mentions légales</Link>
             <Link className="py-2 transition hover:text-[var(--tr1-orange)]" href="/politique-de-confidentialite">Confidentialité</Link>

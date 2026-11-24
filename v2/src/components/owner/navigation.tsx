@@ -7,8 +7,8 @@ const main=[
  {href:"/app/marques",label:"Gestion des marques"},
  {href:"/app/implantations",label:"Pharmacies & implantations"},
  {href:"/app/commandes",label:"Transmission commandes"},
+ {href:"/app/catalogue-public",label:"Prospects · catalogue public"},
  {href:"/app/terrain",label:"Terrain & missions"},
-
 ];
 const advanced=[
  {href:"/app/revenus",label:"Mes revenus"},
@@ -31,14 +31,9 @@ export function OwnerNavigation(){
      </Link>)}
    </div>
    <details className="rounded-lg border border-white/15">
-     <summary className="cursor-pointer px-4 py-3 text-xs font-bold uppercase tracking-wider text-white/65 hover:text-white">
-       Paramètres avancés
-     </summary>
+     <summary className="cursor-pointer px-4 py-3 text-xs font-bold uppercase tracking-wider text-white/65 hover:text-white">Paramètres avancés</summary>
      <div className="grid gap-0.5 border-t border-white/10 p-2">
-       {advanced.map(x=><Link key={x.href} href={x.href}
-         className="rounded-md px-3 py-2.5 text-xs text-white/75 hover:bg-white/10 hover:text-white">
-         {x.label}
-       </Link>)}
+       {advanced.map(x=><Link key={x.href} href={x.href} className="rounded-md px-3 py-2.5 text-xs text-white/75 hover:bg-white/10 hover:text-white">{x.label}</Link>)}
      </div>
    </details>
  </nav>;
