@@ -1,21 +1,41 @@
 import Link from "next/link";
-const links = [
-  { href: "/app", label: "Mon cockpit" },
-  { href: "/app/pharmacies", label: "Pharmacies" },
-  { href: "/app/marques", label: "Marques" },
-  { href: "/app/produits", label: "Catalogue produits" },
-  { href: "/app/althesia", label: "Althesia · Sources" },
-  { href: "/app/commissions", label: "Commissions & primes" },
-  { href: "/app/qualite", label: "Contrôle qualité" },
-  { href: "/app/demo", label: "Pilote Vitalora · TEST" },
-  { href: "/app/conditions", label: "Conditions commerciales" },
-  { href: "/app/commandes", label: "Demandes & commandes" },
-  { href: "/app/acces", label: "Accès B2B" },
-  { href: "/app/terrain", label: "Terrain & missions" },
-  { href: "/app/revenus", label: "Mes revenus" },
+
+const main=[
+ {href:"/app",label:"Vue d'ensemble"},
+ {href:"/app/marques",label:"Gestion des marques"},
+ {href:"/app/implantations",label:"Pharmacies & implantations"},
+ {href:"/app/commandes",label:"Demandes & commandes"},
+ {href:"/app/terrain",label:"Terrain & missions"},
+ {href:"/app/revenus",label:"Mes revenus"},
 ];
-export function OwnerNavigation() {
-  return <nav aria-label="Navigation du cockpit" className="grid gap-1">
-    {links.map(x=><Link key={x.href} href={x.href} className="rounded-lg px-4 py-2.5 text-sm font-semibold text-white/75 hover:bg-white/10 hover:text-white">{x.label}</Link>)}
-  </nav>;
+const advanced=[
+ {href:"/app/produits",label:"Tous les produits"},
+ {href:"/app/offres-implantation",label:"Offres et packs"},
+ {href:"/app/conditions",label:"Conditions fournisseurs"},
+ {href:"/app/commissions",label:"Commissions & primes"},
+ {href:"/app/qualite",label:"Contrôle qualité"},
+ {href:"/app/acces",label:"Accès B2B"},
+ {href:"/app/althesia",label:"Sources Althesia"},
+ {href:"/app/demo",label:"Pilote Vitalora TEST"},
+];
+export function OwnerNavigation(){
+ return <nav aria-label="Navigation du cockpit" className="space-y-2">
+   <div className="grid gap-1">
+     {main.map(x=><Link key={x.href} href={x.href}
+       className="rounded-lg px-4 py-3 text-sm font-semibold text-white/85 hover:bg-white/10 hover:text-white">
+       {x.label}
+     </Link>)}
+   </div>
+   <details className="rounded-lg border border-white/15">
+     <summary className="cursor-pointer px-4 py-3 text-xs font-bold uppercase tracking-wider text-white/65 hover:text-white">
+       Paramètres avancés
+     </summary>
+     <div className="grid gap-0.5 border-t border-white/10 p-2">
+       {advanced.map(x=><Link key={x.href} href={x.href}
+         className="rounded-md px-3 py-2.5 text-xs text-white/75 hover:bg-white/10 hover:text-white">
+         {x.label}
+       </Link>)}
+     </div>
+   </details>
+ </nav>;
 }
