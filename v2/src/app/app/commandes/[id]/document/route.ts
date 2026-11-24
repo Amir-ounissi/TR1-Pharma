@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 
 const escape = (value: unknown) => String(value ?? "").replace(/[&<>"']/g, c => ({
   "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
-}[c] ?? c));
+}[c as "&"|"<"|">"|'"'|"'"] ?? c));
 const money = (value: unknown) => Number(value).toLocaleString("fr-FR",{style:"currency",currency:"EUR"});
 
 export async function GET(_request:Request,{params}:{params:Promise<{id:string}>}) {
