@@ -13,7 +13,7 @@ export type TestAccountState = {
   message: string;
 };
 
-export const initialTestAccountState: TestAccountState = { kind: "idle", message: "" };
+
 
 async function linkIfConfirmed(db: Awaited<ReturnType<typeof requireOwner>>["db"]): Promise<TestAccountState> {
   const { error } = await db.rpc("link_pharmacy_account", {

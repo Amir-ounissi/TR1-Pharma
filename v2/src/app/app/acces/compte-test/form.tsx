@@ -4,8 +4,10 @@ import { useActionState } from "react";
 import {
   createPilotTestAccount,
   finalizePilotTestAccount,
-  initialTestAccountState,
 } from "./actions";
+import type { TestAccountState } from "./actions";
+
+const initialTestAccountState: TestAccountState = { kind: "idle", message: "" };
 
 export function PharmacyTestSetupForm() {
   const [createState, createAction, creating] = useActionState(createPilotTestAccount, initialTestAccountState);
