@@ -23,7 +23,7 @@ export default async function RevenusPage() {
   };
   const estimated=confirmed.map(estimate).filter((x):x is number=>x!==null);
   return <div className="space-y-6 pb-10">
-    <header><p className="text-xs font-bold uppercase tracking-widest text-[#a55925]">TR1 · Confidentiel</p><h1 className="mt-2 text-3xl font-bold">Mes revenus TR1</h1><p className="mt-2 max-w-3xl text-sm text-[#69717d]">Suivi du CA apporté aux marques et simulations de commissions. Les demandes ne sont ni des factures ni des encaissements. Les montants ci-dessous portent sur les {rows.length} demandes les plus récentes ({orders.count??rows.length} au total).</p></header>
+    <header><Link href="/app/revenus/registre" className="mb-4 inline-block rounded-lg bg-[#142941] px-4 py-2 text-sm font-bold text-white">Ouvrir le registre financier</Link><p className="text-xs font-bold uppercase tracking-widest text-[#a55925]">TR1 · Confidentiel</p><h1 className="mt-2 text-3xl font-bold">Mes revenus TR1</h1><p className="mt-2 max-w-3xl text-sm text-[#69717d]">Suivi du CA apporté aux marques et simulations de commissions. Les demandes ne sont ni des factures ni des encaissements. Les montants ci-dessous portent sur les {rows.length} demandes les plus récentes ({orders.count??rows.length} au total).</p></header>
     <section className="grid gap-3 sm:grid-cols-3">
       {[["Demandes non refusées",money(sum(active))],["Demandes confirmées / clôturées",money(sum(confirmed))],["Commission théorique éligible",estimated.length?money(estimated.reduce((a,b)=>a+b,0)):"Non calculable"]].map(([label,value])=><div key={label} className="rounded-xl border bg-white p-5"><p className="text-xs text-[#69717d]">{label}</p><p className="mt-2 text-2xl font-bold">{value}</p></div>)}
     </section>
