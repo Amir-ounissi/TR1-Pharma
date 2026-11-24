@@ -1,55 +1,114 @@
 import Link from "next/link";
-import { requireOwner } from "@/lib/auth";
-import { createBrandAction, setBrandActiveAction } from "../actions";
-export default async function BrandsPage() {
-  const { db } = await requireOwner();
-  const [b,p]=await Promise.all([
+import {requireOwner} from "@/lib/auth";
+import {createBrandAction} from "../actions";
+import {ArrowRight,Boxes,CheckCircle2,ClipboardList,Search,ShieldAlert,Tag} from "lucide-react";
+
+export default async function BrandHub({searchParams}:{
+  searchParams:Promise<{q?:string}>
+}){
+  const {db}=await requireOwner();
+  const {q}=await searchParams;
+  const search=(q??"").trim().toLocaleLowerCase("fr").slice(0,80);
+  const [b,p,o,c,t,d]=await Promise.all([
     db.from("brands").select("id,name,slug,active").order("name"),
-    db.from("products").select("id,brand_id,published,requires_review"),
+    db.from("products").select("id,brand_id,published,requires_review,price_verified,image_url"),
+    db.from("brand_implantation_offers").select("id,brand_id,published,verification_status"),
+    db.from("brand_commission_settings").select("brand_id,rate_percent,review_status"),
+    db.from("brand_trade_terms").select("brand_id,verified"),
+    db.from("brand_discovery_directory").select("brand_id,discoverable"),
   ]);
-  if(b.error||p.error)throw new Error("Impossible de charger les marques.");
-  const brands=b.data||[],products=p.data||[];
-  return <div className="space-y-6">
-    <div><h1 className="text-3xl font-bold">Mes marques</h1>
-      <p className="mt-2 text-sm text-[#69717d]">Gestion des gammes, des conditions et de la visibilité dans le catalogue professionnel.</p>
-      <div className="mt-3 flex flex-wrap gap-4 text-sm font-semibold">
-        <Link href="/app/produits" className="underline">Catalogue produits</Link>
-        <Link href="/app/conditions" className="underline">Conditions commerciales</Link>
-      </div>
-    </div>
-    <div className="grid gap-4 md:grid-cols-2">
-      {brands.map(x=>{
-        const items=products.filter(p=>p.brand_id===x.id);
-        return <section key={x.id} className="rounded-xl border bg-white p-5">
-          <div className="flex justify-between gap-3">
-            <div><h2 className="text-xl font-bold">{x.name}</h2><p className="mt-1 text-xs text-[#69717d]">{x.slug}</p></div>
-            <span className="self-start text-xs font-semibold text-[#69717d]">{x.active?"Active":"Brouillon"}</span>
-          </div>
-          <div className="mt-5 flex flex-wrap gap-4 text-sm">
-            <span><strong>{items.length}</strong> références</span>
-            <span><strong>{items.filter(p=>p.published).length}</strong> publiées</span>
-            <span><strong>{items.filter(p=>p.requires_review).length}</strong> à vérifier</span>
-          </div>
-          <div className="mt-5 flex flex-wrap items-center gap-3">
-            <Link href={"/app/produits?marque="+x.id} className="rounded-lg border px-3 py-2 text-xs font-semibold">Produits</Link>
-            <Link href={"/app/conditions?marque="+x.id} className="rounded-lg border px-3 py-2 text-xs font-semibold">Conditions</Link>
-            <form action={setBrandActiveAction}>
-              <input type="hidden" name="brand_id" value={x.id}/>
-              <input type="hidden" name="active" value={x.active?"false":"true"}/>
-              <button className="rounded-lg bg-[#142941] px-3 py-2 text-xs font-bold text-white">{x.active?"Désactiver":"Activer la marque"}</button>
-            </form>
-          </div>
-          {!x.active?<p className="mt-4 text-xs text-[#69717d]">Invisible dans le catalogue tant qu'elle est inactive.</p>:null}
-        </section>;
+  if([b,p,o,c,t,d].some(x=>x.error))throw new Error("Gestion des marques indisponible.");
+  const brands=b.data??[],products=p.data??[],offers=o.data??[],commissions=c.data??[],
+    terms=t.data??[],directory=d.data??[];
+  const visible=brands.filter(x=>!search||x.name.toLocaleLowerCase("fr").includes(search)||x.slug.includes(search));
+  const readyBrands=brands.filter(x=>x.active).length;
+  const discovers=directory.filter(x=>x.discoverable).length;
+  const drafts=offers.filter(x=>x.verification_status!=="verified").length;
+  return <div className="space-y-7 pb-12">
+    <header>
+      <p className="text-xs font-bold uppercase tracking-[0.17em] text-[#a35f2c]">TR1 PHARMA · Cockpit administrateur</p>
+      <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-[#142941]">Gestion des marques</h1>
+      <p className="mt-2 max-w-3xl text-sm leading-6 text-[#677a88]">
+        Un seul point d'entrée pour les produits, les packs d'implantation, les conditions fournisseur,
+        les commissions et la visibilité des marques.
+      </p>
+    </header>
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      {[
+        ["Marques gérées",brands.length,Boxes],
+        ["Dans la découverte",discovers,Tag],
+        ["Catalogues commerciaux actifs",readyBrands,CheckCircle2],
+        ["Offres à confirmer",drafts,ClipboardList],
+      ].map(([label,count,Icon])=>{
+        const Symbol=Icon as typeof Boxes;
+        return <div key={String(label)} className="rounded-xl border border-[#e0e6e9] bg-white p-5">
+          <Symbol size={20} className="text-[#54768a]"/>
+          <p className="mt-3 text-xs font-semibold text-[#6c7e8a]">{String(label)}</p>
+          <p className="mt-1 text-3xl font-extrabold tabular-nums text-[#142941]">{String(count)}</p>
+        </div>;
       })}
     </div>
-    <section className="rounded-xl border bg-white p-5">
-      <h2 className="text-lg font-bold">Ajouter une marque</h2>
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <form method="GET" className="flex min-w-[230px] flex-1 items-center gap-2 rounded-xl border bg-white px-3 py-2 sm:max-w-md">
+        <Search size={16} className="shrink-0 text-[#718594]"/>
+        <input type="search" name="q" defaultValue={q??""} placeholder="Rechercher une marque…"
+          className="min-w-0 flex-1 bg-transparent p-1 text-sm outline-none"/>
+        <button className="rounded-md bg-[#142941] px-4 py-2 text-xs font-semibold text-white">Chercher</button>
+      </form>
+      <Link href="/app/implantations" className="rounded-lg border bg-white px-4 py-3 text-xs font-semibold text-[#284f67]">Suivi des implantations pharmacies</Link>
+    </div>
+    <section className="grid gap-4 md:grid-cols-2">
+      {visible.map(brand=>{
+        const items=products.filter(x=>x.brand_id===brand.id);
+        const brandOffers=offers.filter(x=>x.brand_id===brand.id);
+        const commission=commissions.find(x=>x.brand_id===brand.id);
+        const verifiedTerm=terms.find(x=>x.brand_id===brand.id)?.verified??false;
+        const isDiscoverable=directory.some(x=>x.brand_id===brand.id&&x.discoverable);
+        const issues=items.filter(x=>x.requires_review||!x.price_verified||!x.image_url).length;
+        const verifiedOffers=brandOffers.filter(x=>x.verification_status==="verified").length;
+        return <article key={brand.id} className="flex flex-col overflow-hidden rounded-xl border border-[#e0e6e9] bg-white shadow-[0_3px_15px_rgb(14_29_49/0.035)]">
+          <div className="flex items-start justify-between gap-4 px-6 pt-6">
+            <div>
+              <h2 className="text-xl font-extrabold text-[#142941]">{brand.name}</h2>
+              <p className="mt-1 font-mono text-[11px] text-[#87939c]">{brand.slug}</p>
+            </div>
+            <span className={"rounded-lg px-3 py-1.5 text-[11px] font-bold "+(brand.active?"bg-green-50 text-green-800":"bg-[#eef2f4] text-[#5f7180]")}>
+              {brand.active?"Catalogue commercial actif":"Catalogue commercial fermé"}
+            </span>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2 px-6">
+            <span className={"rounded-md px-2 py-1 text-[11px] font-semibold "+(isDiscoverable?"bg-[#eaf1f5] text-[#315c75]":"bg-[#f3f5f6] text-[#75838d]")}>
+              {isDiscoverable?"Visible dans Découvrir":"Non visible dans Découvrir"}
+            </span>
+            {issues>0?<span className="inline-flex items-center gap-1 rounded-md bg-[#fff4e6] px-2 py-1 text-[11px] font-semibold text-[#8d602d]">
+              <ShieldAlert size={13}/> {issues} fiches à vérifier
+            </span>:null}
+          </div>
+          <div className="mt-5 grid grid-cols-2 gap-4 border-y border-[#ebeff1] bg-[#fafbfb] px-6 py-4 text-sm">
+            <div><strong className="text-lg text-[#142941]">{items.length}</strong><p className="text-xs text-[#71808a]">Références · {items.filter(x=>x.published).length} publiées</p></div>
+            <div><strong className="text-lg text-[#142941]">{brandOffers.length}</strong><p className="text-xs text-[#71808a]">Offres · {verifiedOffers} confirmées</p></div>
+            <div><p className="font-semibold">{verifiedTerm?"Vérifiées":"À vérifier"}</p><p className="text-xs text-[#71808a]">Conditions fournisseur</p></div>
+            <div><p className="font-semibold">{commission?Number(commission.rate_percent).toLocaleString("fr-FR")+" %":"Non renseignée"}</p>
+              <p className="text-xs text-[#71808a]">Commission TR1 {commission?.review_status==="confirmed"?"confirmée":"non confirmée"}</p></div>
+          </div>
+          <div className="mt-auto flex flex-wrap items-center justify-between gap-3 px-6 py-5">
+            <p className="text-xs text-[#7d8992]">Gérer sans activer automatiquement la vente.</p>
+            <Link href={"/app/marques/"+brand.id} className="inline-flex items-center gap-2 rounded-lg bg-[#142941] px-5 py-3 text-sm font-bold text-white hover:bg-[#29445d]">
+              Gérer {brand.name} <ArrowRight size={15}/>
+            </Link>
+          </div>
+        </article>;
+      })}
+    </section>
+    {!visible.length?<p className="rounded-xl border bg-white p-7 text-sm text-[#6d7c87]">Aucune marque ne correspond à ta recherche.</p>:null}
+    <details className="rounded-xl border bg-white p-6">
+      <summary className="cursor-pointer text-base font-bold text-[#142941]">Ajouter une nouvelle marque</summary>
+      <p className="mt-3 text-xs text-[#6e7e89]">La marque est créée inactive, sans produits publiés ni rémunération attribuée.</p>
       <form action={createBrandAction} className="mt-4 grid gap-3 md:grid-cols-3">
         <input name="name" required minLength={2} placeholder="Nom de la marque" className="rounded-lg border p-3 text-sm"/>
         <input name="slug" required pattern="[a-z0-9-]+" placeholder="identifiant-url" className="rounded-lg border p-3 text-sm"/>
-        <button className="rounded-lg bg-[#142941] px-4 py-3 text-sm font-semibold text-white">Créer la marque en brouillon</button>
+        <button className="rounded-lg bg-[#142941] px-4 py-3 text-sm font-semibold text-white">Créer en brouillon</button>
       </form>
-    </section>
+    </details>
   </div>;
 }
