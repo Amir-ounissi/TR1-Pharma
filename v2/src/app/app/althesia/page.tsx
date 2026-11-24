@@ -49,8 +49,8 @@ export default async function AlthesiaQuality({searchParams}:{searchParams:Promi
         ["Références au catalogue",products.length],
         ["Références archivées",historical.length],
         ["Visuels manquants",products.filter(x=>!x.image_url).length],
-        ["Références sous vigilance CBD",specs.filter(x=>x.market_status==="food_cbd_blocked").length],
-        ["Offres à reconfirmer",offers.filter(x=>!x.price_confirmed).length],
+        ["Références sous vigilance CBD",specs.filter(x=>x.market_status==="food_cbd_blocked"&&products.some(p=>p.id===x.product_id)).length],
+        ["Offres à reconfirmer",offers.filter(x=>!x.price_confirmed&&products.some(p=>p.id===x.product_id)).length],
       ].map(([name,value])=><div key={name} className="rounded-xl border bg-white p-5">
         <p className="text-xs font-semibold text-[#687986]">{name}</p>
         <p className="mt-3 text-3xl font-extrabold">{value}</p>

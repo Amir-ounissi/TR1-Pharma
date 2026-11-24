@@ -7,17 +7,22 @@ type Filters={marque?:string;statut?:string;confirmation?:string;refus?:string;q
 export default async function PhotoQuality({searchParams}:{searchParams:Promise<Filters>}) {
  const {db}=await requireOwner();
  const filters=await searchParams;
- const [brandsResult,productsResult,auditResult]=await Promise.all([
+ const [brandsResult,productsResult,auditResult,stoppedResult]=await Promise.all([
   db.from("brands").select("id,name,slug").order("name"),
   db.from("products").select("id,brand_id,name,ean,format,sku,image_url,published")
     .order("name").limit(350),
   db.from("product_media_audit")
     .select("product_id,candidate_image_url,source_product_url,source_product_name,matched_by,match_score,image_review_status,applied_to_draft")
     .order("detected_at",{ascending:false}).limit(350),
+   db.from("product_discontinuations").select("brand_id,ean"),
  ]);
- if(brandsResult.error||productsResult.error||auditResult.error)
+ if(brandsResult.error||productsResult.error||auditResult.error||stoppedResult.error)
   throw new Error("Impossible de charger la vérification des visuels.");
- const brands=brandsResult.data??[],products=productsResult.data??[],audits=auditResult.data??[];
+ const brands=brandsResult.data??[],allProducts=productsResult.data??[],allAudits=auditResult.data??[];
+ const retired=new Set((stoppedResult.data??[]).map(x=>x.brand_id+":"+x.ean));
+ const products=allProducts.filter(x=>!retired.has(x.brand_id+":"+x.ean));
+ const activeIds=new Set(products.map(x=>x.id));
+ const audits=allAudits.filter(x=>activeIds.has(x.product_id));
  const brandId=brands.find(x=>x.slug===filters.marque)?.id;
  const status=["attente","sans-photo","valides","tous"].includes(filters.statut??"")?filters.statut:"attente";
  const term=(filters.q??"").toLocaleLowerCase("fr").slice(0,90);

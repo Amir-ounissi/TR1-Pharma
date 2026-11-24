@@ -21,7 +21,8 @@ export default async function ProductsPage({searchParams}:{searchParams:Promise<
     (!filters.statut||
       (filters.statut==="publies"&&x.published)||
       (filters.statut==="a-verifier"&&(x.requires_review||!x.price_verified))||
-      (filters.statut==="brouillons"&&!x.published))
+      (filters.statut==="brouillons"&&!x.published)||
+      (filters.statut==="archives"&&isArchived(x)))
   );
   const pending=active.filter(x=>x.requires_review||!x.price_verified).length;
   return <div className="space-y-6">
