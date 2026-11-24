@@ -14,6 +14,7 @@ const advanced=[
  {href:"/app/conditions",label:"Conditions fournisseurs"},
  {href:"/app/commissions",label:"Commissions & primes"},
  {href:"/app/qualite",label:"Contrôle qualité"},
+ {href:"/app/medias",label:"Photos produits & validation"},
  {href:"/app/acces",label:"Accès B2B"},
  {href:"/app/althesia",label:"Sources Althesia"},
  {href:"/app/demo",label:"Pilote Vitalora TEST"},

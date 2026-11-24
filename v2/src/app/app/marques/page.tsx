@@ -55,7 +55,12 @@ export default async function BrandHub({searchParams}:{
           className="min-w-0 flex-1 bg-transparent p-1 text-sm outline-none"/>
         <button className="rounded-md bg-[#142941] px-4 py-2 text-xs font-semibold text-white">Chercher</button>
       </form>
+      <div className="flex flex-wrap items-center gap-2">
+        <Link href="/app/medias?statut=attente" className="rounded-lg border border-[#dfc7a6] bg-[#fff9ee] px-4 py-3 text-xs font-semibold text-[#8b592a]">
+          Contrôler les photos produits
+        </Link>
       <Link href="/app/implantations" className="rounded-lg border bg-white px-4 py-3 text-xs font-semibold text-[#284f67]">Suivi des implantations pharmacies</Link>
+      </div>
     </div>
     <section className="grid gap-4 md:grid-cols-2">
       {visible.map(brand=>{
