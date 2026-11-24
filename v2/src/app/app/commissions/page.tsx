@@ -16,11 +16,11 @@ const triggerLabels:{[key:string]:string}={
 };
 const typeLabels:{[key:string]:string}={fixed:"Forfait €",per_unit:"€ par unité",percent:"% de l'assiette"};
 
-export default async function CommissionsAdmin({searchParams}:{searchParams:Promise<{enregistre?:string;prime?:string}>}) {
+export default async function CommissionsAdmin({searchParams}:{searchParams:Promise<{enregistre?:string;prime?:string;marque?:string}>}) {
   const {db}=await requireOwner();
   const params=await searchParams;
   const [brandsResult,commResult,bonusesResult,programResult]=await Promise.all([
-    db.from("brands").select("id,name,slug").in("slug",["vitalora","bloomster","noto"]).order("name"),
+    db.from("brands").select("id,name,slug").order("name"),
     db.from("brand_commission_settings").select("*"),
     db.from("brand_bonus_rules").select("*").order("created_at",{ascending:false}),
     db.from("althesia_commercial_program").select("*").eq("id","althesia").maybeSingle(),
@@ -29,10 +29,11 @@ export default async function CommissionsAdmin({searchParams}:{searchParams:Prom
     throw new Error("Impossible de charger les commissions Althesia.");
   const brands=brandsResult.data??[],comm=commResult.data??[],bonuses=bonusesResult.data??[];
   const program=programResult.data;
+  const selectedBrands=brands.filter(b=>!params.marque||params.marque===b.slug);
   return <div className="space-y-7 pb-10">
     <header>
       <p className="text-xs font-bold uppercase tracking-widest text-[#a55925]">Gestion TR1 · Confidentiel</p>
-      <h1 className="mt-2 text-3xl font-bold">Commissions & primes Althesia</h1>
+      <h1 className="mt-2 text-3xl font-bold">Commissions & primes par marque</h1>
       <p className="mt-2 max-w-3xl text-sm leading-6 text-[#697782]">
         Un paramétrage indépendant par marque. Les commissions ne sont visibles que dans le cockpit propriétaire,
         jamais sur les fiches des pharmacies.
@@ -51,13 +52,22 @@ export default async function CommissionsAdmin({searchParams}:{searchParams:Prom
     </section>
 
     <section className="rounded-xl border border-[#eadac6] bg-[#fff8ed] p-5 text-sm leading-6 text-[#85572d]">
-      <strong>Source EasyVRP : 15 % sur les références produit des trois gammes.</strong>
+      <strong>Pour Vitalora, Bloomster et Nōto : EasyVRP indique 15 % sur les références.</strong>
       <p className="mt-2">L'assiette, le fait générateur, la date d'effet, le bénéficiaire contractuel et d'éventuelles primes d'implantation ne sont pas définis dans le fichier transmis. Les règles sont donc préremplies <strong>en brouillon</strong>, sans calcul automatique de créance.</p>
       <p className="mt-2 text-xs">Source : Althesia_EasyVRP.xlsx, colonnes « Commission » et « Type Commission ».</p>
     </section>
 
-    {brands.map(b=>{
-      const c=comm.find(x=>x.brand_id===b.id),existing=bonuses.filter(x=>x.brand_id===b.id);
+    <nav aria-label="Filtrer la rémunération par marque" className="flex flex-wrap gap-2">
+      <Link href="/app/commissions" className="rounded-lg border bg-white px-3 py-2 text-xs font-semibold">Toutes les marques</Link>
+      {brands.map(b=><Link key={b.id} href={"/app/commissions?marque="+b.slug} className={"rounded-lg px-3 py-2 text-xs font-semibold "+(params.marque===b.slug?"bg-[#142941] text-white":"border bg-white")}>{b.name}</Link>)}
+    </nav>
+    {selectedBrands.map(b=>{
+      const c=comm.find(x=>x.brand_id===b.id)??{
+        brand_id:b.id,rate_percent:0,base_type:"undetermined",trigger_event:"undetermined",
+        beneficiary:"TR1 PHARMA / agent à confirmer",notes:null,
+        confirmation_reference:null,effective_from:null,review_status:"draft",
+      };
+      const existing=bonuses.filter(x=>x.brand_id===b.id);
       return <section key={b.id} className="overflow-hidden rounded-xl border bg-white">
         <header className="flex flex-wrap items-center justify-between gap-3 border-b bg-[#f7f9fa] px-6 py-5">
           <div><h2 className="text-xl font-bold">{b.name}</h2>

@@ -33,7 +33,8 @@ export async function saveBrandCommissionAction(form:FormData) {
     !data.effective_from
   )) throw new Error("Pour confirmer une commission, préciser l'assiette, le fait générateur, la date d'effet et une référence contractuelle.");
   const {db}=await requireOwner();
-  const {error}=await db.from("brand_commission_settings").update({
+  const {error}=await db.from("brand_commission_settings").upsert({
+    brand_id:data.brand_id,
     rate_percent:data.rate_percent,base_type:data.base_type,
     trigger_event:data.trigger_event,beneficiary:data.beneficiary,
     notes:data.notes||null,
@@ -41,9 +42,11 @@ export async function saveBrandCommissionAction(form:FormData) {
     effective_from:data.effective_from||null,
     review_status:confirmed?"confirmed":"draft",
     updated_at:new Date().toISOString(),
-  }).eq("brand_id",data.brand_id);
+  },{onConflict:"brand_id"});
   if(error)throw new Error("Enregistrement de la commission impossible : "+error.message);
   revalidatePath("/app/commissions");
+  revalidatePath("/app/marques");
+  revalidatePath("/app/marques/"+data.brand_id);
   redirect("/app/commissions?enregistre=1");
 }
 
