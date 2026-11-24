@@ -2,9 +2,10 @@ import Link from "next/link";
 import {ArrowRight,Compass,FileText,Info,ShieldAlert} from "lucide-react";
 import {loadPharmacyBrandDirectory} from "@/lib/pharmacy-brands";
 import {requestBrandIntroductionAction} from "./actions";
+import {loadPharmacyImplantationOffers} from "@/lib/implantation-offers";
 
 export default async function PharmacyDiscovery({searchParams}:{searchParams:Promise<{demande?:string,erreur?:string}>}) {
-  const {brands}=await loadPharmacyBrandDirectory();
+  const [{brands},offers]=await Promise.all([loadPharmacyBrandDirectory(),loadPharmacyImplantationOffers()]);
   const params=await searchParams;
   const other=brands.filter(b=>b.status!=="implanted");
   return <div className="space-y-6 pb-12">
@@ -31,6 +32,16 @@ export default async function PharmacyDiscovery({searchParams}:{searchParams:Pro
           <p className="mt-3 text-xs leading-5 text-[#71808b]">{b.catalogue_note||"Conditions à confirmer avec le fournisseur."}</p>
         </div>
         {b.slug==="noto"?<p className="flex gap-2 rounded-md bg-[#fff5ea] p-3 text-xs text-[#885126]"><ShieldAlert size={16} className="shrink-0"/>Certaines références contenant des cannabinoïdes sont soumises à une vérification juridique et ne sont pas proposées à la vente.</p>:null}
+        <div className="rounded-lg border border-[#e4ebee] bg-[#f7f9fa] p-3">
+          <p className="text-xs font-bold text-[#24465b]">Conditions d'implantation</p>
+          <p className="mt-1 text-sm text-[#637583]">{offers.filter(o=>o.brand_id===b.brand_id).length
+            ? String(offers.filter(o=>o.brand_id===b.brand_id).length)+" offre(s) et palier(s) à comparer"
+            : "Conditions à confirmer avec la marque"}</p>
+          <Link href={"/catalogue/decouvrir/"+b.slug}
+            className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-[#195671] hover:underline">
+            Voir les offres et packs <ArrowRight size={15}/>
+          </Link>
+        </div>
         <div className="mt-auto space-y-3 border-t border-[#edf0f1] pt-4">
           {b.showroom_available && b.demo_access ?
             <Link href={"/catalogue/althesia?marque="+b.slug} className="flex items-center gap-2 text-sm font-semibold text-[#1a5572] hover:underline">
