@@ -33,7 +33,7 @@ export default async function BrandSettingsPage({params,searchParams}:{
   .select("id,name,slug,active").eq("id",id).maybeSingle();
  if(brandError)throw new Error("Impossible de charger la marque.");
  if(!brand)notFound();
- const [p,o,t,c,bonus,d,r,lead]=await Promise.all([
+ const [p,o,t,c,bonus,d,r,lead,stopped]=await Promise.all([
   db.from("products").select("id,name,ean,sku,published,requires_review,price_verified,image_url,fr_market_checked")
     .eq("brand_id",id).order("name"),
   db.from("brand_implantation_offers").select("id,title,offer_kind,min_distinct_references,min_units_per_reference,free_units_per_reference,min_order_ht,verification_status,pilot_visible,published")
@@ -44,9 +44,13 @@ export default async function BrandSettingsPage({params,searchParams}:{
   db.from("brand_discovery_directory").select("*").eq("brand_id",id).maybeSingle(),
   db.from("pharmacy_brand_relationships").select("pharmacy_id,status").eq("brand_id",id),
   db.from("brand_referencing_interests").select("id,status").eq("brand_id",id),
+  db.from("product_discontinuations").select("ean,discontinued_on").eq("brand_id",id),
  ]);
- if([p,o,t,c,bonus,d,r,lead].some(x=>x.error))throw new Error("Données de la marque indisponibles.");
- const products=p.data??[],offers=o.data??[],terms=t.data,commission=c.data;
+ if([p,o,t,c,bonus,d,r,lead,stopped].some(x=>x.error))throw new Error("Données de la marque indisponibles.");
+ const allProducts=p.data??[],retiredEans=new Set((stopped.data??[]).map(x=>x.ean));
+ const products=allProducts.filter(x=>!retiredEans.has(x.ean));
+ const retiredCount=allProducts.length-products.length;
+ const offers=o.data??[],terms=t.data,commission=c.data;
  const bonuses=bonus.data??[],directory=d.data,relationships=r.data??[],interests=lead.data??[];
  const published=products.filter(x=>x.published).length;
  const unchecked=products.filter(x=>x.requires_review||!x.price_verified||!x.image_url||!x.fr_market_checked).length;
@@ -79,7 +83,7 @@ export default async function BrandSettingsPage({params,searchParams}:{
    </div>
   </header>
   <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-   <Metric name="Références" value={products.length} detail={published+" publiées"}/>
+   <Metric name="Références au catalogue" value={products.length} detail={published+" publiées · "+retiredCount+" archives"}/>
    <Metric name="Offres & packs" value={offers.length} detail={confirmed+" confirmé(s)"}/>
    <Metric name="Pharmacies implantées" value={implanted} detail="Statuts suivis par officine"/>
    <Metric name="Demandes de présentation" value={interests.filter(x=>x.status!=="closed").length}/>
@@ -121,8 +125,11 @@ export default async function BrandSettingsPage({params,searchParams}:{
   </div>:null}
   {tab==="produits"?<section className="rounded-xl border bg-white p-6">
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <div><h2 className="text-xl font-bold">Catalogue {brand.name}</h2><p className="mt-2 text-sm text-[#768591]">{products.length} références · {unchecked} fiches à vérifier.</p></div>
-      <ActionLink href={productsLink}>Gérer les produits</ActionLink>
+      <div><h2 className="text-xl font-bold">Catalogue {brand.name}</h2><p className="mt-2 text-sm text-[#768591]">{products.length} références au catalogue · {retiredCount} archivées · {unchecked} fiches à vérifier.</p></div>
+      <div className="flex flex-wrap items-center gap-2">
+        {retiredCount>0?<Link href={"/app/produits?marque="+brand.id+"&statut=archives"} className="rounded-lg border px-4 py-3 text-xs font-bold">Voir les archives ({retiredCount})</Link>:null}
+        <ActionLink href={productsLink}>Gérer les produits</ActionLink>
+      </div>
     </div>
     <div className="mt-5 divide-y">
       {products.slice(0,40).map(x=><div key={x.id} className="flex flex-wrap justify-between gap-3 py-3">

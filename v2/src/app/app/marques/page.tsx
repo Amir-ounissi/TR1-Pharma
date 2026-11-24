@@ -9,16 +9,19 @@ export default async function BrandHub({searchParams}:{
   const {db}=await requireOwner();
   const {q}=await searchParams;
   const search=(q??"").trim().toLocaleLowerCase("fr").slice(0,80);
-  const [b,p,o,c,t,d]=await Promise.all([
+  const [b,p,o,c,t,d,stopped]=await Promise.all([
     db.from("brands").select("id,name,slug,active").order("name"),
-    db.from("products").select("id,brand_id,published,requires_review,price_verified,image_url"),
+    db.from("products").select("id,brand_id,ean,published,requires_review,price_verified,image_url"),
     db.from("brand_implantation_offers").select("id,brand_id,published,verification_status"),
     db.from("brand_commission_settings").select("brand_id,rate_percent,review_status"),
     db.from("brand_trade_terms").select("brand_id,verified"),
     db.from("brand_discovery_directory").select("brand_id,discoverable"),
+    db.from("product_discontinuations").select("brand_id,ean"),
   ]);
-  if([b,p,o,c,t,d].some(x=>x.error))throw new Error("Gestion des marques indisponible.");
-  const brands=b.data??[],products=p.data??[],offers=o.data??[],commissions=c.data??[],
+  if([b,p,o,c,t,d,stopped].some(x=>x.error))throw new Error("Gestion des marques indisponible.");
+  const brands=b.data??[],allProducts=p.data??[],offers=o.data??[],commissions=c.data??[],
+    retired=new Set((stopped.data??[]).map(x=>x.brand_id+":"+x.ean)),
+    products=allProducts.filter(x=>!retired.has(x.brand_id+":"+x.ean)),
     terms=t.data??[],directory=d.data??[];
   const visible=brands.filter(x=>!search||x.name.toLocaleLowerCase("fr").includes(search)||x.slug.includes(search));
   const readyBrands=brands.filter(x=>x.active).length;
@@ -90,7 +93,7 @@ export default async function BrandHub({searchParams}:{
             </span>:null}
           </div>
           <div className="mt-5 grid grid-cols-2 gap-4 border-y border-[#ebeff1] bg-[#fafbfb] px-6 py-4 text-sm">
-            <div><strong className="text-lg text-[#142941]">{items.length}</strong><p className="text-xs text-[#71808a]">Références · {items.filter(x=>x.published).length} publiées</p></div>
+            <div><strong className="text-lg text-[#142941]">{items.length}</strong><p className="text-xs text-[#71808a]">Références au catalogue · {items.filter(x=>x.published).length} publiées · {allProducts.filter(x=>x.brand_id===brand.id).length-items.length} archivées</p></div>
             <div><strong className="text-lg text-[#142941]">{brandOffers.length}</strong><p className="text-xs text-[#71808a]">Offres · {verifiedOffers} confirmées</p></div>
             <div><p className="font-semibold">{verifiedTerm?"Vérifiées":"À vérifier"}</p><p className="text-xs text-[#71808a]">Conditions fournisseur</p></div>
             <div><p className="font-semibold">{commission?Number(commission.rate_percent).toLocaleString("fr-FR")+" %":"Non renseignée"}</p>
