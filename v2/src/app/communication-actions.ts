@@ -9,7 +9,7 @@ const scopes=["all","implanted","discovery","selected"] as const;
 const fields=(form:FormData,keys:string[])=>Object.fromEntries(keys.map(k=>[k,form.get(k)??""]));
 const targetIds=(form:FormData)=>form.getAll("target_pharmacy_ids").map(String).filter(Boolean);
 function isHttpsUrl(value:string){try{return new URL(value).protocol==="https:"&&!!new URL(value).hostname;}catch{return false;}}
-function isSafeCtaUrl(value:string){if(!value)return true;if(isHttpsUrl(value))return true;if(!value.startsWith("/catalogue/")||value.startsWith("//")||value.includes("\\\\")||value.includes(".."))return false;try{const parsed=new URL(value,"https://tr1.invalid");return parsed.origin==="https://tr1.invalid"&&parsed.pathname.startsWith("/catalogue/");}catch{return false;}}
+function isSafeCtaUrl(value:string){if(!value)return true;if(isHttpsUrl(value))return true;if(!value.startsWith("/catalogue/")||value.startsWith("//")||value.includes("\\")||value.includes(".."))return false;try{const parsed=new URL(value,"https://tr1.invalid");return parsed.origin==="https://tr1.invalid"&&parsed.pathname.startsWith("/catalogue/");}catch{return false;}}
 const ctaUrlOptional=z.string().trim().max(1200).refine(isSafeCtaUrl,"URL non autorisée");
 const imageUrlOptional=z.string().trim().max(1200).refine(v=>!v||isHttpsUrl(v),"Une image HTTPS est requise.");
 const urlRequired=z.string().trim().url().refine(v=>v.startsWith("https://"),"Une URL HTTPS est requise");
