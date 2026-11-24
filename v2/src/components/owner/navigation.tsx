@@ -4,6 +4,8 @@ const links = [
   { href: "/app/pharmacies", label: "Pharmacies" },
   { href: "/app/marques", label: "Marques" },
   { href: "/app/produits", label: "Catalogue produits" },
+  { href: "/app/althesia", label: "Althesia · Sources" },
+  { href: "/app/commissions", label: "Commissions & primes" },
   { href: "/app/qualite", label: "Contrôle qualité" },
   { href: "/app/demo", label: "Pilote Vitalora · TEST" },
   { href: "/app/conditions", label: "Conditions commerciales" },

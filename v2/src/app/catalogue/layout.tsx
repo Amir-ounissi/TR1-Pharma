@@ -14,6 +14,7 @@ export default function CatalogueLayout({ children }: { children: React.ReactNod
         </div>
         <nav aria-label="Navigation de l'espace pharmacie" className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-semibold text-[#40586b] sm:gap-x-6">
           <Link href="/catalogue" className="inline-flex items-center gap-1.5 hover:text-[#0e1d31]"><LayoutGrid size={15}/> Catalogue B2B</Link>
+          <Link href="/catalogue/althesia" className="text-[#31556e] hover:text-[#142941]">Marques Althesia</Link>
           <Link href="/catalogue/demo" className="rounded-md bg-[#fff1df] px-2.5 py-2 font-bold text-[#97521e] hover:bg-[#ffe8c8]">Vitalora · TEST</Link>
           <Link href="/catalogue/demo/panier" className="inline-flex items-center gap-1.5 hover:text-[#0e1d31]"><ShoppingBag size={15}/> Panier test</Link>
           <Link href="/catalogue/demo/demandes" className="inline-flex items-center gap-1.5 hover:text-[#0e1d31]"><ClipboardList size={15}/> Simulations</Link>

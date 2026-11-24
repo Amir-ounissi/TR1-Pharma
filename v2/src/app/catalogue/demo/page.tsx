@@ -77,6 +77,11 @@ export default async function VitaloraDemo({ searchParams }: {searchParams: Prom
       </div>
     </section>
 
+    <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#dce7ec] bg-white px-5 py-4">
+      <div><p className="text-sm font-bold text-[#142941]">Découvrir Bloomster, Nōto et les conditions Althesia</p>
+        <p className="mt-1 text-xs text-[#73828e]">43 fiches techniques et commerciales en lecture seule, avec conditions par quantité et vérification des données.</p></div>
+      <Link href="/catalogue/althesia" className="rounded-lg border border-[#142941] px-4 py-3 text-xs font-bold text-[#142941] hover:bg-[#f6f8f8]">Catalogue Althesia</Link>
+    </section>
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#ebdfca] bg-[#fffbf4] px-4 py-3">
       <p className="flex items-start gap-2 text-xs leading-5 text-[#805121]">
         <ShieldCheck size={16} className="mt-0.5 shrink-0" aria-hidden="true"/>
