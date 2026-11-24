@@ -8,8 +8,10 @@ const resourceTypes=["catalogue","product_sheet","argumentaire","training","plv"
 const scopes=["all","implanted","discovery","selected"] as const;
 const fields=(form:FormData,keys:string[])=>Object.fromEntries(keys.map(k=>[k,form.get(k)??""]));
 const targetIds=(form:FormData)=>form.getAll("target_pharmacy_ids").map(String).filter(Boolean);
-const ctaUrlOptional=z.string().trim().max(1200).refine(v=>!v||( /^https:\/\/[^/\\s]+(?:\/[^\\s]*)?$/.test(v) || (/^\/catalogue\/(?!\/)[^\\s]*$/.test(v)&&!v.includes("\\\\"))),"URL non autorisée");
-const imageUrlOptional=z.string().trim().max(1200).refine(v=>!v||/^https:\/\/[^/\\s]+(?:\/[^\\s]*)?$/.test(v),"Une image HTTPS est requise.");
+function isHttpsUrl(value:string){try{return new URL(value).protocol==="https:"&&!!new URL(value).hostname;}catch{return false;}}
+function isSafeCtaUrl(value:string){if(!value)return true;if(isHttpsUrl(value))return true;if(!value.startsWith("/catalogue/")||value.startsWith("//")||value.includes("\\\\")||value.includes(".."))return false;try{const parsed=new URL(value,"https://tr1.invalid");return parsed.origin==="https://tr1.invalid"&&parsed.pathname.startsWith("/catalogue/");}catch{return false;}}
+const ctaUrlOptional=z.string().trim().max(1200).refine(isSafeCtaUrl,"URL non autorisée");
+const imageUrlOptional=z.string().trim().max(1200).refine(v=>!v||isHttpsUrl(v),"Une image HTTPS est requise.");
 const urlRequired=z.string().trim().url().refine(v=>v.startsWith("https://"),"Une URL HTTPS est requise");
 function invalidate(){for(const p of ["/app/communication","/catalogue","/catalogue/actualites","/catalogue/ressources"])revalidatePath(p);}
 export async function createAnnouncement(form:FormData){
