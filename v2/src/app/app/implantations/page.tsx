@@ -8,17 +8,18 @@ export default async function OwnerBrandInstallations({searchParams}:{
 }){
   const {db}=await requireOwner();
   const qs=await searchParams;
-  const [phResult,brandResult,portfolioResult,directoryResult,interestResult]=await Promise.all([
+  const [phResult,brandResult,portfolioResult,directoryResult,interestResult,offerResult]=await Promise.all([
     db.from("pharmacies").select("id,name,city").order("name"),
     db.from("brands").select("id,name,slug").order("name"),
     db.from("pharmacy_brand_relationships").select("pharmacy_id,brand_id,status,source_reference,owner_notes,implanted_at"),
     db.from("brand_discovery_directory").select("brand_id,discoverable,short_description"),
-    db.from("brand_referencing_interests").select("id,brand_id,pharmacy_id,note,created_at,status").order("created_at",{ascending:false}).limit(100),
+    db.from("brand_referencing_interests").select("id,brand_id,pharmacy_id,offer_id,note,created_at,status").order("created_at",{ascending:false}).limit(100),
+    db.from("brand_implantation_offers").select("id,title,brand_id"),
   ]);
-  if([phResult,brandResult,portfolioResult,directoryResult,interestResult].some(x=>x.error))
+  if([phResult,brandResult,portfolioResult,directoryResult,interestResult,offerResult].some(x=>x.error))
     throw new Error("Impossible de charger les implantations et demandes.");
   const pharmacies=phResult.data??[],brands=brandResult.data??[];
-  const portfolio=portfolioResult.data??[],directory=directoryResult.data??[],interests=interestResult.data??[];
+  const portfolio=portfolioResult.data??[],directory=directoryResult.data??[],interests=interestResult.data??[],offers=offerResult.data??[];
   const pharmacy=pharmacies.find(p=>p.id===qs.pharmacie)??pharmacies[0];
   const lookup=(brandId:string)=>portfolio.find(p=>p.pharmacy_id===pharmacy?.id&&p.brand_id===brandId);
   const brandName=(id:string)=>brands.find(b=>b.id===id)?.name||"Marque";
@@ -111,7 +112,7 @@ export default async function OwnerBrandInstallations({searchParams}:{
       <div className="mt-5 divide-y">
         {interests.length?interests.map(i=><div key={i.id} className="flex flex-wrap items-center justify-between gap-3 py-4">
           <div><p className="font-semibold">{pharmacyName(i.pharmacy_id)} · {brandName(i.brand_id)}</p>
-            <p className="mt-1 text-xs text-[#72818c]">{new Date(i.created_at).toLocaleString("fr-FR")} · {i.note||"Aucune précision"}</p></div>
+            <p className="mt-1 text-xs text-[#72818c]">{new Date(i.created_at).toLocaleString("fr-FR")} · {i.offer_id?"Offre souhaitée : "+(offers.find(o=>o.id===i.offer_id)?.title||"Offre à retrouver")+" · ":""}{i.note||"Aucune précision"}</p></div>
           <form action={updateInterestStatusAction} className="flex items-center gap-2">
             <input type="hidden" name="interest_id" value={i.id}/>
             <select name="status" defaultValue={i.status} className="rounded-lg border bg-white p-2 text-sm">
