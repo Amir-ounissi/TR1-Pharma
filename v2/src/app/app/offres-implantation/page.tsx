@@ -13,7 +13,7 @@ type Offer = {
  valid_from:string|null;valid_until:string|null;
 };
 type Brand = {id:string;name:string;slug:string};
-function OfferEditor({offer,brands}: {offer?:Offer;brands:Brand[]}) {
+function OfferEditor({offer,brands,selectedBrandId}: {offer?:Offer;brands:Brand[];selectedBrandId?:string}) {
  const field=(label:string,name:string,opts?:{number?:boolean;integer?:boolean;placeholder?:string})=>
  <label className="grid gap-1 text-xs font-semibold text-[#536b7d]" key={name}>
    {label}
@@ -25,7 +25,7 @@ function OfferEditor({offer,brands}: {offer?:Offer;brands:Brand[]}) {
  return <form action={saveImplantationOfferAction} className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
    {offer?<input type="hidden" name="offer_id" value={offer.id}/>:null}
    <label className="grid gap-1 text-xs font-semibold">Marque
-     <select name="brand_id" defaultValue={offer?.brand_id??""}
+     <select name="brand_id" defaultValue={offer?.brand_id??selectedBrandId??""}
        className="rounded-lg border bg-white p-2.5 text-sm" required>
        <option value="">Sélectionner</option>
        {brands.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}
@@ -104,6 +104,8 @@ export default async function OffersAdmin({searchParams}:{
    <header>
      <p className="text-xs font-bold uppercase tracking-widest text-[#a35c2c]">TR1 PHARMA · Conditions fournisseur</p>
      <h1 className="mt-2 text-3xl font-extrabold">Offres et packs d'implantation</h1>
+     {slug?<Link href={"/app/marques/"+selectedId+"?onglet=implantation"}
+       className="mt-3 inline-block text-sm font-bold text-[#225674] underline">Retour à la fiche {brands.find(b=>b.id===selectedId)?.name}</Link>:null}
      <p className="mt-2 max-w-4xl text-sm leading-6 text-[#697b88]">
        Gère séparément chaque proposition : packs libres ou imposés, minimum de références,
        quantités, UG, prix, PLV, formations et franco. Le statut d'implantation d'une pharmacie
@@ -130,7 +132,7 @@ export default async function OffersAdmin({searchParams}:{
    <section className="rounded-xl border bg-white p-6">
      <h2 className="text-xl font-bold">Ajouter une nouvelle offre de marque</h2>
      <p className="my-3 text-sm text-[#6a7b87]">Utilise « Pack fixe » lorsqu'une sélection précise de références est imposée. Tu ajouteras ensuite chaque ligne du pack.</p>
-     <OfferEditor brands={brands}/>
+     <OfferEditor brands={brands} selectedBrandId={selectedId}/>
    </section>
    <div className="flex flex-wrap items-center justify-between gap-3">
      <h2 className="text-xl font-bold">Offres existantes</h2>

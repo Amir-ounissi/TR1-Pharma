@@ -51,6 +51,13 @@ export async function saveImplantationOfferAction(form:FormData){
  const {db}=await requireOwner();
  const data=parseOffer(form);
  const offerId=form.get("offer_id");
+ if(offerId){
+   const id=z.uuid().parse(offerId);
+   const {data:existing,error:lookupError}=await db.from("brand_implantation_offers")
+     .select("brand_id").eq("id",id).single();
+   if(lookupError||!existing||existing.brand_id!==data.brand_id)
+     throw new Error("Une offre existante ne peut pas changer de marque. Crée une nouvelle offre.");
+ }
  const result=offerId
    ? await db.from("brand_implantation_offers").update(data).eq("id",z.uuid().parse(offerId))
    : await db.from("brand_implantation_offers").insert(data);
