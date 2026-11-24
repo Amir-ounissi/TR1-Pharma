@@ -1,77 +1,48 @@
 import Link from "next/link";
-import { requirePharmacy } from "@/lib/auth";
-import { submitProductRequest } from "./request-actions";
+import {ArrowRight,Building2,Compass,PackageCheck,ShieldCheck} from "lucide-react";
+import {loadPharmacyBrandDirectory} from "@/lib/pharmacy-brands";
 
-export default async function PharmacyCatalogue() {
-  const { db, user } = await requirePharmacy();
-  const { data: memberships, error: membershipError } = await db.from("pharmacy_memberships")
-    .select("pharmacy_id,pharmacies(name,city)").eq("user_id", user.id).eq("active", true).limit(1);
-  if (membershipError) throw new Error("Impossible de vérifier votre pharmacie.");
-  const membership = memberships?.[0];
-  if (!membership) return <section className="rounded-xl border bg-white p-8">
-    <h1 className="text-2xl font-bold">Accès en attente</h1>
-    <p className="mt-3 text-sm text-[#69717d]">Votre compte doit être rattaché à une pharmacie validée avant de consulter les produits.</p>
-  </section>;
-  const pharmacyId=membership.pharmacy_id;
-  const {data:grants,error:grantError}=await db.from("pharmacy_brand_access")
-    .select("brand_id").eq("pharmacy_id",pharmacyId).eq("active",true);
-  if(grantError)throw new Error("Autorisations indisponibles.");
-  const ids=(grants||[]).map(g=>g.brand_id);
-  const [productResult,brandResult]=await Promise.all([
-    ids.length?db.from("products").select("id,brand_id,name,sku,ean,description,format,image_url,price_ht,min_qty,qty_step").eq("published",true).in("brand_id",ids).order("name").limit(200):Promise.resolve({data:[],error:null}),
-    ids.length?db.from("brands").select("id,name,active").eq("active",true).in("id",ids):Promise.resolve({data:[],error:null}),
-  ]);
-  if(productResult.error||brandResult.error)throw new Error("Catalogue indisponible.");
-  const activeBrands=new Map((brandResult.data||[]).map(b=>[b.id,b.name]));
-  const products=(productResult.data||[]).filter(x=>activeBrands.has(x.brand_id));
-  const productIds=products.map(p=>p.id);
-  const [contractPrices,globalTiers]=await Promise.all([
-    productIds.length?db.from("price_rules").select("product_id,min_qty,price_ht").eq("pharmacy_id",pharmacyId).in("product_id",productIds):Promise.resolve({data:[],error:null}),
-    productIds.length?db.from("product_quantity_tiers").select("product_id,min_qty,price_ht,verified").in("product_id",productIds).eq("verified",true):Promise.resolve({data:[],error:null}),
-  ]);
-  if(contractPrices.error||globalTiers.error)throw new Error("Tarifs indisponibles.");
-  function priceAt(productId:string,qty:number,base:number) {
-    const individual=(contractPrices.data||[]).filter(x=>x.product_id===productId&&x.min_qty<=qty).sort((a,b)=>b.min_qty-a.min_qty);
-    if(individual.length)return Number(individual[0].price_ht);
-    const published=(globalTiers.data||[]).filter(x=>x.product_id===productId&&x.min_qty<=qty).sort((a,b)=>b.min_qty-a.min_qty);
-    return published.length?Number(published[0].price_ht):base;
-  }
-  return <div className="space-y-7">
-    <div><p className="text-xs font-bold uppercase tracking-wider text-[#ad4b08]">Espace réservé · TR1 PHARMA</p>
-      <h1 className="mt-2 text-3xl font-bold">Votre catalogue professionnel</h1>
-      <p className="mt-2 text-sm text-[#69717d]">Uniquement les marques et les prix autorisés pour votre pharmacie.</p>
-      <Link href="/catalogue/mes-demandes" className="mt-3 inline-block text-sm font-bold underline">Mes demandes de réassort</Link>
-      <section className="mt-5 rounded-lg border border-[#e4c89f] bg-[#fff8ec] p-4">
-        <p className="text-xs font-extrabold uppercase tracking-wide text-[#ad4b08]">Démonstration réservée aux comptes pilotes</p>
-        <h2 className="mt-2 text-lg font-bold">Tester Vitalora sans commander</h2>
-        <p className="mt-2 text-sm">18 références, visuels, paliers de prix fictifs, panier et demande simulée. Aucun achat ni transmission au fournisseur.</p>
-        <Link href="/catalogue/demo" className="mt-3 inline-block rounded-lg bg-[#142941] px-4 py-3 text-sm font-bold text-white">Ouvrir Vitalora en mode TEST</Link>
-      </section>
+export default async function PharmacyHome() {
+  const {brands}=await loadPharmacyBrandDirectory();
+  const installed=brands.filter(b=>b.status==="implanted");
+  const other=brands.filter(b=>b.status!=="implanted");
+  return <div className="space-y-7 pb-12">
+    <div className="rounded-2xl bg-[#142941] px-6 py-8 text-white sm:px-9">
+      <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#e8b180]">TR1 PHARMA · ESPACE OFFICINE</p>
+      <h1 className="mt-3 text-3xl font-extrabold sm:text-4xl">Votre espace marques</h1>
+      <p className="mt-3 max-w-2xl text-sm leading-6 text-[#dce4ea]">Deux parcours adaptés à votre officine : suivre les marques déjà référencées ou découvrir de nouvelles gammes à implanter.</p>
     </div>
-    {products.length?<div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-      {products.map(p=>{
-        const unit=priceAt(p.id,p.min_qty,Number(p.price_ht));
-        const breaks=(globalTiers.data||[]).filter(x=>x.product_id===p.id).sort((a,b)=>a.min_qty-b.min_qty);
-        return <article key={p.id} className="overflow-hidden rounded-xl border bg-white">
-          {p.image_url?<div className="flex h-44 items-center justify-center bg-white p-4"><img src={p.image_url} alt={p.name} className="h-full max-w-full object-contain"/></div>:null}
-          <div className="p-5"><p className="text-xs font-bold uppercase tracking-wide text-[#ad4b08]">{activeBrands.get(p.brand_id)}</p>
-            <h2 className="mt-2 text-lg font-bold">{p.name}</h2>
-            <p className="mt-1 text-xs text-[#69717d]">{p.format||p.sku} · EAN {p.ean||"—"}</p>
-            {p.description?<p className="mt-3 line-clamp-3 text-sm text-[#69717d]">{p.description}</p>:null}
-            <p className="mt-4 text-xl font-bold">{unit.toFixed(2)} € <span className="text-xs font-normal">HT/unité au minimum</span></p>
-            {breaks.length?<p className="mt-2 text-xs text-[#69717d]">Paliers : {breaks.map(t=>`${t.min_qty} u. · ${Number(t.price_ht).toFixed(2)} €`).join(" · ")}</p>:null}
-          </div>
-          <form action={submitProductRequest} className="flex flex-wrap items-end gap-3 border-t bg-[#f7f7f6] p-4">
-            <input type="hidden" name="pharmacy_id" value={pharmacyId}/>
-            <input type="hidden" name="product_id" value={p.id}/>
-            <label className="grid gap-1 text-xs font-bold">Quantité
-              <input name="quantity" type="number" min={p.min_qty} step={p.qty_step} defaultValue={p.min_qty} required className="w-24 rounded-lg border bg-white p-2 text-sm"/>
-            </label>
-            <button className="min-h-10 flex-1 rounded-lg bg-[#142941] px-4 text-xs font-bold text-white">Demander un réassort</button>
-          </form>
-        </article>;
-      })}
-    </div>:<p className="rounded-xl border bg-white p-8 text-sm text-[#69717d]">Aucun produit publié pour vos marques autorisées.</p>}
-    <p className="text-xs leading-5 text-[#69717d]">Les prix définitifs sont recalculés au moment de la demande selon la quantité et les conditions commerciales de l'officine. Une demande ne vaut pas vente confirmée.</p>
+    <div className="grid gap-5 md:grid-cols-2">
+      <Link href="/catalogue/mes-marques" className="group rounded-2xl border border-[#d9e2e6] bg-white p-7 shadow-[0_5px_20px_rgb(14_29_49/0.045)] transition hover:border-[#93afbd] hover:shadow-lg">
+        <div className="flex items-start justify-between gap-4">
+          <div className="rounded-xl bg-[#e7eff3] p-3 text-[#183d53]"><Building2 size={26}/></div>
+          <span className="text-3xl font-extrabold text-[#142941]">{installed.length}</span>
+        </div>
+        <h2 className="mt-5 text-2xl font-extrabold text-[#142941]">Mes marques implantées</h2>
+        <p className="mt-2 min-h-16 text-sm leading-6 text-[#6b7a86]">Consulter les marques déjà référencées dans l'officine, retrouver leurs produits et préparer les demandes de réassort lorsqu'elles sont disponibles.</p>
+        <div className="mt-5 flex items-center gap-2 text-sm font-bold text-[#1a506d]">Accéder à mes marques <ArrowRight size={17} className="transition group-hover:translate-x-1"/></div>
+      </Link>
+      <Link href="/catalogue/decouvrir" className="group rounded-2xl border border-[#e5ddcc] bg-[#fffcf6] p-7 shadow-[0_5px_20px_rgb(14_29_49/0.045)] transition hover:border-[#d0b78d] hover:shadow-lg">
+        <div className="flex items-start justify-between gap-4">
+          <div className="rounded-xl bg-[#f7ecd9] p-3 text-[#9c5a29]"><Compass size={26}/></div>
+          <span className="text-3xl font-extrabold text-[#142941]">{other.length}</span>
+        </div>
+        <h2 className="mt-5 text-2xl font-extrabold text-[#142941]">Découvrir de nouvelles marques</h2>
+        <p className="mt-2 min-h-16 text-sm leading-6 text-[#6b7a86]">Explorer les gammes non référencées ou dont l'implantation reste à confirmer, consulter les fiches disponibles et demander une présentation.</p>
+        <div className="mt-5 flex items-center gap-2 text-sm font-bold text-[#9c5a29]">Explorer les marques <ArrowRight size={17} className="transition group-hover:translate-x-1"/></div>
+      </Link>
+    </div>
+    <section className="grid gap-4 rounded-xl border border-[#e1e8eb] bg-white p-6 md:grid-cols-[1fr_auto] md:items-center">
+      <div>
+        <h2 className="flex items-center gap-2 text-base font-bold text-[#142941]"><PackageCheck size={18}/> Marques suivies</h2>
+        <p className="mt-2 text-sm text-[#6a7a85]">{installed.length?installed.map(x=>x.name).join(" · "):"Aucune marque officiellement renseignée comme implantée."}</p>
+        <p className="mt-2 text-xs text-[#71818c]">Votre statut d'implantation est tenu à jour par TR1, indépendamment des accès au catalogue test.</p>
+      </div>
+      <Link href="/catalogue/mes-demandes" className="rounded-lg border border-[#d4dde2] px-4 py-3 text-sm font-semibold text-[#284d65]">Historique des demandes</Link>
+    </section>
+    <div className="flex items-start gap-3 rounded-xl border border-[#ebdfca] bg-[#fff9ef] p-4 text-xs leading-5 text-[#795b3b]">
+      <ShieldCheck size={18} className="mt-0.5 shrink-0"/>
+      <p>TR1 PHARMA agit en tant qu'intermédiaire commercial. Les demandes de présentation ne constituent pas des commandes. Le référencement réel et l'accès au catalogue sont deux paramètres distincts.</p>
+    </div>
   </div>;
 }
