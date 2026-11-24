@@ -199,7 +199,7 @@ begin
     raise exception 'Coordonnées professionnelles incomplètes';
   end if;
   if length(trim(coalesce(p_email, ''))) not between 5 and 254
-     or trim(p_email) !~* '^[^[:space:]@]+@[^[:space:]@]+\\.[^[:space:]@]+$' then
+     or trim(p_email) !~* '^[^[:space:]@]+@[^[:space:]@]+[.][^[:space:]@]+$' then
     raise exception 'Adresse e-mail invalide';
   end if;
   if length(coalesce(p_phone, '')) > 30 or length(coalesce(p_postal_code, '')) > 12
