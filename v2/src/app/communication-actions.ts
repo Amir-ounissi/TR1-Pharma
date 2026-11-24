@@ -8,12 +8,13 @@ const resourceTypes=["catalogue","product_sheet","argumentaire","training","plv"
 const scopes=["all","implanted","discovery","selected"] as const;
 const fields=(form:FormData,keys:string[])=>Object.fromEntries(keys.map(k=>[k,form.get(k)??""]));
 const targetIds=(form:FormData)=>form.getAll("target_pharmacy_ids").map(String).filter(Boolean);
-const urlOptional=z.string().trim().max(1200).refine(v=>!v||(v.startsWith("https://")||v.startsWith("/catalogue/")),"URL non autorisée");
+const ctaUrlOptional=z.string().trim().max(1200).refine(v=>!v||( /^https:\/\/[^/\\s]+(?:\/[^\\s]*)?$/.test(v) || (/^\/catalogue\/(?!\/)[^\\s]*$/.test(v)&&!v.includes("\\\\"))),"URL non autorisée");
+const imageUrlOptional=z.string().trim().max(1200).refine(v=>!v||/^https:\/\/[^/\\s]+(?:\/[^\\s]*)?$/.test(v),"Une image HTTPS est requise.");
 const urlRequired=z.string().trim().url().refine(v=>v.startsWith("https://"),"Une URL HTTPS est requise");
 function invalidate(){for(const p of ["/app/communication","/catalogue","/catalogue/actualites","/catalogue/ressources"])revalidatePath(p);}
 export async function createAnnouncement(form:FormData){
  const {db,user}=await requireOwner();
- const parsed=z.object({title:z.string().trim().min(3).max(180),summary:z.string().trim().min(3).max(500),body:z.string().trim().min(3).max(8000),category:z.enum(categories),brand_id:z.union([z.uuid(),z.literal("")]),audience_scope:z.enum(scopes),cover_image_url:urlOptional,cta_label:z.string().trim().max(60),cta_url:urlOptional,status:z.enum(["draft","published"]),starts_on:z.iso.date(),ends_on:z.union([z.iso.date(),z.literal("")])}).safeParse(fields(form,["title","summary","body","category","brand_id","audience_scope","cover_image_url","cta_label","cta_url","status","starts_on","ends_on"]));
+ const parsed=z.object({title:z.string().trim().min(3).max(180),summary:z.string().trim().min(3).max(500),body:z.string().trim().min(3).max(8000),category:z.enum(categories),brand_id:z.union([z.uuid(),z.literal("")]),audience_scope:z.enum(scopes),cover_image_url:imageUrlOptional,cta_label:z.string().trim().max(60),cta_url:ctaUrlOptional,status:z.enum(["draft","published"]),starts_on:z.iso.date(),ends_on:z.union([z.iso.date(),z.literal("")])}).safeParse(fields(form,["title","summary","body","category","brand_id","audience_scope","cover_image_url","cta_label","cta_url","status","starts_on","ends_on"]));
  if(!parsed.success)redirect("/app/communication?erreur=annonce");
  const d=parsed.data,targets=targetIds(form);
  if((d.audience_scope==="selected"&&!targets.length)||(d.audience_scope!=="selected"&&targets.length)||(["implanted","discovery"].includes(d.audience_scope)&&!d.brand_id)||(!!d.cta_label!==!!d.cta_url)||(d.ends_on&&d.ends_on<d.starts_on))redirect("/app/communication?erreur=annonce");
