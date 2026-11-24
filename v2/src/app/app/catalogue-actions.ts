@@ -155,13 +155,24 @@ export async function updateOrderRequestStatusAction(form: FormData) {
     request_id:z.uuid(),
     status:z.enum(["received","verifying","forwarded","confirmed","closed","declined"]),
   }).parse({ request_id:form.get("request_id"),status:form.get("status") });
-  if (data.status === "forwarded" && form.get("transmission_confirmed") !== "yes")
-    throw new Error("Confirmer la transmission réelle de la demande avant de marquer ce statut.");
   const { db } = await requireOwner();
-  const { error } = await db.from("order_requests").update({status:data.status})
-   .eq("id",data.request_id);
-  if (error) throw new Error("Mise à jour du statut impossible.");
+  const { data: current, error: readError } = await db.from("order_requests")
+    .select("status").eq("id",data.request_id).single();
+  if(readError||!current) throw new Error("Demande introuvable.");
+  if(current.status===data.status) return;
+  const next: Record<string,string[]> = {
+    received:["verifying","declined"], verifying:["forwarded","declined"],
+    forwarded:["confirmed","declined"], confirmed:["closed"], closed:[], declined:[],
+  };
+  if(!(next[current.status]??[]).includes(data.status))
+    throw new Error("Transition interdite. Respecter les étapes de validation et de transmission.");
+  if(data.status==="forwarded" && form.get("transmission_confirmed")!=="yes")
+    throw new Error("Confirmer la transmission réelle avant de marquer la demande comme transmise.");
+  const { data: changed,error } = await db.from("order_requests").update({status:data.status})
+    .eq("id",data.request_id).eq("status",current.status).select("id").maybeSingle();
+  if(error||!changed) throw new Error("Le statut a changé ou la mise à jour est impossible. Actualiser la page.");
   revalidatePath("/app/commandes");
+  revalidatePath("/app/revenus");
 }
 
 export async function savePharmacyPriceAction(form: FormData) {

@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { requireOwner } from "@/lib/auth";
 import { updateOrderRequestStatusAction } from "../catalogue-actions";
+const nextStatuses: Record<string,string[]> = { received:["verifying","declined"], verifying:["forwarded","declined"], forwarded:["confirmed","declined"], confirmed:["closed"], closed:[], declined:[] };
 const labels:{[key:string]:string}={received:"Reçue",verifying:"À vérifier",forwarded:"Transmise",confirmed:"Confirmée",closed:"Clôturée",declined:"Refusée"};
 
 export default async function OrdersPage() {
@@ -16,7 +18,7 @@ export default async function OrdersPage() {
   const brandNames=new Map((brands.data||[]).map(x=>[x.id,x.name]));
   return <div className="space-y-6">
     <div><h1 className="text-3xl font-bold">Demandes et commandes</h1>
-      <p className="mt-2 text-sm text-[#69717d]">Les demandes B2B sont à contrôler puis transmettre à la marque concernée. Aucun envoi ni facturation automatique.</p></div>
+      <p className="mt-2 text-sm text-[#69717d]">Les demandes B2B sont à contrôler puis transmettre à la marque concernée. Aucun envoi ni facturation automatique. Affichage des 100 demandes les plus récentes ; les lignes complètes sont disponibles dans leur document individuel.</p></div>
     <div className="space-y-4">
       {(orders.data||[]).length ? orders.data?.map(r=><article key={r.id} className="rounded-xl border bg-white p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -31,15 +33,16 @@ export default async function OrdersPage() {
             <strong>{Number(x.line_total_ht).toFixed(2)} € HT</strong>
           </p>)}
         </div>
-        <form action={updateOrderRequestStatusAction} className="mt-4 flex flex-wrap items-center gap-3">
+        <Link href={"/app/commandes/"+r.id+"/document"} className="mt-4 inline-block rounded-lg border px-4 py-2 text-xs font-bold">Document de demande / imprimer en PDF</Link>
+        {(nextStatuses[r.status]??[]).length>0&&<form action={updateOrderRequestStatusAction} className="mt-4 flex flex-wrap items-center gap-3">
           <input type="hidden" name="request_id" value={r.id}/>
           <select name="status" defaultValue={r.status} className="rounded-lg border p-2 text-sm">
-            {Object.entries(labels).map(([key,label])=><option key={key} value={key}>{label}</option>)}
+            {[r.status,...(nextStatuses[r.status]??[])].map(key=><option key={key} value={key}>{labels[key]||key}</option>)}
           </select>
           <label className="flex items-center gap-2 text-xs"><input type="checkbox" name="transmission_confirmed" value="yes"/>Transmission réellement effectuée (si statut « Transmise »)</label>
           <button className="rounded-lg bg-[#142941] px-4 py-2 text-xs font-bold text-white">Enregistrer le statut</button>
-        </form>
-      </article>):<div className="rounded-xl border bg-white p-6 text-sm text-[#69717d]">Aucune demande reçue. Les nouvelles demandes du catalogue apparaîtront ici après validation.</div>}
+        </form>}
+      </article>):<div className="rounded-xl border bg-white p-6 text-sm text-[#69717d]">Aucune demande reçue. Les nouvelles demandes du catalogue apparaîtront ici après leur soumission.</div>}
     </div>
   </div>;
 }
