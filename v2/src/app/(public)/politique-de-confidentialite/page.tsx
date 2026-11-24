@@ -3,10 +3,10 @@ import { legalInformation, missingLegalInformation } from "@/config/legal";
 export default function PrivacyPage() {
   const sections = [
     ["Responsable du traitement", legalInformation.dataController],
-    ["Finalités", "Répondre à une demande de diagnostic, qualifier le besoin et, si TR1 est adapté, préparer une démonstration ou un pilote contrôlé."],
+    ["Finalités", "Présenter les marques et les produits, répondre aux demandes professionnelles, traiter les demandes de référencement et les demandes de commande, transmettre à la marque concernée les informations nécessaires à leur traitement et assurer le suivi commercial par TR1."],
     ["Base juridique", legalInformation.legalBasis],
     ["Données collectées", "Nom et prénom, fonction professionnelle, e-mail professionnel, numéro de téléphone, nom et adresse de l’officine, code postal, commune, identifiant SIRET ou FINESS lorsqu’une pharmacie demande l’accès au catalogue, ainsi que la marque ou le laboratoire, les messages et les informations de qualification communiquées pendant les échanges."],
-    ["Destinataires", "Responsables TR1 autorisés. Les données ne sont jamais mises à disposition des marques clientes."],
+    ["Destinataires", "Responsables TR1 autorisés. Lorsqu’une pharmacie transmet une demande portant sur une marque, TR1 communique à cette marque les seules informations nécessaires au traitement de la demande (officine, contact, références et quantités). La marque confirme les conditions, puis assure la logistique, la livraison et la facturation. Elle traite ensuite les données reçues sous sa propre responsabilité."],
     ["Durée de conservation", legalInformation.leadRetentionDuration],
     ["Droits", `Accès, rectification, effacement, limitation, opposition et portabilité lorsque ces droits s’appliquent. Contact : ${legalInformation.privacyContactEmail}.`],
     ["Transferts et sous-traitants", "À documenter selon les projets Supabase, Vercel, l’outil de réservation et le fournisseur analytics effectivement configurés."],

@@ -21,7 +21,7 @@ type BrandTerms = {
   shipping_fee_ht: number | string | null; free_shipping_from_ht: number | string | null;
 };
 type PublicBrand = {
-  id: string; name: string; slug: string; short_description: string | null;
+  id: string; name: string; slug: string; catalogue_active: boolean; short_description: string | null;
   catalogue_note: string | null; terms: BrandTerms | null; offers: BrandOffer[];
 };
 type PublicProduct = {
@@ -152,7 +152,9 @@ export function PublicCatalogueClient({ data, error }: { data: PublicCatalogueDa
         </div>
         {brands.length ? <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {brands.map(brand => <article key={brand.id} className="rounded-xl border border-[#e5e9eb] p-4">
-            <div className="flex items-start justify-between gap-3"><h3 className="font-bold text-[#142941]">{brand.name}</h3><BadgeCheck size={17} className="shrink-0 text-[#35765e]"/></div>
+            <div className="flex items-start justify-between gap-3"><h3 className="font-bold text-[#142941]">{brand.name}</h3>{brand.catalogue_active ? <BadgeCheck size={17} className="shrink-0 text-[#35765e]"/> : <PackageOpen size={17} className="shrink-0 text-[#9a7b56]"/>}</div>
+            <p className={"mt-2 text-[11px] font-semibold " + (brand.catalogue_active ? "text-[#35765e]" : "text-[#94683e]")}>{brand.catalogue_active ? "Catalogue commercial actif" : "Présentation disponible · références en préparation"}</p>
+            {!brand.catalogue_active ? <p className="mt-2 text-xs leading-5 text-[#6e7d88]">Les références et les commandes seront ouvertes après validation des fiches, des visuels et des tarifs.</p> : null}
             {brand.short_description ? <p className="mt-2 text-sm leading-6 text-[#657784]">{brand.short_description}</p> : null}
             {brand.catalogue_note ? <p className="mt-2 text-xs leading-5 text-[#657784]">{brand.catalogue_note}</p> : null}
             {brand.terms ? <div className="mt-3 space-y-1 border-t pt-3 text-xs text-[#526878]">
@@ -305,13 +307,13 @@ export function PublicCatalogueClient({ data, error }: { data: PublicCatalogueDa
           </label>
           <div className="rounded-xl bg-[#f5f8f8] p-4 text-xs leading-5 text-[#566e7d] md:col-span-2"><p className="flex items-start gap-2"><ShieldCheck size={16} className="mt-0.5 shrink-0"/> Cette transmission n'est pas une commande ferme ni un paiement. TR1 est l'intermédiaire commercial ; chaque marque confirme la commande, la disponibilité, la livraison et la facturation.</p></div>
           <button type="submit" className="min-h-12 rounded-lg bg-[#142941] px-5 py-3 text-sm font-bold text-white hover:bg-[#203d5a] disabled:opacity-50 md:col-span-2" disabled={!cartReady || cartLines.length===0}>Envoyer ma demande · {cartLines.length} marque(s) / référence(s)</button>
-          <p className="text-[11px] leading-5 text-[#788691] md:col-span-2">En transmettant ce formulaire, vous autorisez TR1 PHARMA à utiliser ces coordonnées pour traiter et suivre votre demande commerciale. Consultez la <a href="/politique-de-confidentialite" className="underline">politique de confidentialité</a>.</p>
+          <p className="text-[11px] leading-5 text-[#788691] md:col-span-2">Les coordonnées transmises sont utilisées par TR1 pour traiter votre demande et peuvent être communiquées à la marque concernée uniquement pour son traitement. Consultez la <a href="/politique-de-confidentialite" className="underline">politique de confidentialité</a>.</p>
         </form>
       </section> : null}
 
       <section className="flex flex-col gap-3 rounded-xl border border-[#e9dfcf] bg-[#fffaf2] p-5 sm:flex-row sm:items-center sm:justify-between">
         <div><p className="flex items-center gap-2 text-sm font-bold text-[#74502f]"><ShieldCheck size={17}/> Le rôle de TR1 PHARMA</p><p className="mt-1 max-w-3xl text-xs leading-5 text-[#80684e]">TR1 présente les gammes, accompagne le pharmacien et transmet les demandes. Les marques restent responsables de la confirmation, de la logistique, de la livraison et de la facturation.</p></div>
-        <a href="mailto:contact@tr1pharma.com" className="shrink-0 text-xs font-bold text-[#74502f] underline">Contacter TR1</a>
+        <span className="shrink-0 text-xs font-semibold text-[#74502f]">TR1 reste votre interlocuteur pour le suivi.</span>
       </section>
     </div>
   );
