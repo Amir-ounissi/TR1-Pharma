@@ -20,5 +20,5 @@ export default async function PublicCataloguePage({ searchParams }: { searchPara
   const [{ data, error }, query] = await Promise.all([db.rpc("public_catalogue_data"), searchParams]);
   if (error) throw new Error("Impossible de charger le catalogue professionnel.");
   const catalogue = (data ?? { brands: [], products: [] }) as PublicCatalogueData;
-  return <main className="mx-auto max-w-7xl px-4 py-7 sm:px-7 sm:py-10"><PublicCatalogueClient data={catalogue} error={query.erreur ?? ""}/></main>;
+  return <main id="contenu" className="mx-auto max-w-7xl px-4 py-7 sm:px-7 sm:py-10"><PublicCatalogueClient data={catalogue} error={query.erreur ?? ""}/></main>;
 }

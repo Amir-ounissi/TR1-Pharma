@@ -27,6 +27,7 @@ export function MobilePublicNav() {
         <Link className="rounded-sm px-4 py-3 transition hover:bg-[var(--tr1-ivory-deep)]" href="/#terrain">Suivi terrain</Link>
         <Link className="rounded-sm px-4 py-3 transition hover:bg-[var(--tr1-ivory-deep)]" href="/#reseau">Le réseau TR1</Link>
         <Link className="rounded-sm px-4 py-3 transition hover:bg-[var(--tr1-ivory-deep)]" href="/#pharmacies">Pharmacies</Link>
+        <Link className="rounded-sm px-4 py-3 font-bold transition hover:bg-[var(--tr1-ivory-deep)]" href="/vitrine">Catalogue officines</Link>
         <Link className="rounded-sm px-4 py-3 transition hover:bg-[var(--tr1-ivory-deep)]" href="/connexion">Connexion</Link>
       </nav>
     </details>
