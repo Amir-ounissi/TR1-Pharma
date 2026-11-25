@@ -50,8 +50,13 @@ export async function setProductPublishedAction(form: FormData) {
   const productId = z.uuid().parse(form.get("product_id"));
   const published = form.get("published") === "true";
   const { db } = await requireOwner();
-  const { error } = await db.from("products").update({ published }).eq("id", productId);
-  if (error) throw new Error("Impossible de modifier la publication du produit.");
+  if(published){
+    const evidence=z.string().trim().min(6).max(400).parse(form.get("supplier_reference"));
+    if(form.get("confirm_availability")!=="yes")throw new Error("Confirme la disponibilité et les conditions auprès du fournisseur.");
+    const {error}=await db.rpc("release_catalogue_product",{p_product_id:productId,p_supplier_reference:evidence,p_activate_brand:form.get("activate_brand")==="yes"});
+    if(error)throw new Error("Publication refusée : "+error.message);
+  }else{const {error}=await db.from("products").update({published:false}).eq("id",productId);if(error)throw new Error("Impossible de retirer le produit.");}
+  revalidatePath("/app/produits/"+productId);revalidatePath("/app/qualite");revalidatePath("/app/marques");
   revalidatePath("/app/produits");
   revalidatePath("/catalogue");
 }

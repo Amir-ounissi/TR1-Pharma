@@ -55,11 +55,11 @@ export default async function ProductsPage({searchParams}:{searchParams:Promise<
           <div className="flex flex-wrap items-center gap-2">
             <span className="whitespace-nowrap text-sm">{Number(x.price_ht).toFixed(2)} € HT</span>
             <Link className="rounded-lg border px-3 py-2 text-xs font-semibold" href={"/app/produits/"+x.id}>Vérifier / modifier</Link>
-            <form action={setProductPublishedAction}>
+            {x.published?<form action={setProductPublishedAction}>
               <input type="hidden" name="product_id" value={x.id}/>
               <input type="hidden" name="published" value={x.published?"false":"true"}/>
               <button disabled={isArchived(x)||(!ready&&!x.published)} className="rounded-lg border border-[#142941] px-3 py-2 text-xs font-bold disabled:cursor-not-allowed disabled:border-[#ccd2d6] disabled:text-[#9aa0a7]">{x.published?"Retirer":"Publier"}</button>
-            </form>
+            </form>:<Link href={"/app/produits/"+x.id} className="rounded-lg border px-3 py-2 text-xs font-bold">{ready?"Finaliser la publication":"Compléter"}</Link>}
           </div>
         </div>;
       }):<p className="p-6 text-sm text-[#69717d]">Aucun résultat pour ce filtre.</p>}

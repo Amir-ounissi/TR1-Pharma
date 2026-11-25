@@ -46,6 +46,7 @@ export default async function ProductDetails({
       <form action={setProductPublishedAction} className="rounded-lg border bg-white p-3">
         <input type="hidden" name="product_id" value={id}/>
         <input type="hidden" name="published" value={product.published?"false":"true"}/>
+        {!product.published&&<div className="mb-3 max-w-sm space-y-2 text-xs"><p className="font-bold">Dernier contrôle commercial</p><label className="grid gap-1 font-semibold">Justificatif fournisseur (date, e-mail, tarif ou dossier)<input name="supplier_reference" minLength={6} maxLength={400} required placeholder="Ex. confirmation ADV du …" className="rounded-lg border p-2 text-sm"/></label><label className="flex items-start gap-2"><input name="confirm_availability" type="checkbox" value="yes" required/>Je confirme que le fournisseur commercialise cette référence et les conditions affichées.</label>{!brand?.active&&<label className="flex items-start gap-2"><input name="activate_brand" type="checkbox" value="yes" required/>Je confirme le mandat et l'ouverture commerciale de cette marque.</label>}<p className="text-[#69717d]">La publication conserve le justificatif dans le journal TR1. Les références arrêtées et les blocages réglementaires spécifiques restent interdits.</p></div>}
         <button disabled={!ready && !product.published}
           className="rounded-lg bg-[#142941] px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-[#d6d9dc] disabled:text-[#69717d]">
           {product.published?"Retirer du catalogue":"Publier la fiche"}

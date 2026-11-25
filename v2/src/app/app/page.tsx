@@ -30,7 +30,7 @@ export default async function CockpitHome() {
       </Link>)}
     </div>
     <section className="rounded-xl border bg-white p-6">
-      <h2 className="text-lg font-bold">Accès rapides</h2>
+      <h2 className="text-lg font-bold">Accès rapides</h2><Link href="/app/qualite" className="mt-3 inline-block rounded-lg border bg-white px-4 py-3 text-sm font-bold">Mise en service · vérifier et publier les produits</Link>
       <p className="mt-2 text-sm text-[#69717d]">Répondre aux demandes, accompagner les pharmacies et coordonner les marques.</p>
       <div className="mt-5 flex flex-wrap gap-3">
         <Link href="/app/catalogue-public/liens" className="rounded-lg bg-[#142941] px-4 py-3 text-sm font-bold text-white">Créer un lien catalogue privé</Link><Link href="/app/relation-client" className="rounded-lg border px-4 py-3 text-sm font-bold">Centre de demandes clients</Link><Link href="/app/pharmacies" className="rounded-lg border px-4 py-3 text-sm font-bold">Mes pharmacies</Link>
