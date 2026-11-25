@@ -28,8 +28,8 @@ type PublicBrand = {
 };
 type PublicProduct = {
   id: string; brand_id: string; brand: string; brand_slug: string; name: string;
-  sku: string; ean: string; description: string; format: string | null;
-  category: string | null; image_url: string; price_ht: number | string;
+  sku: string; ean: string | null; description: string; format: string | null;
+  category: string | null; image_url: string | null; price_ht: number | string;
   vat_rate: number | string; min_qty: number; qty_step: number;
   benefits: string | null; actives: string | null; inci: string | null;
   usage_advice: string | null; precautions: string | null;
@@ -133,7 +133,7 @@ export function PublicCatalogueClient({ data, error, token, pharmacy, authEmail,
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#efbf91]">TR1 PHARMA · Catalogue privé officine</p>
             <h1 className="mt-3 max-w-3xl text-3xl font-extrabold tracking-tight sm:text-4xl">Votre catalogue professionnel</h1>
-            <p className="mt-2 font-semibold text-[#efbf91]">{pharmacy.name}{pharmacy.city?" · "+pharmacy.city:""}</p><p className="mt-4 max-w-2xl text-sm leading-7 text-[#d7e0e7]">Retrouvez vos tarifs, composez votre sélection puis transmettez-la à TR1. Consultation sans compte. Votre espace personnel s’active à la première demande validée. Aucun paiement en ligne.</p>
+            <p className="mt-2 font-semibold text-[#efbf91]">{pharmacy.name}{pharmacy.city?" · "+pharmacy.city:""}</p><p className="mt-4 max-w-2xl text-sm leading-7 text-[#d7e0e7]">Consultez vos tarifs indicatifs, composez votre sélection puis transmettez-la à TR1. Les conditions, la disponibilité et la conformité des références sont confirmées par la marque avant toute commande ferme. Consultation sans compte. Votre espace personnel s’active à la première demande validée. Aucun paiement en ligne.</p>
             <div className="mt-6 flex flex-wrap gap-3">
               <a href="#produits" className="inline-flex items-center gap-2 rounded-lg bg-white px-5 py-3 text-sm font-bold text-[#142941] hover:bg-[#edf2f4]">Explorer les produits <ArrowRight size={16}/></a>
               <a href="#panier" className="inline-flex items-center gap-2 rounded-lg border border-white/30 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10"><ShoppingBag size={16}/> Mon panier ({cartCount})</a>
@@ -151,13 +151,13 @@ export function PublicCatalogueClient({ data, error, token, pharmacy, authEmail,
       <section className="rounded-xl border border-[#dce5e9] bg-white p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div><p className="text-xs font-bold uppercase tracking-wider text-[#9b5d2e]">Les marques</p><h2 className="mt-1 text-xl font-extrabold text-[#142941]">Un catalogue multimarque</h2></div>
-          <span className="text-xs text-[#6a7b87]">{brands.length} marque(s) · {products.length} référence(s) publiées</span>
+          <span className="text-xs text-[#6a7b87]">{brands.length} marque(s) · {products.length} référence(s) accessibles sur demande</span>
         </div>
         {brands.length ? <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {brands.map(brand => <article key={brand.id} className="rounded-xl border border-[#e5e9eb] p-4">
             <div className="flex items-start justify-between gap-3"><h3 className="font-bold text-[#142941]">{brand.name}</h3>{products.some(p=>p.brand_id===brand.id) ? <BadgeCheck size={17} className="shrink-0 text-[#35765e]"/> : <PackageOpen size={17} className="shrink-0 text-[#9a7b56]"/>}</div>
-            <p className={"mt-2 text-[11px] font-semibold " + (products.some(p=>p.brand_id===brand.id) ? "text-[#35765e]" : "text-[#94683e]")}>{products.some(p=>p.brand_id===brand.id) ? "Catalogue commercial actif" : "Présentation disponible · références en préparation"}</p>
-            {!products.some(p=>p.brand_id===brand.id) ? <p className="mt-2 text-xs leading-5 text-[#6e7d88]">Les références et les commandes seront ouvertes après validation des fiches, des visuels et des tarifs.</p> : null}
+            <p className={"mt-2 text-[11px] font-semibold " + (products.some(p=>p.brand_id===brand.id) ? "text-[#35765e]" : "text-[#94683e]")}>{products.some(p=>p.brand_id===brand.id) ? "Sélection commerciale disponible" : "Présentation disponible · références en préparation"}</p>
+            {!products.some(p=>p.brand_id===brand.id) ? <p className="mt-2 text-xs leading-5 text-[#6e7d88]">Contactez TR1 pour une proposition de référencement.</p> : null}
             {brand.short_description ? <p className="mt-2 text-sm leading-6 text-[#657784]">{brand.short_description}</p> : null}
             {brand.catalogue_note ? <p className="mt-2 text-xs leading-5 text-[#657784]">{brand.catalogue_note}</p> : null}
             {brand.terms ? <div className="mt-3 space-y-1 border-t pt-3 text-xs text-[#526878]">
@@ -191,7 +191,7 @@ export function PublicCatalogueClient({ data, error, token, pharmacy, authEmail,
               </div>)}
             </div> : null}
           </article>)}
-        </div> : <p className="mt-5 rounded-lg bg-[#f7f8f8] p-5 text-sm leading-6 text-[#647582]">Les premières marques et références seront visibles ici dès que leurs fiches et tarifs auront été vérifiés et publiés par TR1.</p>}
+        </div> : <p className="mt-5 rounded-lg bg-[#f7f8f8] p-5 text-sm leading-6 text-[#647582]">Demandez à TR1 une présentation commerciale.</p>}
       </section>
 
       <section id="produits" className="space-y-4">
@@ -221,11 +221,11 @@ export function PublicCatalogueClient({ data, error, token, pharmacy, authEmail,
             const coefficient = product.retail_ttc && price > 0 ? Number(product.retail_ttc)/price : null;
             const inCart = cart[product.id] ?? 0;
             return <article key={product.id} className="flex flex-col overflow-hidden rounded-xl border border-[#e0e7e9] bg-white shadow-[0_2px_12px_rgb(14_29_49/0.035)]">
-              <div className="flex h-48 items-center justify-center border-b bg-[#f7f9f9] p-5"><img src={product.image_url} alt={product.name} loading="lazy" referrerPolicy="no-referrer" className="h-full max-w-full object-contain"/></div>
+              <div className="flex h-48 items-center justify-center border-b bg-[#f7f9f9] p-5">{product.image_url?<img src={product.image_url} alt={product.name} loading="lazy" referrerPolicy="no-referrer" className="h-full max-w-full object-contain"/>:<div className="text-center text-xs text-[#69717d]"><PackageOpen size={30} className="mx-auto mb-2"/>Visuel à confirmer</div>}</div>
               <div className="flex flex-1 flex-col p-5">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-[#5e7c90]">{product.brand}</p>
                 <h3 className="mt-2 text-lg font-extrabold text-[#142941]">{product.name}</h3>
-                <p className="mt-1 text-xs text-[#72818b]">{product.format || "Format non précisé"} · EAN {product.ean}</p>
+                <p className="mt-1 text-xs text-[#72818b]">{product.format || "Format non précisé"} · {product.ean ? "EAN " + product.ean : "Réf. " + product.sku}</p>
                 <p className="mt-3 line-clamp-4 text-sm leading-6 text-[#637581]">{product.description}</p>
                 {product.benefits ? <p className="mt-3 text-xs leading-5 text-[#526a7b]"><strong>Bénéfices :</strong> {product.benefits}</p> : null}
                 {product.actives ? <p className="mt-2 text-xs leading-5 text-[#526a7b]"><strong>Actifs :</strong> {product.actives}</p> : null}
@@ -234,10 +234,10 @@ export function PublicCatalogueClient({ data, error, token, pharmacy, authEmail,
                 {product.inci ? <details className="mt-3 text-xs text-[#637581]"><summary className="flex cursor-pointer items-center gap-1 font-semibold">Composition / INCI <ChevronDown size={13}/></summary><p className="mt-2 whitespace-pre-line leading-5">{product.inci}</p></details> : null}
                 <div className="mt-4 border-t pt-4">
                   <div className="flex items-end justify-between gap-3">
-                    <div><p className="text-[11px] text-[#72818b]">Prix d'achat professionnel HT</p><p className="mt-1 text-xl font-extrabold text-[#142941]">{money(price)}</p></div>
+                    <div><p className="text-[11px] text-[#72818b]">Prix d'achat indicatif HT</p><p className="mt-1 text-xl font-extrabold text-[#142941]">{money(price)}</p></div>
                     <div className="text-right text-[11px] text-[#72818b]"><p>TVA : {Number(product.vat_rate)} %</p>{coefficient ? <p>Coeff. PVC TTC / PA HT : × {coefficient.toFixed(2).replace(".",",")}</p> : null}</div>
                   </div>
-                  {product.tiers.length ? <p className="mt-2 text-[11px] text-[#526b7b]">Paliers confirmés : {product.tiers.map(t=>t.min_qty + " u. · " + money(t.price_ht)).join("  |  ")}</p> : null}
+                  {product.tiers.length ? <p className="mt-2 text-[11px] text-[#526b7b]">Paliers indicatifs : {product.tiers.map(t=>t.min_qty + " u. · " + money(t.price_ht)).join("  |  ")}</p> : null}
                   <p className="mt-2 text-[11px] text-[#657783]">Minimum : {product.min_qty} unité(s) · Multiple : {product.qty_step}</p>
                 </div>
                 <div className="mt-auto flex flex-wrap items-end gap-2 pt-4">
@@ -255,7 +255,7 @@ export function PublicCatalogueClient({ data, error, token, pharmacy, authEmail,
         </div> : <div className="rounded-xl border border-dashed border-[#cfdadd] bg-white p-8 text-center">
           <PackageOpen size={30} className="mx-auto text-[#82939d}"/>
           <p className="mt-3 font-bold text-[#142941]">{products.length ? "Aucune référence ne correspond à votre recherche." : "Le catalogue est en cours de préparation."}</p>
-          <p className="mt-2 text-sm leading-6 text-[#687b88]">{products.length ? "Modifiez vos filtres pour élargir la sélection." : "Les références seront publiées après validation des fiches, des prix et des conditions de commercialisation."}</p>
+          <p className="mt-2 text-sm leading-6 text-[#687b88]">{products.length ? "Modifiez vos filtres pour élargir la sélection." : "Contactez TR1 pour obtenir une proposition."}</p>
         </div>}
       </section>
 
@@ -273,7 +273,7 @@ export function PublicCatalogueClient({ data, error, token, pharmacy, authEmail,
             <div className="text-right"><p className="text-[11px] text-[#72818b]">Total HT indicatif</p><p className="font-extrabold text-[#142941]">{money(line.total)}</p></div>
             <button type="button" onClick={()=>setCart(current=>{const next={...current};delete next[line.id];return next;})} aria-label={"Retirer " + line.name} className="rounded-lg p-2 text-[#a24d31] hover:bg-[#fff3ee]"><Trash2 size={17}/></button>
           </article>)}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4"><p className="text-xs text-[#697b86]">Total estimatif hors taxes, hors éventuels frais de port et avantages de pack.</p><p className="text-xl font-extrabold text-[#142941]">{money(cartTotal)} HT</p></div>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4"><p className="text-xs text-[#697b86]">Total estimatif HT, hors UG, remises complémentaires, packs et éventuels frais de port. Le fournisseur confirme les conditions définitives.</p><p className="text-xl font-extrabold text-[#142941]">{money(cartTotal)} HT</p></div>
         </div> : <p className="mt-5 rounded-lg bg-[#f6f8f8] p-5 text-sm text-[#687b88]">Votre panier est vide. Ajoutez les références qui vous intéressent pour préparer une demande.</p>}
       </section>
 

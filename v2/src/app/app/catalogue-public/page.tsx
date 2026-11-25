@@ -40,7 +40,7 @@ export default async function PublicCatalogueRequestsPage() {
       <div>
         <p className="text-xs font-bold uppercase tracking-wider text-[#a35f2c]">Prospection · Catalogue partageable</p>
         <h1 className="mt-2 text-3xl font-extrabold text-[#142941]">Demandes du catalogue public</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-[#687b88]">Chaque demande est séparée par marque. Vérifie les coordonnées et les quantités, puis transmets manuellement la demande au fournisseur concerné.</p>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-[#687b88]">Chaque demande est séparée par marque. Les prix et quantités sont indicatifs : contrôler les conditions, UG, disponibilité et conformité auprès du fournisseur avant toute transmission définitive. Vérifie les coordonnées et les quantités, puis transmets manuellement la demande au fournisseur concerné.</p>
       </div>
       <div className="flex flex-wrap gap-2"><Link href="/app/catalogue-public/liens" className="inline-flex items-center gap-2 rounded-lg bg-[#142941] px-4 py-3 text-sm font-bold text-white">Générer un lien privé</Link><Link href="/vitrine" target="_blank" className="inline-flex items-center gap-2 rounded-lg bg-[#142941] px-4 py-3 text-sm font-bold text-white"><ExternalLink size={15}/> Ouvrir la vitrine publique</Link></div>
     </header>
