@@ -66,7 +66,8 @@ export default async function PublicCatalogueRequestsPage() {
         const brand = brandById.get(request.brand_id);
         const brandTerms = termsByBrand.get(request.brand_id);
         const lines = itemsByRequest.get(request.id) ?? [];
-        const supplierEmail = brandTerms?.verified ? brandTerms.order_email : null;
+        const complete=!!lead&&lines.length>0&&Math.round(lines.reduce((s,x)=>s+Number(x.line_total_ht),0)*100)===Math.round(Number(request.total_ht)*100);
+        const supplierEmail = complete&&brandTerms?.verified ? brandTerms.order_email : null;
         const mailSubject = "Demande de commande officine · " + (brand?.name ?? "Marque") + " · " + (lead?.pharmacy_name ?? "Pharmacie");
         const mailBody = [
           "Bonjour,",
@@ -116,6 +117,7 @@ export default async function PublicCatalogueRequestsPage() {
             </div>)}
           </div>
 
+          {!complete&&<p role="alert" className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-800">Demande incomplète dans cette liste. Ne pas transmettre avant contrôle du document détaillé.</p>}
           <div className="mt-4 flex flex-wrap items-center gap-3">
             {mailHref ? <a href={mailHref} className="inline-flex items-center gap-2 rounded-lg bg-[#eaf2f4] px-4 py-2.5 text-xs font-bold text-[#244e66]"><Mail size={15}/> Préparer l'e-mail fournisseur</a>
               : <Link href={"/app/conditions?marque="+request.brand_id} className="inline-flex items-center gap-2 rounded-lg border px-4 py-2.5 text-xs font-semibold text-[#526b7b]">Renseigner l'e-mail fournisseur</Link>}
