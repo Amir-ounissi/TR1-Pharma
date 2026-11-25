@@ -1,0 +1,4 @@
+import type {Metadata} from "next";
+import Link from "next/link";
+export const metadata:Metadata={robots:{index:false,follow:false,nocache:true},referrer:"no-referrer"};
+export default async function Merci({params}:{params:Promise<{token:string}>}){const {token}=await params;return <main className="mx-auto max-w-xl px-5 py-16"><h1 className="text-3xl font-bold">Votre demande a été transmise à TR1</h1><p className="mt-4 text-sm leading-6 text-[#69717d]">TR1 vérifie votre sélection et la transmet aux marques concernées, qui assurent la confirmation, la livraison et la facturation. Vous n’avez aucun paiement à effectuer ici.</p><Link href={"/vitrine/prive/"+encodeURIComponent(token)} className="mt-6 inline-block rounded-lg bg-[#142941] px-5 py-3 text-sm font-bold text-white">Retour à mon catalogue</Link></main>;}

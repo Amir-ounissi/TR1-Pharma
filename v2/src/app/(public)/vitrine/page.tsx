@@ -1,24 +1,20 @@
-import type { Metadata } from "next";
-import { createServerSupabase } from "@/lib/supabase/server";
-import { PublicCatalogueClient, type PublicCatalogueData } from "@/components/catalogue/public-catalogue";
-
-export const metadata: Metadata = {
-  title: "Catalogue professionnel | TR1 PHARMA",
-  description: "Découvrez les marques et références proposées par TR1 PHARMA aux pharmacies. Composez votre sélection et transmettez votre demande.",
-  alternates: { canonical: "https://www.tr1pharma.com/vitrine" },
-  openGraph: {
-    title: "Catalogue professionnel | TR1 PHARMA",
-    description: "Découvrez les marques et références proposées aux pharmacies.",
-    siteName: "TR1 PHARMA", url: "https://www.tr1pharma.com/vitrine",
-    locale: "fr_FR", type: "website",
-  },
-};
-
-export default async function PublicCataloguePage({ searchParams }: { searchParams: Promise<{ erreur?: string }> }) {
-  const db = await createServerSupabase();
-  if (!db) throw new Error("Catalogue TR1 indisponible.");
-  const [{ data, error }, query] = await Promise.all([db.rpc("public_catalogue_data"), searchParams]);
-  if (error) throw new Error("Impossible de charger le catalogue professionnel.");
-  const catalogue = (data ?? { brands: [], products: [] }) as PublicCatalogueData;
-  return <main id="contenu" className="mx-auto max-w-7xl px-4 py-7 sm:px-7 sm:py-10"><PublicCatalogueClient data={catalogue} error={query.erreur ?? ""}/></main>;
+import type {Metadata} from "next";
+import Link from "next/link";
+import {createServerSupabase} from "@/lib/supabase/server";
+import {submitBrandInterest} from "./actions";
+export const metadata:Metadata={title:"Nos marques | TR1 PHARMA",description:"Découvrez les marques présentées par TR1 PHARMA. Contactez votre interlocuteur pour recevoir votre accès professionnel."};
+type Brand={id:string;name:string;slug:string};
+export default async function Vitrine({searchParams}:{searchParams:Promise<{marque?:string;envoye?:string;erreur?:string}>}){
+ const db=await createServerSupabase();if(!db)throw new Error("Vitrine indisponible.");
+ const [{data,error},params]=await Promise.all([db.rpc("public_catalogue_data"),searchParams]);if(error)throw new Error("Impossible de charger les marques.");
+ const brands=((data as {brands?:Brand[]}|null)?.brands??[]);const selected=brands.some(b=>b.slug===params.marque)?params.marque:brands[0]?.slug;
+ return <main id="contenu" className="mx-auto max-w-6xl space-y-7 px-5 py-10">
+ <header className="rounded-2xl bg-[#142941] p-7 text-white sm:p-10"><p className="text-xs font-bold uppercase tracking-widest text-[#efbf91]">TR1 PHARMA · Nos marques</p><h1 className="mt-3 text-4xl font-extrabold">Découvrez notre sélection de marques</h1><p className="mt-3 max-w-2xl text-sm leading-7 text-white/85">Un interlocuteur commercial unique pour développer vos gammes en officine. Pour consulter les conditions professionnelles, demandez votre lien personnalisé. Aucun compte n’est nécessaire.</p><a href="#contact" className="mt-5 inline-block rounded-lg bg-white px-5 py-3 text-sm font-bold text-[#142941]">Recevoir mon catalogue professionnel</a></header>
+ <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{brands.map(b=><article key={b.id} className="flex min-h-36 flex-col justify-between rounded-2xl border bg-white p-5"><h2 className="text-xl font-extrabold text-[#142941]">{b.name}</h2><Link href={"/vitrine?marque="+encodeURIComponent(b.slug)+"#contact"} className="mt-4 text-sm font-semibold text-[#526b7b] underline">Découvrir avec TR1 →</Link></article>)}</section>
+ <section id="contact" className="scroll-mt-28 rounded-2xl border bg-white p-6"><h2 className="text-2xl font-bold">Recevoir une présentation ou mon lien privé</h2><p className="mt-2 text-sm text-[#69717d]">TR1 vous recontacte pour vous accompagner. Les conditions commerciales ne sont pas publiques.</p>{params.envoye&&<p role="status" className="mt-3 rounded-lg bg-green-50 p-3 text-sm text-green-800">Votre demande est enregistrée.</p>}{params.erreur&&<p role="alert" className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-800">Demande non enregistrée. Vérifiez vos coordonnées.</p>}
+ {brands.length>0&&<form action={submitBrandInterest} className="mt-5 grid gap-3 sm:grid-cols-2">
+ <label className="grid gap-1 text-xs font-semibold">Marque<select name="brand_slug" defaultValue={selected} className="rounded-lg border bg-white p-3 text-sm">{brands.map(b=><option key={b.id} value={b.slug}>{b.name}</option>)}</select></label>
+ {[[ "pharmacy_name","Pharmacie","organization"],["city","Ville","address-level2"],["contact_name","Nom du contact","name"],["email","E-mail professionnel","email"]].map(([name,label,auto])=><label key={name} className="grid gap-1 text-xs font-semibold">{label}<input name={name} type={name==="email"?"email":"text"} autoComplete={auto} minLength={2} maxLength={name==="email"?254:120} required className="rounded-lg border p-3 text-sm"/></label>)}
+ <label className="grid gap-1 text-xs font-semibold sm:col-span-2">Votre besoin (facultatif)<textarea name="note" rows={2} maxLength={1500} className="rounded-lg border p-3 text-sm"/></label><div aria-hidden="true" className="absolute -left-[10000px]"><input name="website" tabIndex={-1} autoComplete="off"/></div><button className="rounded-lg bg-[#142941] p-3 text-sm font-bold text-white sm:col-span-2">Contacter TR1</button><p className="text-xs text-[#69717d] sm:col-span-2">Vos coordonnées servent à traiter votre demande. <Link href="/politique-de-confidentialite" className="underline">Politique de confidentialité</Link>.</p></form>}</section>
+ <p className="text-xs text-[#69717d]">TR1 PHARMA est un intermédiaire commercial. Les marques assurent la logistique et la facturation.</p></main>;
 }

@@ -45,3 +45,5 @@ export async function updatePublicCatalogueRequestAction(form: FormData) {
   revalidatePath("/app/catalogue-public");
   revalidatePath("/app");
 }
+
+export async function updateBrandInterestAction(form:FormData){const {db}=await requireOwner();const p=z.object({id:z.uuid(),status:z.enum(["new","contacted","closed"])}).parse({id:form.get("id"),status:form.get("status")});const {data,error}=await db.from("public_catalogue_leads").update({interest_status:p.status}).eq("id",p.id).not("interest_brand_id","is",null).select("id").maybeSingle();if(error||!data)throw new Error("Impossible de mettre à jour la demande.");revalidatePath("/app/catalogue-public");}

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireOwner } from "@/lib/auth";
 import { ExternalLink, Mail, Store } from "lucide-react";
-import { updatePublicCatalogueRequestAction } from "./actions";
+import { updatePublicCatalogueRequestAction, updateBrandInterestAction } from "./actions";
 
 const labels: Record<string,string> = {
   received: "Reçue", verifying: "À vérifier", forwarded: "Transmise à la marque",
@@ -17,7 +17,7 @@ export default async function PublicCatalogueRequestsPage() {
   const { db } = await requireOwner();
   const [requests,leads,brands,items,terms] = await Promise.all([
     db.from("public_catalogue_requests").select("id,lead_id,brand_id,status,total_ht,admin_note,forwarded_at,created_at").order("created_at",{ascending:false}).limit(100),
-    db.from("public_catalogue_leads").select("id,pharmacy_name,contact_name,email,phone,city,postal_code,siret,note,matched_pharmacy_id,created_at").order("created_at",{ascending:false}).limit(100),
+    db.from("public_catalogue_leads").select("id,pharmacy_name,contact_name,email,phone,city,postal_code,siret,note,matched_pharmacy_id,interest_brand_id,interest_status,catalogue_link_id,created_at").order("created_at",{ascending:false}).limit(100),
     db.from("brands").select("id,name,slug"),
     db.from("public_catalogue_request_items").select("request_id,product_name,brand_name,sku,quantity,unit_price_ht,line_total_ht,vat_rate").limit(500),
     db.from("brand_trade_terms").select("brand_id,order_email,verified"),
@@ -42,13 +42,13 @@ export default async function PublicCatalogueRequestsPage() {
         <h1 className="mt-2 text-3xl font-extrabold text-[#142941]">Demandes du catalogue public</h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-[#687b88]">Chaque demande est séparée par marque. Vérifie les coordonnées et les quantités, puis transmets manuellement la demande au fournisseur concerné.</p>
       </div>
-      <Link href="/vitrine" target="_blank" className="inline-flex items-center gap-2 rounded-lg bg-[#142941] px-4 py-3 text-sm font-bold text-white"><ExternalLink size={15}/> Ouvrir le catalogue public</Link>
+      <div className="flex flex-wrap gap-2"><Link href="/app/catalogue-public/liens" className="inline-flex items-center gap-2 rounded-lg bg-[#142941] px-4 py-3 text-sm font-bold text-white">Générer un lien privé</Link><Link href="/vitrine" target="_blank" className="inline-flex items-center gap-2 rounded-lg bg-[#142941] px-4 py-3 text-sm font-bold text-white"><ExternalLink size={15}/> Ouvrir la vitrine publique</Link></div>
     </header>
 
     <section className="rounded-xl border border-[#dce5e9] bg-white p-5">
       <p className="text-xs font-bold uppercase tracking-wider text-[#617b8c]">Lien à partager aux prospects</p>
-      <p className="mt-2 break-all font-mono text-sm font-semibold text-[#142941]">https://www.tr1pharma.com/vitrine</p>
-      <p className="mt-2 text-xs leading-5 text-[#6b7b87]">Accès libre, sans création de compte. Les prospects peuvent consulter les références publiées, constituer un panier multimarque et transmettre une demande à TR1.</p>
+      <p className="mt-2 break-all font-mono text-sm font-semibold text-[#142941]">/vitrine</p>
+      <p className="mt-2 text-xs leading-5 text-[#6b7b87]">La vitrine publique présente uniquement les marques, sans aucun prix. Pour donner accès aux tarifs et à une sélection de produits, génère un lien privé rattaché à l’officine.</p>
     </section>
 
     <div className="grid gap-3 sm:grid-cols-3">
@@ -59,6 +59,7 @@ export default async function PublicCatalogueRequestsPage() {
       ].map(([label,count])=><div key={String(label)} className="rounded-xl border bg-white p-5"><p className="text-xs font-semibold text-[#6b7b87]">{String(label)}</p><p className="mt-2 text-3xl font-extrabold tabular-nums text-[#142941]">{String(count)}</p></div>)}
     </div>
 
+    <section className="space-y-3"><h2 className="text-xl font-bold">Demandes de présentation / lien privé</h2>{(leads.data??[]).filter(l=>l.interest_brand_id).map(l=><article key={l.id} className="rounded-xl border bg-white p-4"><p className="font-bold">{l.pharmacy_name} · {brands.data?.find(b=>b.id===l.interest_brand_id)?.name??"Marque"}</p><p className="mt-1 text-sm">{l.contact_name} · {l.city} · <a href={"mailto:"+l.email} className="underline">{l.email}</a></p>{l.note&&<p className="mt-2 text-sm">{l.note}</p>}<form action={updateBrandInterestAction} className="mt-3 flex flex-wrap gap-2"><input type="hidden" name="id" value={l.id}/><select name="status" defaultValue={l.interest_status} className="rounded-lg border p-2 text-sm"><option value="new">À contacter</option><option value="contacted">Contactée</option><option value="closed">Clôturée</option></select><button className="rounded-lg border px-3 py-2 text-xs font-bold">Mettre à jour</button><Link href="/app/catalogue-public/liens" className="rounded-lg bg-[#142941] px-3 py-2 text-xs font-bold text-white">Générer son lien</Link></form></article>)}{!(leads.data??[]).some(l=>l.interest_brand_id)&&<p className="rounded-xl border bg-white p-4 text-sm text-[#69717d]">Aucune demande de présentation.</p>}</section>
     <section className="space-y-4">
       {rows.length ? rows.map(request => {
         const lead = leadById.get(request.lead_id);
@@ -73,6 +74,8 @@ export default async function PublicCatalogueRequestsPage() {
           "Veuillez trouver ci-dessous une demande commerciale transmise par TR1 PHARMA.",
           "Pharmacie : " + (lead?.pharmacy_name ?? "—"),
           "Contact : " + (lead?.contact_name ?? "—"),
+          "E-mail : " + (lead?.email ?? "—"),
+          "Téléphone : " + (lead?.phone ?? "Non communiqué"),
           "Ville : " + [lead?.postal_code,lead?.city].filter(Boolean).join(" "),
           "SIRET : " + (lead?.siret ?? "Non communiqué"),
           "",
@@ -102,7 +105,7 @@ export default async function PublicCatalogueRequestsPage() {
             <p><strong>Téléphone :</strong> {lead.phone || "Non communiqué"}</p>
             <p><strong>Ville :</strong> {[lead.postal_code,lead.city].filter(Boolean).join(" ")}</p>
             <p><strong>SIRET :</strong> {lead.siret || "Non communiqué"}</p>
-            <p><strong>Rattachement :</strong> {lead.matched_pharmacy_id ? "Pharmacie déjà identifiée par SIRET" : "Prospect à qualifier"}</p>
+            <p><strong>Rattachement :</strong> {lead.catalogue_link_id ? "Officine identifiée par lien privé" : lead.matched_pharmacy_id ? "Pharmacie identifiée" : "Prospect à qualifier"}</p>
             {lead.note ? <p className="sm:col-span-2"><strong>Précision :</strong> {lead.note}</p> : null}
           </div> : null}
 

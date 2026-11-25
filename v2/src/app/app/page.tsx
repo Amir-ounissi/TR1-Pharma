@@ -2,14 +2,16 @@ import Link from "next/link";
 import { requireOwner } from "@/lib/auth";
 export default async function CockpitHome() {
   const { db } = await requireOwner();
-  const [brands, pharmacies, requests, missions, support] = await Promise.all([
+  const [brands, pharmacies, requests, missions, support, prospects] = await Promise.all([
     db.from("brands").select("id", { count: "exact", head: true }),
     db.from("pharmacies").select("id", { count: "exact", head: true }),
     db.from("order_requests").select("id", { count: "exact", head: true }).eq("status", "received"),
     db.from("missions").select("id", { count: "exact", head: true }).neq("status", "closed"),
     db.from("pharmacy_support_requests").select("id",{count:"exact",head:true}).neq("status","resolved"),
+    db.from("public_catalogue_leads").select("id",{count:"exact",head:true}).not("interest_brand_id","is",null).eq("interest_status","new"),
   ]);
   const indicators = [
+    {label:"Prospects à contacter",value:prospects.count??"—",href:"/app/catalogue-public"},
     { label: "Demandes clients ouvertes", value: support.count ?? "—", href: "/app/relation-client" },
     { label: "Marques", value: brands.count ?? "—", href: "/app/marques" },
     { label: "Pharmacies", value: pharmacies.count ?? "—", href: "/app/pharmacies" },
@@ -31,7 +33,7 @@ export default async function CockpitHome() {
       <h2 className="text-lg font-bold">Accès rapides</h2>
       <p className="mt-2 text-sm text-[#69717d]">Répondre aux demandes, accompagner les pharmacies et coordonner les marques.</p>
       <div className="mt-5 flex flex-wrap gap-3">
-        <Link href="/app/relation-client" className="rounded-lg bg-[#142941] px-4 py-3 text-sm font-bold text-white">Centre de demandes clients</Link><Link href="/app/pharmacies" className="rounded-lg border px-4 py-3 text-sm font-bold">Mes pharmacies</Link>
+        <Link href="/app/catalogue-public/liens" className="rounded-lg bg-[#142941] px-4 py-3 text-sm font-bold text-white">Créer un lien catalogue privé</Link><Link href="/app/relation-client" className="rounded-lg border px-4 py-3 text-sm font-bold">Centre de demandes clients</Link><Link href="/app/pharmacies" className="rounded-lg border px-4 py-3 text-sm font-bold">Mes pharmacies</Link>
         <Link href="/app/marques" className="rounded-lg border px-4 py-3 text-sm font-bold">Mes marques</Link>
         <Link href="/app/commandes" className="rounded-lg border px-4 py-3 text-sm font-bold">Demandes reçues</Link>
         <Link href="/app/demo" className="rounded-lg border border-[#e4c89f] bg-[#fff8ec] px-4 py-3 text-sm font-bold">Pilote Vitalora · TEST</Link>

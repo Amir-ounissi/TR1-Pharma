@@ -7,7 +7,8 @@ const main=[
  {href:"/app/marques",label:"Gestion des marques"},
  {href:"/app/implantations",label:"Pharmacies & implantations"},
  {href:"/app/commandes",label:"Transmission commandes"},
- {href:"/app/catalogue-public",label:"Prospects · catalogue public"},
+ {href:"/app/catalogue-public",label:"Prospects · demandes"},
+ {href:"/app/catalogue-public/liens",label:"Liens catalogue privés"},
  {href:"/app/terrain",label:"Terrain & missions"},
 ];
 const advanced=[
