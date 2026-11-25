@@ -14,7 +14,7 @@ export async function generateCatalogueLink(_state:LinkState,form:FormData):Prom
  if(existing?.length){pharmacyId=existing[0].id;pharmacyName=existing[0].name;}else{const {data,error}=await db.from("pharmacies").insert({name:p.data.name,city:p.data.city}).select("id,name").single();if(error||!data)return {error:"Création de l’officine impossible."};pharmacyId=data.id;pharmacyName=data.name;}
  }else{const {data,error}=await db.from("pharmacies").select("name").eq("id",pharmacyId).single();if(error||!data)return {error:"Officine introuvable."};pharmacyName=data.name;}
  const token=randomBytes(32).toString("hex"),tokenHash=createHash("sha256").update(token).digest("hex");
- const {error}=await db.from("pharmacy_catalogue_links").insert({pharmacy_id:pharmacyId,token_hash:tokenHash,invite_email:p.data.email.toLowerCase().trim(),expires_at:new Date(Date.now()+30*86400000).toISOString()});
+ const {error}=await db.from("pharmacy_catalogue_links").insert({pharmacy_id:pharmacyId,token_hash:tokenHash,invite_email:p.data.email.toLowerCase().trim(),show_supplier_estimates:form.get('show_supplier_estimates')==='yes',expires_at:new Date(Date.now()+30*86400000).toISOString()});
  if(error)return {error:"Lien non créé. Réessayez."};
  revalidatePath("/app/catalogue-public");revalidatePath("/app/catalogue-public/liens");revalidatePath("/app/pharmacies");return {path:"/vitrine/prive/"+token,pharmacy:pharmacyName};
 }
