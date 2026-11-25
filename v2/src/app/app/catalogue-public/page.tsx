@@ -119,6 +119,7 @@ export default async function PublicCatalogueRequestsPage() {
 
           {!complete&&<p role="alert" className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-800">Demande incomplète dans cette liste. Ne pas transmettre avant contrôle du document détaillé.</p>}
           <div className="mt-4 flex flex-wrap items-center gap-3">
+            <Link href={"/app/catalogue-public/"+request.id+"/document"} target="_blank" className="rounded-lg border px-4 py-2.5 text-xs font-bold">Récapitulatif complet / PDF</Link>
             {mailHref ? <a href={mailHref} className="inline-flex items-center gap-2 rounded-lg bg-[#eaf2f4] px-4 py-2.5 text-xs font-bold text-[#244e66]"><Mail size={15}/> Préparer l'e-mail fournisseur</a>
               : <Link href={"/app/conditions?marque="+request.brand_id} className="inline-flex items-center gap-2 rounded-lg border px-4 py-2.5 text-xs font-semibold text-[#526b7b]">Renseigner l'e-mail fournisseur</Link>}
             <span className="text-xs text-[#71818b]">{supplierEmail ? "Destinataire vérifié : " + supplierEmail : "Aucune adresse fournisseur vérifiée"}</span>

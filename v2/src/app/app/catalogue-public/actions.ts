@@ -31,7 +31,7 @@ export async function updatePublicCatalogueRequestAction(form: FormData) {
   if (parsed.data.status !== current.status && !(transitions[current.status] ?? []).includes(parsed.data.status)) {
     throw new Error("Cette transition de statut n'est pas autorisée.");
   }
-  if (parsed.data.status === "forwarded" && form.get("transmission_confirmed") !== "yes") {
+  if (parsed.data.status === "forwarded" && current.status !== "forwarded" && form.get("transmission_confirmed") !== "yes") {
     throw new Error("Confirme la transmission réelle à la marque avant de passer ce statut.");
   }
 
@@ -40,8 +40,8 @@ export async function updatePublicCatalogueRequestAction(form: FormData) {
     updated_at: new Date().toISOString(),
   };
   if (parsed.data.status === "forwarded" && current.status !== "forwarded") update.forwarded_at = new Date().toISOString();
-  const { error } = await db.from("public_catalogue_requests").update(update).eq("id", parsed.data.request_id);
-  if (error) throw new Error("Impossible d'enregistrer le suivi de la demande.");
+  const { data, error } = await db.from("public_catalogue_requests").update(update).eq("id", parsed.data.request_id).eq("status",current.status).select("id").maybeSingle();
+  if (error||!data) throw new Error("Impossible d'enregistrer le suivi de la demande.");
   revalidatePath("/app/catalogue-public");
   revalidatePath("/app");
 }
