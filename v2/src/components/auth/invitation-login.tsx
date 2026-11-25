@@ -1,0 +1,8 @@
+"use client";
+import {useActionState} from "react";
+import {requestInvitationLogin,logoutInvitation,type InvitationState} from "@/app/invitation-auth-actions";
+const empty:InvitationState={};
+export function InvitationLogin({token,signedIn}:{token:string;signedIn:boolean}){
+ const [state,action,pending]=useActionState(requestInvitationLogin,empty);
+ return <div className="mt-4 space-y-3">{signedIn&&token?<form action={logoutInvitation}><input type="hidden" name="token" value={token}/><p className="text-sm text-[#69717d]">Une autre session est ouverte. Déconnectez-vous pour utiliser l’adresse autorisée.</p><button className="mt-2 rounded-lg border bg-white px-4 py-2 text-sm font-bold">Changer de compte</button></form>:<form action={action} className="grid gap-3"><input type="hidden" name="token" value={token}/><label className="grid gap-1 text-xs font-semibold">E-mail professionnel<input name="email" type="email" autoComplete="email" maxLength={254} required className="rounded-lg border bg-white p-3 text-sm"/></label><button disabled={pending} className="rounded-lg bg-[#142941] p-3 text-sm font-bold text-white disabled:opacity-50">{pending?"Envoi…":state.sent?"Renvoyer mon lien de connexion":"Recevoir mon lien de connexion"}</button></form>}{state.error&&<p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{state.error}</p>}{state.sent&&<p role="status" className="rounded-lg bg-green-50 p-3 text-sm text-green-800">Si l’adresse est autorisée, un lien de connexion vous est envoyé. Ouvrez-le dans le même navigateur pour retrouver votre sélection.</p>}</div>;
+}

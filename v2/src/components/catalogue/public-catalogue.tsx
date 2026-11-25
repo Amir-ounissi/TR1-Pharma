@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { submitPublicCatalogueRequestAction } from "@/app/(public)/vitrine/actions";
 import { useFormStatus } from "react-dom";
+import { InvitationLogin } from "@/components/auth/invitation-login";
 import { ArrowRight, BadgeCheck, Check, ChevronDown, PackageOpen, Search, ShoppingBag, ShieldCheck, Trash2 } from "lucide-react";
 
 type PriceTier = { min_qty: number; price_ht: number | string };
@@ -50,8 +51,8 @@ const clampQuantity = (product: PublicProduct, raw: number) => {
   return min + Math.floor((value-min)/step)*step;
 };
 
-function SendSelection({disabled}:{disabled:boolean}){const {pending}=useFormStatus();return <button type="submit" disabled={disabled||pending} className="min-h-12 rounded-lg bg-[#142941] px-5 py-3 text-sm font-bold text-white disabled:opacity-50 md:col-span-2">{pending?"Transmission…":"Envoyer ma sélection à TR1"}</button>;}
-export function PublicCatalogueClient({ data, error, token, pharmacy }: { data: PublicCatalogueData; error: string; token:string; pharmacy:{name:string;city:string|null} }) {
+function SendSelection({disabled,activated}:{disabled:boolean;activated:boolean}){const {pending}=useFormStatus();return <button type="submit" disabled={disabled||pending} className="min-h-12 rounded-lg bg-[#142941] px-5 py-3 text-sm font-bold text-white disabled:opacity-50 md:col-span-2">{pending?"Transmission…":activated?"Envoyer ma sélection à TR1":"Activer mon compte et valider ma demande"}</button>;}
+export function PublicCatalogueClient({ data, error, token, pharmacy, authEmail, activated, signedIn }: { data: PublicCatalogueData; error: string; token:string; pharmacy:{name:string;city:string|null};authEmail:string|null;activated:boolean;signedIn:boolean }) {
   const products = data.products ?? [];
   const brands = data.brands ?? [];
   const [query, setQuery] = useState("");
@@ -63,7 +64,7 @@ export function PublicCatalogueClient({ data, error, token, pharmacy }: { data: 
 
   useEffect(() => {
     try {
-      const raw = window.sessionStorage.getItem("tr1-private-cart-"+token);
+      const raw = window.localStorage.getItem("tr1-private-cart-"+token);
       if (raw) {
         const parsed = JSON.parse(raw) as Record<string, number>;
         const valid: Record<string, number> = {};
@@ -81,7 +82,7 @@ export function PublicCatalogueClient({ data, error, token, pharmacy }: { data: 
 
   useEffect(() => {
     if (!cartReady) return;
-    try { window.sessionStorage.setItem("tr1-private-cart-"+token, JSON.stringify(cart)); }
+    try { window.localStorage.setItem("tr1-private-cart-"+token, JSON.stringify(cart)); }
     catch { /* The basket remains usable in memory if storage is unavailable. */ }
   }, [cart, cartReady,token]);
 
@@ -132,7 +133,7 @@ export function PublicCatalogueClient({ data, error, token, pharmacy }: { data: 
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#efbf91]">TR1 PHARMA · Catalogue privé officine</p>
             <h1 className="mt-3 max-w-3xl text-3xl font-extrabold tracking-tight sm:text-4xl">Votre catalogue professionnel</h1>
-            <p className="mt-2 font-semibold text-[#efbf91]">{pharmacy.name}{pharmacy.city?" · "+pharmacy.city:""}</p><p className="mt-4 max-w-2xl text-sm leading-7 text-[#d7e0e7]">Retrouvez vos tarifs, composez votre sélection puis transmettez-la à TR1. Aucun compte, aucun paiement en ligne.</p>
+            <p className="mt-2 font-semibold text-[#efbf91]">{pharmacy.name}{pharmacy.city?" · "+pharmacy.city:""}</p><p className="mt-4 max-w-2xl text-sm leading-7 text-[#d7e0e7]">Retrouvez vos tarifs, composez votre sélection puis transmettez-la à TR1. Consultation sans compte. Votre espace personnel s’active à la première demande validée. Aucun paiement en ligne.</p>
             <div className="mt-6 flex flex-wrap gap-3">
               <a href="#produits" className="inline-flex items-center gap-2 rounded-lg bg-white px-5 py-3 text-sm font-bold text-[#142941] hover:bg-[#edf2f4]">Explorer les produits <ArrowRight size={16}/></a>
               <a href="#panier" className="inline-flex items-center gap-2 rounded-lg border border-white/30 px-5 py-3 text-sm font-semibold text-white hover:bg-white/10"><ShoppingBag size={16}/> Mon panier ({cartCount})</a>
@@ -280,15 +281,15 @@ export function PublicCatalogueClient({ data, error, token, pharmacy }: { data: 
         <p className="text-xs font-bold uppercase tracking-wider text-[#9b5d2e]">Dernière étape</p>
         <h2 className="mt-1 text-2xl font-extrabold text-[#142941]">Transmettre ma demande à TR1</h2>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-[#687b88]">Renseignez les coordonnées de l'officine. TR1 reprend contact si nécessaire, vérifie les conditions et transmet chaque demande à la marque concernée.</p>
-        <form action={submitPublicCatalogueRequestAction} className="mt-6 grid gap-4 md:grid-cols-2">
+        {!authEmail?<div className="mt-5 rounded-xl border bg-[#f5f8f8] p-5"><h3 className="font-bold">Vérifiez votre e-mail professionnel</h3><p className="mt-2 text-sm text-[#69717d]">Votre sélection est conservée dans ce navigateur. Connectez-vous avec le lien reçu par e-mail puis validez votre demande. Votre compte sera activé sans mot de passe à la première demande acceptée par la plateforme.</p><InvitationLogin token={token} signedIn={signedIn}/></div>:<form action={submitPublicCatalogueRequestAction} className="mt-6 grid gap-4 md:grid-cols-2">
           <input type="hidden" name="items_json" value={itemsJson}/><input type="hidden" name="token" value={token}/>
           <div className="absolute -left-[10000px] h-px w-px overflow-hidden" aria-hidden="true"><label>Ne pas remplir<input name="website" tabIndex={-1} autoComplete="off"/></label></div>
           <label className="grid gap-1.5 text-xs font-semibold text-[#4e6575]">Nom et prénom du contact *
             <input name="contact_name" required minLength={2} maxLength={120} autoComplete="name" className="h-12 rounded-lg border border-[#d5dfe4] px-3 text-sm"/>
           </label>
           <div className="rounded-lg bg-[#f5f8f8] p-3 text-sm"><span className="block text-xs text-[#69717d]">Officine déjà renseignée</span><strong>{pharmacy.name}</strong></div>
-          <label className="grid gap-1.5 text-xs font-semibold text-[#4e6575]">E-mail professionnel *
-            <input name="email" type="email" required maxLength={254} autoComplete="email" className="h-12 rounded-lg border border-[#d5dfe4] px-3 text-sm"/>
+          <label className="grid gap-1.5 text-xs font-semibold text-[#4e6575]">E-mail professionnel vérifié
+            <input name="email" type="email" readOnly value={authEmail} required maxLength={254} autoComplete="email" className="h-12 rounded-lg border border-[#d5dfe4] px-3 text-sm"/>
           </label>
           <label className="grid gap-1.5 text-xs font-semibold text-[#4e6575]">Téléphone
             <input name="phone" type="tel" maxLength={30} autoComplete="tel" className="h-12 rounded-lg border border-[#d5dfe4] px-3 text-sm"/>
@@ -300,9 +301,9 @@ export function PublicCatalogueClient({ data, error, token, pharmacy }: { data: 
             <textarea name="note" rows={3} maxLength={1500} className="rounded-lg border border-[#d5dfe4] p-3 text-sm"/>
           </label>
           <div className="rounded-xl bg-[#f5f8f8] p-4 text-xs leading-5 text-[#566e7d] md:col-span-2"><p className="flex items-start gap-2"><ShieldCheck size={16} className="mt-0.5 shrink-0"/> Cette transmission n'est pas une commande ferme ni un paiement. TR1 est l'intermédiaire commercial ; chaque marque confirme la commande, la disponibilité, la livraison et la facturation.</p></div>
-          <SendSelection disabled={!cartReady||cartLines.length===0}/>
+          <SendSelection disabled={!cartReady||cartLines.length===0} activated={activated}/>
           <p className="text-[11px] leading-5 text-[#788691] md:col-span-2">Les coordonnées transmises sont utilisées par TR1 pour traiter votre demande et peuvent être communiquées à la marque concernée uniquement pour son traitement. Consultez la <a href="/politique-de-confidentialite" className="underline">politique de confidentialité</a>.</p>
-        </form>
+        </form>}
       </section> : null}
 
       {cartLines.length>0&&<div className="fixed inset-x-0 bottom-0 z-40 border-t bg-white/95 p-3 shadow-lg sm:hidden"><a href="#transmission" className="mx-auto flex max-w-lg items-center justify-between rounded-lg bg-[#142941] px-4 py-3 text-sm font-bold text-white"><span>{cartLines.length} réf. · {money(cartTotal)} HT</span><span>Envoyer ma sélection →</span></a></div>}
