@@ -19,6 +19,29 @@ const legalEnvironmentFields = {
 } as const;
 
 export type LegalInformation = Record<keyof typeof legalEnvironmentFields, string>;
+
+// Verified company identifiers come from the TR1 Pharma Kbis (22 October 2026)
+// and the company's issued invoice dated 18 November 2026.
+// Public infrastructure providers and their published legal addresses are listed
+// in their current terms and data-processing addenda.
+const legalDefaults:LegalInformation = {
+  legalEntityName:"TR1 Pharma",
+  legalForm:"EURL — SARL à associé unique",
+  shareCapital:"500 €",
+  registeredOffice:"17 Route de la Capelette, 13800 Istres, France",
+  registrationNumber:"SIREN 131 791 238 · SIRET 131 791 238 00010 · RCS Salon-de-Provence 131 791 238",
+  vatNumber:"FR77131791238",
+  publicationDirector:"Amir Nasser-Dine Houcine OUNISSI, gérant",
+  contactEmail:"contact@tr1pharma.com",
+  privacyContactEmail:"contact@tr1pharma.com",
+  dataController:"TR1 Pharma, représentée par son gérant Amir Nasser-Dine Houcine OUNISSI",
+  hostingProviderName:"Vercel Inc. (application) · Supabase Pte. Ltd. (base de données et authentification)",
+  hostingProviderAddress:"Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, États-Unis · Supabase Pte. Ltd., 65 Chulia Street #38-02/03, OCBC Centre, Singapore 049513",
+  leadRetentionDuration:"3 ans à compter du dernier contact actif avec le prospect, sauf obligation légale ou contentieux justifiant une durée différente.",
+  legalBasis:"Intérêt légitime de TR1 Pharma à traiter les demandes professionnelles et assurer le suivi commercial B2B ; mesures précontractuelles prises à la demande de l'officine lorsqu'elle sollicite une proposition de référencement ou de commande.",
+  privacyPolicyUpdatedAt:"27 novembre 2026",
+};
+
 type ApplicationEnvironment = "local" | "test" | "staging" | "production";
 
 function readApplicationEnvironment(environment: Record<string, string | undefined>): ApplicationEnvironment {
@@ -28,8 +51,15 @@ function readApplicationEnvironment(environment: Record<string, string | undefin
 }
 
 export function readLegalConfiguration(environment: Record<string, string | undefined> = process.env) {
-  const information = Object.fromEntries(Object.entries(legalEnvironmentFields).map(([key, variable]) => [key, environment[variable]?.trim() || LEGAL_PLACEHOLDER])) as LegalInformation;
-  const missingFields = Object.entries(information).filter(([, value]) => value === LEGAL_PLACEHOLDER).map(([key]) => key as keyof LegalInformation);
+  const information = Object.fromEntries(
+    Object.entries(legalEnvironmentFields).map(([key, variable]) => [
+      key,
+      environment[variable]?.trim() || legalDefaults[key as keyof LegalInformation] || LEGAL_PLACEHOLDER,
+    ])
+  ) as LegalInformation;
+  const missingFields = Object.entries(information)
+    .filter(([, value]) => value === LEGAL_PLACEHOLDER)
+    .map(([key]) => key as keyof LegalInformation);
   return { appEnvironment: readApplicationEnvironment(environment), information, missingFields };
 }
 
