@@ -33,7 +33,7 @@ type PublicProduct = {
   vat_rate: number | string; min_qty: number; qty_step: number;
   benefits: string | null; actives: string | null; inci: string | null;
   usage_advice: string | null; precautions: string | null;
-  retail_ttc: number | string | null; tiers: PriceTier[];
+  retail_ttc: number | string | null; tiers: PriceTier[]; commercial_status: string; commercial_note: string;
 };
 export type PublicCatalogueData = { brands: PublicBrand[]; products: PublicProduct[] };
 
@@ -226,6 +226,8 @@ export function PublicCatalogueClient({ data, error, token, pharmacy, authEmail,
                 <p className="text-[11px] font-bold uppercase tracking-wider text-[#5e7c90]">{product.brand}</p>
                 <h3 className="mt-2 text-lg font-extrabold text-[#142941]">{product.name}</h3>
                 <p className="mt-1 text-xs text-[#72818b]">{product.format || "Format non précisé"} · {product.ean ? "EAN " + product.ean : "Réf. " + product.sku}</p>
+                <p className="mt-2 inline-flex w-fit rounded-full bg-[#f4f1e8] px-2.5 py-1 text-[10px] font-bold text-[#7c6234]">{product.commercial_status}</p>
+                <p className="mt-1 text-[11px] leading-5 text-[#7a6c54]">{product.commercial_note}</p>
                 <p className="mt-3 line-clamp-4 text-sm leading-6 text-[#637581]">{product.description}</p>
                 {product.benefits ? <p className="mt-3 text-xs leading-5 text-[#526a7b]"><strong>Bénéfices :</strong> {product.benefits}</p> : null}
                 {product.actives ? <p className="mt-2 text-xs leading-5 text-[#526a7b]"><strong>Actifs :</strong> {product.actives}</p> : null}
