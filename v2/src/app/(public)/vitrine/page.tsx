@@ -157,7 +157,7 @@ export default async function Vitrine({
         <p className="mt-2 text-sm leading-6 text-[#667887]">Échange sur votre assortiment, votre positionnement et les gammes que vous souhaitez développer.</p>
       </article>
       <article className="rounded-2xl border border-[#e2e8ea] bg-[#f7f9f9] p-6">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-[#31556b]"><BriefcaseBusiness size={20}/></div>
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-[#31556b]"><Briefcase size={20}/></div>
         <h3 className="mt-4 font-extrabold text-[#142941]">Proposition commerciale</h3>
         <p className="mt-2 text-sm leading-6 text-[#667887]">Présentation des références et des conditions professionnelles applicables à votre demande, après vérification auprès de la marque.</p>
       </article>
