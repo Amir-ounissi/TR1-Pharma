@@ -4,7 +4,7 @@ import {
   ArrowRight,
   ArrowUpRight,
   BadgeCheck,
-  BriefcaseBusiness,
+  Briefcase,
   ClipboardList,
   Headset,
   Leaf,
