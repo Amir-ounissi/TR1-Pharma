@@ -146,7 +146,7 @@ export default async function Vitrine({
             </p>
             <div className="mt-9 flex flex-wrap gap-3">
               <a href="#marques" className="inline-flex min-h-12 items-center gap-3 rounded-full bg-[#edc197] px-6 py-3 text-sm font-extrabold text-[#142941] shadow-[0_8px_25px_rgba(0,0,0,0.16)] transition hover:-translate-y-0.5 hover:bg-[#f5d3b1]">
-                Explorer les marques <ArrowDown size={16}/>
+                Consulter les catalogues <ArrowDown size={16}/>
               </a>
               <a href="#contact" className="inline-flex min-h-12 items-center gap-2 rounded-full border border-white/35 bg-white/5 px-6 py-3 text-sm font-bold text-white backdrop-blur-sm transition hover:bg-white/15">
                 Parler de mon projet <ArrowUpRight size={16}/>
@@ -230,15 +230,15 @@ export default async function Vitrine({
                 <div className="mt-4 flex flex-wrap gap-2 text-xs"><span className="rounded-lg bg-[#edf1ed] px-3 py-2 font-semibold">{assortment.length} références</span>{prices.length>0&&<span className="rounded-lg bg-[#f5f1ea] px-3 py-2 font-semibold">Dès {money(Math.min(...prices))} HT</span>}</div><div className="mt-5 flex items-center justify-between gap-3 border-t border-[#eceeea] pt-4">
                   <Link
                     href={"/vitrine/brands/"+brand.slug}
-                    className="inline-flex items-center gap-2 text-xs font-extrabold text-[#31576a] transition hover:text-[#a66a43]"
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#142941] px-4 py-2 text-xs font-extrabold text-white transition hover:bg-[#31576a]"
                   >
-                    Découvrir & composer <ArrowRight size={15}/>
+                    Consulter les produits <ArrowRight size={15}/>
                   </Link>
                   <Link
                     href={"/vitrine?marque="+encodeURIComponent(brand.slug)+"#contact"}
                     className="text-[10px] font-bold text-[#8b989d] underline decoration-[#cbd2cf] underline-offset-4 transition hover:text-[#31576a]"
                   >
-                    Sélectionner
+                    Demander
                   </Link>
                 </div>
               </div>
@@ -294,6 +294,7 @@ export default async function Vitrine({
             </div>
             <span className="rounded-full bg-[#f4f2ec] px-3 py-1.5 text-[10px] font-bold text-[#6c7c82]">Plusieurs choix possibles</span>
           </div>
+          <p className="mt-3 text-sm leading-6 text-[#536b79]">Consultez les catalogues produits librement, sans remplir ce formulaire. Les liens ci-dessous s’ouvrent dans un nouvel onglet pour conserver votre sélection.</p>
           <BrandMultiSelect brands={brands} initialSlugs={initialSlugs}/>
 
           <div className="mt-9 border-t border-[#eceeea] pt-7">
