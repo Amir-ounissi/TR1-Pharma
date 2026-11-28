@@ -40,16 +40,23 @@ export function BrandLogo({slug,name,compact=false}:{slug:string;name:string;com
   }
   const position=logoSpritePositions[slug];
   if(position){
-    return <span
+    const mark=<span
       role="img"
       aria-label={`Logo ${name}`}
-      className={`block ${box} shrink-0 bg-no-repeat`}
+      className={`block ${slug==="cosrx"&&!compact?"h-11 w-24":box} shrink-0 bg-no-repeat`}
       style={{
         backgroundImage:"url('/brand-assets/brand-logos-sprite.png')",
         backgroundSize:"300% 300%",
         backgroundPosition:position,
       }}
     />;
+    if(slug==="cosrx"&&!compact){
+      return <a href="/vitrine/cosrx" title="Consulter les 104 références COSRX" aria-label="Consulter le catalogue COSRX" className="inline-flex shrink-0 items-center gap-2 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#31576a]">
+        {mark}
+        <span className="text-[9px] font-extrabold uppercase tracking-[0.1em] text-[#31576a]">Catalogue</span>
+      </a>;
+    }
+    return mark;
   }
   return <span className={`flex ${box} shrink-0 items-center justify-center rounded-lg bg-white px-2 font-serif text-sm font-semibold tracking-wide text-[#234d3a]`}>{name}</span>;
 }
