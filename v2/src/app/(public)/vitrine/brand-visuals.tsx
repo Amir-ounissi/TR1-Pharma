@@ -14,7 +14,7 @@ const logoSpritePositions:Record<string,string>={
 
 const remoteLogos:Record<string,string>={
   "beauty-of-joseon":"https://di52x3c4ntpb8.cloudfront.net/production/brands/1000062898_1754783832892.png",
-  "dr-althea":"https://doctoraltheaglobal.com/cdn/shop/files/logo-dr-althea-removebg-preview_1_2.png?v=1751019586",
+  "dr-althea":"https://doctoraltheaglobal.com/cdn/shop/files/dr.alteha_75ebcb8c-e3d4-4c24-a0a4-ef60987d5a49.png?v=1738920590&width=600",
   "vk-swiss":"https://static.wixstatic.com/media/89c805_f732ebba700045888a4925b7d04d91f8~mv2.png",
 };
 
@@ -27,7 +27,7 @@ const heroImages:Record<string,string>={
   noto:"https://www.notocbd.com/assets/hero-oils-4IsR29eq.webp",
   bloomster:"https://www.bloomster.fr/wp-content/uploads/2024/06/Group-1000007855-2.png.webp",
   vitalora:"https://www.vitalora.fr/assets/products-hero-BuNiBZG4.png",
-  "vk-swiss":"https://static.wixstatic.com/media/89c805_9ba09e205e5148a0b36ab81c2423ec4c~mv2.jpg",
+  "vk-swiss":"https://static.wixstatic.com/media/89c805_9ba09e205e5148a0b36ab81c2423ec4c~mv2.jpg/v1/fill/w_980%2Ch_490%2Cal_c%2Cq_85%2Cusm_0.66_1.00_0.01%2Cenc_avif%2Cquality_auto/89c805_9ba09e205e5148a0b36ab81c2423ec4c~mv2.jpg",
 };
 
 function catalogueHref(slug:string){
