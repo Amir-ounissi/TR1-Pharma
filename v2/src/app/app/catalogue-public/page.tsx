@@ -15,17 +15,35 @@ const euro = (value: number | string) => Number(value).toLocaleString("fr-FR",{s
 
 export default async function PublicCatalogueRequestsPage() {
   const { db } = await requireOwner();
-  const [requests,leads,brands,items,terms] = await Promise.all([
+  const [requests,leads,brands,items,terms,leadBrandLinks] = await Promise.all([
     db.from("public_catalogue_requests").select("id,lead_id,brand_id,status,total_ht,admin_note,forwarded_at,created_at").order("created_at",{ascending:false}).limit(100),
     db.from("public_catalogue_leads").select("id,pharmacy_name,contact_name,email,phone,city,postal_code,siret,note,matched_pharmacy_id,interest_brand_id,interest_status,catalogue_link_id,created_at").order("created_at",{ascending:false}).limit(100),
     db.from("brands").select("id,name,slug"),
     db.from("public_catalogue_request_items").select("request_id,product_name,brand_name,sku,quantity,unit_price_ht,line_total_ht,vat_rate").limit(500),
     db.from("brand_trade_terms").select("brand_id,order_email,verified"),
+    db.from("public_catalogue_lead_brands").select("lead_id,brand_id"),
   ]);
-  if ([requests,leads,brands,items,terms].some(x=>x.error)) throw new Error("Impossible de charger les demandes du catalogue public.");
+  if ([requests,leads,brands,items,terms,leadBrandLinks].some(x=>x.error)) throw new Error("Impossible de charger les demandes du catalogue public.");
 
   const leadById = new Map((leads.data??[]).map(x=>[x.id,x]));
   const brandById = new Map((brands.data??[]).map(x=>[x.id,x]));
+  const brandNamesByLead = new Map<string,string[]>();
+  for (const interest of leadBrandLinks.data??[]) {
+    const name = brandById.get(interest.brand_id)?.name;
+    if (!name) continue;
+    const names = brandNamesByLead.get(interest.lead_id) ?? [];
+    if (!names.includes(name)) names.push(name);
+    brandNamesByLead.set(interest.lead_id,names);
+  }
+  for (const lead of leads.data??[]) {
+    const primary = lead.interest_brand_id ? brandById.get(lead.interest_brand_id)?.name : null;
+    if (primary) {
+      const names = brandNamesByLead.get(lead.id) ?? [];
+      if (!names.includes(primary)) names.unshift(primary);
+      brandNamesByLead.set(lead.id,names);
+    }
+  }
+  const presentationLeads = (leads.data??[]).filter(lead=>brandNamesByLead.has(lead.id));
   const termsByBrand = new Map((terms.data??[]).map(x=>[x.brand_id,x]));
   const itemsByRequest = new Map<string, any[]>();
   for (const item of items.data??[]) {
@@ -59,7 +77,7 @@ export default async function PublicCatalogueRequestsPage() {
       ].map(([label,count])=><div key={String(label)} className="rounded-xl border bg-white p-5"><p className="text-xs font-semibold text-[#6b7b87]">{String(label)}</p><p className="mt-2 text-3xl font-extrabold tabular-nums text-[#142941]">{String(count)}</p></div>)}
     </div>
 
-    <section className="space-y-3"><h2 className="text-xl font-bold">Demandes de présentation / lien privé</h2>{(leads.data??[]).filter(l=>l.interest_brand_id).map(l=><article key={l.id} className="rounded-xl border bg-white p-4"><p className="font-bold">{l.pharmacy_name} · {brands.data?.find(b=>b.id===l.interest_brand_id)?.name??"Marque"}</p><p className="mt-1 text-sm">{l.contact_name} · {l.city} · <a href={"mailto:"+l.email} className="underline">{l.email}</a></p>{l.note&&<p className="mt-2 text-sm">{l.note}</p>}<form action={updateBrandInterestAction} className="mt-3 flex flex-wrap gap-2"><input type="hidden" name="id" value={l.id}/><select name="status" defaultValue={l.interest_status} className="rounded-lg border p-2 text-sm"><option value="new">À contacter</option><option value="contacted">Contactée</option><option value="closed">Clôturée</option></select><button className="rounded-lg border px-3 py-2 text-xs font-bold">Mettre à jour</button><Link href="/app/catalogue-public/liens" className="rounded-lg bg-[#142941] px-3 py-2 text-xs font-bold text-white">Générer son lien</Link></form></article>)}{!(leads.data??[]).some(l=>l.interest_brand_id)&&<p className="rounded-xl border bg-white p-4 text-sm text-[#69717d]">Aucune demande de présentation.</p>}</section>
+    <section className="space-y-3"><h2 className="text-xl font-bold">Demandes de présentation / lien privé</h2>{presentationLeads.map(l=><article key={l.id} className="rounded-xl border bg-white p-4"><p className="font-bold">{l.pharmacy_name}</p><div className="mt-2 flex flex-wrap gap-2">{(brandNamesByLead.get(l.id)??[]).map(name=><span key={name} className="rounded-full border border-[#dce5e9] bg-[#f4f7f6] px-3 py-1 text-xs font-bold text-[#31566b]">{name}</span>)}</div><p className="mt-2 text-sm">{l.contact_name} · {l.city} · <a href={"mailto:"+l.email} className="underline">{l.email}</a></p>{l.note&&<p className="mt-2 text-sm">{l.note}</p>}<form action={updateBrandInterestAction} className="mt-3 flex flex-wrap gap-2"><input type="hidden" name="id" value={l.id}/><select name="status" defaultValue={l.interest_status} className="rounded-lg border p-2 text-sm"><option value="new">À contacter</option><option value="contacted">Contactée</option><option value="closed">Clôturée</option></select><button className="rounded-lg border px-3 py-2 text-xs font-bold">Mettre à jour</button><Link href="/app/catalogue-public/liens" className="rounded-lg bg-[#142941] px-3 py-2 text-xs font-bold text-white">Générer son lien</Link></form></article>)}{presentationLeads.length===0&&<p className="rounded-xl border bg-white p-4 text-sm text-[#69717d]">Aucune demande de présentation.</p>}</section>
     <section className="space-y-4">
       {rows.length ? rows.map(request => {
         const lead = leadById.get(request.lead_id);
