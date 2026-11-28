@@ -50,8 +50,9 @@ export function BrandLogo({slug,name,compact=false}:{slug:string;name:string;com
         backgroundPosition:position,
       }}
     />;
-    if(slug==="cosrx"&&!compact){
-      return <a href="/vitrine/cosrx" title="Consulter les 104 références COSRX" aria-label="Consulter le catalogue COSRX" className="inline-flex shrink-0 items-center gap-2 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#31576a]">
+    if((slug==="cosrx"||slug==="bloomster")&&!compact){
+      const href=slug==="cosrx"?"/vitrine/cosrx":"/vitrine/bloomster";
+      return <a href={href} title={`Consulter le catalogue ${name}`} aria-label={`Consulter le catalogue ${name}`} className="inline-flex shrink-0 items-center gap-2 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#31576a]">
         {mark}
         <span className="text-[9px] font-extrabold uppercase tracking-[0.1em] text-[#31576a]">Catalogue</span>
       </a>;
