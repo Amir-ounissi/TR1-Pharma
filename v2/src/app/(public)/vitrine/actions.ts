@@ -21,10 +21,37 @@ export async function submitPublicCatalogueRequestAction(form:FormData){
  revalidatePath("/app/catalogue-public");revalidatePath("/app");redirect(base+"/merci?envoye=1");
 }
 export async function submitBrandInterest(form:FormData){
- const p=z.object({brand_slug:z.string().min(1).max(100),pharmacy_name:z.string().trim().min(2).max(180),contact_name:z.string().trim().min(2).max(120),email:z.email().max(254),city:z.string().trim().min(2).max(120),note:z.string().trim().max(1500),website:z.string().max(200)}).safeParse(Object.fromEntries(["brand_slug","pharmacy_name","contact_name","email","city","note","website"].map(k=>[k,form.get(k)??""])));
+ const p=z.object({
+  brand_slugs:z.array(z.string().min(1).max(100)).min(1).max(8).refine(values=>new Set(values).size===values.length),
+  pharmacy_name:z.string().trim().min(2).max(180),
+  contact_name:z.string().trim().min(2).max(120),
+  email:z.email().max(254),
+  city:z.string().trim().min(2).max(120),
+  note:z.string().trim().max(1500),
+  website:z.string().max(200),
+ }).safeParse({
+  brand_slugs:form.getAll("brand_slugs"),
+  pharmacy_name:form.get("pharmacy_name")??"",
+  contact_name:form.get("contact_name")??"",
+  email:form.get("email")??"",
+  city:form.get("city")??"",
+  note:form.get("note")??"",
+  website:form.get("website")??"",
+ });
  if(!p.success)redirect("/vitrine?erreur=contact#contact");
  if(p.data.website)redirect("/vitrine?envoye=1#contact");
  const db=await createServerSupabase();if(!db)redirect("/vitrine?erreur=contact#contact");
- const {error}=await db.rpc("submit_public_brand_interest",{p_brand_slug:p.data.brand_slug,p_pharmacy_name:p.data.pharmacy_name,p_contact_name:p.data.contact_name,p_email:p.data.email,p_city:p.data.city,p_note:p.data.note||null,p_honeypot:""});
- if(error)redirect("/vitrine?erreur=contact#contact");revalidatePath("/app/catalogue-public");redirect("/vitrine?envoye=1#contact");
+ const {error}=await db.rpc("submit_public_brand_interests",{
+  p_brand_slugs:p.data.brand_slugs,
+  p_pharmacy_name:p.data.pharmacy_name,
+  p_contact_name:p.data.contact_name,
+  p_email:p.data.email,
+  p_city:p.data.city,
+  p_note:p.data.note||null,
+  p_honeypot:"",
+ });
+ if(error)redirect("/vitrine?erreur=contact#contact");
+ revalidatePath("/app/catalogue-public");
+ revalidatePath("/app");
+ redirect("/vitrine?envoye=1#contact");
 }
