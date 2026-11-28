@@ -22,7 +22,7 @@ const heroImages:Record<string,string>={
   biodance:"https://cdn.shopify.com/s/files/1/0894/2554/3511/files/Biodance_real_deep.png?v=1769774509",
   "dr-althea":"https://doctoraltheaglobal.com/cdn/shop/files/260227___345___1200_-02_01001f4e-f46e-4aa0-918d-28228f558fdf.jpg?v=1782870711&width=200",
   medicube:"https://cdn.shopify.com/s/files/1/0156/3905/2336/files/Group_48096714.jpg?v=1742186065",
-  cosrx:"https://www.yellowcare.gr/cdn/shop/files/2440f23d35e3a8b51f103db134e4066358c20fca_original.jpg?v=1770040814&width=1920",
+  cosrx:"https://www.cosrx.com/cdn/shop/files/Snail_96_Promo-Image-1_1024x1024.png?v=1763519441",
   noto:"https://www.notocbd.com/assets/hero-oils-4IsR29eq.webp",
   bloomster:"https://www.parashop.com/img/m/Bloomster.png",
   vitalora:"https://www.vitalora.fr/assets/products-hero-BuNiBZG4.png",
