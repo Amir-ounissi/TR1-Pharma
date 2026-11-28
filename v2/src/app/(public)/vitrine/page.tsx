@@ -19,6 +19,7 @@ import {
 import {createServerSupabase} from "@/lib/supabase/server";
 import {submitBrandInterest} from "./actions";
 import {BrandMultiSelect} from "./brand-multi-select";
+import {BrandHero,BrandLogo} from "./brand-visuals";
 
 export const metadata:Metadata={
   title:"Catalogue marques & implantations officinales | TR1 PHARMA",
@@ -54,6 +55,13 @@ const profiles:Record<string,{segment:string;focus:string;letter:string;tone:str
     focus:"Soins de la peau et dermocosmétique",
     letter:"M",
     tone:"from-[#d7e0e8] via-[#e9eef1] to-[#f7f6f2]",
+    kind:"beauty",
+  },
+  cosrx:{
+    segment:"K-beauty · Soins du visage",
+    focus:"Soins coréens du visage : nettoyage, hydratation et soins ciblés",
+    letter:"C",
+    tone:"from-[#efe7d6] via-[#f7f2e8] to-[#faf8f3]",
     kind:"beauty",
   },
   bloomster:{
@@ -176,7 +184,7 @@ export default async function Vitrine({
       <section className="grid gap-4 py-9 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-[#e5e1d9]">
         <div className="flex items-center gap-4 px-2 sm:px-7">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#e9efed] text-[#31576a]"><Store size={19}/></span>
-          <div><p className="text-sm font-extrabold">8 univers de marques</p><p className="mt-1 text-xs text-[#77838a]">Une offre multimarque à explorer</p></div>
+          <div><p className="text-sm font-extrabold">{brands.length} univers de marques</p><p className="mt-1 text-xs text-[#77838a]">Une offre multimarque à explorer</p></div>
         </div>
         <div className="flex items-center gap-4 px-2 sm:px-7">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f2e8df] text-[#a46b45]"><Target size={19}/></span>
@@ -198,18 +206,20 @@ export default async function Vitrine({
           <span className="rounded-full border border-[#dcded8] bg-white px-4 py-2 text-xs font-bold text-[#536b79]">{brands.length} marques à découvrir</span>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {brands.map((brand,index)=>{
             const profile=profiles[brand.slug]??{segment:"Sélection officinale",focus:"Marque présentée par TR1 PHARMA",letter:brand.name.slice(0,2).toUpperCase(),tone:"from-[#dce4e3] via-[#edf1ed] to-[#f7f5ef]",kind:"wellness" as const};
             return <article key={brand.id} className="group overflow-hidden rounded-[22px] border border-[#e3e4df] bg-white transition duration-300 hover:-translate-y-1 hover:border-[#c7d2d0] hover:shadow-[0_18px_42px_rgba(20,41,65,0.1)]">
-              <div className={`relative flex h-[142px] items-end overflow-hidden bg-gradient-to-br ${profile.tone} p-5`}>
-                <div aria-hidden="true" className="absolute -right-8 -top-14 h-44 w-44 rounded-full border border-[#142941]/10"/>
-                <div aria-hidden="true" className="absolute -right-1 -top-7 h-28 w-28 rounded-full border border-[#142941]/10"/>
-                <span className="absolute left-5 top-5 inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/50 px-3 py-1.5 text-[9px] font-extrabold uppercase tracking-[0.14em] text-[#526a76] backdrop-blur-sm">
+              <div className={`group relative h-[188px] overflow-hidden bg-gradient-to-br ${profile.tone}`}>
+                <BrandHero slug={brand.slug} name={brand.name}/>
+                <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-[#10283d]/35 via-transparent to-transparent"/>
+                <span className="absolute left-4 top-4 inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/85 px-3 py-1.5 text-[9px] font-extrabold uppercase tracking-[0.14em] text-[#526a76] shadow-sm backdrop-blur-sm">
                   <BrandIcon kind={profile.kind}/>{profile.segment.split(" · ")[0]}
                 </span>
-                <span className="relative font-serif text-[58px] font-semibold leading-none tracking-[-0.06em] text-[#142941]/80">{profile.letter}</span>
-                <span className="absolute bottom-5 right-5 text-[10px] font-extrabold tracking-[0.18em] text-[#142941]/45">{String(index+1).padStart(2,"0")} / {String(brands.length).padStart(2,"0")}</span>
+                <div className="absolute bottom-4 left-4 flex min-h-[52px] min-w-[150px] items-center rounded-xl border border-white/80 bg-white/95 px-3 py-1.5 shadow-[0_8px_24px_rgba(15,35,50,0.12)]">
+                  <BrandLogo slug={brand.slug} name={brand.name}/>
+                </div>
+                <span className="absolute bottom-5 right-4 text-[10px] font-extrabold tracking-[0.18em] text-white drop-shadow">{String(index+1).padStart(2,"0")} / {String(brands.length).padStart(2,"0")}</span>
               </div>
               <div className="p-5">
                 <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#a66a43]">{profile.segment}</p>
