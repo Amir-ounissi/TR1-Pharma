@@ -21,10 +21,10 @@ export async function submitPublicCatalogueRequestAction(form:FormData){
  revalidatePath("/app/catalogue-public");revalidatePath("/app");redirect(base+"/merci?envoye=1");
 }
 export async function submitBrandInterest(form:FormData){
- const submittedSlugs=form.getAll("brand_slugs").filter((value):value is string=>typeof value==="string").slice(0,8);
+ const submittedSlugs=form.getAll("brand_slugs").filter((value):value is string=>typeof value==="string").slice(0,20);
  const selectionQuery=submittedSlugs.length?"&marques="+encodeURIComponent(submittedSlugs.join(",")):"";
  const p=z.object({
-  brand_slugs:z.array(z.string().min(1).max(100)).min(1).max(8).refine(values=>new Set(values).size===values.length),
+  brand_slugs:z.array(z.string().min(1).max(100)).min(1).max(20).refine(values=>new Set(values).size===values.length),
   pharmacy_name:z.string().trim().min(2).max(180),
   contact_name:z.string().trim().min(2).max(120),
   email:z.email().max(254),
