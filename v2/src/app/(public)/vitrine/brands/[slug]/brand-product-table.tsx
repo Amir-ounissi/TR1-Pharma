@@ -30,6 +30,8 @@ export function BrandProductTable({products}:{products:CatalogueProduct[]}){
     return [...map.entries()].sort((a,b)=>a[0].localeCompare(b[0],"fr"));
   },[products]);
 
+  const showVisuals=products.some(product=>Boolean(product.image_url));
+
   return <div className="mt-6 space-y-3">
     {groups.map(([category,rows],index)=><details key={category} open={index===0} className="group overflow-hidden rounded-2xl border border-[#e2e5e1] bg-white shadow-[0_5px_18px_rgba(20,41,65,0.035)]">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 transition hover:bg-[#f8f7f3] [&::-webkit-details-marker]:hidden">
@@ -43,7 +45,7 @@ export function BrandProductTable({products}:{products:CatalogueProduct[]}){
         <table className="w-full min-w-[790px] border-collapse text-left">
           <thead className="bg-[#f8f8f5] text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#78868b]">
             <tr>
-              <th className="w-[92px] px-4 py-3">Visuel</th>
+              {showVisuals&&<th className="w-[92px] px-4 py-3">Visuel</th>}
               <th className="px-4 py-3">Produit / format</th>
               <th className="px-4 py-3">EAN</th>
               <th className="px-4 py-3 text-center">Unités / carton</th>
@@ -52,18 +54,18 @@ export function BrandProductTable({products}:{products:CatalogueProduct[]}){
           </thead>
           <tbody className="divide-y divide-[#eff0ec]">
             {rows.map(product=><tr key={product.id} className="transition hover:bg-[#fbfaf7]">
-              <td className="px-4 py-3">
-                {product.image_url?<div className="flex h-[72px] w-[72px] items-center justify-center overflow-hidden rounded-xl bg-[#f5f6f2] p-1.5">
+              {showVisuals&&<td className="px-4 py-3">
+                {product.image_url&&<div className="flex h-[72px] w-[72px] items-center justify-center overflow-hidden rounded-xl bg-[#f5f6f2] p-1.5">
                   <img
                     src={product.image_url}
                     alt={product.name}
                     loading="lazy"
                     decoding="async"
                     className="max-h-full max-w-full object-contain"
-                    onError={event=>{event.currentTarget.style.display="none";}}
+                    onError={event=>{const frame=event.currentTarget.parentElement;if(frame)frame.style.display="none";}}
                   />
-                </div>:<span className="block h-[72px] w-[72px] rounded-xl bg-[#f5f6f2]" aria-hidden="true"/>}
-              </td>
+                </div>}
+              </td>}
               <td className="px-4 py-3.5">
                 <span className="block text-xs font-bold text-[#203b4d]">{product.name}</span>
                 <span className="mt-1 block text-[11px] text-[#849096]">{product.format||"Format non précisé"}</span>
