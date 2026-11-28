@@ -21,6 +21,8 @@ export async function submitPublicCatalogueRequestAction(form:FormData){
  revalidatePath("/app/catalogue-public");revalidatePath("/app");redirect(base+"/merci?envoye=1");
 }
 export async function submitBrandInterest(form:FormData){
+ const submittedSlugs=form.getAll("brand_slugs").filter((value):value is string=>typeof value==="string").slice(0,8);
+ const selectionQuery=submittedSlugs.length?"&marques="+encodeURIComponent(submittedSlugs.join(",")):"";
  const p=z.object({
   brand_slugs:z.array(z.string().min(1).max(100)).min(1).max(8).refine(values=>new Set(values).size===values.length),
   pharmacy_name:z.string().trim().min(2).max(180),
@@ -38,7 +40,7 @@ export async function submitBrandInterest(form:FormData){
   note:form.get("note")??"",
   website:form.get("website")??"",
  });
- if(!p.success)redirect("/vitrine?erreur=contact#contact");
+ if(!p.success)redirect("/vitrine?erreur=contact"+selectionQuery+"#contact");
  if(p.data.website)redirect("/vitrine?envoye=1#contact");
  const db=await createServerSupabase();if(!db)redirect("/vitrine?erreur=contact#contact");
  const {error}=await db.rpc("submit_public_brand_interests",{
@@ -50,7 +52,7 @@ export async function submitBrandInterest(form:FormData){
   p_note:p.data.note||null,
   p_honeypot:"",
  });
- if(error)redirect("/vitrine?erreur=contact#contact");
+ if(error)redirect("/vitrine?erreur=contact"+selectionQuery+"#contact");
  revalidatePath("/app/catalogue-public");
  revalidatePath("/app");
  redirect("/vitrine?envoye=1#contact");
