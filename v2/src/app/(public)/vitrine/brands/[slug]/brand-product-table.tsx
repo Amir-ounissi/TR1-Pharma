@@ -7,6 +7,8 @@ export type CatalogueProduct={
  description?:string|null;min_qty?:number;qty_step?:number;retail_ttc?:number|string|null;requestable?:boolean;tiers?:{paid:number;free:number;price_ht:number}[];
 };
 const observations:Record<string,{prices:number[];sources:string[]}> = {
+ "8809416470009":{prices:[21.99],sources:["https://www.pharmacieeiffelcommerce.com/cosrx-advanced-snail-96-mucin-power-essence-a84633"]},
+ "8809517414315":{prices:[18.99],sources:["https://perfumemarket.fr/products/medicube-zero-pore-pad-mild"]},
  "8809525249565":{prices:[21],sources:["https://pharmaciedesrochettes.fr/produit/beauty-of-joseon-dynasty-creme-hydratante-et-nourrissante-50ml"]},
  "8809937361718":{prices:[6.95],sources:["https://lapharmaciedepierre.fr/produit/biodance-bio-collagen-real-deep-mask-visage-masque-de-34g/"]},
  "8809447256221":{prices:[25.41],sources:["https://www.pharmaciepolygone.com/fr/products/dr-althea-345-gel-creme-hydratante-niacinamide-et-panthenol-50ml"]},
