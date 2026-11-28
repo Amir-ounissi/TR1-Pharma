@@ -6,7 +6,6 @@ import {
   ArrowRight,
   ArrowUpRight,
   BadgeCheck,
-  BriefcaseBusiness,
   Check,
   Compass,
   Headset,
@@ -259,7 +258,7 @@ export default async function Vitrine({
               <h2 className="mt-3 text-3xl font-semibold tracking-[-0.035em] sm:text-4xl">Parlons de votre prochaine implantation.</h2>
               <p className="mt-3 max-w-xl text-sm leading-7 text-white/75">Choisissez une ou plusieurs marques. Nous revenons vers vous pour qualifier votre besoin et étudier les possibilités de référencement.</p>
             </div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold text-white/85"><BadgeCheck size={15} className="text-[#efc39b}"/> Demande sans engagement</span>
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold text-white/85"><BadgeCheck size={15} className="text-[#efc39b]"/> Demande sans engagement</span>
           </div>
         </div>
 
