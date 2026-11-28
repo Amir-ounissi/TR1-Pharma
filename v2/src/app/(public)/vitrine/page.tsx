@@ -103,7 +103,7 @@ function BrandIcon({kind}:{kind:"beauty"|"nutrition"|"wellness"}){
 export default async function Vitrine({
   searchParams,
 }:{
-  searchParams:Promise<{marque?:string;marques?:string;envoye?:string;erreur?:string}>
+  searchParams:Promise<{marque?:string;marques?:string;envoye?:string;erreur?:string;projet?:string}>
 }){
   const db=await createServerSupabase();
   if(!db)throw new Error("Vitrine indisponible.");
@@ -113,12 +113,13 @@ export default async function Vitrine({
   ]);
   if(error)throw new Error("Impossible de charger les marques.");
   const brands=((data as {brands?:Brand[]}|null)?.brands??[]);
+  const products=((data as {products?:{brand_slug:string;price_ht:number|string|null;requestable?:boolean}[]}|null)?.products??[]);
   const requestedSlugs=(params.marques??params.marque??"").split(",").map(slug=>slug.trim()).filter(Boolean);
   const initialSlugs=[...new Set(requestedSlugs)].filter(slug=>brands.some(b=>b.slug===slug));
 
   return <main id="contenu" className="overflow-hidden bg-[#fbfaf7] text-[#142941]">
     <div className="mx-auto max-w-[1360px] px-4 pb-16 pt-5 sm:px-7 lg:px-10 lg:pt-8">
-      <section className="relative isolate min-h-[560px] overflow-hidden rounded-[30px] bg-[#10283d] shadow-[0_24px_70px_rgba(16,40,61,0.18)] sm:min-h-[590px] lg:min-h-[620px]">
+      <section className="relative isolate min-h-[420px] overflow-hidden rounded-[30px] bg-[#10283d] shadow-[0_24px_70px_rgba(16,40,61,0.18)] sm:min-h-[460px] lg:min-h-[480px]">
         <Image
           src="/marketing/tr1-pharmacy-hero-hd.webp"
           alt="Accompagnement professionnel des pharmacies par TR1 PHARMA"
@@ -131,7 +132,7 @@ export default async function Vitrine({
         <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-[#0d2338]/70 via-transparent to-[#0d2338]/10"/>
         <div aria-hidden="true" className="absolute -right-24 -top-36 h-[520px] w-[520px] rounded-full border border-white/10"/>
         <div aria-hidden="true" className="absolute -right-5 -top-16 h-[360px] w-[360px] rounded-full border border-white/10"/>
-        <div className="relative grid min-h-[560px] items-center gap-12 px-6 py-12 sm:min-h-[590px] sm:px-10 sm:py-14 lg:min-h-[620px] lg:grid-cols-[1.1fr_.9fr] lg:px-16">
+        <div className="relative grid min-h-[420px] items-center gap-12 px-6 py-12 sm:min-h-[460px] sm:px-10 sm:py-14 lg:min-h-[480px] lg:grid-cols-[1.1fr_.9fr] lg:px-16">
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#f1c79f] backdrop-blur-md">
               <span className="h-1.5 w-1.5 rounded-full bg-[#f1c79f]"/> Catalogue professionnel · Officines
@@ -141,7 +142,7 @@ export default async function Vitrine({
               <span className="font-serif font-normal italic text-[#efc39b]">Révélez votre différence.</span>
             </h1>
             <p className="mt-6 max-w-xl text-[15px] leading-7 text-white/80 sm:text-base">
-              Des univers de marques à découvrir, des projets d'implantation à construire et un interlocuteur terrain pour vous accompagner à chaque étape.
+              Explorez les marques, comparez leurs assortiments et estimez votre budget d’implantation. Un interlocuteur terrain vous accompagne de la découverte au développement en officine.
             </p>
             <div className="mt-9 flex flex-wrap gap-3">
               <a href="#marques" className="inline-flex min-h-12 items-center gap-3 rounded-full bg-[#edc197] px-6 py-3 text-sm font-extrabold text-[#142941] shadow-[0_8px_25px_rgba(0,0,0,0.16)] transition hover:-translate-y-0.5 hover:bg-[#f5d3b1]">
@@ -208,6 +209,7 @@ export default async function Vitrine({
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {brands.map((brand,index)=>{
+            const assortment=products.filter(p=>p.brand_slug===brand.slug&&p.requestable!==false);const prices=assortment.map(p=>Number(p.price_ht)).filter(p=>p>0&&Number.isFinite(p));const money=(v:number)=>new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR"}).format(v);
             const profile=profiles[brand.slug]??{segment:"Sélection officinale",focus:"Marque présentée par TR1 PHARMA",letter:brand.name.slice(0,2).toUpperCase(),tone:"from-[#dce4e3] via-[#edf1ed] to-[#f7f5ef]",kind:"wellness" as const};
             return <article key={brand.id} className="group overflow-hidden rounded-[22px] border border-[#e3e4df] bg-white transition duration-300 hover:-translate-y-1 hover:border-[#c7d2d0] hover:shadow-[0_18px_42px_rgba(20,41,65,0.1)]">
               <div className={`group relative h-[188px] overflow-hidden bg-gradient-to-br ${profile.tone}`}>
@@ -225,12 +227,12 @@ export default async function Vitrine({
                 <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#a66a43]">{profile.segment}</p>
                 <h3 className="mt-2 min-h-7 text-[21px] font-extrabold tracking-[-0.035em] text-[#142941]">{brand.name}</h3>
                 <p className="mt-2 min-h-[48px] text-[13px] leading-6 text-[#748188]">{brand.description||profile.focus}</p>
-                <div className="mt-5 flex items-center justify-between gap-3 border-t border-[#eceeea] pt-4">
+                <div className="mt-4 flex flex-wrap gap-2 text-xs"><span className="rounded-lg bg-[#edf1ed] px-3 py-2 font-semibold">{assortment.length} références</span>{prices.length>0&&<span className="rounded-lg bg-[#f5f1ea] px-3 py-2 font-semibold">Dès {money(Math.min(...prices))} HT</span>}</div><div className="mt-5 flex items-center justify-between gap-3 border-t border-[#eceeea] pt-4">
                   <Link
-                    href={brand.slug==="cosrx"?"/vitrine/cosrx":brand.slug==="bloomster"?"/vitrine/bloomster":"/vitrine/brands/"+brand.slug}
+                    href={"/vitrine/brands/"+brand.slug}
                     className="inline-flex items-center gap-2 text-xs font-extrabold text-[#31576a] transition hover:text-[#a66a43]"
                   >
-                    Voir le catalogue <ArrowRight size={15}/>
+                    Découvrir & composer <ArrowRight size={15}/>
                   </Link>
                   <Link
                     href={"/vitrine?marque="+encodeURIComponent(brand.slug)+"#contact"}
@@ -312,7 +314,7 @@ export default async function Vitrine({
               </label>)}
               <label className="grid gap-2 text-xs font-bold text-[#536b79] sm:col-span-2">
                 Votre projet <span className="font-normal text-[#87949b]">(facultatif)</span>
-                <textarea name="note" rows={3} maxLength={1500} placeholder="Ex. : première implantation, extension de gamme, demande de rendez-vous ou de conditions commerciales…" className="rounded-xl border border-[#d9e0df] bg-[#fdfdfb] px-4 py-3 text-sm font-medium text-[#142941] outline-none transition placeholder:text-[#aab2b2] focus:border-[#587c89] focus:bg-white focus:ring-4 focus:ring-[#587c89]/10"/>
+                <textarea name="note" rows={5} defaultValue={(params.projet??"").slice(0,1500)} maxLength={1500} placeholder="Ex. : première implantation, extension de gamme, demande de rendez-vous ou de conditions commerciales…" className="rounded-xl border border-[#d9e0df] bg-[#fdfdfb] px-4 py-3 text-sm font-medium text-[#142941] outline-none transition placeholder:text-[#aab2b2] focus:border-[#587c89] focus:bg-white focus:ring-4 focus:ring-[#587c89]/10"/>
               </label>
             </div>
             <div aria-hidden="true" className="absolute -left-[10000px]"><input name="website" tabIndex={-1} autoComplete="off"/></div>
