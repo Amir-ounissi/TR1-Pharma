@@ -1,6 +1,6 @@
 import type {Metadata} from "next";
 import Link from "next/link";
-import {ArrowLeft, ArrowRight, BadgeInfo, Package, ShieldCheck} from "lucide-react";
+import {ArrowLeft, ArrowRight, BadgeInfo, ShieldCheck} from "lucide-react";
 import {notFound} from "next/navigation";
 import {createServerSupabase} from "@/lib/supabase/server";
 import {BrandHero,BrandLogo} from "../brand-visuals";
@@ -50,7 +50,7 @@ export default async function CosrxCataloguePage(){
             <span className="inline-flex rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#efc39b]">Catalogue professionnel · Officines</span>
             <h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em] text-white sm:text-5xl">Catalogue COSRX</h1>
             <p className="mt-3 max-w-xl text-sm leading-6 text-white/80">Soins coréens du visage · Nettoyants · Hydratation · Soins ciblés</p>
-            <div className="mt-5 inline-flex rounded-xl border border-white/70 bg-white px-4 py-2"><BrandLogo slug="cosrx" name="COSRX"/></div>
+            <div className="mt-5 inline-flex rounded-xl border border-white/70 bg-white px-4 py-2"><BrandLogo slug="cosrx" name="COSRX" compact/></div>
           </div>
           <div className="grid grid-cols-2 gap-3 sm:min-w-[250px]">
             <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-sm">
