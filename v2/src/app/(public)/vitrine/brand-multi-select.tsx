@@ -1,7 +1,8 @@
 "use client";
 
 import {useState} from "react";
-import {Check} from "lucide-react";
+import {ArrowUpRight,Check} from "lucide-react";
+import Link from "next/link";
 import {BrandLogo} from "./brand-visuals";
 
 export type SelectableBrand={id:string;name:string;slug:string;description:string|null};
@@ -36,8 +37,8 @@ export function BrandMultiSelect({
       {brands.map(brand=>{
         const meta=brandMeta[brand.slug]??{category:"Sélection officinale"};
         const active=selected.includes(brand.slug);
-        return <label
-          key={brand.id}
+        return <div key={brand.id} className="flex flex-col gap-2">
+        <label
           className={`group relative flex min-h-[112px] cursor-pointer items-center gap-3 overflow-hidden rounded-2xl border p-4 transition duration-200 focus-within:ring-2 focus-within:ring-[#d79b69] ${active?"border-[#244a60] bg-[#edf3f3] shadow-[0_6px_20px_rgba(20,41,65,0.08)]":"border-[#e1e7e8] bg-white hover:-translate-y-0.5 hover:border-[#b8c8ce] hover:shadow-[0_8px_22px_rgba(20,41,65,0.06)]"}`}
         >
           <input
@@ -60,7 +61,9 @@ export function BrandMultiSelect({
             <Check size={12} strokeWidth={3}/>
           </span>
           <span className="sr-only">{active?"Sélectionnée":"Non sélectionnée"}</span>
-        </label>;
+        </label>
+        <Link href={"/vitrine/brands/"+encodeURIComponent(brand.slug)+"#assortiment"} target="_blank" rel="noopener noreferrer" aria-label={"Consulter les produits de "+brand.name+" (nouvel onglet)"} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#cbd6da] bg-white px-3 text-xs font-bold text-[#31576a] hover:bg-[#edf3f3]">Consulter les produits <ArrowUpRight size={14}/></Link>
+        </div>;
       })}
     </div>
     <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
