@@ -49,6 +49,7 @@ export function BrandMultiSelect({
             name="brand_slugs"
             value={brand.slug}
             checked={active}
+            required={index===0&&selected.length===0}
             onChange={()=>toggle(brand.slug)}
             className="peer sr-only"
           />
