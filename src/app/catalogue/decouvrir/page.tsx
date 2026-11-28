@@ -1,56 +1,28 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, Building2, ClipboardList, LockKeyhole, ShoppingBasket, Truck } from "lucide-react";
+import { ArrowRight, Building2, ClipboardList, ShoppingBasket } from "lucide-react";
 import { PublicProductGrid } from "@/components/catalogue/public-product-grid";
-import { Tr1BrandLogo } from "@/components/brand/tr1-brand-logo";
 
 export const metadata: Metadata = {
   title: "Catalogue professionnel multimarque | TR1 PHARMA",
-  description: "Explorez les gammes Beauty of Joseon, Dr. Althea et Biodance dans le catalogue professionnel TR1 PHARMA.",
+  description: "Explorez les gammes Beauty of Joseon, Dr. Althea, Biodance et Vitalora dans le catalogue professionnel TR1 PHARMA.",
   robots: { index: false, follow: false },
 };
 
 export default function PharmacieStorefront() {
   return (
-    <div className="space-y-10 pb-4">
-      <div className="-mx-5 -mt-8 border-b border-[#e2e7ec] bg-[#f4f0e7] px-5 py-3 sm:-mx-8 sm:-mt-12 sm:px-8">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-8 gap-y-2 text-center text-[11px] font-semibold text-[#515d6b] sm:text-xs">
-          <span className="inline-flex items-center gap-1.5"><BadgeCheck size={15} aria-hidden="true" /> Catalogue réservé aux professionnels de santé</span>
-          <span className="inline-flex items-center gap-1.5"><Truck size={15} aria-hidden="true" /> Conditions selon le laboratoire et les volumes</span>
+    <div className="-mt-3 space-y-6 pb-4 sm:-mt-5">
+      <header className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#e2e7ec] bg-white px-4 py-3 sm:px-6 sm:py-4">
+        <div>
+          <p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-[#b3683e]">TR1 PHARMA · Sélection multimarque</p>
+          <h1 className="mt-1 text-xl font-black tracking-[-.035em] text-[#0e1d31] sm:text-2xl">Catalogue professionnel</h1>
+          <p className="mt-1 text-xs leading-5 text-[#66717d]">Parcourez les produits et filtrez par marque, catégorie ou référence.</p>
         </div>
-      </div>
-
-      <section className="relative overflow-hidden rounded-lg bg-[#0e1d31] px-6 py-8 text-white sm:px-10 sm:py-10 lg:px-12">
-        <div aria-hidden="true" className="pointer-events-none absolute -right-15 -top-25 size-100 rounded-full border-[45px] border-white/5" />
-        <div className="relative max-w-[660px]">
-          <p className="text-[11px] font-extrabold uppercase tracking-[.24em] text-[#ffa460]">
-            TR1 PHARMA · Collection professionnelle
-          </p>
-          <h1 className="mt-4 text-[32px] font-black leading-[1.08] tracking-[-.045em] sm:text-5xl lg:text-[56px]">
-            Découvrez notre sélection multimarque.
-          </h1>
-          <p className="mt-5 max-w-xl text-sm leading-7 text-[#d5dde7] sm:text-base">
-            Explorez les gammes Dr. Althea, Beauty of Joseon et Biodance.
-            Les prix et conditions commerciales sont réservés aux pharmacies autorisées.
-          </p>
-          <div className="mt-7 flex flex-wrap gap-3">
-            <Link href="#produits" className="shop-primary-action inline-flex min-h-12 items-center gap-2 px-5 text-sm">
-              Explorer les gammes <ArrowRight size={17} aria-hidden="true" />
-            </Link>
-            <Link href="/catalogue/connexion" className="inline-flex min-h-12 items-center gap-2 rounded-md border border-white/35 px-5 text-sm font-bold text-white transition hover:bg-white/10">
-              <LockKeyhole size={16} aria-hidden="true" /> Connexion professionnelle
-            </Link>
-            <Link href="/catalogue/demander-acces" className="inline-flex min-h-12 items-center gap-2 rounded-md border border-[#ffa460] bg-[#ea7015] px-5 text-sm font-extrabold text-[#0e1d31] transition hover:bg-[#f28331]">
-              <Building2 size={16} aria-hidden="true" /> Demander l’accès au catalogue
-            </Link>
-          </div>
-        </div>
-        <div className="pointer-events-none absolute bottom-0 right-3 hidden w-60 rotate-[-8deg] rounded-md border border-white/15 bg-white/[.05] p-6 lg:block" aria-hidden="true">
-          <Tr1BrandLogo className="h-25 w-full" primaryColor="#fffdf8" accentColor="#ea7015" />
-          <div className="mt-4 border-t border-white/20 pt-3 text-center text-[10px] font-bold tracking-[.19em] text-white/75">CATALOGUE PROFESSIONNEL</div>
-        </div>
-      </section>
-
+        <Link href="/catalogue/demander-acces"
+          className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-[#142941] px-3.5 text-xs font-extrabold text-white hover:bg-[#1e405f]">
+          Demander un accès <ArrowRight size={15} aria-hidden="true" />
+        </Link>
+      </header>
       <PublicProductGrid />
 
       <section aria-labelledby="customer-benefits" className="grid gap-4 rounded-lg bg-white p-6 shadow-sm sm:grid-cols-3 sm:p-7">
