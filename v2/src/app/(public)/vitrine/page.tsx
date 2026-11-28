@@ -105,7 +105,8 @@ export default async function Vitrine({
   ]);
   if(error)throw new Error("Impossible de charger les marques.");
   const brands=((data as {brands?:Brand[]}|null)?.brands??[]);
-  const requestedSlugs=(params.marques??params.marque??"").split(",").map(slug=>slug.trim()).filter(Boolean);\n  const initialSlugs=[...new Set(requestedSlugs)].filter(slug=>brands.some(b=>b.slug===slug));
+  const requestedSlugs=(params.marques??params.marque??"").split(",").map(slug=>slug.trim()).filter(Boolean);
+  const initialSlugs=[...new Set(requestedSlugs)].filter(slug=>brands.some(b=>b.slug===slug));
 
   return <main id="contenu" className="overflow-hidden bg-[#fbfaf7] text-[#142941]">
     <div className="mx-auto max-w-[1360px] px-4 pb-16 pt-5 sm:px-7 lg:px-10 lg:pt-8">
