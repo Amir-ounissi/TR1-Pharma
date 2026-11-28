@@ -5,6 +5,7 @@ import {useMemo} from "react";
 export type CatalogueProduct = {
   id:string;
   name:string;
+  sku:string|null;
   ean:string|null;
   format:string|null;
   category:string|null;
@@ -47,7 +48,7 @@ export function BrandProductTable({products}:{products:CatalogueProduct[]}){
             <tr>
               {showVisuals&&<th className="w-[92px] px-4 py-3">Visuel</th>}
               <th className="px-4 py-3">Produit / format</th>
-              <th className="px-4 py-3">EAN</th>
+              <th className="px-4 py-3">EAN / Réf. fournisseur</th>
               <th className="px-4 py-3 text-center">Unités / carton</th>
               <th className="px-5 py-3 text-right">Prix unitaire HT</th>
             </tr>
@@ -70,7 +71,7 @@ export function BrandProductTable({products}:{products:CatalogueProduct[]}){
                 <span className="block text-xs font-bold text-[#203b4d]">{product.name}</span>
                 <span className="mt-1 block text-[11px] text-[#849096]">{product.format||"Format non précisé"}</span>
               </td>
-              <td className="whitespace-nowrap px-4 py-3.5 font-mono text-[11px] text-[#687982]">{product.ean||"—"}</td>
+              <td className="whitespace-nowrap px-4 py-3.5"><span className="block text-[9px] font-extrabold uppercase tracking-[0.1em] text-[#9aa5a7]">{product.ean?"EAN":"Réf. fournisseur"}</span><span className="mt-1 block font-mono text-[11px] text-[#687982]">{product.ean||product.sku||"—"}</span></td>
               <td className="px-4 py-3.5 text-center text-xs tabular-nums text-[#687982]">{product.units_per_carton??"—"}</td>
               <td className="whitespace-nowrap px-5 py-3.5 text-right text-sm font-extrabold tabular-nums text-[#142941]">{money(product.price_ht)}</td>
             </tr>)}
