@@ -30,14 +30,22 @@ const heroImages:Record<string,string>={
   "vk-swiss":"https://static.wixstatic.com/media/89c805_9ba09e205e5148a0b36ab81c2423ec4c~mv2.jpg",
 };
 
+function catalogueHref(slug:string){
+  if(slug==="cosrx")return "/vitrine/cosrx";
+  if(slug==="bloomster")return "/vitrine/bloomster";
+  return "/vitrine/brands/"+slug;
+}
+
 export function BrandLogo({slug,name,compact=false}:{slug:string;name:string;compact?:boolean}){
   const [failed,setFailed]=useState(false);
   const remote=remoteLogos[slug];
   const box=compact?"h-9 w-24":"h-11 w-36";
+  const href=catalogueHref(slug);
   if(remote&&!failed){
-    return <span className={`flex ${box} shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white px-2`}>
+    const logo=<span className={`flex ${box} shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white px-2`}>
       <img src={remote} alt={`Logo ${name}`} loading="lazy" decoding="async" onError={()=>setFailed(true)} className="max-h-full max-w-full object-contain"/>
     </span>;
+    return compact?logo:<a href={href} title={`Consulter le catalogue ${name}`} aria-label={`Consulter le catalogue ${name}`} className="inline-flex shrink-0 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#31576a]">{logo}</a>;
   }
   const position=logoSpritePositions[slug];
   if(position){
@@ -51,16 +59,10 @@ export function BrandLogo({slug,name,compact=false}:{slug:string;name:string;com
         backgroundPosition:position,
       }}
     />;
-    if((slug==="cosrx"||slug==="bloomster")&&!compact){
-      const href=slug==="cosrx"?"/vitrine/cosrx":"/vitrine/bloomster";
-      return <a href={href} title={`Consulter le catalogue ${name}`} aria-label={`Consulter le catalogue ${name}`} className="inline-flex shrink-0 items-center gap-2 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#31576a]">
-        {mark}
-        <span className="text-[9px] font-extrabold uppercase tracking-[0.1em] text-[#31576a]">Catalogue</span>
-      </a>;
-    }
-    return mark;
+    return compact?mark:<a href={href} title={`Consulter le catalogue ${name}`} aria-label={`Consulter le catalogue ${name}`} className="inline-flex shrink-0 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#31576a]">{mark}</a>;
   }
-  return <span className={`flex ${box} shrink-0 items-center justify-center rounded-lg bg-white px-2 font-serif text-sm font-semibold tracking-wide text-[#234d3a]`}>{name}</span>;
+  const wordmark=<span className={`flex ${box} shrink-0 items-center justify-center rounded-lg bg-white px-2 font-serif text-sm font-semibold tracking-wide text-[#234d3a]`}>{name}</span>;
+  return compact?wordmark:<a href={href} title={`Consulter le catalogue ${name}`} aria-label={`Consulter le catalogue ${name}`} className="inline-flex shrink-0 rounded-lg">{wordmark}</a>;
 }
 
 export function BrandHero({slug,name}:{slug:string;name:string}){
