@@ -1,159 +1,54 @@
 import type {Metadata} from "next";
 import Link from "next/link";
 import {notFound} from "next/navigation";
-import {ArrowLeft,ArrowRight,BadgeInfo,ShieldCheck} from "lucide-react";
+import {ArrowLeft,ArrowRight,ArrowUpRight} from "lucide-react";
 import {createServerSupabase} from "@/lib/supabase/server";
 import {BrandHero,BrandLogo} from "../../brand-visuals";
 import {BrandProductTable,type CatalogueProduct} from "./brand-product-table";
 
 type Brand={id:string;name:string;slug:string;description:string|null};
-
-type PublicCatalogue={
-  brands?:Brand[];
-  products?:Array<CatalogueProduct&{
-    brand_id:string;
-    brand_slug:string;
-    brand_name:string;
-    source_catalog:string|null;
-    source_document:string|null;
-    price_status:string|null;
-  }>;
+type PublicCatalogue={brands?:Brand[];products?:Array<CatalogueProduct&{brand_slug:string}>};
+const profiles:Record<string,{origin:string;segment:string;story:string;interest:string;site:string;theme:string}> = {
+ "beauty-of-joseon":{origin:"Corée du Sud",segment:"K-beauty · Rituels visage",story:"Beauty of Joseon revisite le Hanbang, héritage coréen des ingrédients végétaux, dans des soins contemporains. Le riz, le ginseng et les routines quotidiennes structurent son univers.",interest:"Construire un rayon K-beauty lisible autour du nettoyage, des sérums, de l'hydratation et de la protection solaire.",site:"https://beautyofjoseon.com/pages/about-beauty-of-joseon",theme:"from-[#6d473e] to-[#e7c9b5]"},
+ biodance:{origin:"Corée du Sud",segment:"K-beauty · Masques & soins",story:"Biodance est née de l'expérience de sa fondatrice Mihwa dans l'univers de la beauté coréenne. La marque a développé son identité autour des masques hydrogel et de l'expérience d'application.",interest:"Développer un espace masques et soins complémentaires, avec des formats découverte et des achats d'impulsion.",site:"https://biodance.com/pages/our-story-mihwa",theme:"from-[#365e65] to-[#dce8e4]"},
+ "dr-althea":{origin:"Corée du Sud",segment:"K-beauty · Dermocosmétique",story:"Dr. Althea développe un univers de soins orienté vers les peaux sensibles et le confort cutané. Sa philosophie associe recherche cosmétique et formules destinées aux routines quotidiennes.",interest:"Proposer une alternative K-beauty dans les rayons hydratation et soins ciblés, avec un conseil adapté aux besoins de la peau.",site:"https://doctoraltheaglobal.com/pages/about-us",theme:"from-[#55435d] to-[#e7dce9]"},
+ medicube:{origin:"Corée du Sud",segment:"K-beauty · Soins ciblés",story:"Medicube associe soins cosmétiques et technologies de beauté. La marque construit ses gammes autour de préoccupations spécifiques de la peau et de routines ciblées.",interest:"Structurer le rayon par besoins et formats : nettoyants, pads, sérums, crèmes et masques selon l'assortiment disponible.",site:"https://medicube.us/fr/pages/brandstory",theme:"from-[#6d3439] to-[#ead6d7]"},
+ cosrx:{origin:"Corée du Sud",segment:"K-beauty · Soins visage",story:"COSRX développe des routines de soins centrées sur les besoins de la peau. Son univers s'organise autour de familles d'ingrédients et de produits ciblés, dont les soins à la mucine d'escargot.",interest:"Composer une offre de routines courtes ou complètes selon le positionnement du rayon et la clientèle.",site:"https://www.cosrx.com/pages/about-us-old",theme:"from-[#5d5947] to-[#e7dfcb]"},
+ bloomster:{origin:"France",segment:"Micronutrition · Champignons",story:"Bloomster est née d'une approche de la micronutrition inspirée des usages traditionnels des champignons et des connaissances nutritionnelles contemporaines.",interest:"Créer un espace dédié aux champignons et compléter une offre existante de micronutrition.",site:"https://www.bloomster.fr/notre-naissance/",theme:"from-[#294b3c] to-[#dce5d9]"},
+ vitalora:{origin:"France",segment:"Micronutrition · Essentiels",story:"Vitalora est née d'une volonté de rendre la micronutrition plus lisible, avec des formules organisées autour des besoins du quotidien et un positionnement axé sur la transparence.",interest:"Construire un assortiment d'essentiels, élargissable par besoins, et étudier la rentabilité selon les quantités.",site:"https://vitalora.fr/la-marque",theme:"from-[#414b39] to-[#e2e6d2]"},
+ noto:{origin:"France",segment:"Bien-être · Soins",story:"NŌTO fait partie de l'univers Althesia Pharma. La marque s'intéresse à différents besoins du quotidien, notamment le bien-être et le sommeil.",interest:"Identifier les références adaptées au rayon bien-être et retenir les produits dont le statut de commercialisation permet une implantation.",site:"https://althesiapharma.com/marques",theme:"from-[#2c5149] to-[#d9e7dc]"},
+ "vk-swiss":{origin:"Suisse",segment:"Compléments · Ayurveda",story:"VK Swiss associe des plantes issues de la tradition ayurvédique à du ghee produit en Suisse. La marque a construit son concept autour de cette association.",interest:"Différencier un rayon compléments alimentaires avec une approche inspirée de l'Ayurveda, à accompagner par le conseil officinal.",site:"https://www.vk-swiss.ch/",theme:"from-[#514630] to-[#eee2c6]"},
 };
-
-const profiles:Record<string,{segment:string;intro:string;theme:string}> = {
-  "beauty-of-joseon":{
-    segment:"K-beauty · Soins du visage",
-    intro:"Une gamme de soins coréens inspirés des ingrédients traditionnels et des routines contemporaines.",
-    theme:"from-[#6d473e] via-[#a67b68] to-[#e7c9b5]",
-  },
-  biodance:{
-    segment:"K-beauty · Masques & soins",
-    intro:"Des soins coréens axés sur l'hydratation, l'éclat et le confort cutané.",
-    theme:"from-[#365e65] via-[#789b9a] to-[#dce8e4]",
-  },
-  "dr-althea":{
-    segment:"K-beauty · Dermocosmétique",
-    intro:"Des soins coréens formulés autour du confort cutané et de la barrière cutanée.",
-    theme:"from-[#55435d] via-[#9b829c] to-[#e7dce9]",
-  },
-  medicube:{
-    segment:"K-beauty · Skin care & beauty tech",
-    intro:"Une gamme de soins et d'appareils orientés vers les besoins ciblés de la peau.",
-    theme:"from-[#6d3439] via-[#a86d72] to-[#ead6d7]",
-  },
-  noto:{
-    segment:"Bien-être · Gammes naturelles",
-    intro:"Une sélection de références bien-être et de soins de la gamme NŌTO.",
-    theme:"from-[#2c5149] via-[#668a78] to-[#d9e7dc]",
-  },
-  vitalora:{
-    segment:"Micronutrition · Compléments alimentaires",
-    intro:"Une gamme de micronutrition structurée autour de besoins quotidiens et de formules ciblées.",
-    theme:"from-[#414b39] via-[#89936d] to-[#e2e6d2]",
-  },
-  "vk-swiss":{
-    segment:"Compléments alimentaires · Tradition ayurvédique",
-    intro:"Des compléments inspirés de la tradition ayurvédique et associés au ghee suisse.",
-    theme:"from-[#514630] via-[#9c8658] to-[#eee2c6]",
-  },
-};
-
+const money=(n:number)=>new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR"}).format(n);
 export async function generateMetadata({params}:{params:Promise<{slug:string}>}):Promise<Metadata>{
-  const {slug}=await params;
-  const label=profiles[slug]?.segment||"Catalogue professionnel";
-  return {
-    title:"Catalogue professionnel | TR1 PHARMA",
-    description:label+" — références, formats, EAN et tarifs fournisseurs HT indicatifs.",
-  };
+ const {slug}=await params;return {title:(profiles[slug]?.segment||"Catalogue professionnel")+" | TR1 PHARMA",description:"Découvrez la marque, son assortiment et ses conditions indicatives. Préparez votre implantation officinale."};
 }
-
 export default async function BrandCataloguePage({params}:{params:Promise<{slug:string}>}){
-  const {slug}=await params;
-  const db=await createServerSupabase();
-  if(!db)throw new Error("Catalogue de marque indisponible.");
-  const {data,error}=await db.rpc("public_catalogue_data");
-  if(error)throw new Error("Impossible de charger le catalogue de la marque.");
-  const catalogue=(data as PublicCatalogue|null)??{};
-  const brand=(catalogue.brands??[]).find(item=>item.slug===slug);
-  if(!brand)notFound();
-  const products=(catalogue.products??[])
-    .filter(product=>product.brand_slug===slug)
-    .sort((a,b)=>(a.category||"").localeCompare(b.category||"","fr")||a.name.localeCompare(b.name,"fr"));
-  if(!products.length)notFound();
-  const profile=profiles[slug]??{
-    segment:"Catalogue professionnel",
-    intro:brand.description||"Découvrez les références de cette marque proposées aux officines.",
-    theme:"from-[#334c58] via-[#82969b] to-[#e3e9e7]",
-  };
-  const categories=new Set(products.map(product=>product.category||"Autres références"));
-
-  return <main className="min-h-screen bg-[#fbfaf7] text-[#142941]">
-    <div className="mx-auto max-w-[1240px] px-4 pb-16 pt-5 sm:px-7 lg:px-10 lg:pt-8">
-      <Link href="/vitrine#marques" className="inline-flex items-center gap-2 text-xs font-bold text-[#647782] transition hover:text-[#a66a43]">
-        <ArrowLeft size={15}/> Retour aux marques
-      </Link>
-
-      <section className={`relative isolate mt-5 min-h-[300px] overflow-hidden rounded-[28px] bg-gradient-to-br ${profile.theme} shadow-[0_20px_55px_rgba(20,41,65,0.16)]`}>
-        <div className="absolute inset-0 opacity-65"><BrandHero slug={brand.slug} name={brand.name}/></div>
-        <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-r from-[#10283d]/90 via-[#10283d]/65 to-[#10283d]/20"/>
-        <div className="relative flex min-h-[300px] flex-col justify-end gap-6 px-6 py-8 sm:flex-row sm:items-end sm:justify-between sm:px-10">
-          <div className="max-w-2xl">
-            <span className="inline-flex rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.18em] text-white/90">Catalogue professionnel · Officines</span>
-            <h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em] text-white sm:text-5xl">{brand.name}</h1>
-            <p className="mt-3 max-w-xl text-sm leading-6 text-white/85">{profile.segment}</p>
-            <div className="mt-5 inline-flex min-h-12 items-center rounded-xl border border-white/80 bg-white px-4 py-2 shadow-sm">
-              <BrandLogo slug={brand.slug} name={brand.name} compact/>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3 sm:min-w-[250px]">
-            <div className="rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
-              <p className="text-3xl font-semibold text-white tabular-nums">{products.length}</p>
-              <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white/80">Références</p>
-            </div>
-            <div className="rounded-2xl border border-white/20 bg-white/10 p-4 backdrop-blur-sm">
-              <p className="text-3xl font-semibold text-white tabular-nums">{categories.size}</p>
-              <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white/80">Familles</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="mt-6 rounded-2xl border border-[#e6e2d9] bg-white p-5 sm:p-6">
-        <div className="flex items-start gap-3">
-          <BadgeInfo size={20} className="mt-0.5 shrink-0 text-[#a66a43]"/>
-          <div>
-            <h2 className="text-sm font-extrabold text-[#203b4d]">Informations commerciales</h2>
-            <p className="mt-2 text-xs leading-6 text-[#6e7b81]">{profile.intro} Les prix fournisseurs HT affichés sont ceux enregistrés dans le catalogue TR1 PHARMA. Ils sont présentés à titre indicatif et peuvent être confirmés par la marque ou son fournisseur avant commande.</p>
-          </div>
-        </div>
-      </section>
-
-      <section className="mt-8">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#a66a43]">Assortiment fournisseur</p>
-            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em] sm:text-3xl">Références & tarifs</h2>
-          </div>
-          <p className="text-xs text-[#77858b]">Visuels disponibles · EAN · Formats · Prix unitaires HT</p>
-        </div>
-        <BrandProductTable products={products}/>
-      </section>
-
-      <section className="mt-9 flex flex-col gap-5 rounded-[24px] bg-[#142941] p-6 text-white sm:flex-row sm:items-center sm:justify-between sm:p-8">
-        <div className="max-w-2xl">
-          <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#efc39b]">Projet d'implantation</p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-[-0.03em]">Étudier {brand.name} dans votre officine</h2>
-          <p className="mt-2 text-xs leading-6 text-white/75">TR1 PHARMA centralise votre demande et vous accompagne dans l'étude de l'assortiment. La marque ou le fournisseur prend en charge la confirmation de commande, la facturation et la livraison.</p>
-        </div>
-        <Link href={`/vitrine?marque=${encodeURIComponent(brand.slug)}#contact`} className="inline-flex min-h-12 shrink-0 items-center justify-center gap-3 rounded-full bg-[#edc197] px-6 py-3 text-sm font-extrabold text-[#142941] transition hover:bg-[#f5d3b1]">
-          Demander une étude d'implantation <ArrowRight size={16}/>
-        </Link>
-      </section>
-
-      <p className="mt-6 flex items-start gap-2 text-[11px] leading-5 text-[#879399]">
-        <ShieldCheck size={14} className="mt-0.5 shrink-0"/>
-        Ce catalogue est un support de présentation commerciale. Les disponibilités, conditions commerciales, facturation et livraison sont confirmées par la marque ou son fournisseur.
-      </p>
-    </div>
-  </main>;
+ const {slug}=await params;const db=await createServerSupabase();if(!db)throw new Error("Catalogue indisponible.");
+ const {data,error}=await db.rpc("public_catalogue_data");if(error)throw new Error("Catalogue indisponible.");
+ const catalogue=(data as PublicCatalogue|null)??{};const brand=(catalogue.brands??[]).find(x=>x.slug===slug);if(!brand)notFound();
+ const products=(catalogue.products??[]).filter(p=>p.brand_slug===slug);
+ const profile=profiles[slug]??{origin:"",segment:"Catalogue professionnel",story:brand.description||"Découvrez la marque.",interest:"Étudiez votre assortiment avec TR1 PHARMA.",site:"",theme:"from-[#334c58] to-[#e3e9e7]"};
+ const eligible=products.filter(p=>p.requestable!==false);const prices=eligible.map(p=>Number(p.price_ht)).filter(p=>p>0&&Number.isFinite(p));const matched=eligible.filter(p=>Number(p.retail_ttc)>0&&Number(p.price_ht)>0);
+ const avg=prices.length?prices.reduce((a,b)=>a+b,0)/prices.length:0;const avgCoef=matched.length?matched.reduce((a,p)=>a+Number(p.retail_ttc)/Number(p.price_ht),0)/matched.length:0;
+ return <main className="min-h-screen bg-[#fbfaf7] text-[#142941]">
+ <div className="mx-auto max-w-[1320px] px-4 pb-16 pt-5 sm:px-7 lg:px-10">
+ <Link href="/vitrine#marques" className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-[#526a76]"><ArrowLeft size={16}/> Toutes les marques</Link>
+ <section className={"relative isolate mt-3 overflow-hidden rounded-[28px] bg-gradient-to-br "+profile.theme}>
+ <div className="absolute inset-0 opacity-65"><BrandHero slug={brand.slug} name={brand.name}/></div><div aria-hidden="true" className="absolute inset-0 bg-gradient-to-r from-[#10283d]/95 via-[#10283d]/80 to-[#10283d]/25"/>
+ <div className="relative max-w-3xl px-6 py-10 sm:px-10 sm:py-14">
+ <div className="inline-flex rounded-xl bg-white px-4 py-2"><BrandLogo slug={brand.slug} name={brand.name} compact/></div>
+ <p className="mt-5 text-xs font-bold uppercase tracking-widest text-[#efc39b]">{profile.origin} · {profile.segment}</p><h1 className="mt-2 text-4xl font-semibold tracking-tight text-white sm:text-5xl">{brand.name}</h1>
+ <p className="mt-4 max-w-xl text-sm leading-7 text-white/90">{profile.story}</p>
+ <div className="mt-6 flex flex-wrap gap-3"><a href="#assortiment" className="rounded-full bg-[#edc197] px-5 py-3 text-sm font-bold">Explorer l'assortiment <ArrowRight className="ml-1 inline" size={16}/></a>{profile.site&&<a href={profile.site} target="_blank" rel="noopener noreferrer" className="rounded-full border border-white/40 px-5 py-3 text-sm font-bold text-white">Découvrir la marque <ArrowUpRight className="ml-1 inline" size={16}/></a>}</div>
+ </div></section>
+ <section className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+ {[[String(eligible.length),"Références à étudier"],[prices.length?money(Math.min(...prices))+" – "+money(Math.max(...prices)):"Sur devis","Fourchette d'achat HT"],[avg?money(avg):"Sur devis","Prix d'achat moyen HT"],[avgCoef?"× "+avgCoef.toFixed(2):"À simuler",avgCoef?"Coef. moyen sur "+matched.length+" PVC conseillés":"Coefficient personnalisable"]].map(([value,label])=><div key={label} className="rounded-2xl border border-[#e0e4df] bg-white p-4"><p className="text-lg font-bold tracking-tight sm:text-xl">{value}</p><p className="mt-1 text-xs text-[#64747c]">{label}</p></div>)}
+ </section>
+ <p className="mt-2 text-[11px] text-[#64747c]">Repères indicatifs, calculés sur les références disponibles dans le catalogue, hors remises et unités gratuites. Le coefficient est le PVC TTC divisé par le PA HT.</p>
+ <section className="mt-5 rounded-2xl border border-[#e0e4df] bg-white p-5 sm:p-6"><h2 className="text-lg font-extrabold">Quel intérêt pour votre officine ?</h2><p className="mt-2 text-sm leading-6 text-[#64747c]">{profile.interest}</p><p className="mt-3 text-xs leading-5 text-[#64747c]">TR1 PHARMA vous accompagne dans le choix de l'assortiment et les conditions de référencement. La marque confirme les tarifs, la disponibilité, la facturation et la livraison.</p></section>
+ <section id="assortiment" className="mt-8 scroll-mt-20"><div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-widest text-[#a66a43]">Votre assortiment</p><h2 className="mt-1 text-3xl font-semibold tracking-tight">Composez votre implantation</h2><p className="mt-2 text-sm text-[#64747c]">Recherchez, comparez les prix et choisissez les quantités pour estimer votre budget.</p></div></div>
+ <BrandProductTable products={products} slug={slug}/></section>
+ <section className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-[#e9eee9] p-6"><div><h2 className="text-lg font-bold">Besoin d'un assortiment adapté à votre officine ?</h2><p className="mt-2 text-sm text-[#64747c]">Demandez une étude sans engagement, même sans sélection de produits.</p></div><Link href={"/vitrine?marque="+encodeURIComponent(slug)+"#contact"} className="rounded-full bg-[#142941] px-5 py-3 text-sm font-bold text-white">Être accompagné <ArrowRight className="ml-1 inline" size={16}/></Link></section>
+ </div></main>;
 }
