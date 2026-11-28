@@ -95,7 +95,7 @@ function BrandIcon({kind}:{kind:"beauty"|"nutrition"|"wellness"}){
 export default async function Vitrine({
   searchParams,
 }:{
-  searchParams:Promise<{marque?:string;envoye?:string;erreur?:string}>
+  searchParams:Promise<{marque?:string;marques?:string;envoye?:string;erreur?:string}>
 }){
   const db=await createServerSupabase();
   if(!db)throw new Error("Vitrine indisponible.");
@@ -105,7 +105,7 @@ export default async function Vitrine({
   ]);
   if(error)throw new Error("Impossible de charger les marques.");
   const brands=((data as {brands?:Brand[]}|null)?.brands??[]);
-  const initialSlugs=brands.some(b=>b.slug===params.marque&&params.marque)?[params.marque!]:[];
+  const requestedSlugs=(params.marques??params.marque??"").split(",").map(slug=>slug.trim()).filter(Boolean);\n  const initialSlugs=[...new Set(requestedSlugs)].filter(slug=>brands.some(b=>b.slug===slug));
 
   return <main id="contenu" className="overflow-hidden bg-[#fbfaf7] text-[#142941]">
     <div className="mx-auto max-w-[1360px] px-4 pb-16 pt-5 sm:px-7 lg:px-10 lg:pt-8">
