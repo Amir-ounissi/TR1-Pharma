@@ -25,7 +25,7 @@ const heroImages:Record<string,string>={
   medicube:"https://cdn.shopify.com/s/files/1/0156/3905/2336/files/Group_48096714.jpg?v=1742186065",
   cosrx:"https://www.cosrx.com/cdn/shop/files/Snail_96_Promo-Image-1_1024x1024.png?v=1763519441",
   noto:"https://www.notocbd.com/assets/hero-oils-4IsR29eq.webp",
-  bloomster:"https://www.bloomster.fr/wp-content/uploads/2024/06/Group-1000007855-2.png.webp",
+  bloomster:"https://www.bloomster.fr/wp-content/uploads/2024/05/Untitled-design-2.png",
   vitalora:"https://www.vitalora.fr/assets/products-hero-BuNiBZG4.png",
   "vk-swiss":"https://static.wixstatic.com/media/89c805_9ba09e205e5148a0b36ab81c2423ec4c~mv2.jpg/v1/fill/w_980%2Ch_490%2Cal_c%2Cq_85%2Cusm_0.66_1.00_0.01%2Cenc_avif%2Cquality_auto/89c805_9ba09e205e5148a0b36ab81c2423ec4c~mv2.jpg",
 };
