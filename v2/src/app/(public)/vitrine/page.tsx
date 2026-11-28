@@ -225,12 +225,20 @@ export default async function Vitrine({
                 <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#a66a43]">{profile.segment}</p>
                 <h3 className="mt-2 min-h-7 text-[21px] font-extrabold tracking-[-0.035em] text-[#142941]">{brand.name}</h3>
                 <p className="mt-2 min-h-[48px] text-[13px] leading-6 text-[#748188]">{brand.description||profile.focus}</p>
-                <Link
-                  href={"/vitrine?marque="+encodeURIComponent(brand.slug)+"#contact"}
-                  className="mt-5 inline-flex w-full items-center justify-between border-t border-[#eceeea] pt-4 text-xs font-extrabold text-[#31576a] transition group-hover:text-[#a66a43]"
-                >
-                  Sélectionner cette marque <ArrowUpRight size={16}/>
-                </Link>
+                <div className="mt-5 flex items-center justify-between gap-3 border-t border-[#eceeea] pt-4">
+                  <Link
+                    href={brand.slug==="cosrx"?"/vitrine/cosrx":brand.slug==="bloomster"?"/vitrine/bloomster":"/vitrine/brands/"+brand.slug}
+                    className="inline-flex items-center gap-2 text-xs font-extrabold text-[#31576a] transition hover:text-[#a66a43]"
+                  >
+                    Voir le catalogue <ArrowRight size={15}/>
+                  </Link>
+                  <Link
+                    href={"/vitrine?marque="+encodeURIComponent(brand.slug)+"#contact"}
+                    className="text-[10px] font-bold text-[#8b989d] underline decoration-[#cbd2cf] underline-offset-4 transition hover:text-[#31576a]"
+                  >
+                    Sélectionner
+                  </Link>
+                </div>
               </div>
             </article>;
           })}
